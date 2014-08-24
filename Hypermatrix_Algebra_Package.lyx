@@ -1,0 +1,8757 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+\@ifundefined{definecolor}
+ {\usepackage{color}}{}
+\@ifundefined{definecolor}{\usepackage{color}}{}
+
+
+\usepackage{babel}
+\usepackage{nicefrac}
+\usepackage{sagetex}
+\end_preamble
+\use_default_options false
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding latin9
+\fontencoding T1
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 2
+\use_esint 2
+\use_mhchem 0
+\use_mathdots 0
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 0.5in
+\topmargin 1in
+\rightmargin 0.5in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+A 
+\begin_inset Formula $\textsf{SageTeX}$
+\end_inset
+
+ Hypermatrix Algebra Package
+\end_layout
+
+\begin_layout Author
+Edinah K.
+ Gnang
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+School of Mathematics, Institute for Advanced Study
+\end_layout
+
+\end_inset
+
+, Ori Parzanchevski
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+School of Mathematics, Institute for Advanced Study
+\end_layout
+
+\end_inset
+
+, Yuval Filmus
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+School of Mathematics, Institute for Advanced Study
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Abstract
+We describe here a rudimentary sage 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "S6"
+
+\end_inset
+
+ implementation of the Bhattacharya-Mesner hypermatrix algebra package.
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+The current package implements very basic features of the Bhattacharya-Mesner
+ 
+\emph on
+hypermatri
+\emph default
+x algebra.
+ A hypermatrix denotes a finite set of complex numbers each of which is
+ indexed by members of an integer cartesian product set of the form 
+\begin_inset Formula $\left\{ 0,\cdots,\left(n_{0}-1\right)\right\} \times\cdots\times\left\{ 0,\cdots,\left(n_{l-1}-1\right)\right\} $
+\end_inset
+
+.
+ Such a hypermatrix is said to be of order 
+\begin_inset Formula $l$
+\end_inset
+
+ or simply an 
+\begin_inset Formula $l$
+\end_inset
+
+-hypermatrix for short.
+ The algebra and the spectral analysis of hypermatrices arise as a natural
+ generalization of matrix algebra.
+ Important hypermatrix results available in the literature are concisely
+ surveyed in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "L"
+
+\end_inset
+
+, the reader is also refered to 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "LQ"
+
+\end_inset
+
+ for a more detail survey on the spectral analysis of hypermatrices.
+ The hypermatrix algebra discussed here differs from the hypermatrix algebras
+ surveyed in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "L"
+
+\end_inset
+
+ in the fact that the hypermatrix algebra considered here centers around
+ the Bhattacharya-Mesner hypermatrix product operation introduced in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "BM1,BM2,B"
+
+\end_inset
+
+ and followed up in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "GER"
+
+\end_inset
+
+.
+ Although the scope of the Bhattacharya-Mesner algebra extends to hypermatrices
+ of all finite integral orders, the package will be mostly geared towards
+ 
+\begin_inset Formula $3$
+\end_inset
+
+-hypermatrices.
+\end_layout
+
+\begin_layout Section
+The Hypermatrix Sage Package
+\end_layout
+
+\begin_layout Standard
+We try here to simultaneously follow precepts of the New Jersey school of
+ experimental mathematics initiated by Doron Zeilberger 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Z"
+
+\end_inset
+
+ and the fundamental paradigm of litterate programming pioneered by Donald
+ Knuth
+\begin_inset CommandInset citation
+LatexCommand cite
+key "K"
+
+\end_inset
+
+ to discuss various computational aspects of the Bhattacharya-Mesner 3-hypermatr
+ix algebra.
+ We therefore present here a very rudimentary 
+\begin_inset Formula $\textsf{SageTeX}$
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "S6"
+
+\end_inset
+
+ implementation of a hypermatrix package.
+ The proposed package is available through the source code for the current
+ document either in the format of a LyX file or alternatively as a 
+\begin_inset Formula $\TeX$
+\end_inset
+
+ file or an independent sage file.
+\begin_inset Newline newline
+\end_inset
+
+Our implementation will be concerned with generic 3-hypermatrices and consequent
+ly we will often work with symbolic expressions.
+ The implementation starts out by describing procedures which enable us
+ to generate symbolic matrices and hypermatrices of desired size, order
+ and with other additional properties.
+ Throughout the package, the data structure used will be a lists.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def MatrixGenerate(nr, nc, c):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with a symbolic nr x nc
+\end_layout
+
+\begin_layout Plain Layout
+
+    matrix using the input character c followed by indices.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = MatrixGenerate(2, 2, 'm'); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        [[m00, m01], [m10, m11]]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = nc
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows > 0 and n_q_cols > 0:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                # Filling up the matrix
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append(var(c+str(i)+str(j)))
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "Input dimensions "+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+str(nr)+" and "+str(nc)+" must both be non-zero positive integers."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+in addition we implement a similar procedure for generating symbolic symmetric
+ matrices
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def SymMatrixGenerate(nr, c):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with a symbolic nr x nc
+\end_layout
+
+\begin_layout Plain Layout
+
+    symmetric matrix using the input character c followed by 
+\end_layout
+
+\begin_layout Plain Layout
+
+    indices.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = SymMatrixGenerate(2, 'm'); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        [[m00, m01], [m10, m11]]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows > 0 and n_q_cols > 0:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                # Filling up the matrix
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append(var(c+str(min(i,j))+str(max(i,j))))
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "Input dimensions "+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+str(nr)+" must be a non-zero positive integers."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+The two procedures implemented above for generating symbolic lists will
+ typically be used in conjunction with the Sage
+\begin_inset CommandInset citation
+LatexCommand cite
+key "S6"
+
+\end_inset
+
+ Matrix class over symbolic rings as illustrated 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{M}_{1}=\mbox{Matrix(SR,MatrixGenerate(2,3,'m'))}=\sage{Matrix(SR,MatrixGenerate(2,3,'m'))}.
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\mathbf{M}_{2}=\mbox{Matrix(SR,SymMatrixGenerate(2,'m'))}=\sage{Matrix(SR,SymMatrixGenerate(2,'m'))}.
+\end{equation}
+
+\end_inset
+
+We implement similar procedures for generating symbolic hypermatrices of
+ desired order and size.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixGenerate(*args):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with a symbolic arbitrary
+\end_layout
+
+\begin_layout Plain Layout
+
+    hypematrix of order and size specified by the input.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixGenerate(2, 2, 2, 'm'); M
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+     AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang, Ori Parzanchevski and Yuval Filmus
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    if len(args) == 1:
+\end_layout
+
+\begin_layout Plain Layout
+
+        return var(args[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [apply(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+HypermatrixGenerate,args[1:-1]+(args[-1]+str(i),)) for i in range(args[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+The procedures implemented above illustrate the use of lists for representing
+ hypermatrices.
+ We show bellow for convenience of the reader the output of the function
+ call 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{T}=\mbox{HypermatrixGenerate(2, 2, 2, 't')}=\sage{HypermatrixGenerate(2,2,2,'t')}.
+\end{equation}
+
+\end_inset
+
+In connection with the spectral decomposition of 3-hypermatrices we discuss
+ the implemention of a procedure which generates the desired size symbolic
+ 3-hypermatrices with entries symmetric under cyclic permutation of the
+ hypermatrix indices.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def SymHypermatrixGenerate(nr, c):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with a symbolic nr x nc x nd
+\end_layout
+
+\begin_layout Plain Layout
+
+    third order hypematrix using the input character c followed by 
+\end_layout
+
+\begin_layout Plain Layout
+
+    indices.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = SymHypermatrixGenerate(2, 'm'); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+                for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    if i==j or i==k or j==k:
+\end_layout
+
+\begin_layout Plain Layout
+
+                        (q[i][j]).append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+\end_layout
+
+\begin_layout Plain Layout
+
+                    else:
+\end_layout
+
+\begin_layout Plain Layout
+
+                        if i == min(i,j,k) and k == max(i,j,k):
+\end_layout
+
+\begin_layout Plain Layout
+
+                            (q[i][j]).append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+\end_layout
+
+\begin_layout Plain Layout
+
+                        elif k == min(i,j,k) and j == max(i,j,k):
+\end_layout
+
+\begin_layout Plain Layout
+
+                            (q[i][j]).append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+\end_layout
+
+\begin_layout Plain Layout
+
+                        elif i == max(i,j,k) and j == min(i,j,k):
+\end_layout
+
+\begin_layout Plain Layout
+
+                            (q[i][j]).append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+\end_layout
+
+\begin_layout Plain Layout
+
+                        else:
+\end_layout
+
+\begin_layout Plain Layout
+
+                            (q[i][j]).append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+var(c+str(i+j+k-min(i,j,k)-max(i,j,k))+str(min(i,j,k))+str(max(i,j,k))))
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "Input dimensions "+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+str(nr)+" must be a non-zero positive integer."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We illustrate the use of the procedure by showing the output of the following
+ function call 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{S}=\mbox{SymHypermatrixGenerate(2, 's')}=\sage{SymHypermatrixGenerate(2,'s')}.
+\end{equation}
+
+\end_inset
+
+We also implement a procedure for canonically stripping down the 3-hypermatrix
+ ( encoded as a list of list ) to a simple list of symbolic variables in
+ a similar spirit as the matrix vectorization operation.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixVectorize(A):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs our canonical vectorization of
+\end_layout
+
+\begin_layout Plain Layout
+
+    the input hypermatrices A.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixVectorize(A); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows>0 and n_q_cols>0 and n_q_dpts>0:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    q.append(A[i][j][k])
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "The Dimensions non zero."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Newline newline
+\end_inset
+
+The implementation of the hypermatrix vectorization procedure concludes
+ the implementation of procedure for generating and formating symbolic 3-hyperma
+trices.
+\end_layout
+
+\begin_layout Standard
+The next part of the package will discuss the implementation of procedures
+ which enable us to perform very basic operations on 3-hypermatrices starting
+ with the addition operation
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixAdd(A, B):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists corresponding to the sum of 
+\end_layout
+
+\begin_layout Plain Layout
+
+    the two input hypermatrices A, B of the same size
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixAdd(A, B); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = len(B)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = len(B[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = len(B[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows==len(A) and n_q_cols==len(A[0]) and n_q_dpts==len(A[0][0]):
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+                for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    (q[i][j]).append(A[i][j][k]+B[i][j][k])
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "The Dimensions of the input hypermatrices must
+ match."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+quite similarly we implement the 3-hypermatrix hadamard product procedure
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixHadamardProduct(A, B):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists associated with the addtion of 
+\end_layout
+
+\begin_layout Plain Layout
+
+    the two input hypermatrices A and B
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixHadamardProduct(A, B); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows==len(A) and n_q_cols==len(A[0]) and n_q_dpts==len(A[0][0]):
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+                for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    (q[i][j]).append(A[i][j][k]*B[i][j][k])
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "The Dimensions of the input hypermatrices must
+ match."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We illustrate the usage of the two procedures implemented above 
+\begin_inset Formula 
+\[
+\mathbf{S}+\mathbf{T}=\mbox{HypermatrixAdd(SymHypermatrixGenerate(2,'s'),HypermatrixGenerate(2,2,2,'t'))}=
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{HypermatrixAdd(SymHypermatrixGenerate(2,'s'),HypermatrixGenerate(2,2,2,'t'))}
+\end{equation}
+
+\end_inset
+
+and
+\begin_inset Formula 
+\[
+\mathbf{S}\star\mathbf{T}=\mbox{HypermatrixHadamardProduct(SymHypermatrixGenerate(2,'s'),HypermatrixGenerate(2,2,2,'t'))}=
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{HypermatrixHadamardProduct(SymHypermatrixGenerate(2,'s'),HypermatrixGenerate(2,2,2,'t'))}.
+\end{equation}
+
+\end_inset
+
+Furthermore, we implement the procedure for multiplying a 3-hypermatrix
+ by a scalar.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixScale(A, s):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists associated with product of the
+\end_layout
+
+\begin_layout Plain Layout
+
+    input scalar s with the input hypermatrix A.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixScale(A, 3); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+        q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+            (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i][j]).append(A[i][j][k]*s)
+\end_layout
+
+\begin_layout Plain Layout
+
+    return q
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+typically used as follows 
+\begin_inset Formula 
+\[
+3\,\mathbf{T}=\mbox{HypermatrixScale(HypermatrixGenerate(2,2,2,'t'),3)}=
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{HypermatrixScale(HypermatrixGenerate(2,2,2,'t'),3)}.
+\end{equation}
+
+\end_inset
+
+similarly, we implement the entry-wise exponentiation bellow
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixEntryExponent(A, s):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists associated with product of the
+\end_layout
+
+\begin_layout Plain Layout
+
+    scalar s with the hypermatrix A.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixEntryExponent(A, 3); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+        q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+            (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i][j]).append((A[i][j][k])^s)
+\end_layout
+
+\begin_layout Plain Layout
+
+    return q
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+due to the fact that the exponentiation operation is noncommutative we also
+ implement the entry-wise exponentiation operation where the input is to
+ be taken as basis for the exponentiation computation.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixEntryExponentB(s, A):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists associated with product of the
+\end_layout
+
+\begin_layout Plain Layout
+
+    scalar s with the hypermatrix A.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixEntryExponentB(3,A); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+        q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+            (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i][j]).append(s^(A[i][j][k]))
+\end_layout
+
+\begin_layout Plain Layout
+
+    return q
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+At the heart of the Mesner-Bhattacharya 3-hypermatrix algebra lies the ternary
+ non-associative hypermatrix product operation
+\begin_inset CommandInset citation
+LatexCommand cite
+key "BM2,BM1"
+
+\end_inset
+
+.
+ We provide here a naive implementation of the Mesner-Bhattacharya 3-hypermatrix
+ product.
+ We may briefly recall that the product is defined for input hypermatrices
+ 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+ of dimensions 
+\begin_inset Formula $m\times k\times p$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{B}$
+\end_inset
+
+ of dimensions 
+\begin_inset Formula $m\times n\times k$
+\end_inset
+
+ and the matrix 
+\begin_inset Formula $\mathbf{C}$
+\end_inset
+
+ of dimension 
+\begin_inset Formula $k\times n\times p$
+\end_inset
+
+, to result into an 
+\begin_inset Formula $m\times n\times p$
+\end_inset
+
+ hypermatrix with entries specified by 
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{A},\,\mathbf{B},\,\mathbf{C}\right)\right]_{i,j,k}=\sum_{0\le t<k}a_{itk}\, b_{ijt}\, c_{tjk}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixProduct(A, B, C):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists associated with the ternary 
+\end_layout
+
+\begin_layout Plain Layout
+
+    non associative Bhattacharya-Mesner product of the
+\end_layout
+
+\begin_layout Plain Layout
+
+    input hypermatrices A, B and C.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixProduct(A, B, C); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_a_rows = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_a_cols = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_a_dpts = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_b_rows = len(B)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_b_cols = len(B[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_b_dpts = len(B[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_c_rows = len(C)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_c_cols = len(C[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_c_dpts = len(C[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts
+ and 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_a_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_b_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+                for k in range(n_c_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    (q[i][j]).append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+sum([A[i][l][k]*B[i][j][l]*C[l][j][k] for l in range(n_a_cols)]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "Hypermatrix dimension mismatch."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+In connection with the computation of the spectral elimination ideals, we
+ implement a slight generalization of the Mesner-Bhattacharya hypermatrix
+ product hypermatrix product, introduced in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "GER"
+
+\end_inset
+
+.
+ Recall that the 3-hypermatrix product of input hypermatrices 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+ of dimensions 
+\begin_inset Formula $m\times l\times p$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{B}$
+\end_inset
+
+ of dimensions 
+\begin_inset Formula $m\times n\times l$
+\end_inset
+
+ and the matrix 
+\begin_inset Formula $\mathbf{C}$
+\end_inset
+
+ of dimension 
+\begin_inset Formula $l\times n\times p$
+\end_inset
+
+, with non-trivial background 
+\begin_inset Formula $\mathbf{T}$
+\end_inset
+
+ with dimensions 
+\begin_inset Formula $l\times l\times l$
+\end_inset
+
+ results in 
+\begin_inset Formula $m\times n\times p$
+\end_inset
+
+ hypermatrix and in particular the 
+\begin_inset Formula $m$
+\end_inset
+
+, 
+\begin_inset Formula $n$
+\end_inset
+
+, 
+\begin_inset Formula $p$
+\end_inset
+
+ of the product is expressed by 
+\begin_inset Formula 
+\begin{equation}
+\left[\circ_{\mathbf{T}}\left(\mathbf{A},\,\mathbf{B},\,\mathbf{C}\right)\right]_{mnp}=\sum_{1\le i\le l}\left(\sum_{1\le j\le l}\left(\sum_{1\le k\le l}a_{mip}\, b_{mnj}\, c_{knp}\, t_{ijk}\right)\right),
+\end{equation}
+
+\end_inset
+
+which is implemented as follows
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixProductB(A, B, C, D):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists associated with the ternary 
+\end_layout
+
+\begin_layout Plain Layout
+
+    product the input hypermatrices A, B and C with
+\end_layout
+
+\begin_layout Plain Layout
+
+    background hypermatrix D.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixProductB(A, B, C, D); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_a_rows = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_a_cols = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_a_dpts = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_b_rows = len(B)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_b_cols = len(B[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_b_dpts = len(B[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_c_rows = len(C)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_c_cols = len(C[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_c_dpts = len(C[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_d_rows = len(D)
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_d_cols = len(D[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_d_dpts = len(D[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+n_a_cols==n_b_dpts and n_b_dpts==n_c_rows and n_a_cols==n_d_rows and 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_a_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_b_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+                for k in range(n_c_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    (q[i][j]).append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+sum([A[i][l0][k]*B[i][j][l1]*C[l2][j][k]*D[l0][l1][l2] for l0 in range(n_d_rows)
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for l1 in range(n_d_cols) for l2 in range(n_d_dpts)]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "Hypermatrix dimension mismatch."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We illustrate bellow, how to initialize and obtain 3-hypermatrix products
+ either with the trivial or arbitrary background hypermatrix.
+ The example discussed here will be for 
+\begin_inset Formula $2\times2\times2$
+\end_inset
+
+ hypermatrices.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+# We put here together the seperate pieces we have implemented above.
+\end_layout
+
+\begin_layout Plain Layout
+
+A = HypermatrixGenerate(2, 2, 2, 'a')
+\end_layout
+
+\begin_layout Plain Layout
+
+B = HypermatrixGenerate(2, 2, 2, 'b')
+\end_layout
+
+\begin_layout Plain Layout
+
+C = HypermatrixGenerate(2, 2, 2, 'c')
+\end_layout
+
+\begin_layout Plain Layout
+
+T = HypermatrixGenerate(2, 2, 2, 't')
+\end_layout
+
+\begin_layout Plain Layout
+
+P = HypermatrixProduct(A, B, C)
+\end_layout
+
+\begin_layout Plain Layout
+
+Q = HypermatrixProductB(A, B, C, T)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+from which we obtain that the 
+\begin_inset Formula $0$
+\end_inset
+
+,
+\begin_inset Formula $0$
+\end_inset
+
+,
+\begin_inset Formula $0$
+\end_inset
+
+ entry of the product with trivial background is given by 
+\begin_inset Formula 
+\begin{equation}
+p_{000}=\left[\circ\left(\mathbf{A},\,\mathbf{B},\,\mathbf{C}\right)\right]_{0,0,0}=\mbox{P[0][0][0]}=\sage{P[0][0][0]}
+\end{equation}
+
+\end_inset
+
+while the 
+\begin_inset Formula $0$
+\end_inset
+
+,
+\begin_inset Formula $0$
+\end_inset
+
+,
+\begin_inset Formula $0$
+\end_inset
+
+ entry of the product with non trivial background is given 
+\begin_inset Formula 
+\[
+q_{000}=\left[\circ_{\mathbf{T}}\left(\mathbf{A},\,\mathbf{B},\,\mathbf{C}\right)\right]_{0,0,0}=\mbox{Q[0][0][0]}=\sage{sum(((Q[0][0][0]).operands())[0:4])}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{sum(((Q[0][0][0]).operands())[4:8])}.
+\end{equation}
+
+\end_inset
+
+We now implement the procedure which generalizes to 3-hypermatrices the
+ notion of matrix transpose.
+ The transpose operation for matrices consists in performing a transposition
+ of matrix indices and this has the effect of simultaneously changing rows
+ vectors into column vectors and column vecors into row vectors.
+ However in the case of 3-hypermatrices there are six possible permutations
+ which can be performed on the indices and among these permutations, the
+ cyclic permutation form a very special subgroup, because cyclic permutations
+ simultaneously map rows vectors to columns vectors and column vectors to
+ depth vectors.
+ As a result, cyclic permutations of the indices should be thought off as
+ operations which are inherent to 3-hypermatrices while the remaining three
+ transpositions are to be thought off as matrix operations.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixCyclicPermute(A):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a list of lists associated with the hypermatrix 
+\end_layout
+
+\begin_layout Plain Layout
+
+    with entries index cycliclly permuted.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixCyclicPermute(A); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = len(A[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = len(A[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+        q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+            (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i][j]).append(A[k][i][j])
+\end_layout
+
+\begin_layout Plain Layout
+
+    return q
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We illustrate the hypermatrix transpose operation by starting with the 3-hyperma
+trix 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{A}=\sage{A}
+\end{equation}
+
+\end_inset
+
+and showing the result of the transposition 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{A}^{T}=\mbox{HypermatrixCyclicPermute(A)}=\sage{HypermatrixCyclicPermute(A)}.
+\end{equation}
+
+\end_inset
+
+In connection with 3-hypermatrix spectral decompositions computations, we
+ implement procedure for generating special family of 3-hypermatrices starting
+ with Kronecker delta 3-hypermatrices.
+ The defining properties of the Kronecker delta 3-hypermatrix can be expressed
+ as follows 
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{\Delta}=\left(\delta_{ijk}\ge0\right)_{0\le i,j,k<n},\quad\mbox{ and }\quad\boldsymbol{\Delta}=\circ\left(\boldsymbol{\Delta},\,\boldsymbol{\Delta}^{T^{2}},\,\boldsymbol{\Delta}^{T}\right)
+\end{equation}
+
+\end_inset
+
+and the procedure generating Kronecker delta 3-hypermatrices is implemented
+ as follows
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixKroneckerDelta(nr):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with the nr x nr x nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    Kronecker Delta hypermatrix.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixKroneckerDelta(2); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = nr
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n_q_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(n_q_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+                (q[i]).append([])
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(len(q)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(len(q[i])):
+\end_layout
+
+\begin_layout Plain Layout
+
+                for k in range(n_q_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    if i==j and i==k:
+\end_layout
+
+\begin_layout Plain Layout
+
+                        (q[i][j]).append(1)
+\end_layout
+
+\begin_layout Plain Layout
+
+                    else:
+\end_layout
+
+\begin_layout Plain Layout
+
+                        (q[i][j]).append(0)
+\end_layout
+
+\begin_layout Plain Layout
+
+        return q
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "Input dimensions "+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+str(nr)+" must be a non-zero positive integer."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+Furthermore for some particular numerical routines we implement procedures
+ for initializing hypermatrices so as to have all entries either equal to
+ zero or equal to one
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixGenerateAllOne(*args):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with the nr x nr x nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    all one hypermatrix.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixGenerateAllOne(2,2,2); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    if len(args) == 1:
+\end_layout
+
+\begin_layout Plain Layout
+
+        return [1 for i in range(args[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [apply(HypermatrixGenerateAllOne, args[1:] ) for i in range(args[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+for initializing all entries to zero we have
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixGenerateAllZero(*args):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with the nr x nr x nr
+\end_layout
+
+\begin_layout Plain Layout
+
+    all zero hypermatrix.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixGenerateAllZero(2,2,2); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    if len(args) == 1:
+\end_layout
+
+\begin_layout Plain Layout
+
+        return [0 for i in range(args[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [apply(HypermatrixGenerateAllZero, args[1:] ) for i in range(args[0])
+]
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+More interestingly, we implement procedures for generating 3-hypermatrices
+ with binary entries which correspond to the 3-hypermatrix analogue of permutati
+on matrices.
+ Permutation 3-hypermatrices by analogy to permutation matrices effect some
+ prescribed permutations of row slices or column slices or alternatively
+ the depth slices of some specified hypermatrices.
+ The permutation is effected by performing the appropriate sequence hypermatrix
+ products.
+ The procedure which we implement here for generating permutation 3-hypermatrix
+ takes as input a list of integer in the range 
+\begin_inset Formula $0$
+\end_inset
+
+ to 
+\begin_inset Formula $\left(n-1\right)$
+\end_inset
+
+ inclusively whose particular order in the list specify the desired transpositio
+n.
+ The procedure outputs the corresponding transposition 3-hypermatrix.
+ The output 3-hypermatrix will be of dimension 
+\begin_inset Formula $n\times n\times n$
+\end_inset
+
+.
+ We recall from 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "GER"
+
+\end_inset
+
+ that permutation hypermatrices corresponding to some transposition 
+\begin_inset Formula $\sigma\in S_{n}$
+\end_inset
+
+ is expressed by 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{P}_{\sigma}=\sum_{1\le k\le n}\circ\left(\boldsymbol{1}_{n\times n\times n},\,\boldsymbol{1}_{n\times n\times n},\,\mathbf{e}_{k}\otimes\mathbf{e}_{k}\otimes\mathbf{e}_{\sigma\left(k\right)}\right)
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixPermutation(s):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Generates a list of lists associated with the permutation
+\end_layout
+
+\begin_layout Plain Layout
+
+    hypermatrix deduced from sigma.
+\end_layout
+
+\begin_layout Plain Layout
+
+    
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: M = HypermatrixPermutation([0,2,1]); M
+\end_layout
+
+\begin_layout Plain Layout
+
+        
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    n = len(s)
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Setting the dimensions parameters.
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_rows = n
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_cols = n
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_q_dpts = n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Test for dimension match
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        q = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        T = HypermatrixKroneckerDelta(n)
+\end_layout
+
+\begin_layout Plain Layout
+
+        U = HypermatrixGenerateAllOne(n,n,n)
+\end_layout
+
+\begin_layout Plain Layout
+
+        Id= HypermatrixProduct(U,U,T)
+\end_layout
+
+\begin_layout Plain Layout
+
+        Id= HypermatrixCyclicPermute(Id)
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(n):
+\end_layout
+
+\begin_layout Plain Layout
+
+            q.append(Id[s[i]])
+\end_layout
+
+\begin_layout Plain Layout
+
+        return HypermatrixCyclicPermute(HypermatrixCyclicPermute(q))
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    else :
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError, "Input dimensions "+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+str(n)+" must be a non-zero positive integer."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+It is important to note that because of the associativity symmetry breaking,
+ it is important to express the permutations as product of transpositions.
+ We also illustrate how the 3-hypermatrix product effects some desired transposi
+tion to the appropriate 3-hypermatrix slices.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+# the code writen here is merely to put together the peices we have implemented
+ so far.
+\end_layout
+
+\begin_layout Plain Layout
+
+# Generic Symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+A   = HypermatrixGenerateAllZero(3,3,3)  
+\end_layout
+
+\begin_layout Plain Layout
+
+Tmp = HypermatrixGenerate(3, 3, 3, 'a')
+\end_layout
+
+\begin_layout Plain Layout
+
+for i in range(2):
+\end_layout
+
+\begin_layout Plain Layout
+
+    for j in range(3):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(3):
+\end_layout
+
+\begin_layout Plain Layout
+
+            A[i][j][k]=Tmp[i][j][k]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initialization of the hypermatrix and it's cyclic permutations
+\end_layout
+
+\begin_layout Plain Layout
+
+P  = HypermatrixPermutation([1,0,2])
+\end_layout
+
+\begin_layout Plain Layout
+
+Pt =HypermatrixCyclicPermute(P)
+\end_layout
+
+\begin_layout Plain Layout
+
+Ptt=HypermatrixCyclicPermute(HypermatrixCyclicPermute(P))
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Effecting the permutation of ...
+\end_layout
+
+\begin_layout Plain Layout
+
+# row slices
+\end_layout
+
+\begin_layout Plain Layout
+
+Ar = HypermatrixProduct(Pt,Ptt,A)
+\end_layout
+
+\begin_layout Plain Layout
+
+# column slice
+\end_layout
+
+\begin_layout Plain Layout
+
+Ac = HypermatrixProduct(A,P,Pt)
+\end_layout
+
+\begin_layout Plain Layout
+
+# and depth slices
+\end_layout
+
+\begin_layout Plain Layout
+
+Ad = HypermatrixProduct(P,A,Ptt)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Newline newline
+\end_inset
+
+It follows from the lines of code written above that starting from the 
+\begin_inset Formula $3\times3\times3$
+\end_inset
+
+ symbolic 3-hypermatrix 
+\begin_inset Formula 
+\[
+\mathbf{A}=\left[\sage{A[0]},\right.
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left.\sage{A[1]}\right]
+\end{equation}
+
+\end_inset
+
+and for performing the transposition 
+\begin_inset Formula $\left[1,0,2\right]$
+\end_inset
+
+, we produced the permutation hypermatrix 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{P}_{\left[1,0,2\right]}=\sage{P}.
+\end{equation}
+
+\end_inset
+
+In order to effect the transposition to the row slices of 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+ we compute the product 
+\begin_inset Formula 
+\[
+\circ\left(\mathbf{P}_{\left[1,0,2\right]}^{T},\mathbf{P}_{\left[1,0,2\right]}^{T^{2}},\mathbf{A}\right)=\left[\sage{Ar[0]},\right.
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left.\sage{Ar[1]}\right].
+\end{equation}
+
+\end_inset
+
+furthermore in order to effect the transposition to the column slices of
+ 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+ we compute the product
+\begin_inset Formula 
+\[
+\circ\left(\mathbf{A},\mathbf{P}_{\left[1,0,2\right]},\mathbf{P}_{\left[1,0,2\right]}^{T}\right)=\left[\sage{Ac[0]},\right.
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left.\sage{Ac[1]}\right].
+\end{equation}
+
+\end_inset
+
+finally in order to effect the same transposition to the depth slices of
+ 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+ we compute the product
+\begin_inset Formula 
+\[
+\circ\left(\mathbf{P}_{\left[1,0,2\right]},\mathbf{A},\mathbf{P}_{\left[1,0,2\right]}^{T^{2}}\right)=\left[\sage{Ad[0]},\right.
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left.\sage{Ad[1]}\right].
+\end{equation}
+
+\end_inset
+
+We now implement a procedure for generating 3-hypermatrix analog of diagonal
+ martrices.
+ We recall that just as for matrices the diagonal 3-hypermatrices are slight
+ variation of the identity permutation 3-hypermatrix and their defining
+ equality is expressed by 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{D}^{\star^{3}}=\circ\left(\mathbf{D}^{T},\,\mathbf{D}^{T^{2}},\,\mathbf{D}\right)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{D}^{\star^{3}}$
+\end_inset
+
+ denotes the Hadamard cube power of 
+\begin_inset Formula $\mathbf{D}$
+\end_inset
+
+.
+ The procedure that we implement here for generating a diagonal 3-hypermatrix,
+ takes as input a symmetric generic 
+\begin_inset Formula $n\times n$
+\end_inset
+
+ symbolic matrix and outputs a 
+\begin_inset Formula $n\times n\times n$
+\end_inset
+
+ 3-hypermatrix satisfying the defining equation
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def DiagonalHypermatrix(Mtrx):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs a diagonal third order hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    constructed using the input square matrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    to enforce the symmetry constraint we will
+\end_layout
+
+\begin_layout Plain Layout
+
+    only take entry from the lower triangular
+\end_layout
+
+\begin_layout Plain Layout
+
+    part of the input matrix.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+     EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: var('a00, a11, a01')
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: Mtrx = Matrix(Sr,[[a00,a01],[a01,a11]])
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: d = DiagonalHypermatrix(Mtrx)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the dimensions
+\end_layout
+
+\begin_layout Plain Layout
+
+    n = min(Mtrx.nrows(),Mtrx.ncols())
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_d_rows = n
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_d_cols = n
+\end_layout
+
+\begin_layout Plain Layout
+
+    n_d_dpts = n
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the identity permutations hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    D = HypermatrixPermutation(range(n))
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Filling up the entries of the hypermatrix.
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(n_d_rows):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(n_d_cols):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(n_d_dpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+                if (D[i][j][k] != 0):
+\end_layout
+
+\begin_layout Plain Layout
+
+                    D[i][j][k] = Mtrx[min(i,k),max(i,k)]
+\end_layout
+
+\begin_layout Plain Layout
+
+    return D    
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We illustrate with the following few lines of codes how to generate a diagonal
+ 
+\begin_inset Formula $2\times2\times2$
+\end_inset
+
+ hypermatrices and verify their defining identity
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+# Generating a diagonal hypermatrices
+\end_layout
+
+\begin_layout Plain Layout
+
+Mtrx = Matrix(SR,MatrixGenerate(2, 3,"lambda"))
+\end_layout
+
+\begin_layout Plain Layout
+
+D  = DiagonalHypermatrix(Mtrx)
+\end_layout
+
+\begin_layout Plain Layout
+
+Dt = HypermatrixCyclicPermute(D)
+\end_layout
+
+\begin_layout Plain Layout
+
+Dtt= HypermatrixCyclicPermute(HypermatrixCyclicPermute(D))
+\end_layout
+
+\begin_layout Plain Layout
+
+Dc = HypermatrixProduct(Dt,Dtt,D)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+hence 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{D}=\sage{D}
+\end{equation}
+
+\end_inset
+
+and we observe that 
+\begin_inset Formula 
+\begin{equation}
+\circ\left(\mathbf{D}^{T},\,\mathbf{D}^{T^{2}},\,\mathbf{D}\right)=\mbox{HypermatrixProduct(Dt, Dtt, D)}=\sage{Dc}
+\end{equation}
+
+\end_inset
+
+and incidentally has the same entries as the hypermatrix 
+\begin_inset Formula $\mathbf{D}^{\star^{3}}$
+\end_inset
+
+ 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{D}^{\star^{3}}=\mbox{HypermatrixEntryExponent(D, 3)}=\sage{HypermatrixEntryExponent(D,3)}
+\end{equation}
+
+\end_inset
+
+We now implement procedures which enables us to constrast 
+\begin_inset Formula $2\times2$
+\end_inset
+
+ , 
+\begin_inset Formula $2\times2\times2$
+\end_inset
+
+, and so on type hypermatrices wich are orthogonal in the sense introduced
+ in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "GER"
+
+\end_inset
+
+.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def Orthogonal2x2x2Hypermatrix(t):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs an orthogonal third order hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    of size 2 by 2 by 2.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+     EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: t=var('t')
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: Orthogonal2x2x2Hypermatrix(t)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [[[cos(t)^(2/3),sin(t)^(2/3)],[sin(t)^(2/3), cos(t)^(2/3)]],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[[-sin(t)^(2/3),cos(t)^(2/3)],[sin(t)^(2/3),sin(t)^(2/3)]]]    
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+we also present here a parametrization of a subset of 
+\begin_inset Formula $3\times3\times3$
+\end_inset
+
+ orthogonal hypermatrix bellow
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def Orthogonal3x3x3Hypermatrix(t1,t2):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outputs an orthogonal third order hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    of size 3 by 3 by 3.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+     EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: t1,t2=var('t1,t2')
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: Orthogonal3x3x3Hypermatrix(t1,t2)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    c1=cos(t1)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+    s1=sin(t1)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+    c2=cos(t2)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+    s2=sin(t2)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [[[c1,s1*c2,0],[s1*c2,s1*s2,0],[s1*s2,exp(-I*2*pi/3)*c1,0]],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[[s1*s2,c1,exp(-I*2*pi/3)*s1*c2],[exp(I*2*pi/3)*c1,s1*c2,s1*s2],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[s1*c2,s1*s2,c1]],[[0,s1*s2,c1],[0,c1,s1*c2],[0,exp(I*2*pi/3)*s1*c2,s1*s2]]]
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+The use of the procedures for generating orthogonal hypermatrices are illustrate
+d bellow
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+theta = var('theta')
+\end_layout
+
+\begin_layout Plain Layout
+
+Q  = Orthogonal2x2x2Hypermatrix(theta)
+\end_layout
+
+\begin_layout Plain Layout
+
+Qt = HypermatrixCyclicPermute(Q)
+\end_layout
+
+\begin_layout Plain Layout
+
+Qtt= HypermatrixCyclicPermute(HypermatrixCyclicPermute(Q))
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+Expressing 
+\begin_inset Formula $2\times2\times2$
+\end_inset
+
+ orthogonal hypermatrices in term of the free parameter 
+\begin_inset Formula $\theta$
+\end_inset
+
+ we obtain 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{Q}\left(\theta\right)=\sage{Q}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\circ\left(\mathbf{Q}\left(\theta\right),\,\left[\mathbf{Q}\left(\theta\right)\right]^{T^{2}},\,\left[\mathbf{Q}\left(\theta\right)\right]^{T}\right)=\mbox{HypermatrixProduct(Q, Qtt, Qt)}=
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{HypermatrixProduct(Q,Qtt,Qt)}
+\end{equation}
+
+\end_inset
+
+We also illustrate the output of the procedure implemented above for generating
+ parametrization for 
+\begin_inset Formula $3\times3\times3$
+\end_inset
+
+ orthogonal hypermatrices
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+# Defining the Parametrization Variables
+\end_layout
+
+\begin_layout Plain Layout
+
+theta1,theta2=var('theta1,theta2')
+\end_layout
+
+\begin_layout Plain Layout
+
+c1=cos(theta1)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+s1=sin(theta1)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+c2=cos(theta2)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+s2=sin(theta2)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Parametrization of a orthogonal hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+U  = Orthogonal3x3x3Hypermatrix(theta1,theta2)
+\end_layout
+
+\begin_layout Plain Layout
+
+Ut = HypermatrixCyclicPermute(U)
+\end_layout
+
+\begin_layout Plain Layout
+
+Utt= HypermatrixCyclicPermute(HypermatrixCyclicPermute(U))
+\end_layout
+
+\begin_layout Plain Layout
+
+UUttUt = HypermatrixProduct(U,Utt,Ut)
+\end_layout
+
+\begin_layout Plain Layout
+
+for i in range(3):
+\end_layout
+
+\begin_layout Plain Layout
+
+    for j in range(3):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(3):
+\end_layout
+
+\begin_layout Plain Layout
+
+            UUttUt[i][j][k] = (UUttUt[i][j][k]).simplify_exp()
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We verify that the obtained 
+\begin_inset Formula $3\times3\times3$
+\end_inset
+
+ hypermatrix is indeed orthogonal via the following computation
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{0,0,0}=\sage{UUttUt[0][0][0]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{1,1,1}=\sage{UUttUt[1][1][1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{2,2,2}=\sage{UUttUt[2][2][2]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{0,0,1}=\sage{UUttUt[0][0][1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{0,0,2}=\sage{UUttUt[0][0][2]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{1,1,2}=\sage{UUttUt[1][1][2]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{1,1,0}=\sage{UUttUt[1][1][0]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{2,2,0}=\sage{UUttUt[2][2][0]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{2,2,1}=\sage{UUttUt[2][2][1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{0,1,2}=\sage{UUttUt[0][1][2]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\left[\circ\left(\mathbf{U},\,\mathbf{U}^{T^{2}},\,\mathbf{U}^{T}\right)\right]_{1,0,2}=\sage{UUttUt[1][0][2]}
+\end{equation}
+
+\end_inset
+
+In the remaining part of the package, we implement functions which relates
+ to genralizations to hypermatrices of the classic Cayley-Hamilton theorem
+ and to the notion of hypermatrix inversion.
+ We first start by implementing the function which creates a list of hypermatric
+es corresponding to all the possible product composition of the input hypermatri
+x 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixCayleyHamiltonList(A, n):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Outpts a list of hypermatrices of all product
+\end_layout
+
+\begin_layout Plain Layout
+
+    composition of order n from which it follows
+\end_layout
+
+\begin_layout Plain Layout
+
+    that n must be odd.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+     EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: A = HypermatrixGenerate(2,2,2,'a')
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: L = HypermatrixCayleyHamiltonList(A,3)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    if n == 1:
+\end_layout
+
+\begin_layout Plain Layout
+
+        return [A]
+\end_layout
+
+\begin_layout Plain Layout
+
+    else:
+\end_layout
+
+\begin_layout Plain Layout
+
+        gu = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(1,n,2):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in range(1,n-i,2):
+\end_layout
+
+\begin_layout Plain Layout
+
+                gu = gu + [HypermatrixProduct(g1,g2,g3) 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for g1 in HypermatrixCayleyHamiltonList(A,i) 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for g2 in HypermatrixCayleyHamiltonList(A,j) 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for g3 in HypermatrixCayleyHamiltonList(A,n-(i+j))]
+\end_layout
+
+\begin_layout Plain Layout
+
+        return gu
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+It then becomes possible to establish that the dimension of the span of
+ hypermatrix composition powers is maximal for generic 
+\begin_inset Formula $2\times2\times2$
+\end_inset
+
+ and 
+\begin_inset Formula $3\times3\times3$
+\end_inset
+
+ hypermatrices.
+ The lines of code bellow computes hypermatrix compositions and stacks the
+ resulting hypermatrices into a square matrix and computing the determinant
+ in order to assert that the matrix is full rank.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initializing an orthogonal hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+A = Orthogonal2x2x2Hypermatrix(e/pi) 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initialization of the list
+\end_layout
+
+\begin_layout Plain Layout
+
+L = HypermatrixCayleyHamiltonList(A,1)+HypermatrixCayleyHamiltonList(A,3)+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+HypermatrixCayleyHamiltonList(A,5)+HypermatrixCayleyHamiltonList(A,7)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initializing the index variables
+\end_layout
+
+\begin_layout Plain Layout
+
+Indx = Set(range(len(L))).subsets(8)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initialization of the of the matrix
+\end_layout
+
+\begin_layout Plain Layout
+
+M = Matrix(RR,identity_matrix(8,8))
+\end_layout
+
+\begin_layout Plain Layout
+
+cnt = 0
+\end_layout
+
+\begin_layout Plain Layout
+
+for index in Indx:
+\end_layout
+
+\begin_layout Plain Layout
+
+    if cnt < 10:
+\end_layout
+
+\begin_layout Plain Layout
+
+        M = M*Matrix(RR,[HypermatrixVectorize(L[i]) for i in index])
+\end_layout
+
+\begin_layout Plain Layout
+
+        cnt= cnt+1
+\end_layout
+
+\begin_layout Plain Layout
+
+    else:
+\end_layout
+
+\begin_layout Plain Layout
+
+        break
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Defining the Parametrization Variables
+\end_layout
+
+\begin_layout Plain Layout
+
+c1=cos(e/pi)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+s1=sin(e/pi)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+c2=cos(pi/e)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+s2=sin(pi/e)^(2/3)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Defining the unitary hypermatrices
+\end_layout
+
+\begin_layout Plain Layout
+
+U=[[[c1,s1*c2,0],[s1*c2,s1*s2,0],[s1*s2, exp(-I*2*pi/3)*c1,0]],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[[s1*s2,c1,exp(-I*2*pi/3)*s1*c2],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[exp(I*2*pi/3)*c1,s1*c2,s1*s2],[s1*c2,s1*s2,c1]],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[[0,s1*s2,c1],[0,c1,s1*c2],[0,exp(I*2*pi/3)*s1*c2,s1*s2]]]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+Lu = HypermatrixCayleyHamiltonList(U,1)+HypermatrixCayleyHamiltonList(U,3)+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+HypermatrixCayleyHamiltonList(U,5)+HypermatrixCayleyHamiltonList(U,7)+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+HypermatrixCayleyHamiltonList(U,9)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initializing the index variables
+\end_layout
+
+\begin_layout Plain Layout
+
+Indxu = Set(range(len(Lu))).subsets(27)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initialization of the of the matrix
+\end_layout
+
+\begin_layout Plain Layout
+
+Mu = Matrix(CC,identity_matrix(27,27))
+\end_layout
+
+\begin_layout Plain Layout
+
+cntu = 0
+\end_layout
+
+\begin_layout Plain Layout
+
+for index in Indxu:
+\end_layout
+
+\begin_layout Plain Layout
+
+    if cntu < 5:
+\end_layout
+
+\begin_layout Plain Layout
+
+        Mu = Mu*Matrix(CC,[HypermatrixVectorize(Lu[i]) for i in index])
+\end_layout
+
+\begin_layout Plain Layout
+
+        cntu = cntu+1
+\end_layout
+
+\begin_layout Plain Layout
+
+    else:
+\end_layout
+
+\begin_layout Plain Layout
+
+        break
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+The determinant of resulting matrix is given by 
+\begin_inset Formula 
+\begin{equation}
+\det\mathbf{M}=\sage{M.det()},
+\end{equation}
+
+\end_inset
+
+furthermore for 
+\begin_inset Formula $3\times3\times3$
+\end_inset
+
+ we have that 
+\begin_inset Formula 
+\begin{equation}
+\det\mathbf{M}^{\prime}=\sage{Mu.det()}
+\end{equation}
+
+\end_inset
+
+The very last piece of the current package corresponds to the hypermatrix
+ pseudo-inversion procedure.
+ The routine that we implement here will be predominantly numerical.
+ The notions of hypermatrix inverse pairs was first proposed in the work
+ of Battacharya and Mesner in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "BM2"
+
+\end_inset
+
+, we follow up by implementing here numerical routine for the computation
+ of pseudo-inverse pairs for 
+\begin_inset Formula $2\times2\times2$
+\end_inset
+
+ hypermatrices.
+\end_layout
+
+\begin_layout Standard
+We first start by implementing a constraint formator procedure which formats
+ a list of linear constraints into a system of linear equation in the canonical
+ form 
+\begin_inset Formula $\mathbf{A}\cdot\mathbf{x}=\mathbf{b}$
+\end_inset
+
+, the constraint formator will be curcial for formating the linear constraints
+ which arise from the hypermatrix inversion constraints.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def ConstraintFormator(CnstrLst, VrbLst):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Takes as input a List of linear constraints 
+\end_layout
+
+\begin_layout Plain Layout
+
+    and a list of variables and outputs matrix 
+\end_layout
+
+\begin_layout Plain Layout
+
+    and the right hand side vector associate
+\end_layout
+
+\begin_layout Plain Layout
+
+    with the matrix formulation of the constraints.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: x, y = var('x,y')
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: CnstrLst = [x+y==1, x-y==2]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: VrbLst = [x, y]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: [A,b] = ConstraintFormator(CnstrLst, VrbLst)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the Matrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    A=Matrix(CC,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst))
+)
+\end_layout
+
+\begin_layout Plain Layout
+
+    b=vector(CC, [eq.rhs() for eq in CnstrLst]).column()
+\end_layout
+
+\begin_layout Plain Layout
+
+    for r in range(len(CnstrLst)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for c in range(len(VrbLst)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            A[r,c] = diff((CnstrLst[r]).lhs(),VrbLst[c])
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [A,b]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+def ConstraintFormatorII(CnstrLst, VrbLst):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    Takes as input a List of linear constraints 
+\end_layout
+
+\begin_layout Plain Layout
+
+    and a list of variables and outputs matrix 
+\end_layout
+
+\begin_layout Plain Layout
+
+    and the right hand side vector associate
+\end_layout
+
+\begin_layout Plain Layout
+
+    with the matrix formulation of the constraints.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: x, y = var('x,y')
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: CnstrLst = [x+y==1, x-y==2]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: VrbLst = [x, y]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: [A,b] = ConstraintFormator(CnstrLst, VrbLst)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the Matrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    A=Matrix(SR,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst))
+)
+\end_layout
+
+\begin_layout Plain Layout
+
+    b=vector(SR, [eq.rhs() for eq in CnstrLst]).column()
+\end_layout
+
+\begin_layout Plain Layout
+
+    for r in range(len(CnstrLst)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for c in range(len(VrbLst)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            A[r,c] = diff((CnstrLst[r]).lhs(),VrbLst[c])
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [A,b]
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+Having implemented the constraint formator we are now ready to implement
+ the 3-hypermatrix pseudo-inversion subroutine.
+ The following equation constitutes the defining property of an inverse
+ pairs for 3-hypermatrices 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{B}$
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\forall\:\mathbf{M}\in\mathbb{C}^{n\times n\times n},\quad\mathbf{M}=\circ\left(\circ\left(\mathbf{M},\mathbf{A},\mathbf{B}\right),\mathbf{U},\mathbf{V}\right)
+\end{equation}
+
+\end_inset
+
+consequently as suggested by the equality above, the ordered pair of hypermatric
+es 
+\begin_inset Formula $\left(\mathbf{U},\mathbf{V}\right)$
+\end_inset
+
+ is said to denote inverse pairs associated with the ordered hypermatrix
+ pair 
+\begin_inset Formula $\left(\mathbf{A},\mathbf{B}\right)$
+\end_inset
+
+.
+ in the case where no such hypermatrices pairs exist for the pair 
+\begin_inset Formula $\left(\mathbf{A},\,\mathbf{B}\right)$
+\end_inset
+
+ we say that the pair 
+\begin_inset Formula $\left(\mathbf{A},\mathbf{B}\right)$
+\end_inset
+
+ is non invertible and in such case we may compute a pseudo-inverse inverse
+ pair as follows.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def HypermatrixPseudoInversePairs(A,B):
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+     Outputs the pseudo inverse pairs associated with the input pairs of
+ matrices
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    EXAMPLES:
+\end_layout
+
+\begin_layout Plain Layout
+
+    ::
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: A1=[[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39
+605960486710756]]
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+,[[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]
+]]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: A2=[[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.
+01568017636082064]]
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+,[[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sage: [B1,B2]=HypermatrixPseudoInversePairs(A1,A2)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    AUTHORS:
+\end_layout
+
+\begin_layout Plain Layout
+
+    - Edinah K.
+ Gnang and Ori Parzanchevski
+\end_layout
+
+\begin_layout Plain Layout
+
+    """
+\end_layout
+
+\begin_layout Plain Layout
+
+    sz = len(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the list of linear constraints
+\end_layout
+
+\begin_layout Plain Layout
+
+    CnstrLst = []
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initilizing the variable list
+\end_layout
+
+\begin_layout Plain Layout
+
+    Vrbls  = [var('ln_al'+str(i)+str(j)+str(k)) 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for i in range(sz) for j in range(sz) for k in range(sz)]+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[var('ln_bt'+str(i)+str(j)+str(k)) for i in range(sz) for j in range(sz)
+ 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for k in range(sz)]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    for m in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for p in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for n in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+                V=Matrix(CC, sz, sz, [(A[m][k1][k0])*(B[k0][k1][p]) 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+for k0 in range(sz) for k1 in range(sz)]).inverse()
+\end_layout
+
+\begin_layout Plain Layout
+
+                CnstrLst=CnstrLst+[
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+var('ln_al'+str(m)+str(n)+str(k1))+var('ln_bt'+str(k1)+str(n)+str(p))==
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+ln(V[k1,n])  for k1 in range(sz)]
+\end_layout
+
+\begin_layout Plain Layout
+
+    [A,b]=ConstraintFormator(CnstrLst,Vrbls)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Importing the Numerical Python package
+\end_layout
+
+\begin_layout Plain Layout
+
+    # for computing the matrix pseudo inverse
+\end_layout
+
+\begin_layout Plain Layout
+
+    import numpy
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    sln = matrix(numpy.linalg.pinv(A))*b
+\end_layout
+
+\begin_layout Plain Layout
+
+    R1 = HypermatrixGenerateAllZero(sz,sz,sz)
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+                R1[i][j][k] = exp(sln[i*sz^2+j*sz^1+k*sz^0,0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    R2 = HypermatrixGenerateAllZero(sz, sz, sz)
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(sz):
+\end_layout
+
+\begin_layout Plain Layout
+
+                R2[i][j][k] = exp(sln[sz^3+i*sz^2+j*sz^1+k*sz^0,0])
+\end_layout
+
+\begin_layout Plain Layout
+
+    return [R1,R2]
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+To illustrate how the procedure implemented above are used, we compute for
+ the inverse pair corresponding to the hypermatrix pair 
+\begin_inset Formula $\left(\mathbf{A}_{1},\,\mathbf{A}_{2}\right)$
+\end_inset
+
+ specified bellow
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+# Building from the example mentioned in the implementation
+\end_layout
+
+\begin_layout Plain Layout
+
+# we consider the hypermatrices
+\end_layout
+
+\begin_layout Plain Layout
+
+A1=[[[0.1631135370902057,0.11600112072013125],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[0.9823708115400902,0.39605960486710756]],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[[0.061860929755424676,0.2325542810173995],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[0.39111210957450926,0.2019809359102137]]]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+A2=[[[0.15508921433883183,0.17820377184410963],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[0.48648171594508205,0.01568017636082064]],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[[0.8250247759993575,0.1938307874191597],
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[0.23867299119274843,0.3935578730402869]]]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# Numerical computation of the hypermatrix inverse pairs
+\end_layout
+
+\begin_layout Plain Layout
+
+[B1,B2]=HypermatrixPseudoInversePairs(A1,A2)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# To appreciate how good the numerical approximation of the
+\end_layout
+
+\begin_layout Plain Layout
+
+# inverse pair is we generate the generic symbolic hypermatrix M
+\end_layout
+
+\begin_layout Plain Layout
+
+M0 = HypermatrixGenerate(2,2,2,'m')
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+# We would want to compare the symbolic hypermatrix M to the product
+\end_layout
+
+\begin_layout Plain Layout
+
+M1 = HypermatrixProduct(M0,A1,A2)
+\end_layout
+
+\begin_layout Plain Layout
+
+M2 = HypermatrixProduct(M1,B1,B2)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+unfortunately the hypermatrix pair 
+\begin_inset Formula $\left(\mathbf{A}_{1},\,\mathbf{A}_{2}\right)$
+\end_inset
+
+ (chosen here randomly above) admits no inverse pair and hence starting
+ from the generic symbolic hypermatrix 
+\begin_inset Formula $\mathbf{M}$
+\end_inset
+
+ 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{M}=\sage{M0}
+\end{equation}
+
+\end_inset
+
+we illustrate the error induced by the pseudo-inversion by comparing to
+ 
+\begin_inset Formula $\mathbf{M}$
+\end_inset
+
+ the 3-hypermatrix product computation 
+\begin_inset Formula $\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)$
+\end_inset
+
+ with entries given by 
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{0,0,0}=\sage{((M2[0][0][0]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[0][0][0]).operands())[1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{0,0,1}=\sage{((M2[0][0][1]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[0][0][1]).operands())[1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{0,1,0}=\sage{((M2[0][1][0]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[0][1][0]).operands())[1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{0,1,1}=\sage{((M2[0][1][1]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[0][1][1]).operands())[1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{1,0,0}=\sage{((M2[1][0][0]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[1][0][0]).operands())[1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{1,0,1}=\sage{((M2[1][0][1]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[1][0][1]).operands())[0]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{1,1,0}=\sage{((M2[1][1][0]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[1][1][0]).operands())[1]}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\left[\circ\left(\circ\left(\mathbf{M},\mathbf{A}_{1},\mathbf{A}_{2}\right),\mathbf{B}_{1},\mathbf{B}_{2}\right)\right]_{1,1,1}=\sage{((M2[1][1][1]).operands())[0]}+
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\sage{((M2[1][1][1]).operands())[1]}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Hypermatrix class
+\end_layout
+
+\begin_layout Standard
+As a summary for the hypermatrix package for the convenience of the user
+ we encapsulate all the pieces into a single class all the precedures implemente
+d above.
+ This is particularly useful for the purpose of setting up computer experiments
+ with the proposed hypermatrix package.
+ 
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+class HM:
+\end_layout
+
+\begin_layout Plain Layout
+
+    """HM class"""
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __init__(self,*args):
+\end_layout
+
+\begin_layout Plain Layout
+
+		# Single argument class constructor specification.
+\end_layout
+
+\begin_layout Plain Layout
+
+        if len(args) == 1:
+\end_layout
+
+\begin_layout Plain Layout
+
+            inp = args[0]
+\end_layout
+
+\begin_layout Plain Layout
+
+            if type(inp)==type(Matrix(SR,2,1,[var('x'),var('y')])) or 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
+\end_layout
+
+\begin_layout Plain Layout
+
+                self.hm=DiagonalHypermatrix(inp)
+\end_layout
+
+\begin_layout Plain Layout
+
+            elif type(inp) == list:
+\end_layout
+
+\begin_layout Plain Layout
+
+                self.hm = inp
+\end_layout
+
+\begin_layout Plain Layout
+
+            else:
+\end_layout
+
+\begin_layout Plain Layout
+
+                raise ValueError, 
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+"Expected either a list or and an object of type Matrix"
+\end_layout
+
+\begin_layout Plain Layout
+
+            return
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Two or more arguments class constructor
+\end_layout
+
+\begin_layout Plain Layout
+
+        s = args[-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        dims = args[:-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        if s == 'one':
+\end_layout
+
+\begin_layout Plain Layout
+
+            self.hm = apply(HypermatrixGenerateAllOne, dims)
+\end_layout
+
+\begin_layout Plain Layout
+
+        elif s == 'zero':
+\end_layout
+
+\begin_layout Plain Layout
+
+            self.hm = apply(HypermatrixGenerateAllZero, dims)
+\end_layout
+
+\begin_layout Plain Layout
+
+        elif s == 'ortho':
+\end_layout
+
+\begin_layout Plain Layout
+
+            if len(dims) == 1:
+\end_layout
+
+\begin_layout Plain Layout
+
+                self.hm=Orthogonal2x2x2Hypermatrix(dims[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+            elif len(dims) == 2:
+\end_layout
+
+\begin_layout Plain Layout
+
+                self.hm=Orthogonal3x3x3Hypermatrix(dims[0],dims[1])
+\end_layout
+
+\begin_layout Plain Layout
+
+            else:
+\end_layout
+
+\begin_layout Plain Layout
+
+                raise ValueError,
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+"ortho not supported for order %d tensors" % len(dims)
+\end_layout
+
+\begin_layout Plain Layout
+
+        elif s == 'perm':
+\end_layout
+
+\begin_layout Plain Layout
+
+            self.hm=HypermatrixPermutation(dims[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+        elif s == 'kronecker':
+\end_layout
+
+\begin_layout Plain Layout
+
+            self.hm=HypermatrixKroneckerDelta(dims[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+        elif s == 'sym':
+\end_layout
+
+\begin_layout Plain Layout
+
+            if len(dims) == 2:
+\end_layout
+
+\begin_layout Plain Layout
+
+                self.hm=SymHypermatrixGenerate(dims[0],dims[1])
+\end_layout
+
+\begin_layout Plain Layout
+
+            else :
+\end_layout
+
+\begin_layout Plain Layout
+
+                raise ValueError,
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+"kronecker not supported for order %d tensors" % len(dims)
+\end_layout
+
+\begin_layout Plain Layout
+
+        else:
+\end_layout
+
+\begin_layout Plain Layout
+
+            self.hm=apply(HypermatrixGenerate, args)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __repr__(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return `self.hm`
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __add__(self, other):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixAdd(self,other)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __neg__(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixScale(self.hm,-1)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __sub__(self, other):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-1))
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __mul__(self, other):
+\end_layout
+
+\begin_layout Plain Layout
+
+        if other.__class__.__name__=='HM':
+\end_layout
+
+\begin_layout Plain Layout
+
+            return HM(GeneralHypermatrixHadamardProduct(self,other))
+\end_layout
+
+\begin_layout Plain Layout
+
+        elif other.__class__.__name__=='tuple':
+\end_layout
+
+\begin_layout Plain Layout
+
+            # This function takes a a list as intput
+\end_layout
+
+\begin_layout Plain Layout
+
+            l = other
+\end_layout
+
+\begin_layout Plain Layout
+
+            return GeneralHypermatrixProduct(self,*l)
+\end_layout
+
+\begin_layout Plain Layout
+
+        else:
+\end_layout
+
+\begin_layout Plain Layout
+
+            return GeneralHypermatrixScale(self,other)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __rmul__(self, a):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return self*a
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __getitem__(self,i):
+\end_layout
+
+\begin_layout Plain Layout
+
+        if i.__class__.__name__=='tuple':
+\end_layout
+
+\begin_layout Plain Layout
+
+            tmp = self.hm
+\end_layout
+
+\begin_layout Plain Layout
+
+            for j in i:
+\end_layout
+
+\begin_layout Plain Layout
+
+                tmp = tmp[j]
+\end_layout
+
+\begin_layout Plain Layout
+
+            return tmp
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __setitem__(self, i, v):
+\end_layout
+
+\begin_layout Plain Layout
+
+        if   i.__class__.__name__=='tuple':
+\end_layout
+
+\begin_layout Plain Layout
+
+            tmp = self.hm
+\end_layout
+
+\begin_layout Plain Layout
+
+            while len(i)>1:
+\end_layout
+
+\begin_layout Plain Layout
+
+                tmp = tmp[i[0]]
+\end_layout
+
+\begin_layout Plain Layout
+
+                i = i[1:]
+\end_layout
+
+\begin_layout Plain Layout
+
+            tmp[i[0]] = v
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def __call__(self, *inpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+        # This function takes a a list as intput
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixProduct(self, *inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def hprod(self,*inpts):
+\end_layout
+
+\begin_layout Plain Layout
+
+        # This function takes a a list as intput
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixProduct(self,*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def hprod3b(self, b, c, t):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return HM(HypermatrixProductB(self.hm, b.hm, c.hm, t.hm))
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def elementwise_product(self,B):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixHadamardProduct(self,B)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def elementwise_exponent(self,s):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixExponent(self,s)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def elementwise_base_exponent(self,s):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return GeneralHypermatrixBaseExponent(self,s)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def transpose(self, i=1):
+\end_layout
+
+\begin_layout Plain Layout
+
+        t = Integer(mod(i, self.order()))
+\end_layout
+
+\begin_layout Plain Layout
+
+        A = self
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(t):
+\end_layout
+
+\begin_layout Plain Layout
+
+            A = GeneralHypermatrixCyclicPermute(A)
+\end_layout
+
+\begin_layout Plain Layout
+
+        return A
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def nrows(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return len(self.hm)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def ncols(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return len(self.hm[0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def ndpts(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return len(self.hm[0][0])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def n(self,i):
+\end_layout
+
+\begin_layout Plain Layout
+
+        tmp = self.listHM()
+\end_layout
+
+\begin_layout Plain Layout
+
+        for j in range(i):
+\end_layout
+
+\begin_layout Plain Layout
+
+            tmp = tmp[0]
+\end_layout
+
+\begin_layout Plain Layout
+
+        return len(tmp)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def list(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        lst = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        l = [self.n(i) for i in range(self.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Main loop canonicaly listing the elements
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+            lst.append(self[tuple(entry)])
+\end_layout
+
+\begin_layout Plain Layout
+
+        return lst
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def listHM(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        return self.hm
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def cayley_hamilton_list(self,n):
+\end_layout
+
+\begin_layout Plain Layout
+
+        tmp = HypermatrixCayleyHamiltonList(self.hm,n)
+\end_layout
+
+\begin_layout Plain Layout
+
+        return [HM(h) for h in tmp]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def cayley_hamilton_mtrx(self,itr,bnd):
+\end_layout
+
+\begin_layout Plain Layout
+
+        tmp = []
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(itr):
+\end_layout
+
+\begin_layout Plain Layout
+
+            tmp = tmp + HypermatrixCayleyHamiltonList(self.hm, 2*i+1)
+\end_layout
+
+\begin_layout Plain Layout
+
+        return Matrix([HM(h).list() for h in tmp[0:bnd]])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    def order(self):
+\end_layout
+
+\begin_layout Plain Layout
+
+        cnt = 0
+\end_layout
+
+\begin_layout Plain Layout
+
+        H = self.listHM()
+\end_layout
+
+\begin_layout Plain Layout
+
+        while type(H) == type([]):
+\end_layout
+
+\begin_layout Plain Layout
+
+            H = H[0]
+\end_layout
+
+\begin_layout Plain Layout
+
+            cnt = cnt+1
+\end_layout
+
+\begin_layout Plain Layout
+
+        return cnt
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We implement also some additional auxiliary special functions specifically
+ used by the class for dealing with hypermatrices of order greater then
+ 
+\begin_inset Formula $3$
+\end_inset
+
+.
+ We start by implementing a general hypermatrix product operation which
+ incorporate matrix and 3-hypermatrix products as special cases and therfore
+ captures the full Bhattacharya-Mesner algebra.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralHypermatrixProduct(*args):
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the list specifying the dimensions of the output
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [(args[i]).n(i) for i in range(len(args))]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the input for generating a symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    inpts = l+['zero']
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    Rh = HM(*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Main loop performing the assignement
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+prod([(args[j]).n(Integer(mod(j+1,len(args)))) for j in range(len(args))])):
+\end_layout
+
+\begin_layout Plain Layout
+
+        entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        if len(args)<2:
+\end_layout
+
+\begin_layout Plain Layout
+
+            raise ValueError, "The number of operands must be >= 2"
+\end_layout
+
+\begin_layout Plain Layout
+
+        elif len(args) >= 2:
+\end_layout
+
+\begin_layout Plain Layout
+
+            Rh[tuple(entry)]=sum(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[prod([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
+\end_layout
+
+\begin_layout Plain Layout
+
+    return Rh
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+We also implement the more generally cyclic action on arbitrary order hypermatri
+ces.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralHypermatrixCyclicPermute(A):
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the list specifying the dimensions of the output
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [A.n(i) for i in range(A.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = l[1:]+[l[0]]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the input for generating a symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    inpts = l+['r']
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    Rh = HM(*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Main loop performing the transposition of the entries
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Performing the transpose
+\end_layout
+
+\begin_layout Plain Layout
+
+        Rh[tuple(entry)]=A[tuple([entry[len(entry)-1]]+entry[:len(entry)-1])]
+\end_layout
+
+\begin_layout Plain Layout
+
+    return Rh
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+similarly the scaling function will be given by
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralHypermatrixScale(A,s):
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the list specifying the dimensions of the output
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [A.n(i) for i in range(A.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the input for generating a symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    inpts = l+['r']
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    Rh = HM(*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Main loop performing the transposition of the entries
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Performing the computation
+\end_layout
+
+\begin_layout Plain Layout
+
+        Rh[tuple(entry)]=s*A[tuple(entry)]
+\end_layout
+
+\begin_layout Plain Layout
+
+    return Rh
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+the function which compute the exponentiation of the entries for arbitrary
+ order hypermatrices is given bellow
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralHypermatrixExponent(A,s):
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the list specifying the dimensions of the output
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [A.n(i) for i in range(A.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the input for generating a symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    inpts = l+['r']
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    Rh = HM(*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Main loop performing the transposition of the entries
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Performing computation
+\end_layout
+
+\begin_layout Plain Layout
+
+        Rh[tuple(entry)]=(A[tuple(entry)])^s
+\end_layout
+
+\begin_layout Plain Layout
+
+    return Rh
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+for accounting for the non commutativeity of the exponentiation operation
+ we implement the other function
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralHypermatrixBaseExponent(A,s):
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initialization of the list specifying the dimensions of the output
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [A.n(i) for i in range(A.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the input for generating a symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    inpts = l+['r']
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    Rh = HM(*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Main loop performing the transposition of the entries
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Performing computation
+\end_layout
+
+\begin_layout Plain Layout
+
+        Rh[tuple(entry)]=s^(A[tuple(entry)])
+\end_layout
+
+\begin_layout Plain Layout
+
+    return Rh
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+Similarly arbitrary order hypermatrix addition is implemented bellow as
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralHypermatrixAdd(A,B):
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initialization of the list specifying the dimensions of the output
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [A.n(i) for i in range(A.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    s = [B.n(i) for i in range(B.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Testing the dimensions
+\end_layout
+
+\begin_layout Plain Layout
+
+    x = var('x')
+\end_layout
+
+\begin_layout Plain Layout
+
+    if(sum([l[i]*x^i for i in range(len(l))])==sum(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[s[i]*x^i for i in range(len(s))])):
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initializing the input for generating a symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        inpts = l+['r']
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        Rh = HM(*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Main loop performing the transposition of the entries
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+            Rh[tuple(entry)]=A[tuple(entry)]+B[tuple(entry)]
+\end_layout
+
+\begin_layout Plain Layout
+
+        return Rh
+\end_layout
+
+\begin_layout Plain Layout
+
+    else:
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError,
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+"The Dimensions of the input hypermatrices must match."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+quite similarly the Hadamard product is given by
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralHypermatrixHadamardProduct(A,B):
+\end_layout
+
+\begin_layout Plain Layout
+
+# Initialization of the list specifying the dimensions of the output
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [A.n(i) for i in range(A.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    s = [B.n(i) for i in range(B.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Testing the dimensions
+\end_layout
+
+\begin_layout Plain Layout
+
+    x = var('x')
+\end_layout
+
+\begin_layout Plain Layout
+
+    if(sum([l[i]*x^i for i in range(len(l))])==sum(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[s[i]*x^i for i in range(len(s))])):
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initializing the input for generating a symbolic hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        inpts = l+['r']
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Initialization of the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+        Rh = HM(*inpts)
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Main loop performing the transposition of the entries
+\end_layout
+
+\begin_layout Plain Layout
+
+        for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+            for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+            Rh[tuple(entry)]=A[tuple(entry)]+B[tuple(entry)]
+\end_layout
+
+\begin_layout Plain Layout
+
+        return Rh
+\end_layout
+
+\begin_layout Plain Layout
+
+    else:
+\end_layout
+
+\begin_layout Plain Layout
+
+        raise ValueError,
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+"The Dimensions of the input hypermatrices must match."
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+As a way of illustrating the existence of arbitrary order hypermatrices
+ we implement a procedure for parametrizing ( albeit somewhat redundantly
+ in the number of variables ) hypermatrices of the size 
+\begin_inset Formula $2\times2\times2\times\cdots\times2$
+\end_inset
+
+.
+ and therefore providing a constructif proof of existence of arbitrary order
+ orthogonal hypermatrices.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{sageblock}
+\end_layout
+
+\begin_layout Plain Layout
+
+def GeneralOrthogonalHypermatrix(od):
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initializing the hypermatrix
+\end_layout
+
+\begin_layout Plain Layout
+
+    Q = apply(HM,[2 for i in range(od)]+['q'])
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Initilizing the list of variable
+\end_layout
+
+\begin_layout Plain Layout
+
+    VrbLst = Q.list()
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Reinitializing of Q by exponentiation
+\end_layout
+
+\begin_layout Plain Layout
+
+    Q = Q.elementwise_base_exponent(e)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Computing the product
+\end_layout
+
+\begin_layout Plain Layout
+
+    Eq = apply(GeneralHypermatrixProduct,[Q.transpose(j) for j in range(od,0,-1)]
+)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Writting up the constraints
+\end_layout
+
+\begin_layout Plain Layout
+
+    LeQ = (Set(Eq.list())).list()
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Removing the normalization constraints
+\end_layout
+
+\begin_layout Plain Layout
+
+    LeQ.remove(e^(od*var('q'+''.join(['0' for i in range(od)])))+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+e^(od*var('q01'+''.join(['0' for i in range(od-2)]))))
+\end_layout
+
+\begin_layout Plain Layout
+
+    LeQ.remove( e^(od*var('q10'+''.join(['1' for i in range(od-2)])))+
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+e^(od*var('q'+''.join(['1' for i in range(od)]))))
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Filling up the linear constraints
+\end_layout
+
+\begin_layout Plain Layout
+
+    CnstrLst= []
+\end_layout
+
+\begin_layout Plain Layout
+
+    for f in LeQ:
+\end_layout
+
+\begin_layout Plain Layout
+
+        CnstrLst.append(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+ln((f.operands())[0]).simplify_exp()-I*pi-ln((f.operands())[1]).simplify_exp()==0)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Directly solving the constraints
+\end_layout
+
+\begin_layout Plain Layout
+
+    Sl = solve(CnstrLst,VrbLst)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+    # Main loop performing the substitution of the entries
+\end_layout
+
+\begin_layout Plain Layout
+
+    Lr = [var('r'+str(i)) for i in range(1,2^od+1)]
+\end_layout
+
+\begin_layout Plain Layout
+
+    l = [Q.n(i) for i in range(Q.order())]
+\end_layout
+
+\begin_layout Plain Layout
+
+    for i in range(prod(l)):
+\end_layout
+
+\begin_layout Plain Layout
+
+        # Turning the index i into an hypermatrix array location
+\end_layout
+
+\begin_layout Plain Layout
+
+        # using the decimal encoding trick
+\end_layout
+
+\begin_layout Plain Layout
+
+        entry = [mod(i,l[0])]
+\end_layout
+
+\begin_layout Plain Layout
+
+        sm = Integer(mod(i,l[0]))
+\end_layout
+
+\begin_layout Plain Layout
+
+        for k in range(len(l)-1):
+\end_layout
+
+\begin_layout Plain Layout
+
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+\end_layout
+
+\begin_layout Plain Layout
+
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+\end_layout
+
+\begin_layout Plain Layout
+
+        Q[tuple(entry)]=Q[tuple(entry)].subs(
+\backslash
+
+\end_layout
+
+\begin_layout Plain Layout
+
+dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).simplify_exp()
+\end_layout
+
+\begin_layout Plain Layout
+
+    return Q
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{sageblock}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+Acknowledgments
+\end_layout
+
+\begin_layout Standard
+We would like to thank the IAS for providing excellent working conditions.
+ This material is based upon work supported by the National Science Foundation
+ under agreements Princeton University Prime Award No.
+ CCF-0832797 and Sub-contract No.
+ 00001583.
+ Any opinions, findings and conclusions or recommendations expressed in
+ this material are those of the authors and do not necessarily reflect the
+ views of the National Science Foundation.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "B"
+key "B"
+
+\end_inset
+
+ P.
+ Bhattacharya, 
+\begin_inset Quotes eld
+\end_inset
+
+A new 3-D transform using a ternary product,
+\begin_inset Quotes erd
+\end_inset
+
+ IEEE Trans.
+ on Signal Processing 43(12):3081-3084, 1995.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "BM1"
+key "BM1"
+
+\end_inset
+
+ D.
+ M.
+ Mesner and P.
+ Bhattacharya, 
+\begin_inset Quotes eld
+\end_inset
+
+Association schemes on triples and a ternary algebra,
+\begin_inset Quotes erd
+\end_inset
+
+ J.
+ Comb.
+ Theory, ser.
+ A, vol.
+ 55, pp.
+ 204-234, 1990.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "BM2"
+key "BM2"
+
+\end_inset
+
+ D.
+ M.
+ Mesner and P.
+ Bhattacharya, 
+\begin_inset Quotes eld
+\end_inset
+
+A ternary algebra arising from an association scheme on triples,
+\begin_inset Quotes erd
+\end_inset
+
+ J.
+ Algebra.
+ vol.
+ 164, no.
+ 1 pp.
+ 595-613, 1994.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "GER"
+key "GER"
+
+\end_inset
+
+ E.
+ K.
+ Gnang, A.
+ Elgammal and V.
+ Retakh, 
+\begin_inset Quotes eld
+\end_inset
+
+A Spectral Theory for Tensors
+\begin_inset Quotes erd
+\end_inset
+
+ Annales de la faculté des sciences de Toulouse Sér.
+ 6, 20 no.
+ 4, p.
+ 801-841, 2011.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "K"
+key "K"
+
+\end_inset
+
+ D.
+ E.
+ Knuth, 
+\begin_inset Quotes eld
+\end_inset
+
+Literate Programming
+\begin_inset Quotes erd
+\end_inset
+
+ (Stanford, California: Center for the Study of Language and Information,
+ 1992)
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "L"
+key "L"
+
+\end_inset
+
+ L.-H.
+ Lim, "Tensors and hypermatrices," in: L.
+ Hogben (Ed.), Handbook of Linear Algebra, 2nd Ed., CRC Press, Boca Raton,
+ FL, 2013.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "LQ"
+key "LQ"
+
+\end_inset
+
+ L.
+ Qi, 
+\begin_inset Quotes eld
+\end_inset
+
+The Spectral Theory of Tensors
+\begin_inset Quotes erd
+\end_inset
+
+, preprint arXiv:1201.3424 [math.SP], 2012.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "S6"
+key "S6"
+
+\end_inset
+
+ W.
+\begin_inset space \thinspace{}
+\end_inset
+
+A.
+ Stein et
+\begin_inset space ~
+\end_inset
+
+al., 
+\emph on
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+S
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+age 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+M
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+athematics 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+S
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+oftware (
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+V
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+ersion 6.0)
+\emph default
+, The Sage Development Team, ( 2013 ) , 
+\family typewriter
+http://www.sagemath.org
+\family default
+.
+\end_layout
+
+\begin_layout Bibliography
+\labelwidthstring References
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+label "Z"
+key "Z"
+
+\end_inset
+
+ D.
+ Zeilberger, "[Contemporary Pure] Math Is Far Less Than the Sum of Its [Too
+ Numerous] Parts", Opinion.
+ Vol.
+ 60 Iss.
+ 10, Notices of the AMS.
+ December 2013 
+\end_layout
+
+\end_body
+\end_document
