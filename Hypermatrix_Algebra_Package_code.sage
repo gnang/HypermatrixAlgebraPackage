@@ -1284,7 +1284,8 @@ type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
         # the image size
         #X = pylab.imread(image_name)
         X = misc.toimage(pylab.array(self.listHM()))
-        X.save(filename) 
+        X.save(filename)
+
 
 # Implementing the General version of the Hypermatrix product 
 # I now need to test this implementation
@@ -1800,6 +1801,157 @@ def GeneralOrthogonalHypermatrix(od):
         entry[1] = 0
         U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
     return U
+
+def DFT_image_resizer(sz, dm):
+    if mod(sz,dm) == 0:
+        # Initializing the identity matrix of the appropriate size
+        Idm = identity_matrix(Integer(sz/dm))
+        # Computing the Kronecker product with the hadamard 2x2 matrix
+        Rs = Idm.tensor_product(Matrix(SR, dm, dm, [exp(I*2*pi*u*v/dm) for u in range(dm) for v in range(dm)]))
+        # Permuting the colum of the matrix in order to put the resized
+        # image in the top left corner of the image
+        for i in range(1,Integer(sz/dm)):
+            tmp = Rs[:,i]
+            Rs[:,i] = Rs[:,dm*i]
+            Rs[:,dm*i] = tmp
+        return [HM([[(Rs[i,:]).list() for i in range(sz)] for j in range(3)]).transpose(), HM([[((Rs.transpose())[i,:]).list() for i in range(sz)] for j in range(3)]).transpose()]
+    else:
+        print 'Dimension mismatch !!'  
+
+def channel_product(A,B):
+    P0 = HM(A.n(0),A.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            P0[i,j]=A[i,j,0]
+    P1 = HM(A.n(0),A.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            P1[i,j]=A[i,j,1]
+    P2 = HM(A.n(0),A.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            P2[i,j]=A[i,j,2]
+    Q0 = HM(B.n(0),B.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            Q0[i,j]=B[i,j,0]
+    Q1 = HM(B.n(0),B.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            Q1[i,j]=B[i,j,1]
+    Q2 = HM(B.n(0),B.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            Q2[i,j]=B[i,j,2]
+    R0 = Matrix(SR,P0.listHM())*Matrix(SR,Q0.listHM())
+    R1 = Matrix(SR,P1.listHM())*Matrix(SR,Q1.listHM())
+    R2 = Matrix(SR,P2.listHM())*Matrix(SR,Q2.listHM())
+    return HM([[(R0[i,:]).list() for i in range(A.n(1))],[(R1[i,:]).list() for i in range(A.n(1))],[(R2[i,:]).list() for i in range(A.n(1))]]).transpose()
+
+# first order Lagrange interpolation
+def lagrange1t(u0, m0):
+    var('x0')
+    f = 1
+    for m in range(m0):
+        if(m!=u0):
+            f = f*(exp(I*2*pi*(x0/m0+0/2)) + exp(I*2*pi*(m/m0+1/2)))/(exp(I*2*pi*(u0/m0+0/2))+ exp(I*2*pi*(m/m0+1/2)))
+    return f
+
+# Secom2 order Lagrange interpolation
+def lagrange2t(u0, m0, u1, m1):
+    var('x0,x1')
+    f = 1
+    for m in range(m0):
+        for n in range(m1):
+            if(m!=u0 or n!=u1):
+                 f = f*(exp(I*2*pi*((x0/m0)^2+(n/m1)+0/3)) + exp(I*2*pi*((m/m0)^2+(x1/m1)+1/3)) + exp(I*2*pi*((m/m0)^2+(n/m1)+2/3)))/(exp(I*2*pi*((u0/m0)^2+(n/m1)+0/3))+ exp(I*2*pi*((m/m0)^2+(u1/m1)+1/3)) + exp(I*2*pi*((m/m0)^2+(n/m1)+2/3)))
+    return f
+
+# Third order Lagrange interpolation
+def lagrange3t(u0, m0, u1, m1, u2, m2):
+    var('x0,x1,x2')
+    f = 1
+    for m in range(m0):
+        for n in range(m1):
+            for p in range(m2):
+                if(m!=u0 or n!=u1 or p!=u2):
+                    f = f*((exp(I*2*pi*((x0/m0)^3+(n/m1)^2+(p/m2)^1+0/4))+exp(I*2*pi*((m/m0)^3+(x1/m1)^2+(p/m2)^1+1/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(x2/m2)^1+2/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(p/m2)^1+3/4))))/((exp(I*2*pi*((u0/m0)^3+(n/m1)^2+(p/m2)^1+0/4))+exp(I*2*pi*((m/m0)^3+(u1/m1)^2+(p/m2)^1+1/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(u2/m2)^1+2/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(p/m2)^1+3/4))))
+    return f
+
+# Fourth order Lagrange interpolation
+def lagrange4t(u0, m0, u1, m1, u2, m2, u3, m3):
+    var('x0,x1,x2,x3')
+    f = 1
+    for m in range(m0):
+        for n in range(m1):
+            for p in range(m2):
+                for q in range(m3):
+                    if(m!=u0 or n!=u1 or p!=u2 or q!=u3):
+                        f = f*(exp(I*2*pi*((x0/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+0/5))+exp(I*2*pi*((m/m0)^4+(x1/m1)^3+(p/m2)^2+(q/m3)^1+1/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(x2/m2)^2+(q/m3)^1+2/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(x3/m3)^1+3/5))+ exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+4/5)))/(exp(I*2*pi*((u0/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+0/5))+exp(I*2*pi*((m/m0)^4+(u1/m1)^3+(p/m2)^2+(q/m3)^1+1/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(u2/m2)^2+(q/m3)^1+2/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(u3/m3)^1+3/5))+ exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+4/5)))
+    return f
+
+# Fourth order Lagrange interpolation
+def lagrange5t(u0, m0, u1, m1, u2, m2, u3, m3, u4, m4):
+    var('x0,x1,x2,x3,x4')
+    f = 1
+    for m in range(m0):
+        for n in range(m1):
+            for p in range(m2):
+                for q in range(m3):
+                    for r in range(m4):
+                        if(m!=u0 or n!=u1 or p!=u2 or q!=u3 or r!=u4):
+                            f = f*(exp(I*2*pi*((x0/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+0/6))+exp(I*2*pi*((m/m0)^5+(x1/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+1/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(x2/m2)^3+(q/m3)^2+(r/m4)^1+2/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(x3/m3)^2+(r/m4)^1+3/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(x4/m4)^1+4/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+5/6)))/(exp(I*2*pi*((u0/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+0/6))+exp(I*2*pi*((m/m0)^5+(u1/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+1/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(u2/m2)^3+(q/m3)^2+(r/m4)^1+2/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(u3/m3)^2+(r/m4)+3/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(u4/m4)+4/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)+5/6)))
+    return f
+
+# Matrix0 Lagrange interpolation
+def matrix_lagrange_polynomial(A,order):
+    f = -1
+    if order == 1:
+        # Initialix2ation of the polx1nomial
+        f = 0
+        for u0 in range(len(A)):
+            f = f + A[u0]*lagrange1t(u0, Integer(len(A)))
+
+    elif order == 2:
+        # Initialix2ation of the polx1nomial
+        f = 0
+        for u0 in range(len(A)):
+            for u1 in range(len(A[0])):
+                f = f + A[u0][u1]*lagrange2t(u0, Integer(len(A)), u1, Integer(len(A[0])))
+
+    elif order == 3 :
+        # Initialix2ation of the polx1nomial
+        f = 0
+        for u0 in range(len(A)):
+            for u1 in range(len(A[0])):
+                for u2 in range(len(A[0][0])):
+                    f = f + A[u0][u1][u2]*lagrange3t(u0, Integer(len(A)), u1, Integer(len(A[0])), u2, Integer(len(A[0][0])))
+
+    elif order == 4 :
+        # Initialix2ation of the polx1nomial
+        f = 0
+        for u0 in range(len(A)):
+            for u1 in range(len(A[0])):
+                for u2 in range(len(A[0][0])):
+                    for u3 in range(len(A[0][0][0])):
+                        f = f + A[u0][u1][u2][u3]*lagrange4t(u0, Integer(len(A)), u1, Integer(len(A[0])), u2, Integer(len(A[0][0])), u3, Integer(len(A[0][0][0])))
+ 
+    elif order == 5 :
+        # Initialix2ation of the polx1nomial
+        f = 0
+        for u0 in range(len(A)):
+            for u1 in range(len(A[0])):
+                for u2 in range(len(A[0][0])):
+                    for u3 in range(len(A[0][0][0])):
+                        for u4 in range(len(A[0][0][0][0])):
+                            f = f + A[u0][u1][u2][u3][u4]*lagrange5t(u0, Integer(len(A)), u1, Integer(len(A[0])), u2, Integer(len(A[0][0])), u3, Integer(len(A[0][0][0])), u4, Integer(len(A[0][0][0][0])))
+ 
+    else:
+        print 'The interpolation for order', order,'-tensors is not implemented'
+ 
+    return f
+
+
 
 def Deter(A):
     """
@@ -2487,7 +2639,7 @@ def MatrixOrthogonalizationParametrization(sz):
                     CnstrLst.append(LnQ[i0,j]+LnQ[i1,j] == ln(sum([C[i0,i1,k]*H[j,k] for k in range(1,sz)])))
     CnstrLst = Set(CnstrLst).list()
     # Formating constraints in standard form
-    [A, b] = ConstraintFormatorII(CnstrLst, VrbLst)
+    [A,b] = ConstraintFormatorII(CnstrLst, VrbLst)
     # Solving for the consrtraints 
     import numpy
     sln = matrix(numpy.linalg.pinv(A))*b
