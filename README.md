@@ -178,7 +178,7 @@ sage: [Ha, Hb, Hc]=GeneralUncorrelatedHypermatrixTuple(3); Prod(Ha, Hb, Hc).simp
 sage: [Ha, Hb, Hc, Hd]=GeneralUncorrelatedHypermatrixTuple(4); Prod(Ha, Hb, Hc, Hd).simplify() 
 ```
 
-## Multistochastic hypermatrices.
+## Multistochastic hypermatrices
 The hypermatrix package also provide and symbolic parametrization of multistochastic hypermartices of arbitrary orders
 and side lenght equal to 2 obtained as follows
 
@@ -189,7 +189,7 @@ sage: GeneralStochasticHypermatrix(var('x'), 4)
 ```
 
 
-## Revisiting Hyperdeterminant
+## Revisiting Hyperdeterminants
 The BM algebra of hypermatrices suggests very natural generalization to the matrix determinant which has also been 
 implemented in the hypermatrix package. The user must be warn that while it is relatively straight forward to compute
 determinant of hypermatrices of arbitrary order of with side length equal to 2 via the following expressions 
