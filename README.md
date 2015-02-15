@@ -23,7 +23,7 @@ sage: %runfile("Hypermatrix_Algebra_Package_code.sage")
 
 # Usage
 
-To creates a symbolic Hypermatrix instance of size \[2\times 2 \times 2\], we use the instruction
+To creates a symbolic Hypermatrix instance of size \\[2\times 2 \times 2\\], we use the instruction
 
 ```python
 sage: Ha = HM(2,3,4,'a')
