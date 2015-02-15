@@ -14,7 +14,7 @@ investigate structural and combinatorial properties of hypermatrices.
 
 # Installation 
 
-A properly working install of [Sage](http://sagemath.org/) is a prerequisite to using the hypermatrix 
+A properly working install of [sage](http://sagemath.org/) is a prerequisite to using the hypermatrix 
 package. In a sage terminal session, the hypermatrix package is to be loaded via the following 
 command:
 
@@ -125,7 +125,7 @@ The parameters which appear in the parametrization can be assigned arbitrary com
 possible division by zeros when assigning values to the parameters).
 The hypermatrix package also provides construction of cubic third order Hadamard hypermatrices, which are quite analogous
 to Hadamard matrices in the fact that the product of the transposes equals to the Kronecker delta ( of the same size and 
-order ) scaled by the side lenght of the hypermatrix. It is infact easy to see that the classical Hadamard matrix 
+order ) scaled by the side length of the hypermatrix. It is infact easy to see that the classical Hadamard matrix 
 [construction](http://en.wikipedia.org/wiki/Hadamard_matrix#Sylvester.27s_construction) proposed by 
 James Joseph Sylvester and going back to 1867 extends to all hypermatrices of prime order ( recall that the order refers
 to the number of indices associated with the hypermatrix entries, for instance matrices are second order hypermatrices 
@@ -165,12 +165,12 @@ important to emphasize that all the parameters in the parametrization are to be 
 to be unitary.
 
 ## Uncorrelated tuples: Generalization of matrix inverse pair
-The [General linear group](http://en.wikipedia.org/wiki/General_linear_group) plays a crucial role in many areas of
-mathematics. The BM algebra suggest natural generalization for the General linear group, for which very little is known.
+The [general linear group](http://en.wikipedia.org/wiki/General_linear_group) plays a crucial role in many areas of
+mathematics. The BM algebra suggests a natural generalization for the general linear group, for which very little is known.
 Recall that a pair of square matrices are said to form an inverse pair if their product yields the Kronecker delta of the
 same size and order. Similarly a tuple of cubic hypermatrices are said to form an uncorrelated tuple if their product
 yield the Kronecker delta of the same order and size. The hypermatrix package implements a symbolic parametrization for
-uncorrelated tuples of arbitrary order but of side lenght equal to 2 and are obtained as follows
+uncorrelated tuples of arbitrary order but having side length equal to 2 obtained as follows
 
 ```python
 sage: [Ha,Hb]=GeneralUncorrelatedHypermatrixTuple(2); Prod(Ha,Hb).simplify() 
@@ -180,7 +180,7 @@ sage: [Ha,Hb,Hc,Hd]=GeneralUncorrelatedHypermatrixTuple(4); Prod(Ha,Hb,Hc,Hd).si
 
 ## Multistochastic hypermatrices
 The hypermatrix package also provide and symbolic parametrization of multistochastic hypermartices of arbitrary orders
-and side lenght equal to 2 obtained as follows
+and side length equal to 2 obtained as follows
 
 ```python
 sage: GeneralStochasticHypermatrix(var('x'), 2) 
