@@ -9,8 +9,8 @@ generalizations.
 
 **UPDATE 2015-02-15** Major changes to the codebase, as reflected by the current post.
 
-The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed for 
-investigating structural and combinatorial properties of hypermatrices.
+The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed to
+investigate structural and combinatorial properties of hypermatrices.
 
 # Installation 
 
