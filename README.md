@@ -164,10 +164,10 @@ Note that the symbolic parametrization returns the unitary hypermatrix and it's 
 important to emphasize that all the parameters in the parametrization are to be assigned real values for the hypermatrix
 to be unitary.
 
-## Uncorrelated tuples: Generalization of matrix inverse pairs
+## Uncorrelated tuples: Generalization of matrix inverse pair
 The [General linear group](http://en.wikipedia.org/wiki/General_linear_group) plays a crucial role in many areas of
 mathematics. The BM algebra suggest natural generalization for the General linear group, for which very little is known.
-Recall that a pair of square matrices are said to form inverse pairs if their product yields the Kronecker delta of the
+Recall that a pair of square matrices are said to form an inverse pair if their product yields the Kronecker delta of the
 same size and order. Similarly a tuple of cubic Hypermatrices are said to form an uncorrelated tuple if their product
 yield the Kronecker delta of the same order and size. The Hypermatrix package implements a symbolic parametrization for
 uncorrelated tuples of arbitrary order but of side lenght equal to 2 and are obtained as follows
