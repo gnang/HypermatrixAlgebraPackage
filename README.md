@@ -203,7 +203,7 @@ sage: GeneralHypermatrixDeterminant(5)
 
 however computing determinant of hypermatrices of arbitrary order with side length greater then 3 is considerably 
 more difficult as the expression of the proposed generalization of the determinant involves all 
-[latin hypercube](http://en.wikipedia.org/wiki/Latin_hypercube_sampling) of the corresponding order and side lenght.
+[latin hypercubes](http://en.wikipedia.org/wiki/Latin_hypercube_sampling) of the corresponding order and side lenght.
 Unefortunately as our implementation suggestis we perform a brute forces search for the latin Hypercubes (suggestions for
 improvemements are more then welcome). Consequently the package provides an implementation of the hyperdeterminant of 
 hypermatrices of arbitrary size but order less than 7. The computation of the determinant of a hypermatrix is obtained 
