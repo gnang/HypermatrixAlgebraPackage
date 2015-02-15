@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 layout: page-mathjax
 permalink: /Hypermatrix Algebra Package/
@@ -5,6 +6,11 @@ title: "Hypermatrix Package Tutorial"
 ---
 
 =======
+=======
+# Hypermatrix Algebra Package
+
+We provide here a sagemath package implementation for the Mesner-Bhattacharya Hypermatrix Algebra.
+>>>>>>> FETCH_HEAD
 
 We provide here a sagemath package implementation for the Mesner-Bhattacharya Hypermatrix Algebra.
 
