@@ -56,8 +56,8 @@ The [BM product](http://arxiv.org/abs/1411.6270) is implemented for hypermatrice
 compatible sizes. The hypermatrix product is performed as follows
 
 ```python
-sage: Prod(HM(2,3,'a'), HM(3,4,'c'))
-sage: Prod(HM(2,3,4,'a'), HM(2,2,3,'b'), HM(3,2,4,'c'))
+sage: Prod(HM(2,3,'a'),HM(3,4,'c'))
+sage: Prod(HM(2,3,4,'a'),HM(2,2,3,'b'),HM(3,2,4,'c'))
 ```
 
 As illustrated by the previous instructions, the product of compatible second order hypermatrices recover the 
@@ -91,7 +91,7 @@ The hypermatrix package provides an implementation of the Kronecker product for 
 as follows
 
 ```python
-sage: A= HM(2,2,2,'a'); B=HM(3,3,3,'b')
+sage: A=HM(2,2,2,'a'); B=HM(3,3,3,'b')
 sage: A.slicekroneckerproduct(B)
 ```
 
@@ -109,15 +109,15 @@ indices are all equal as illustrated by the identity matrices). A symbolic param
 given by
 
 ```python
-sage: Q = GeneralOrthogonalHypermatrix(3); Q
-sage: Prod(Q, Q.transpose(2), Q.transpose()).simplify()
+sage: Q=GeneralOrthogonalHypermatrix(3); Q
+sage: Prod(Q,Q.transpose(2),Q.transpose()).simplify()
 ```
 
 Similarly a symbolic parametrization of orthogonal parametrization of 2x2x2x2 hypermatrices is given
 by
 
 ```python
-sage: Q = GeneralOrthogonalHypermatrix(4); Q
+sage: Q=GeneralOrthogonalHypermatrix(4); Q
 sage: Prod(Q,Q.transpose(3),Q.transpose(2),Q.transpose()).simplify()
 ```
 
@@ -133,7 +133,7 @@ because every matrix entry has a row and column index). Third order Hadamard hyp
 of 2 and in the particular case of size 4x4x4 is obtained as follows
 
 ```python
-sage: H = ThirdOrderHadamardBlockU(4); H
+sage: H=ThirdOrderHadamardBlockU(4); H
 sage: Prod(H, H.transpose(2), H.transpose())
 ```
 
@@ -149,14 +149,14 @@ Consequently, second order unitary hypermatrices correspond to the usual unitary
 of 2x2 unitary matrices is obtained from the hypermatrix package via the commands
 
 ```python
-sage: [U,Uc] = GeneralUnitaryHypermatrix(2); U 
+sage: [U,Uc]=GeneralUnitaryHypermatrix(2); U 
 sage: Prod(U,Uc.transpose()).simplify()
 ```
 
 Similarly a symblic paramterization of a fourth order unitary hypermatrix of side length 2 is obtained as follows 
 
 ```python
-sage: [U,Uc] = GeneralUnitaryHypermatrix(4); U 
+sage: [U,Uc]=GeneralUnitaryHypermatrix(4); U 
 sage: Prod(U, Uc.transpose(3), U.transpose(2), Uc.transpose()).simplify()
 ```
 
@@ -173,9 +173,9 @@ yield the Kronecker delta of the same order and size. The hypermatrix package im
 uncorrelated tuples of arbitrary order but of side lenght equal to 2 and are obtained as follows
 
 ```python
-sage: [Ha, Hb]=GeneralUncorrelatedHypermatrixTuple(2); Prod(Ha, Hb).simplify() 
-sage: [Ha, Hb, Hc]=GeneralUncorrelatedHypermatrixTuple(3); Prod(Ha, Hb, Hc).simplify()
-sage: [Ha, Hb, Hc, Hd]=GeneralUncorrelatedHypermatrixTuple(4); Prod(Ha, Hb, Hc, Hd).simplify() 
+sage: [Ha,Hb]=GeneralUncorrelatedHypermatrixTuple(2); Prod(Ha,Hb).simplify() 
+sage: [Ha,Hb,Hc]=GeneralUncorrelatedHypermatrixTuple(3); Prod(Ha,Hb,Hc).simplify()
+sage: [Ha,Hb,Hc,Hd]=GeneralUncorrelatedHypermatrixTuple(4); Prod(Ha,Hb,Hc,Hd).simplify() 
 ```
 
 ## Multistochastic hypermatrices
@@ -210,7 +210,7 @@ hypermatrices of arbitrary size but order less than 7. The computation of the de
 as follows
 
 ```python
-sage: Hc = HM(3,3,3,'c')
+sage: Hc=HM(3,3,3,'c')
 sage: Hc.det()
 ```
 
