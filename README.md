@@ -82,7 +82,7 @@ The sum of hypermatrices can taken over a list of hypermatrices.
 We ilustrate this by constructing a symbolic symmetric hypermatrix.
 
 ```python
-sage: sum([ HM(2,2,2,'a').transpose(i) for i in range(3)])
+sage: sum([HM(2,2,2,'a').transpose(i) for i in range(3)])
 ```
 
 Many of the properties of special hypermatrices that we describe subsequently are preserved by the Kroencker product.
