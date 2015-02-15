@@ -15,6 +15,252 @@
 #                  http://www.gnu.org/licenses/                           #
 #*************************************************************************#
 
+# Definition of the hypermatrix class HM.
+class HM:
+    """Hypermatrix class"""
+    def __init__(self,*args):
+        if len(args) == 1:
+            inp = args[0]
+            if type(inp)==type(Matrix(SR,2,1,[var('x'),var('y')])) or type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
+                self.hm=DiagonalHypermatrix(inp)
+            elif type(inp) == list:
+                self.hm = inp
+            elif type(inp) == type("abcd"):
+                # Importing the numerical library
+                import pylab, numpy
+                from scipy import misc
+                # Defining the input Pictures
+                X  = pylab.imread(inp)
+                sz = max(len(X),len(X[0]),len(X[0][0]))
+                args = (len(X), len(X[0]), len(X[0][0]))
+                T = apply(HypermatrixGenerateAllZero, args)
+                # Filling up the image Hypermatrix
+                for i in range(len(X)):
+                    for j in range(len(X[0])):
+                        for k in range(len(X[0][0])):
+                            T[i][j][k] = X[i,j,k]
+                self.hm = T
+            else:
+                raise ValueError, "Expected list as input when generating diagonal hypermatrix"
+            return
+        # Obtaining the last argument
+    	s = args[-1]
+        # Initializing the dimension parameters
+        dims = args[:-1]
+        if s == 'one':
+            self.hm = apply(HypermatrixGenerateAllOne, dims)
+        elif s == 'zero':
+            self.hm = apply(HypermatrixGenerateAllZero, dims)
+        elif s == 'ortho':
+            if len(dims) == 1:
+                self.hm=Orthogonal2x2x2Hypermatrix(dims[0])
+            elif len(dims) == 2:
+                self.hm=Orthogonal3x3x3Hypermatrix(dims[0],dims[1])
+            else:
+                raise ValueError, "ortho not supported for order %d tensors" % len(dims)
+        elif s == 'perm':
+            self.hm=HypermatrixPermutation(dims[0])
+        elif s == 'kronecker':
+            self.hm=HypermatrixKroneckerDelta(dims[0])
+        elif s == 'sym':
+            if len(dims) == 2:
+                self.hm=SymHypermatrixGenerate(dims[0],dims[1])
+            else:
+                raise ValueError, "kronecker not supported for order %d tensors" % len(dims)
+        elif type(s) == list:
+            self.hm=(apply(List2Hypermatrix, args)).listHM()
+        else:
+            self.hm=apply(HypermatrixGenerate, args)
+    def __repr__(self):
+        return `self.hm`
+    def __add__(self, other):
+        return GeneralHypermatrixAdd(self,other)
+    def __radd__(self, other):
+        return GeneralHypermatrixAdd(self,other)
+    def __neg__(self):
+        return GeneralHypermatrixScale(self.hm,-1)
+    def __sub__(self, other):
+        return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-1))
+    def __mul__(self, other):
+        if other.__class__.__name__=='HM':
+            return HM(GeneralHypermatrixHadamardProduct(self,other))
+        elif other.__class__.__name__=='tuple':
+            # This function takes a a list as intput
+            l = other
+            return GeneralHypermatrixProduct(self,*l)
+        else: 
+            return GeneralHypermatrixScale(self,other)
+    def __rmul__(self, a):
+        return self*a
+    def __getitem__(self,i):
+        if i.__class__.__name__=='tuple':
+            tmp = self.hm
+            for j in i:
+                tmp = tmp[j]
+            return tmp
+    def __setitem__(self, i, v):
+        if   i.__class__.__name__=='tuple':
+	    tmp = self.hm
+            while len(i)>1:
+                tmp = tmp[i[0]]
+                i = i[1:]
+            tmp[i[0]] = v
+    def __call__(self, *inpts):
+        # This function takes a a list as intput
+        return GeneralHypermatrixProduct(self, *inpts)
+    def hprod(self,*inpts):
+        # This function takes a a list as intput
+        return GeneralHypermatrixProduct(self,*inpts)
+    def hprod3b(self, b, c, t):
+        return HM(HypermatrixProductB(self.hm, b.hm, c.hm, t.hm))
+    def elementwise_product(self,B):
+        return GeneralHypermatrixHadamardProduct(self, B)
+    def elementwise_exponent(self,s):
+        return GeneralHypermatrixExponent(self, s)
+    def elementwise_base_exponent(self, s):
+        return GeneralHypermatrixBaseExponent(self, s)
+    def elementwise_base_logarithm(self, s):
+        return GeneralHypermatrixLogarithm(self, s)
+    def slicekroneckerproduct(self, V):
+        if  self.order()==2:
+            return SecondOrderSliceKroneckerProduct(self, V)
+        elif self.order()==3:
+            return ThirdOrderSliceKroneckerProduct(self, V)
+        elif self.order()==4:
+            return FourthOrderSliceKroneckerProduct(self, V)
+        elif self.order()==5:
+            return FifthOrderSliceKroneckerProduct(self, V)
+        else :
+            raise ValueError, "ortho not supported for order %d tensors" % len(dims)
+    def block_sum(self, V):
+        return HypermatrixKroneckerSum(self, V)
+    def expand(self):
+        return GeneralHypermatrixExpand(self)
+    def simplify(self):
+        return GeneralHypermatrixSimplify(self)
+    def subs(self, Dct):
+        return GeneralHypermatrixSubstitute(self, Dct)
+    def subsn(self, Dct):
+        return GeneralHypermatrixSubstituteN(self, Dct)
+    def transpose(self, i=1):
+        t = Integer(mod(i, self.order()))
+        A = self 
+        for i in range(t):
+            A = GeneralHypermatrixCyclicPermute(A)
+        return A
+    def dagger(self, i=1):
+        t = Integer(mod(i, self.order()))
+        A = self 
+        for i in range(t):
+            A = GeneralHypermatrixCyclicPermute(A)
+        if Integer(mod(i,2))==0:
+            return A
+        else:
+            return GeneralHypermatrixConjugate(A)
+    def nrows(self):
+        return len(self.hm)
+    def ncols(self):
+        return len(self.hm[0])
+    def ndpts(self):
+        return len(self.hm[0][0])
+    def Print(self):
+        if self.order() == 3:
+            L = self.listHM()
+            for m in L:
+                print '\n'+Matrix(m).str()
+        else:
+            raise ValueError, "not supported for order %d tensors" % len(dims)
+    def n(self,i):
+        if i == 0:
+            return self.nrows()
+        elif i == 1:
+            return self.ncols()
+        elif i == 2:
+            return self.ndpts()
+        else:
+            tmp = self.listHM()
+            for j in range(i):
+                tmp = tmp[0]
+            return len(tmp)
+    def list(self):
+        lst = []
+        l = [self.n(i) for i in range(self.order())]
+        # Main loop canonicaly listing the elements
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [mod(i,l[0])]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            # Appending to the list
+            lst.append(self[tuple(entry)])
+        return lst
+    def listHM(self):
+        return self.hm
+    def order(self):
+        cnt = 0
+        H = self.listHM()
+        while type(H) == type([]):
+            H = H[0]
+            cnt = cnt+1
+        return cnt
+    def dimensions(self):
+        return [self.n(i) for i in range(self.order())]
+    def conj(self, k):
+        Tmp = self.listHM()
+        for r in range(len(Tmp)):
+            for c in range(len(Tmp[0])):
+                for d in range(len(Tmp[0][0])): 
+                    Tmp[r][c][d]=conj3(Tmp[r][c][d], k)
+        return HM(Tmp)
+    def zero_padd(self):
+        sz  = max(self.nrows(), self.ncols(), self.ndpts())
+        Tmp = HM(sz,sz,sz,'zero') 
+        for i in range(self.nrows()):
+            for j in range(self.ncols()):
+                for k in range(self.ndpts()):
+                    Tmp[i,j,k]=self.hm[i][j][k]
+        return Tmp
+    def fill_with(self,T):
+        if T.nrows()>=self.nrows() or T.ncols()>=self.ncols or T.ndpts()>=self.ndpts():
+            for r in range(self.nrows()):
+                for c in range(self.ncols()):
+                    for d in range(self.ndpts()):
+                        self.hm[r][c][d]=T[r,c,d]
+        else:
+            raise ValueError, "Expected the input 3 hypermatrix to have larger dimensions in all directions"
+    def show(self):
+        import pylab, numpy
+        from scipy import misc
+        # Obtaining the size of the image
+        X = misc.toimage(pylab.array(self.listHM()))
+        g = graphics_array([[matrix_plot(X)]])
+        g.show()
+    def save(self,filename):
+        import pylab, numpy
+        from scipy import misc
+        # obtaining the image size
+        X = misc.toimage(pylab.array(self.listHM()))
+        X.save(filename)
+    def copy(self):
+        return GeneralHypermatrixCopy(self)
+    def norm(self,p=2):
+        return sum([abs(i)^p for i in self.list()])
+    def det(self):
+        if self.order()==2:
+            return Deter(Matrix(SR,self.listHM()))
+        elif self.order()==3:
+            return ThirdOrderHyperdeterminant(self)
+        elif self.order()==4:
+            return FourthOrderHyperdeterminant(self)
+        elif self.order()==5:
+            return FifthOrderHyperdeterminant(self)
+        elif self.order()==6:
+            return SixthOrderHyperdeterminant(self)
+        else:
+            raise ValueError, "The hyperdeterminant is not implemented for order "+str(self.order())+"."
+
 # Definition of the functions 
 def MatrixGenerate(nr, nc, c):
     """
@@ -32,7 +278,6 @@ def MatrixGenerate(nr, nc, c):
     # Setting the dimensions parameters.
     n_q_rows = nr
     n_q_cols = nc
-
     # Test for dimension match
     if n_q_rows > 0 and n_q_cols > 0:
         # Initialization of the hypermatrix
@@ -44,21 +289,19 @@ def MatrixGenerate(nr, nc, c):
                 # Filling up the matrix
                 (q[i]).append(var(c+str(i)+str(j)))
         return q
-
     else :
-        raise ValueError, "Input dimensions "+\
-str(nr)+" and "+str(nc)+" must both be non-zero positive integers."
+        raise ValueError, "Input dimensions "+str(nr)+" and "+str(nc)+" must both be non-zero positive integers."
 
 def SymMatrixGenerate(nr, c):
     """
-    Generates a list of lists associated with a symbolic nr x nc
+    Generates a list of lists associated with a symbolic nr x nr
     symmetric matrix using the input character c followed by
     indices.
 
     EXAMPLES:
     ::
         sage: M = SymMatrixGenerate(2, 'm'); M
-        [[m00, m01], [m10, m11]]
+        [[m00, m01], [m01, m11]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -80,8 +323,7 @@ def SymMatrixGenerate(nr, c):
         return q
 
     else :
-        raise ValueError, "Input dimensions "+\
-str(nr)+" must be a non-zero positive integers."
+        raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integers."
 
 def HypermatrixGenerate(*args):
     """
@@ -92,6 +334,7 @@ def HypermatrixGenerate(*args):
     EXAMPLES:
     ::
         sage: M = HypermatrixGenerate(2, 2, 2, 'm'); M
+        [[[m000, m001], [m010, m011]], [[m100, m101], [m110, m111]]]
 
 
     AUTHORS:
@@ -99,7 +342,7 @@ def HypermatrixGenerate(*args):
     """
     if len(args) == 1:
         return var(args[0])
-    return [apply(HypermatrixGenerate, args[1:-1] + (args[-1] + str(i),)) for i in range(args[0])]
+    return [apply(HypermatrixGenerate, args[1:-1]+(args[-1]+str(i),)) for i in range(args[0])]
 
 def HypermatrixGenerateAllOne(*args):
     """
@@ -110,6 +353,7 @@ def HypermatrixGenerateAllOne(*args):
     EXAMPLES:
     ::
         sage: M = HypermatrixGenerateAllOne(2, 2, 2); M
+        [[[1, 1], [1, 1]], [[1, 1], [1, 1]]]
 
 
     AUTHORS:
@@ -128,7 +372,7 @@ def HypermatrixGenerateAllZero(*args):
     EXAMPLES:
     ::
         sage: M = HypermatrixGenerateAllZero(2, 2, 2); M
-
+        [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]
 
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
@@ -139,14 +383,13 @@ def HypermatrixGenerateAllZero(*args):
 
 def SymHypermatrixGenerate(nr, c):
     """
-    Generates a list of lists associated with a symbolic nr x nc x nd
-    third order hypematrix using the input character c followed by
-    indices.
+    Generates a list of lists associated with a symbolic third order hypermatrix of size
+    nr x nc x nd third order hypematrix using the input character c followed by indices.
 
     EXAMPLES:
     ::
         sage: M = SymHypermatrixGenerate(2, 'm'); M
-
+        [[[m000, m001], [m001, m011]], [[m001, m011], [m011, m111]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -169,35 +412,31 @@ def SymHypermatrixGenerate(nr, c):
             for j in range(len(q[i])):
                 for k in range(n_q_dpts):
                     if i==j or i==k or j==k:
-                        (q[i][j]).append(\
-var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+                        (q[i][j]).append(var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
                     else:
                         if i == min(i,j,k) and k == max(i,j,k):
-                            (q[i][j]).append(\
-var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+                            (q[i][j]).append(var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
                         elif k == min(i,j,k) and j == max(i,j,k):
-                            (q[i][j]).append(\
-var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+                            (q[i][j]).append(var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
                         elif i == max(i,j,k) and j == min(i,j,k):
-                            (q[i][j]).append(\
-var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+                            (q[i][j]).append(var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
                         else:
-                            (q[i][j]).append(\
-var(c+str(i+j+k-min(i,j,k)-max(i,j,k))+str(min(i,j,k))+str(max(i,j,k))))
+                            (q[i][j]).append(var(c+str(i+j+k-min(i,j,k)-max(i,j,k))+str(min(i,j,k))+str(max(i,j,k))))
         return q
 
     else :
-        raise ValueError, "Input dimensions "+\
-str(nr)+" must be a non-zero positive integer."
+        raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integer."
 
 def HypermatrixVectorize(A):
     """
-    Outputs our canonical vectorization a list
-    the input hypermatrices A.
+    Outputs our canonical vectorization list associated with
+    the input third order hypermatrices A.
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixVectorize(A); M
+        sage: A = SymHypermatrixGenerate(2, 'a') 
+        sage: Lst = HypermatrixVectorize(A); Lst
+        [a000, a001, a001, a011, a001, a011, a011, a111]
 
 
     AUTHORS:
@@ -224,11 +463,13 @@ def HypermatrixVectorize(A):
 def HypermatrixAdd(A, B):
     """
     Outputs a list of lists associated with the addtion of
-    the two input hypermatrices A and B
+    the two input third order hypermatrices A and B
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixAdd(A, B); M
+        sage: A = HypermatrixGenerate(2,2,2,'a'); B = HypermatrixGenerate(2,2,2,'b')
+        sage: Rslt = HypermatrixAdd(A, B); Rslt
+        [[[a000 + b000, a001 + b001], [a010 + b010, a011 + b011]], [[a100 + b100, a101 + b101], [a110 + b110, a111 + b111]]]
 
 
     AUTHORS:
@@ -238,7 +479,6 @@ def HypermatrixAdd(A, B):
     n_q_rows = len(B)
     n_q_cols = len(B[0])
     n_q_dpts = len(B[0][0])
-
     # Test for dimension match
     if n_q_rows==len(A) and n_q_cols==len(A[0]) and n_q_dpts==len(A[0][0]):
         # Initialization of the hypermatrix
@@ -253,18 +493,19 @@ def HypermatrixAdd(A, B):
                 for k in range(n_q_dpts):
                     (q[i][j]).append(A[i][j][k]+B[i][j][k])
         return q
-
     else :
         raise ValueError, "The Dimensions of the input hypermatrices must match."
 
 def HypermatrixHadamardProduct(A, B):
     """
-    Outputs a list of lists associated with the addtion of
-    the two input hypermatrices A and B
+    Outputs a list of lists associated with the Hadamard product of
+    the two input third order hypermatrices A and B
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixHadamardProduct(A, B); M
+        sage: A = HypermatrixGenerate(2,2,2,'a'); B = HypermatrixGenerate(2,2,2,'b')
+        sage: Rslt = HypermatrixHadamardProduct(A, B); Rslt
+        [[[a000 * b000, a001 * b001], [a010 * b010, a011 * b011]], [[a100 * b100, a101 * b101], [a110 * b110, a111 * b111]]]
 
 
     AUTHORS:
@@ -274,7 +515,6 @@ def HypermatrixHadamardProduct(A, B):
     n_q_rows = len(A)
     n_q_cols = len(A[0])
     n_q_dpts = len(A[0][0])
-
     # Test for dimension match
     if n_q_rows==len(A) and n_q_cols==len(A[0]) and n_q_dpts==len(A[0][0]):
         # Initialization of the hypermatrix
@@ -289,19 +529,19 @@ def HypermatrixHadamardProduct(A, B):
                 for k in range(n_q_dpts):
                     (q[i][j]).append(A[i][j][k]*B[i][j][k])
         return q
-
     else :
         raise ValueError, "The Dimensions of the input hypermatrices must match."
 
 def HypermatrixScale(A, s):
     """
     Outputs a list of lists associated with product of the
-    scalar s with the hypermatrix A.
+    scalar s with the third order hypermatrix A.
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixScale(A, 3); M
-
+        sage: A = HypermatrixGenerate(2,2,2,'a')
+        sage: Rslt = HypermatrixScale(A, 3); Rslt
+        [[[3*a000, 3*a001], [3*a010, 3*a011]], [[3*a100, 3*a101], [3*a110, 3*a111]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -310,7 +550,6 @@ def HypermatrixScale(A, s):
     n_q_rows = len(A)
     n_q_cols = len(A[0])
     n_q_dpts = len(A[0][0])
-
     # Initialization of the hypermatrix
     q = []
     for i in range(n_q_rows):
@@ -326,13 +565,14 @@ def HypermatrixScale(A, s):
 
 def HypermatrixEntryExponent(A, s):
     """
-    Outputs a list of lists associated with product of the
-    scalar s with the hypermatrix A.
+    Outputs a list of lists associated with raising every entry of the 
+    third order input hypermatrix A by the scalar s.
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixEntryExponent(A, 3); M
-
+        sage: A = HypermatrixGenerate(2,2,2,'a')
+        sage: Rslt = HypermatrixEntryExponent(A, 3); Rslt
+        [[[a000^3, a001^3], [a010^3, a011^3]], [[a100^3, a101^3], [a110^3, a111^3]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -341,7 +581,6 @@ def HypermatrixEntryExponent(A, s):
     n_q_rows = len(A)
     n_q_cols = len(A[0])
     n_q_dpts = len(A[0][0])
-
     # Initialization of the hypermatrix
     q = []
     for i in range(n_q_rows):
@@ -357,12 +596,14 @@ def HypermatrixEntryExponent(A, s):
 
 def HypermatrixEntryExponentB(s, A):
     """
-    Outputs a list of lists associated with product of the
-    scalar s with the hypermatrix A.
+    Outputs a list of lists associated with the exponentiation by the
+    scalar s of every entry of the third order input hypermatrix A.
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixEntryExponentB(3,A); M
+        sage: A = HypermatrixGenerate(2,2,2,'a')
+        sage: Rslt = HypermatrixEntryExponentB(3,A); Rslt
+        [[[3^a000, 3^a001], [3^a010, 3^a011]], [[3^a100, 3^a101], [3^a110, 3^a111]]]
 
 
     AUTHORS:
@@ -372,7 +613,6 @@ def HypermatrixEntryExponentB(s, A):
     n_q_rows = len(A)
     n_q_cols = len(A[0])
     n_q_dpts = len(A[0][0])
-
     # Initialization of the hypermatrix
     q = []
     for i in range(n_q_rows):
@@ -389,7 +629,10 @@ def HypermatrixEntryExponentB(s, A):
 def HypermatrixProduct(A, B, C):
     """
     Outputs a list of lists associated with the ternary
-    product of the input hypermatrices A, B and C.
+    Bhattacharya-Mesner product of the input third order 
+    hypermatrices A, B and C.
+    The code writen here handles both list of list data
+    structures as well as the Hypermatrix HM class objects.
 
     EXAMPLES:
     ::
@@ -399,22 +642,22 @@ def HypermatrixProduct(A, B, C):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
+    typ = 'list'
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
+        A = A.listHM(); B = B.listHM(); C = C.listHM()
+        typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
     n_a_cols = len(A[0])
     n_a_dpts = len(A[0][0])
-
     n_b_rows = len(B)
     n_b_cols = len(B[0])
     n_b_dpts = len(B[0][0])
-
     n_c_rows = len(C)
     n_c_cols = len(C[0])
     n_c_dpts = len(C[0][0])
-
     # Test for dimension match
-    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and \
-n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
+    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_a_rows):
@@ -425,9 +668,11 @@ n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
         for i in range(len(q)):
             for j in range(len(q[i])):
                 for k in range(n_c_dpts):
-                    (q[i][j]).append(\
-sum([A[i][l][k]*B[i][j][l]*C[l][j][k] for l in range(n_a_cols)]))
-        return q
+                    (q[i][j]).append(sum([A[i][l][k]*B[i][j][l]*C[l][j][k] for l in range(n_a_cols)]))
+        if typ=='list':
+            return q
+        else:
+            return HM(q)
 
     else :
         raise ValueError, "Hypermatrix dimension mismatch."
@@ -439,28 +684,31 @@ def HypermatrixLogProduct(A, B, C):
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixProduct(A, B, C); M
+        sage: Ha = HypermatrixGenerate(2, 1, 2, 'a')
+        sage: Hb = HypermatrixGenerate(2, 2, 1, 'b')
+        sage: Hc = HypermatrixGenerate(1, 2, 2, 'c')
+        sage: Rslt = HypermatrixProduct(Ha, Hb, Hc); Rslt
 
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
+    typ = 'list'
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
+        A = A.listHM(); B = B.listHM(); C = C.listHM()
+        typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
     n_a_cols = len(A[0])
     n_a_dpts = len(A[0][0])
-
     n_b_rows = len(B)
     n_b_cols = len(B[0])
     n_b_dpts = len(B[0][0])
-
     n_c_rows = len(C)
     n_c_cols = len(C[0])
     n_c_dpts = len(C[0][0])
-
     # Test for dimension match
-    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and \
-n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
+    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_a_rows):
@@ -471,40 +719,43 @@ n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
         for i in range(len(q)):
             for j in range(len(q[i])):
                 for k in range(n_c_dpts):
-                    (q[i][j]).append(\
-sum([A[i][l][k]+B[i][j][l]+C[l][j][k] for l in range(n_a_cols)]))
-        return q
-
+                    (q[i][j]).append(sum([A[i][l][k]+B[i][j][l]+C[l][j][k] for l in range(n_a_cols)]))
+        if typ == 'list':
+            return q
+        else:
+            return HM(q)
     else :
         raise ValueError, "Hypermatrix dimension mismatch."
 
 def HypermatrixKroneckerProduct(A, B, C):
     """
     Outputs a list of lists associated with the ternary
-    product of the input hypermatrices A, B and C.
+    analog of the Kronecker product for the inputh third
+    order hypermatrices A, B and C.
 
     EXAMPLES:
     ::
-        sage: X=HM(2,1,1,'x'); Y=HM(1,2,1,'y'); Z=HM(1,1,2,'z') 
-        sage: T = HM(HypermatrixKroneckerProduct(X.listHM(),Y.listHM(),Z.listHM()))
+        sage: X=HypermatrixGenerate(2,1,1,'x'); Y=HypermatrixGenerate(1,2,1,'y'); Z=HypermatrixGenerate(1,1,2,'z') 
+        sage: T=HypermatrixKroneckerProduct(X, Y, Z); T
         [[[x000*y000*z000, x000*y000*z001], [x000*y010*z000, x000*y010*z001]], [[x100*y000*z000, x100*y000*z001], [x100*y010*z000, x100*y010*z001]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
+    typ = 'list'
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
+        A = A.listHM(); B = B.listHM(); C = C.listHM()
+        typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
     n_a_cols = len(A[0])
     n_a_dpts = len(A[0][0])
-
     n_b_rows = len(B)
     n_b_cols = len(B[0])
     n_b_dpts = len(B[0][0])
-
     n_c_rows = len(C)
     n_c_cols = len(C[0])
     n_c_dpts = len(C[0][0])
-
     # Test for zero dimension
     if n_a_rows*n_b_rows*n_c_rows>0 and n_a_cols*n_b_cols*n_c_cols>0 and n_a_dpts*n_b_dpts*n_c_dpts>0:
         # Initialization of the hypermatrix
@@ -528,8 +779,10 @@ def HypermatrixKroneckerProduct(A, B, C):
                                     for k1 in range(n_b_dpts):
                                         for k2 in range(n_c_dpts):
                                             q[n_a_rows*n_b_rows*i2+n_a_rows*i1+i0][n_b_cols*n_c_cols*j0+n_b_cols*j2+j1][n_c_cols*n_a_dpts*k1+n_c_dpts*k0+k2]=A[i0][i1][i2]*B[j0][j1][j2]*C[k0][k1][k2]
-        return q
-
+        if typ=='list':
+            return q
+        else:
+            return HM(q)
     else :
         raise ValueError, "Hypermatrix dimension mismatch."
 
@@ -541,34 +794,37 @@ def HypermatrixProductB(A, B, C, D):
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixProductB(A, B, C, D); M
+        sage: Ha=HypermatrixGenerate(2,2,2,'a')
+        sage: Hb=HypermatrixGenerate(2,2,2,'b')
+        sage: Hc=HypermatrixGenerate(2,2,2,'c')
+        sage: Hd=HypermatrixGenerate(2,2,2,'d')
+        sage: Rslt=HypermatrixProductB(Ha,Hb,Hc,Hd); Rslt
+        [[[a000*b000*c000*d000 + a000*b000*c100*d001 + a000*b001*c000*d010 + a000*b001*c100*d011 + a010*b000*c000*d100 + a010*b000*c100*d101 + a010*b001*c000*d110 + a010*b001*c100*d111, a001*b000*c001*d000 + a001*b000*c101*d001 + a001*b001*c001*d010 + a001*b001*c101*d011 + a011*b000*c001*d100 + a011*b000*c101*d101 + a011*b001*c001*d110 + a011*b001*c101*d111], [a000*b010*c010*d000 + a000*b010*c110*d001 + a000*b011*c010*d010 + a000*b011*c110*d011 + a010*b010*c010*d100 + a010*b010*c110*d101 + a010*b011*c010*d110 + a010*b011*c110*d111, a001*b010*c011*d000 + a001*b010*c111*d001 + a001*b011*c011*d010 + a001*b011*c111*d011 + a011*b010*c011*d100 + a011*b010*c111*d101 + a011*b011*c011*d110 + a011*b011*c111*d111]], [[a100*b100*c000*d000 + a100*b100*c100*d001 + a100*b101*c000*d010 + a100*b101*c100*d011 + a110*b100*c000*d100 + a110*b100*c100*d101 + a110*b101*c000*d110 + a110*b101*c100*d111, a101*b100*c001*d000 + a101*b100*c101*d001 + a101*b101*c001*d010 + a101*b101*c101*d011 + a111*b100*c001*d100 + a111*b100*c101*d101 + a111*b101*c001*d110 + a111*b101*c101*d111], [a100*b110*c010*d000 + a100*b110*c110*d001 + a100*b111*c010*d010 + a100*b111*c110*d011 + a110*b110*c010*d100 + a110*b110*c110*d101 + a110*b111*c010*d110 + a110*b111*c110*d111, a101*b110*c011*d000 + a101*b110*c111*d001 + a101*b111*c011*d010 + a101*b111*c111*d011 + a111*b110*c011*d100 + a111*b110*c111*d101 + a111*b111*c011*d110 + a111*b111*c111*d111]]]
 
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
+    typ = 'list'
+    if type(A)==type(HM(1,1,1,'one')) and type(B)==type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')) and type(D)==type(HM(1,1,1,'one')):
+        A = A.listHM(); B = B.listHM(); C = C.listHM(); D = D.listHM()
+        typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
     n_a_cols = len(A[0])
     n_a_dpts = len(A[0][0])
-
     n_b_rows = len(B)
     n_b_cols = len(B[0])
     n_b_dpts = len(B[0][0])
-
     n_c_rows = len(C)
     n_c_cols = len(C[0])
     n_c_dpts = len(C[0][0])
-
     n_d_rows = len(D)
     n_d_cols = len(D[0])
     n_d_dpts = len(D[0][0])
 
     # Test for dimension match
-    if \
-n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and \
-n_a_cols==n_b_dpts and n_b_dpts==n_c_rows and n_a_cols==n_d_rows and \
-n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
+    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows and n_a_cols==n_d_rows and n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_a_rows):
@@ -579,22 +835,82 @@ n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
         for i in range(len(q)):
             for j in range(len(q[i])):
                 for k in range(n_c_dpts):
-                    (q[i][j]).append(\
-sum([A[i][l0][k]*B[i][j][l1]*C[l2][j][k]*D[l0][l1][l2] for l0 in range(n_d_rows)\
-for l1 in range(n_d_cols) for l2 in range(n_d_dpts)]))
-        return q
+                    (q[i][j]).append(sum([A[i][l0][k]*B[i][j][l1]*C[l2][j][k]*D[l0][l1][l2] for l0 in range(n_d_rows) for l1 in range(n_d_cols) for l2 in range(n_d_dpts)]))
+        if typ=='list':
+            return q
+        else:
+            return HM(q)
+    else :
+        raise ValueError, "Hypermatrix dimension mismatch."
 
+def HypermatrixDualProductB(A, B, C, D):
+    """
+    Outputs a list of lists associated with the ternary
+    dual product the third order input hypermatrices A, B
+    and C with background hypermatrix D which relates to 
+    the product introduced by Richard Kerner.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HypermatrixGenerate(2,2,2,'a')
+        sage: Hb=HypermatrixGenerate(2,2,2,'b')
+        sage: Hc=HypermatrixGenerate(2,2,2,'c')
+        sage: Hd=HypermatrixGenerate(2,2,2,'d')
+        sage: Rslt = HypermatrixDualProductB(Ha, Hb, Hc, Hd); Rslt
+        [[[a000*b000*c000*d000 + a100*b100*c000*d000 + a001*b000*c001*d000 + a101*b100*c001*d000 + a000*b010*c010*d000 + a100*b110*c010*d000 + a001*b010*c011*d000 + a101*b110*c011*d000, a000*b000*c100*d001 + a100*b100*c100*d001 + a001*b000*c101*d001 + a101*b100*c101*d001 + a000*b010*c110*d001 + a100*b110*c110*d001 + a001*b010*c111*d001 + a101*b110*c111*d001], [a000*b001*c000*d010 + a100*b101*c000*d010 + a001*b001*c001*d010 + a101*b101*c001*d010 + a000*b011*c010*d010 + a100*b111*c010*d010 + a001*b011*c011*d010 + a101*b111*c011*d010, a000*b001*c100*d011 + a100*b101*c100*d011 + a001*b001*c101*d011 + a101*b101*c101*d011 + a000*b011*c110*d011 + a100*b111*c110*d011 + a001*b011*c111*d011 + a101*b111*c111*d011]], [[a010*b000*c000*d100 + a110*b100*c000*d100 + a011*b000*c001*d100 + a111*b100*c001*d100 + a010*b010*c010*d100 + a110*b110*c010*d100 + a011*b010*c011*d100 + a111*b110*c011*d100, a010*b000*c100*d101 + a110*b100*c100*d101 + a011*b000*c101*d101 + a111*b100*c101*d101 + a010*b010*c110*d101 + a110*b110*c110*d101 + a011*b010*c111*d101 + a111*b110*c111*d101], [a010*b001*c000*d110 + a110*b101*c000*d110 + a011*b001*c001*d110 + a111*b101*c001*d110 + a010*b011*c010*d110 + a110*b111*c010*d110 + a011*b011*c011*d110 + a111*b111*c011*d110, a010*b001*c100*d111 + a110*b101*c100*d111 + a011*b001*c101*d111 + a111*b101*c101*d111 + a010*b011*c110*d111 + a110*b111*c110*d111 + a011*b011*c111*d111 + a111*b111*c111*d111]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    typ = 'list'
+    if type(A)==type(HM(1,1,1,'one')) and type(B)==type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')) and type(D)==type(HM(1,1,1,'one')):
+        A = A.listHM(); B = B.listHM(); C = C.listHM(); D = D.listHM()
+        typ = 'HM'
+    # Setting the dimensions parameters.
+    n_a_rows = len(A)
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
+    n_b_rows = len(B)
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
+    n_c_rows = len(C)
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
+    n_d_rows = len(D)
+    n_d_cols = len(D[0])
+    n_d_dpts = len(D[0][0])
+    # Test for dimension match
+    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows and n_a_cols==n_d_rows and n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
+        # Initialization of the hypermatrix
+        q = []
+        for i in range(n_a_rows):
+            q.append([])
+        for i in range(len(q)):
+            for j in range(n_b_cols):
+                (q[i]).append([])
+        for l0 in range(len(q)):
+            for l1 in range(len(q[i])):
+                for l2 in range(n_c_dpts):
+                    (q[l0][l1]).append( sum([A[i][l0][k]*B[i][j][l1]*C[l2][j][k]*D[l0][l1][l2] for i in range(n_a_rows) for j in range(n_b_cols) for k in range(n_c_dpts)]))
+        if typ=='list':
+            return q
+        else:
+            return HM(q)
     else :
         raise ValueError, "Hypermatrix dimension mismatch."
 
 def HypermatrixCyclicPermute(A):
     """
-    Outputs a list of lists associated with the hypermatrix
-    with entries index cycliclly permuted.
+    Outputs a list of lists associated with the third order
+    hypermatrix with entries index cyclicaly permuted.
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixCyclicPermute(A); M
+        sage: Ha=HypermatrixGenerate(2,2,2,'a'); Ha
+        [[[a000, a001], [a010, a011]], [[a100, a101], [a110, a111]]]
+        sage: HypermatrixCyclicPermute(Ha)
+        [[[a000, a100], [a001, a101]], [[a010, a110], [a011, a111]]]
 
 
     AUTHORS:
@@ -604,7 +920,6 @@ def HypermatrixCyclicPermute(A):
     n_q_rows = len(A[0])
     n_q_cols = len(A[0][0])
     n_q_dpts = len(A)
-
     # Initialization of the hypermatrix
     q = []
     for i in range(n_q_rows):
@@ -620,12 +935,13 @@ def HypermatrixCyclicPermute(A):
 
 def HypermatrixKroneckerDelta(nr):
     """
-    Generates a list of lists associated with the nr x nr x nr
-    Kronecker Delta hypermatrix.
+    Generates a list of lists associated with the third order
+    nr x nr x nr Kronecker Delta hypermatrix.
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixKroneckerDelta(2); M
+        sage: Dlt = HypermatrixKroneckerDelta(2); Dlt
+        [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
 
 
     AUTHORS:
@@ -635,7 +951,6 @@ def HypermatrixKroneckerDelta(nr):
     n_q_rows = nr
     n_q_cols = nr
     n_q_dpts = nr
-
     # Test for dimension match
     if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
         # Initialization of the hypermatrix
@@ -653,19 +968,20 @@ def HypermatrixKroneckerDelta(nr):
                     else:
                         (q[i][j]).append(0)
         return q
-
     else :
-        raise ValueError, "Input dimensions "+\
-str(nr)+" must be a non-zero positive integer."
+        raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integer."
 
 def HypermatrixPermutation(s):
     """
     Generates a list of lists associated with the permutation
-    hypermatrix deduced from sigma.
+    hypermatrix deduced from sigma. Note that as a result of 
+    the  non associativity, permutations must be performed as
+    one transposition at a time.
 
     EXAMPLES:
     ::
-        sage: M = HypermatrixPermutation([0,2,1]); M
+        sage: P = HypermatrixPermutation([0,2,1]); P
+        [[[1, 0, 0], [0, 0, 1], [0, 1, 0]], [[1, 0, 0], [0, 0, 1], [0, 1, 0]], [[1, 0, 0], [0, 0, 1], [0, 1, 0]]]
 
 
     AUTHORS:
@@ -676,7 +992,6 @@ def HypermatrixPermutation(s):
     n_q_rows = n
     n_q_cols = n
     n_q_dpts = n
-
     # Test for dimension match
     if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
         # Initialization of the hypermatrix
@@ -688,24 +1003,24 @@ def HypermatrixPermutation(s):
         for i in range(n):
             q.append(Id[s[i]])
         return HypermatrixCyclicPermute(HypermatrixCyclicPermute(q))
-
     else :
-        raise ValueError, "Input dimensions "+\
-str(n)+" must be a non-zero positive integer."
+        raise ValueError, "Input dimensions "+str(n)+" must be a non-zero positive integer."
 
 def DiagonalHypermatrix(Mtrx):
     """
     Outputs a diagonal third order hypermatrix
-    constructed using the input square matrix
-    to enforce the symmetry constraint we will
-    only take entry from the lower triangular
+    constructed using the input square matrix.
+    We enforce the symmetry constraint by only
+    taking entries from the lower triangular
     part of the input matrix.
 
      EXAMPLES:
     ::
         sage: var('a00, a11, a01')
-        sage: Mtrx = Matrix(Sr,[[a00,a01],[a01,a11]])
-        sage: d = DiagonalHypermatrix(Mtrx)
+        sage: Mtrx = Matrix(SR, [[a00, a01], [a01, a11]])
+        sage: Dg = DiagonalHypermatrix(Mtrx); Dg
+        [[[a00, 0], [0, a01]], [[a01, 0], [0, a11]]]
+
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -715,10 +1030,8 @@ def DiagonalHypermatrix(Mtrx):
     n_d_rows = n
     n_d_cols = n
     n_d_dpts = n
-
     # Initialization of the identity permutations hypermatrix
     D = HypermatrixPermutation(range(n))
-
     # Filling up the entries of the hypermatrix.
     for i in range(n_d_rows):
         for j in range(n_d_cols):
@@ -729,8 +1042,8 @@ def DiagonalHypermatrix(Mtrx):
 
 def Orthogonal2x2x2Hypermatrix(t):
     """
-    Outputs an orthogonal third order hypermatrix
-    of size 2 by 2 by 2.
+    Outputs a symbolic parametrization of third order orthogonal hypermatrix
+    of size 2x2x2.
 
      EXAMPLES:
     ::
@@ -741,17 +1054,18 @@ def Orthogonal2x2x2Hypermatrix(t):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    return [[[cos(t)^(2/3),sin(t)^(2/3)],[sin(t)^(2/3), cos(t)^(2/3)]],\
-[[-sin(t)^(2/3),cos(t)^(2/3)],[sin(t)^(2/3),sin(t)^(2/3)]]]
+    return [[[cos(t)^(2/3),sin(t)^(2/3)],[sin(t)^(2/3), cos(t)^(2/3)]], [[-sin(t)^(2/3),cos(t)^(2/3)],[sin(t)^(2/3),sin(t)^(2/3)]]]
+
 def Orthogonal3x3x3Hypermatrix(t1,t2):
     """
-    Outputs an orthogonal third order hypermatrix
-    of size 3 by 3 by 3.
+    Outputs a symbolic parametrization of third order orthogonal hypermatrix
+    of size 3x3x3.
 
      EXAMPLES:
     ::
-        sage: t1,t2=var('t1,t2')
+        sage: t1, t2=var('t1, t2')
         sage: Orthogonal3x3x3Hypermatrix(t1,t2)
+        [[[cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3), 0], [cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3), 0], [sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)*e^(-2/3*I*pi), 0]], [[sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3), cos(t2)^(2/3)*e^(-2/3*I*pi)*sin(t1)^(2/3)], [cos(t1)^(2/3)*e^(2/3*I*pi), cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3)], [cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)]], [[0, sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)], [0, cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3)], [0, cos(t2)^(2/3)*e^(2/3*I*pi)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3)]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -760,22 +1074,40 @@ def Orthogonal3x3x3Hypermatrix(t1,t2):
     s1=sin(t1)^(2/3)
     c2=cos(t2)^(2/3)
     s2=sin(t2)^(2/3)
-    return [[[c1,s1*c2,0],[s1*c2,s1*s2,0],[s1*s2,exp(-I*2*pi/3)*c1,0]],\
-[[s1*s2,c1,exp(-I*2*pi/3)*s1*c2],[exp(I*2*pi/3)*c1,s1*c2,s1*s2],\
-[s1*c2,s1*s2,c1]],[[0,s1*s2,c1],[0,c1,s1*c2],[0,exp(I*2*pi/3)*s1*c2,s1*s2]]]
+    return [[[c1,s1*c2,0],[s1*c2,s1*s2,0],[s1*s2,exp(-I*2*pi/3)*c1,0]], [[s1*s2,c1,exp(-I*2*pi/3)*s1*c2],[exp(I*2*pi/3)*c1,s1*c2,s1*s2], [s1*c2,s1*s2,c1]],[[0,s1*s2,c1],[0,c1,s1*c2],[0,exp(I*2*pi/3)*s1*c2,s1*s2]]]
 
-
-#@cached_function
-# I should find a way to hash my lists
 def HypermatrixCayleyHamiltonList(A,n):
     """
-    Outpts a list of hypermatrices of all product
-    composition of order n.
+    Outpts a list of hypermatrices (each of which is encapsulated as a single list) of all product composition of degree n.
+    This function is most adapted for constructing matrices.
 
      EXAMPLES:
     ::
         sage: A = HypermatrixGenerate(2,2,2,'a')
-        sage: L = HypermatrixCayleyHamiltonList(A,3)
+        sage: Lst = HypermatrixCayleyHamiltonList(A,3); Lst
+        [[a000^3 + a001*a010*a100, a000*a001^2 + a001*a011*a101, a000*a010^2 + a010*a011*a110, a001*a010*a011 + a011^2*a111, a000*a100^2 + a100*a101*a110, a001*a100*a101 + a101^2*a111, a010*a100*a110 + a110^2*a111, a011*a101*a110 + a111^3]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    if n == 1:
+        return [A.list()]
+    else:
+        gu = []
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
+                gu = gu + [HypermatrixProduct(HM(A.n(0),A.n(1),A.n(2),g1), HM(A.n(0),A.n(1),A.n(2),g2), HM(A.n(0),A.n(1),A.n(2),g3)).list() for g1 in HypermatrixCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonList(A,j) for g3 in HypermatrixCayleyHamiltonList(A,n-(i+j))]
+        return gu
+
+def HypermatrixCayleyHamiltonListII(A,n):
+    """
+    Outpts a list of third order hypermatrices of all product composition of degree n.
+
+     EXAMPLES:
+    ::
+        sage: A = HypermatrixGenerate(2,2,2,'a')
+        sage: Lst = HypermatrixCayleyHamiltonList(A,3); Lst
+        [[[[a000^3 + a001*a010*a100, a000*a001^2 + a001*a011*a101], [a000*a010^2 + a010*a011*a110, a001*a010*a011 + a011^2*a111]], [[a000*a100^2 + a100*a101*a110, a001*a100*a101 + a101^2*a111], [a010*a100*a110 + a110^2*a111, a011*a101*a110 + a111^3]]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -786,16 +1118,16 @@ def HypermatrixCayleyHamiltonList(A,n):
         gu = []
         for i in range(1,n,2):
             for j in range(1,n-i,2):
-                gu = gu + [HypermatrixProduct(g1,g2,g3) \
-for g1 in HypermatrixCayleyHamiltonList(A,i) \
-for g2 in HypermatrixCayleyHamiltonList(A,j) \
-for g3 in HypermatrixCayleyHamiltonList(A,n-(i+j))]
+                gu = gu + [HypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonList(A,j) for g3 in HypermatrixCayleyHamiltonList(A,n-(i+j))]
         return gu
 
-def HypermatrixCayleyHamiltonListII(A,n):
+def HypermatrixCayleyHamiltonListIII(A,n):
     """
     Outpts a list of hypermatrices of all product
-    composition of order n.
+    composition of degree n for hypermatrices of 
+    order up to 8 tends to be slow because it uses
+    the general hypermatrix product and it takes HM
+    object class as the input A
 
      EXAMPLES:
     ::
@@ -812,10 +1144,9 @@ def HypermatrixCayleyHamiltonListII(A,n):
             gu = []
             for i in range(1,n,2):
                 for j in range(1,n-i,2):
-                    #gu = gu + [HypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
                     gu = gu + [GeneralHypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
             return gu
-
+    # Case of order 4
     elif A.order()==4:
         if n == 1:
             return [A]
@@ -825,38 +1156,158 @@ def HypermatrixCayleyHamiltonListII(A,n):
                 for j in range(1,n-i,2):
                     for k in range(1,n-i-j,2):
                         gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k))]
+    # Case of order 5
+    elif A.order()==5:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l))]
+    # Case of order 6
+    elif A.order()==6:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m))]
+    # Case of order 7
+    elif A.order()==7:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))]
+    # Case of order 8
+    elif A.order()==8:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    for p in range(1,n-i-j-k-l-o,2):
+                                        gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p))]
     else :
-        raise ValueError, "Not supported for order > 3 and for non cube hypermpatrix of order 3 "
+        raise ValueError, "Not supported for order > 4 and for non cube hypermpatrix of order 3 "
    
-def HypermatrixCayleyHamiltonListIII(n):
+def HypermatrixSymCayleyHamiltonList(A,n):
     """
-    Outpts a list of hypermatrices of all product
-    composition of order n.
+    Outpts a list of symmetric hypermatrices of all product
+    composition of degree n.
 
      EXAMPLES:
     ::
-        sage: L = HypermatrixCayleyHamiltonListIII(A,3)
+        sage: A = HM(2,2,2,'a')
+        sage: L = HypermatrixSymCayleyHamiltonList(A,3)
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    if n == 1:
-        return ['A.listHM()']
-    else:
-        gu = []
-        for i in range(1,n,2):
-            for j in range(1,n-i,2):
-                gu = gu + ['HypermatrixProduct('+str(g1)+','+str(g2)+','+str(g3)+')' \
-for g1 in HypermatrixCayleyHamiltonListIII(i) \
-for g2 in HypermatrixCayleyHamiltonListIII(j) \
-for g3 in HypermatrixCayleyHamiltonListIII(n-(i+j))]
-        # Creating the string corresponding to the file name
-        filename = 'output.txt'
-        # Opening the file
-        f = open(filename,'w')
-        f.write(str(gu).replace("'",""))
-        f.close()
-        return gu
+    if A.order()==3:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(2),g3.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
+            return gu
+    # Case of order 4
+    elif A.order()==4:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(3),g3.transpose(2),g4.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k))]
+    # Case of order 5
+    elif A.order()==5:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(4),g3.transpose(3),g4.transpose(2),g5.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l))]
+    # Case of order 6
+    elif A.order()==6:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(5),g3.transpose(4),g4.transpose(3),g5.transpose(2),g6.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m))]
+    # Case of order 7
+    elif A.order()==7:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(6),g3.transpose(5),g4.transpose(4),g5.transpose(3),g6.transpose(2),g7.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))]
+    # Case of order 8
+    elif A.order()==8:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    for p in range(1,n-i-j-k-l-o,2):
+                                        gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(7),g3.transpose(6),g4.transpose(5),g5.transpose(4),g6.transpose(3),g7.transpose(2),g8.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p))]
+    # Case of order 9
+    elif A.order()==9:
+        if n == 1:
+            return [A]
+        else:
+            gu = []
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    for p in range(1,n-i-j-k-l-o,2):
+                                        for q in range(1,n-i-j-k-l-o-p,2):
+                                            gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(8),g3.transpose(7),g4.transpose(6),g5.transpose(5),g6.transpose(4),g7.transpose(3),g8.transpose(2),g9.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p)) for g9 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p+q)) ]
+    else :
+        raise ValueError, "Not supported for order > 4 and for non cube hypermpatrix of order 3 "
 
 def ConstraintFormator(CnstrLst, VrbLst):
     """
@@ -867,10 +1318,16 @@ def ConstraintFormator(CnstrLst, VrbLst):
 
     EXAMPLES:
     ::
-        sage: x, y = var('x,y')
-        sage: CnstrLst = [x+y==1, x-y==2]
+        sage: x, y = var('x, y')
+        sage: CnstrLst = [x + y == 1, x - y == 2]
         sage: VrbLst = [x, y]
-        sage: [A,b] = ConstraintFormator(CnstrLst, VrbLst)
+        sage: [A, b] = ConstraintFormator(CnstrLst, VrbLst)
+        sage: A
+        [ 1.00000000000000  1.00000000000000]
+        [ 1.00000000000000 -1.00000000000000]
+        sage: b
+        [1.00000000000000]
+        [2.00000000000000]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -880,7 +1337,7 @@ def ConstraintFormator(CnstrLst, VrbLst):
     b=vector(CC, [eq.rhs() for eq in CnstrLst]).column()
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
-            A[r,c] = diff((CnstrLst[r]).lhs(),VrbLst[c])
+            A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
     return [A,b]
 
 def ConstraintFormatorII(CnstrLst, VrbLst):
@@ -896,6 +1353,13 @@ def ConstraintFormatorII(CnstrLst, VrbLst):
         sage: CnstrLst = [x+y==1, x-y==2]
         sage: VrbLst = [x, y]
         sage: [A,b] = ConstraintFormatorII(CnstrLst, VrbLst)
+        sage: A
+        [ 1  1]
+        [ 1 -1]
+        sage: b
+        [1]
+        [2]
+
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -905,7 +1369,39 @@ def ConstraintFormatorII(CnstrLst, VrbLst):
     b=vector(SR, [eq.rhs() for eq in CnstrLst]).column()
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
-            A[r,c] = diff((CnstrLst[r]).lhs(),VrbLst[c])
+            A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
+    return [A,b]
+
+def ConstraintFormatorIII(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+
+    EXAMPLES:
+    ::
+        sage: x,y = var('x,y')
+        sage: CnstrLst = [x+y==1, x-y==2]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = ConstraintFormatorII(CnstrLst, VrbLst)
+        sage: A
+        [ 1  1]
+        [ 1 -1]
+        sage: b
+        [1]
+        [2]
+       
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=Matrix(CC,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst)))
+    b=vector(SR, [eq.rhs() for eq in CnstrLst]).column()
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
     return [A,b]
 
 def HypermatrixPseudoInversePairs(A,B):
@@ -914,40 +1410,27 @@ def HypermatrixPseudoInversePairs(A,B):
 
     EXAMPLES:
     ::
-        sage: A1=[[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]]\
-,[[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]]
-        sage: A2=[[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]]\
-,[[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]]
+        sage: A1=[[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]] ,[[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]]
+        sage: A2=[[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]] ,[[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]]
         sage: [B1,B2]=HypermatrixPseudoInversePairs(A1,A2)
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
     sz = len(A)
-
     # Initializing the list of linear constraints
     CnstrLst = []
-
     # Initilizing the variable list
-    Vrbls  = [var('ln_al'+str(i)+str(j)+str(k)) \
-for i in range(sz) for j in range(sz) for k in range(sz)]+\
-[var('ln_bt'+str(i)+str(j)+str(k)) for i in range(sz) for j in range(sz) \
-for k in range(sz)]
-
+    Vrbls  = [var('ln_al'+str(i)+str(j)+str(k)) for i in range(sz) for j in range(sz) for k in range(sz)]+[var('ln_bt'+str(i)+str(j)+str(k)) for i in range(sz) for j in range(sz) for k in range(sz)]
     for m in range(sz):
         for p in range(sz):
             for n in range(sz):
-                V=Matrix(CC, sz, sz, [(A[m][k1][k0])*(B[k0][k1][p]) \
-for k0 in range(sz) for k1 in range(sz)]).inverse()
-                CnstrLst=CnstrLst+[\
-var('ln_al'+str(m)+str(n)+str(k1))+var('ln_bt'+str(k1)+str(n)+str(p))==\
-ln(V[k1,n])  for k1 in range(sz)]
+                V=Matrix(CC, sz, sz, [(A[m][k1][k0])*(B[k0][k1][p]) for k0 in range(sz) for k1 in range(sz)]).inverse()
+                CnstrLst=CnstrLst+[var('ln_al'+str(m)+str(n)+str(k1))+var('ln_bt'+str(k1)+str(n)+str(p))==ln(V[k1,n])  for k1 in range(sz)]
     [A,b]=ConstraintFormator(CnstrLst,Vrbls)
-
     # Importing the Numerical Python package
     # for computing the matrix pseudo inverse
     import numpy
-
     sln = matrix(numpy.linalg.pinv(A))*b
     R1 = HypermatrixGenerateAllZero(sz,sz,sz)
     for i in range(sz):
@@ -981,315 +1464,22 @@ def C(n):
     else :
         return sum([C(i)*C(j)*C(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
 
-# Deinfition of the third order hypermatrix class
-class HM:
-    """HM class"""
-    def __init__(self,*args):
-        if len(args) == 1:
-            inp = args[0]
-            if type(inp)==type(Matrix(SR,2,1,[var('x'),var('y')])) or \
-type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
-                self.hm=DiagonalHypermatrix(inp)
-            elif type(inp) == list:
-                self.hm = inp
-            elif type(inp) == type("abcd"):
-                # Importing the numerical library
-                import pylab, numpy
-                from scipy import misc
-                # Defining the input Pictures
-                X  = pylab.imread(inp)
-                sz = max(len(X),len(X[0]),len(X[0][0]))
-                args = (len(X), len(X[0]), len(X[0][0]))
-                #print args 
-                T = apply(HypermatrixGenerateAllZero, args)
-                # Filling up the image Hypermatrix
-                for i in range(len(X)):
-                    for j in range(len(X[0])):
-                        for k in range(len(X[0][0])):
-                            T[i][j][k] = X[i,j,k]
-                self.hm = T
-
-            else:
-                raise ValueError, "Expected list as input when generating diagonal hypermatrix"
-            return
-    	s = args[-1]
-        dims = args[:-1]
-        if s == 'one':
-            self.hm = apply(HypermatrixGenerateAllOne, dims)
-        elif s == 'zero':
-            self.hm = apply(HypermatrixGenerateAllZero, dims)
-        elif s == 'ortho':
-            if len(dims) == 1:
-                self.hm=Orthogonal2x2x2Hypermatrix(dims[0])
-            elif len(dims) == 2:
-                self.hm=Orthogonal3x3x3Hypermatrix(dims[0],dims[1])
-            else:
-                raise ValueError, "ortho not supported for order %d tensors" % len(dims)
-        elif s == 'perm':
-            self.hm=HypermatrixPermutation(dims[0])
-        elif s == 'kronecker':
-            self.hm=HypermatrixKroneckerDelta(dims[0])
-        elif s == 'sym':
-            if len(dims) == 2:
-                self.hm=SymHypermatrixGenerate(dims[0],dims[1])
-            else:
-                raise ValueError, "kronecker not supported for order %d tensors" % len(dims)
-        else:
-            self.hm=apply(HypermatrixGenerate, args)
-
-    def __repr__(self):
-        return `self.hm`
-
-    def __add__(self, other):
-        return GeneralHypermatrixAdd(self,other)
-
-    def __neg__(self):
-        return GeneralHypermatrixScale(self.hm,-1)
-
-    def __sub__(self, other):
-        return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-1))
-
-    def __mul__(self, other):
-        if other.__class__.__name__=='HM':
-            return HM(GeneralHypermatrixHadamardProduct(self,other))
-        elif other.__class__.__name__=='tuple':
-            # This function takes a a list as intput
-            l = other
-            return GeneralHypermatrixProduct(self,*l)
-        else: 
-            return GeneralHypermatrixScale(self,other)
-
-    def __rmul__(self, a):
-        return self*a
-
-    def __getitem__(self,i):
-        if i.__class__.__name__=='tuple':
-            tmp = self.hm
-            for j in i:
-                tmp = tmp[j]
-            return tmp
-
-    def __setitem__(self, i, v):
-        if   i.__class__.__name__=='tuple':
-	    tmp = self.hm
-            while len(i)>1:
-                tmp = tmp[i[0]]
-                i = i[1:]
-            tmp[i[0]] = v
-
-    def __call__(self, *inpts):
-        # This function takes a a list as intput
-        return GeneralHypermatrixProduct(self, *inpts)
-
-    def hprod(self,*inpts):
-        # This function takes a a list as intput
-        return GeneralHypermatrixProduct(self,*inpts)
-
-    def hprod3b(self, b, c, t):
-        return HM(HypermatrixProductB(self.hm, b.hm, c.hm, t.hm))
-
-    def elementwise_product(self,B):
-        return GeneralHypermatrixHadamardProduct(self,B)
-
-    def elementwise_exponent(self,s):
-        return GeneralHypermatrixExponent(self,s)
-
-    def elementwise_base_exponent(self,s):
-        return GeneralHypermatrixBaseExponent(self,s)
-
-    def expand(self):
-        return GeneralHypermatrixExpand(self)
-
-    def simplify(self):
-        return GeneralHypermatrixSimplify(self)
-
-    def subs(self, Dct):
-        return GeneralHypermatrixSubstitute(self, Dct)
-
-    def subsn(self, Dct):
-        return GeneralHypermatrixSubstituteN(self, Dct)
-
-    def transpose(self, i=1):
-        t = Integer(mod(i, self.order()))
-        A = self 
-        for i in range(t):
-            A = GeneralHypermatrixCyclicPermute(A)
-        return A
-
-    def nrows(self):
-        return len(self.hm)
-
-    def ncols(self):
-        return len(self.hm[0])
-
-    def ndpts(self):
-        return len(self.hm[0][0])
-
-    def Print(self):
-        if self.order() == 3:
-            L = self.listHM()
-            for m in L:
-                print '\n'+Matrix(m).str()
-        else:
-            raise ValueError, "not supported for order %d tensors" % len(dims)
-            
-    def n(self,i):
-        if i == 0:
-            return self.nrows()
-        elif i == 1:
-            return self.ncols()
-        elif i == 2:
-            return self.ndpts()
-        else:
-            tmp = self.listHM()
-            for j in range(i):
-                tmp = tmp[0]
-            return len(tmp)
-
-    def list(self):
-        lst = []
-        l = [self.n(i) for i in range(self.order())]
-        # Main loop canonicaly listing the elements
-        for i in range(prod(l)):
-            # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
-            sm = Integer(mod(i,l[0]))
-            for k in range(len(l)-1):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
-                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-            # Appending to the list
-            lst.append(self[tuple(entry)])
-        return lst
-
-    def listHM(self):
-        return self.hm
-
-    def cayley_hamilton_list(self,n):
-        tmp = HypermatrixCayleyHamiltonListII(self,n)
-        return [h for h in tmp]
-
-    def cayley_hamilton_mtrxII(self,itr,bnd):
-        tmp = []
-        for i in range(itr):
-            tmp = tmp + HypermatrixCayleyHamiltonList(self.hm, 2*i+1)
-        return Matrix([HM(h).list() for h in tmp[0:bnd]]).transpose()
-
-    def cayley_hamilton_mtrxI(self):
-        mn = min(self.nrows(), self.ncols(), self.ndpts())
-        mx = max(self.nrows(), self.ncols(), self.ndpts())
-        if self.order() == 3 and mn == mx:
-            tmp = []
-            i = 0
-            while len(tmp) < mn^3:
-                tmp = tmp + HypermatrixCayleyHamiltonList(self.hm, 2*i+1)
-                i = i+1
-            return Matrix([HM(h).list() for h in tmp[0:mn^3]]).transpose()
-        else :
-            raise ValueError, "Not supported for order > 3 and for non cube hypermpatrix of order 3 "
-
-    def cayley_hamilton_coef(self, v):
-        # Computing the matrix of powers
-        M = self.cayley_hamilton_mtrxI()
-        dtrm = Deter(M)
-        L = []
-        for i in range(M.nrows()):
-            T = copy(M)
-            T[:,i] = v[:,0]
-            L.append(Deter(T)/dtrm)
-        return L
- 
-    def cayley_hamilton_coefN(self, v):
-        # Computing the matrix of powers
-        M = Matrix(CC,self.cayley_hamilton_mtrxI())
-        dtrm = M.det()
-        L = []
-        for i in range(M.nrows()):
-            T = copy(M)
-            T[:,i] = v[:,0]
-            L.append(T.det()/dtrm)
-        return L
-
-    def cayley_hamilton_coefNI(self):
-        # Initializing thr size of the hypermatrix
-        sz = min([self.n(i) for i in range(self.order())])
-        # Creating the list of hypermatrix powers
-        TmpL = HypermatrixCayleyHamiltonList(self.listHM(), 1+sz^3)
-        # Filling up the left hand side
-        v = Matrix(CC,sz^3,1,HM(TmpL[len(TmpL)-1]).list())
-        # Filling up the matrix
-        M = Matrix(CC, zero_matrix(sz^3,sz^3))
-        for l in range(sz^3):
-            for i in range(sz):
-                for j in range(sz):
-                    for k in range(sz):
-                        M[i*sz^2+j*sz+k,l] = (TmpL[l])[i][j][k] 
-        dtrm = M.det()
-        L = []
-        for i in range(M.nrows()):
-            T = copy(M)
-            T[:,i] = v[:,0]
-            L.append(T.det()/dtrm)
-        return L
-
-    def order(self):
-        cnt = 0
-        H = self.listHM()
-        while type(H) == type([]):
-            H = H[0]
-            cnt = cnt+1
-        return cnt
-
-    def conj(self, k):
-        Tmp = self.listHM()
-        for r in range(len(Tmp)):
-            for c in range(len(Tmp[0])):
-                for d in range(len(Tmp[0][0])): 
-                    Tmp[r][c][d]=conj3(Tmp[r][c][d], k)
-        return HM(Tmp)
-
-    def zero_padd(self):
-        sz  = max(self.nrows(), self.ncols(), self.ndpts())
-        Tmp = HM(sz,sz,sz,'zero') 
-        for i in range(self.nrows()):
-            for j in range(self.ncols()):
-                for k in range(self.ndpts()):
-                    Tmp[i,j,k]=self.hm[i][j][k]
-        return Tmp
-
-    def fill_with(self,T):
-        if T.nrows()>=self.nrows() or T.ncols()>=self.ncols or T.ndpts()>=self.ndpts():
-            for r in range(self.nrows()):
-                for c in range(self.ncols()):
-                    for d in range(self.ndpts()):
-                        self.hm[r][c][d]=T[r,c,d]
-        else:
-            raise ValueError, "Expected the input 3 hypermatrix to have larger dimensions in all directions"
-    
-    def show(self):
-        import pylab, numpy
-        from scipy import misc
-        # This line of code corresponds
-        # to the lazy way of getting
-        # the image size
-        #X = pylab.imread(image_name)
-        X = misc.toimage(pylab.array(self.listHM()))
-        g = graphics_array([[matrix_plot(X)]])
-        g.show()
-
-    def save(self,filename):
-        import pylab, numpy
-        from scipy import misc
-        # This line of code corresponds
-        # to the lazy way of getting
-        # the image size
-        #X = pylab.imread(image_name)
-        X = misc.toimage(pylab.array(self.listHM()))
-        X.save(filename)
-
-
-# Implementing the General version of the Hypermatrix product 
-# I now need to test this implementation
 def GeneralHypermatrixProduct(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner product of the input hypermatrices.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GeneralHypermatrixProduct(Ha, Hb, Hc); Rslt
+        [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [(args[i]).n(i) for i in range(len(args))]
     # Initializing the input for generating a symbolic hypermatrix
@@ -1308,23 +1498,54 @@ def GeneralHypermatrixProduct(*args):
         if len(args)<2:
             raise ValueError, "The number of operands must be >= 2"
         elif len(args) >= 2:
-            Rh[tuple(entry)]=sum(\
-[prod([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+\
-[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
+            Rh[tuple(entry)]=sum([prod([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
 
-# Implementing the General version of the Hypermatrix product 
-# I now need to test this implementation
+# Defining a shorter function call for the hypermatrix product implemented above.
+def Prod(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner product of the input hypermatrices.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=Prod(Ha, Hb, Hc); Rslt
+        [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+
+    return GeneralHypermatrixProduct(*args)
+
 def GeneralHypermatrixProductB(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner product of the input hypermatrices
+    with non-trivial background. The code only handles the 
+    Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c'); Hd = HM(2,2,2,'d')
+        sage: Rslt=GeneralHypermatrixProductB(Ha, Hb, Hc, Hd); Rslt
+        [[[a000*b000*c000*d000 + a000*b000*c100*d001 + a000*b001*c000*d010 + a000*b001*c100*d011 + a010*b000*c000*d100 + a010*b000*c100*d101 + a010*b001*c000*d110 + a010*b001*c100*d111, a001*b000*c001*d000 + a001*b000*c101*d001 + a001*b001*c001*d010 + a001*b001*c101*d011 + a011*b000*c001*d100 + a011*b000*c101*d101 + a011*b001*c001*d110 + a011*b001*c101*d111], [a000*b010*c010*d000 + a000*b010*c110*d001 + a000*b011*c010*d010 + a000*b011*c110*d011 + a010*b010*c010*d100 + a010*b010*c110*d101 + a010*b011*c010*d110 + a010*b011*c110*d111, a001*b010*c011*d000 + a001*b010*c111*d001 + a001*b011*c011*d010 + a001*b011*c111*d011 + a011*b010*c011*d100 + a011*b010*c111*d101 + a011*b011*c011*d110 + a011*b011*c111*d111]], [[a100*b100*c000*d000 + a100*b100*c100*d001 + a100*b101*c000*d010 + a100*b101*c100*d011 + a110*b100*c000*d100 + a110*b100*c100*d101 + a110*b101*c000*d110 + a110*b101*c100*d111, a101*b100*c001*d000 + a101*b100*c101*d001 + a101*b101*c001*d010 + a101*b101*c101*d011 + a111*b100*c001*d100 + a111*b100*c101*d101 + a111*b101*c001*d110 + a111*b101*c101*d111], [a100*b110*c010*d000 + a100*b110*c110*d001 + a100*b111*c010*d010 + a100*b111*c110*d011 + a110*b110*c010*d100 + a110*b110*c110*d101 + a110*b111*c010*d110 + a110*b111*c110*d111, a101*b110*c011*d000 + a101*b110*c111*d001 + a101*b111*c011*d010 + a101*b111*c111*d011 + a111*b110*c011*d100 + a111*b110*c111*d101 + a111*b111*c011*d110 + a111*b111*c111*d111]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [(args[i]).n(i) for i in range(len(args)-1)]
     # Initializing the input for generating a symbolic hypermatrix
     inpts = l+['zero']
     # Initialization of the hypermatrix
     Rh = HM(*inpts)
-    # Main loop performing the assignement
     # Initializing the background hypermatrix
-    B = args[len(args)-1]
+    B = (args[len(args)-1]).transpose(args[len(args)-1].order()-1)
     args = tuple([args[id] for id in range(len(args)-1)])
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
@@ -1333,7 +1554,7 @@ def GeneralHypermatrixProductB(*args):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        # computing the Hypermatrix product
+        # Computing the Hypermatrix product
         if len(args) < 2:
             raise ValueError, "The number of operands must be >= 2"
         elif len(args) >= 2:
@@ -1346,12 +1567,44 @@ def GeneralHypermatrixProductB(*args):
                 for z in range(len(l2)-1):
                     entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[0:z+1])),l2[z+1])))
                     sm2 = sm2+prod(l2[0:z+1])*entry2[len(entry2)-1]
-                Rh[tuple(entry)]= Rh[tuple(entry)]+prod([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[entry2[s]]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[entry2[len(entry2)-1]])]]+[args[len(args)-1][tuple([entry2[0]]+entry[1:])]])*B[tuple(entry2)]
+                Rh[tuple(entry)] = Rh[tuple(entry)]+prod([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[entry2[ Integer(mod(s+1,len(args))) ]]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(entry)-1]+[entry2[len(entry2)-1]])]]+[args[len(args)-1][tuple([entry2[0]]+entry[1:])]])*B[tuple(entry2)]
     return Rh
 
-# Implementing the General version of the Hypermatrix logarithmic product
-# I now need to test this implementation
+def ProdB(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner product of the input hypermatrices
+    with non-trivial background. The code only handles the 
+    Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c'); Hd = HM(2,2,2,'d')
+        sage: Rslt=ProdB(Ha, Hb, Hc, Hd); Rslt
+        [[[a000*b000*c000*d000 + a000*b000*c100*d001 + a000*b001*c000*d010 + a000*b001*c100*d011 + a010*b000*c000*d100 + a010*b000*c100*d101 + a010*b001*c000*d110 + a010*b001*c100*d111, a001*b000*c001*d000 + a001*b000*c101*d001 + a001*b001*c001*d010 + a001*b001*c101*d011 + a011*b000*c001*d100 + a011*b000*c101*d101 + a011*b001*c001*d110 + a011*b001*c101*d111], [a000*b010*c010*d000 + a000*b010*c110*d001 + a000*b011*c010*d010 + a000*b011*c110*d011 + a010*b010*c010*d100 + a010*b010*c110*d101 + a010*b011*c010*d110 + a010*b011*c110*d111, a001*b010*c011*d000 + a001*b010*c111*d001 + a001*b011*c011*d010 + a001*b011*c111*d011 + a011*b010*c011*d100 + a011*b010*c111*d101 + a011*b011*c011*d110 + a011*b011*c111*d111]], [[a100*b100*c000*d000 + a100*b100*c100*d001 + a100*b101*c000*d010 + a100*b101*c100*d011 + a110*b100*c000*d100 + a110*b100*c100*d101 + a110*b101*c000*d110 + a110*b101*c100*d111, a101*b100*c001*d000 + a101*b100*c101*d001 + a101*b101*c001*d010 + a101*b101*c101*d011 + a111*b100*c001*d100 + a111*b100*c101*d101 + a111*b101*c001*d110 + a111*b101*c101*d111], [a100*b110*c010*d000 + a100*b110*c110*d001 + a100*b111*c010*d010 + a100*b111*c110*d011 + a110*b110*c010*d100 + a110*b110*c110*d101 + a110*b111*c010*d110 + a110*b111*c110*d111, a101*b110*c011*d000 + a101*b110*c111*d001 + a101*b111*c011*d010 + a101*b111*c111*d011 + a111*b110*c011*d100 + a111*b110*c111*d101 + a111*b111*c011*d110 + a111*b111*c111*d111]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductB(*args) 
+
 def GeneralHypermatrixLogProduct(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner Log-product of the input hypermatrices
+    with non-trivial background. The code only handles the 
+    Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,1,2,'a'); Hb=HM(2,2,1,'b'); Hc=HM(1,2,2,'c')
+        sage: Rslt=GeneralHypermatrixLogProduct(Ha, Hb, Hc); Rslt
+        [[[a000 + b000 + c000, a001 + b000 + c001], [a000 + b010 + c010, a001 + b010 + c011]], [[a100 + b100 + c000, a101 + b100 + c001], [a100 + b110 + c010, a101 + b110 + c011]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [(args[i]).n(i) for i in range(len(args))]
     # Initializing the input for generating a symbolic hypermatrix
@@ -1370,12 +1623,24 @@ def GeneralHypermatrixLogProduct(*args):
         if len(args)<2:
             raise ValueError, "The number of operands must be >= 2"
         elif len(args) >= 2:
-            Rh[tuple(entry)]=sum(\
-[sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+\
-[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
+            Rh[tuple(entry)]=sum([sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
 
 def GeneralHypermatrixCyclicPermute(A):
+    """
+    Outputs a list of lists associated with the general
+    transpose as defined by the cyclic permutation of indices.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a')
+        sage: GeneralHypermatrixCyclicPermute(Ha)
+        [[[a000, a100], [a001, a101]], [[a010, a110], [a011, a111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     l = l[1:]+[l[0]]
@@ -1396,6 +1661,19 @@ def GeneralHypermatrixCyclicPermute(A):
     return Rh
 
 def GeneralHypermatrixScale(A,s):
+    """
+    Outputs a list of lists associated with the scaling of a general hypermatrix.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a')
+        sage: GeneralHypermatrixScale(Ha,3)
+        [[[3*a000, 3*a001], [3*a010, 3*a011]], [[3*a100, 3*a101], [3*a110, 3*a111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -1414,6 +1692,20 @@ def GeneralHypermatrixScale(A,s):
     return Rh
 
 def GeneralHypermatrixExponent(A,s):
+    """
+    Outputs a list of lists associated with the general
+    whose entries are all raised to the power s.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a')
+        sage: GeneralHypermatrixExponent(Ha,3)
+        [[[a000^3, a001^3], [a010^3, a011^3]], [[a100^3, a101^3], [a110^3, a111^3]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -1427,10 +1719,28 @@ def GeneralHypermatrixExponent(A,s):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Rh[tuple(entry)]=(A[tuple(entry)])^s
+        if A[tuple(entry)].is_zero():
+            Rh[tuple(entry)] = 0
+        else:
+            Rh[tuple(entry)] = (A[tuple(entry)])^s
     return Rh
 
 def GeneralHypermatrixBaseExponent(A,s):
+    """
+    Outputs a list of lists associated with the general
+    whose entries are exponentiated using the input s as
+    basis for the exponentiation.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a')
+        sage: GeneralHypermatrixBaseExponent(Ha,3)
+        [[[3^a000, 3^a001], [3^a010, 3^a011]], [[3^a100, 3^a101], [3^a110, 3^a111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -1448,7 +1758,89 @@ def GeneralHypermatrixBaseExponent(A,s):
         Rh[tuple(entry)]=s^(A[tuple(entry)])
     return Rh
 
+def GeneralHypermatrixLogarithm(A,s=e):
+    """
+    Outputs a list of lists associated with the general
+    whose entries are logarithms to the base s of the 
+    original hypermatrix.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a')
+        sage: GeneralHypermatrixLogarithm(Ha,3)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """   
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=log(A[tuple(entry)],s).simplify_exp()
+    return Rh
+
+def GeneralHypermatrixConjugate(A):
+    """
+    Outputs a list of lists associated with the general
+    whose entries are complex conjugates of the original
+    hypermatrix.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,[exp(I*2*pi*u*v*w/4) for u in range(2) for v in range(2) for w in range(2)])
+        sage: GeneralHypermatrixConjugate(Ha)
+        [[[1, 1], [1, 1]], [[1, 1], [1, -I]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=conjugate(A[tuple(entry)])
+    return Rh
+
 def GeneralHypermatrixExpand(A):
+    """
+    Outputs a list of lists associated with the general
+    hypermatrix with expressions in the entries in their
+    expanded form.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,[(var('x')+var('y'))^(i+j+k) for i in range(2) for j in range(2) for k in range(2)])
+        sage: GeneralHypermatrixExpand(Ha)
+        [[[1, x + y], [x + y, x^2 + 2*x*y + y^2]], [[x + y, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^3 + 3*x^2*y + 3*x*y^2 + y^3]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -1542,7 +1934,7 @@ def GeneralHypermatrixSubstituteN(A, Dct):
         [[[z, y], [y, x]], [[y, x], [x, t]]]
 
     AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
+    - Edinah K. Gnang
     """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
@@ -1572,7 +1964,7 @@ def GeneralHypermatrixCopy(A):
         [[[a000+b000,a001+b001],[a010+b010,a011+b011]],[[a100+b100,a101+b101],[a110+b110,a111+b111]]]
 
     AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
+    - Edinah K. Gnang
     """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
@@ -1591,6 +1983,37 @@ def GeneralHypermatrixCopy(A):
         Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
+def List2Hypermatrix(*args):
+    """
+    Procedure for Initializing a Hypermatrix from a size specifications and a list
+
+    EXAMPLES:
+    ::
+        sage: A = List2Hypermatrix(2,2,2,HM(2,2,2,'a').list()); A
+        [[[a000, a001], [a010, a011]],[[a100, a101], [a110, a111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = args[:-1]
+    # Initialization of the list
+    Lst =args[-1]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = [j for j in l]+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=Lst[i]
+    return Rh
+
 def GeneralHypermatrixAdd(A,B):
     """
     Procedure for computing Hypermatrix Hadamard addition.
@@ -1602,8 +2025,12 @@ def GeneralHypermatrixAdd(A,B):
         [[[a000*b000,a001*b001],[a010*b010,a011*b011]],[[a100*b100,a101*b101],[a110*b110,a111*b111]]]
 
     AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
+    - Edinah K. Gnang
     """
+    # The if statement bellow address the sum function
+    if B == 0:
+        tl = [A.n(i) for i in range(A.order())]+['zero']
+        B = HM(*tl)
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     s = [B.n(i) for i in range(B.order())]
@@ -1638,7 +2065,7 @@ def GeneralHypermatrixHadamardProduct(A,B):
         [[[a000*b000,a001*b001],[a010*b010,a011*b011]],[[a100*b100,a101*b101],[a110*b110,a111*b111]]]
 
     AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
+    - Edinah K. Gnang
     """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
@@ -1664,6 +2091,20 @@ def GeneralHypermatrixHadamardProduct(A,B):
         raise ValueError, "The Dimensions of the input hypermatrices must match."
 
 def GeneralHypermatrixKroneckerDelta(od, sz):
+    """
+    Outputs a list of lists associated with the general
+    Kronecter delta hypermatrix
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Dlt = GeneralHypermatrixKroneckerDelta(2,2); Dlt
+        [[1, 0], [0, 1]] 
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [sz for i in range(od)] 
     # Initializing the input for generating a symbolic hypermatrix
@@ -1682,6 +2123,80 @@ def GeneralHypermatrixKroneckerDelta(od, sz):
             Rh[tuple(entry)] = 1
     return Rh
 
+def GeneralUncorrelatedHypermatrixTupleU(od):
+    """
+    Generates a tuplet of hypermatrices of the appropriate order which are
+    uncorrelated but I do not normalize them. Each one of the dimensions are equal to 2.
+
+    EXAMPLES:
+    ::
+        sage: [A,B]=GeneralUncorrelatedHypermatrixTupleU(2)
+        sage: A
+        [[e^(I*pi + r1 - r2 + r6), e^r6], [e^(I*pi + r3 - r4 + r5), e^r5]]
+        sage: B
+        [[e^r4, e^r2], [e^r3, e^r1]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization the alphabet list
+    AlphaB = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    # Initializing the hypermatrix
+    LQ = [apply(HM,[2 for i in range(od)]+[AlphaB[j]]).elementwise_base_exponent(e) for j in range(od)]
+    # Initilizing the list of variable
+    VrbLst = []
+    for Q in LQ:
+        VrbLst = VrbLst + (Q.elementwise_base_logarithm(e)).list()
+    # Computing the product
+    Eq = apply(GeneralHypermatrixProduct, [Q for Q in LQ])
+    # Writting up the constraints
+    LeQ = (Eq.list())[1:2^od-1]
+    # Filling up the linear constraints
+    CnstrLst= [] 
+    for f in LeQ:
+        CnstrLst.append(ln((f.operands())[0]).simplify_exp()-I*pi-ln((f.operands())[1]).simplify_exp()==0)
+    # Directly solving the constraints
+    Sl = solve(CnstrLst, VrbLst)
+    # Setting up the list for the dictionary
+    Dct = [(eq.lhs(),exp(eq.rhs())) for eq in Sl[0]]
+    # Returning the uncorrelated tuplets
+    return [apply(HM, [2 for i in range(od)]+[AlphaB[j]]).subs(dict(Dct)) for j in range(od)]
+
+def GeneralUncorrelatedHypermatrixTuple(od):
+    """
+    Generates a tuplet of hypermatrices of the appropriate order which are
+    uncorrelated and normalized. Each one of the dimensions are equal to 2.
+
+    EXAMPLES:
+    ::
+        sage: [A,B]=GeneralUncorrelatedHypermatrixTuple(2)
+        sage: A
+        [[e^(I*pi + r1 - r2 + r6)/(e^(I*pi + r1 - r2 + r4 + r6) + e^(r3 + r6)), e^r6/(e^(I*pi + r1 - r2 + r4 + r6) + e^(r3 + r6))], [e^(I*pi + r3 - r4 + r5)/(e^(I*pi + r2 + r3 - r4 + r5) + e^(r1 + r5)), e^r5/(e^(I*pi + r2 + r3 - r4 + r5) + e^(r1 + r5))]]
+        sage: B
+        [[e^r4, e^r2], [e^r3, e^r1]]
+        sage: (Prod(A,B)).simplify()
+        [[1, 0], [0, 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the unormalized tuples
+    L = GeneralUncorrelatedHypermatrixTupleU(od)
+    Tp= apply(GeneralHypermatrixProduct, [h for h in L])
+    Q = L[0].copy()
+    # first row to normalize 
+    entry = [0 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([0 for i in range(Q.order())])]
+    entry[1] = 1
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([0 for i in range(Q.order())])]
+    # last row to normalize 
+    entry = [1 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([1 for i in range(Q.order())])]
+    entry[1] = 0
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([1 for i in range(Q.order())])]
+    return [Q]+[L[i] for i in range(1,len(L))]
+
 def GeneralOrthogonalHypermatrixU(od):
     """
     Generates an orthogonal hypermatrix of the appropriate order
@@ -1690,7 +2205,7 @@ def GeneralOrthogonalHypermatrixU(od):
 
     EXAMPLES:
     ::
-        sage: Q = GeneralOrthogonalHypermatrix(3); Q
+        sage: Q = GeneralOrthogonalHypermatrixU(3); Q
         [[[e^(-r1+r3+r6),e^r4],[e^r6,e^r2]],[[-e^(r1+r2-r3-r4+r5),e^r3],[e^r5,e^r1]]]
 
     AUTHORS:
@@ -1707,10 +2222,8 @@ def GeneralOrthogonalHypermatrixU(od):
     # Writting up the constraints
     LeQ = (Set(Eq.list())).list()
     # Removing the normalization constraints
-    LeQ.remove(e^(od*var('q'+''.join(['0' for i in range(od)])))+\
-e^(od*var('q01'+''.join(['0' for i in range(od-2)]))))
-    LeQ.remove( e^(od*var('q10'+''.join(['1' for i in range(od-2)])))+\
-e^(od*var('q'+''.join(['1' for i in range(od)]))))
+    LeQ.remove(e^(od*var('q'+''.join(['0' for i in range(od)])))+e^(od*var('q01'+''.join(['0' for i in range(od-2)]))))
+    LeQ.remove( e^(od*var('q10'+''.join(['1' for i in range(od-2)])))+e^(od*var('q'+''.join(['1' for i in range(od)]))))
     # Filling up the linear constraints
     CnstrLst= [] 
     for f in LeQ:
@@ -1750,31 +2263,23 @@ def GeneralOrthogonalHypermatrix(od):
     else :
         # Initializing the hypermatrix
         Q = apply(HM,[2 for i in range(od)]+['q'])
-    
         # Initilizing the list of variable
         VrbLst = Q.list()
-    
         # Reinitializing of Q by exponentiation 
         Q = Q.elementwise_base_exponent(e)
-    
         # Computing the product
         Eq = apply(GeneralHypermatrixProduct, [Q.transpose(j) for j in range(od,0,-1)])
-    
         # Writting up the constraints
         LeQ = (Set(Eq.list())).list()
-        
         # Removing the normalization constraints
         LeQ.remove(e^(od*var('q'+''.join(['0' for i in range(od)])))+ e^(od*var('q01'+''.join(['0' for i in range(od-2)]))))
         LeQ.remove( e^(od*var('q10'+''.join(['1' for i in range(od-2)])))+ e^(od*var('q'+''.join(['1' for i in range(od)]))))
-    
         # Filling up the linear constraints
         CnstrLst= [] 
         for f in LeQ:
             CnstrLst.append(ln((f.operands())[0]).simplify_exp()-I*pi-ln((f.operands())[1]).simplify_exp()==0)
-    
         # Directly solving the constraints
         Sl = solve(CnstrLst,VrbLst)
-    
         # Main loop performing the substitution of the entries
         Lr = [var('r'+str(i)) for i in range(1,2^od+1)]
         l = [Q.n(i) for i in range(Q.order())]
@@ -1786,7 +2291,6 @@ def GeneralOrthogonalHypermatrix(od):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
                 sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).simplify_exp()
-
         # Initialization of the output hypermatrix
         U = GeneralHypermatrixCopy(Q)
         # first row to normalize 
@@ -1794,7 +2298,6 @@ def GeneralOrthogonalHypermatrix(od):
         U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
         entry[1] = 1
         U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
-
         # last row to normalize 
         entry = [1 for i in range(Q.order())]
         U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
@@ -1802,7 +2305,114 @@ def GeneralOrthogonalHypermatrix(od):
         U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
     return U
 
+def GeneralUnitaryHypermatrixU(od):
+    """
+    Generates an unitary hypermatrix of the appropriate order
+    for which each one of the dimensions are equal to 2.
+    The vectors are not normalized. The order input od
+    must be even for the function call to be meaningful.
+
+    EXAMPLES:
+    ::
+        sage: [A, Ac]=GeneralUnitaryHypermatrixU(4)
+        sage: (Prod(A,Ac.transpose(3),A.transpose(2),Ac.transpose())).simplify()
+        [[[[(e^(4*r18+4*r19+4*r21+4*r24) + e^(4*r19+4*r20+4*r22+4*r23))*e^(-4*r18-4*r21-4*r24),0],[0,0]],[[0,0],[0,0]]],[[[0,0],[0,0]], [[0,0],[0,(e^(4*r17+4*r18+4*r21+4*r24) + e^(4*r17+4*r20+4*r22+4*r23))*e^(-4*r20-4*r22-4*r23)]]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the variable playing the role of sqrt(-1)
+    z=var('z')
+    # Initializing the real part and the imaginary part
+    X=apply(HM,[2 for i in range(od)]+['x']); Y=apply(HM,[2 for i in range(od)]+['y'])
+    # Initialization of the list
+    Lh = [(X+z*Y).elementwise_base_exponent(e), (X-z*Y).elementwise_base_exponent(e)]
+    # Computation of the Product.
+    B = apply(Prod,[Lh[Integer(mod(i,2))].transpose(i) for i in range(od,0,-1)])
+    B[tuple([0 for i in range(od)])]=0; B[tuple([1 for i in range(od)])]=0
+    # Initializing the list
+    L=Set(B.list()).list()
+    # Removing the normalization constraints
+    L.remove(0)
+    # Initialization of the variables.
+    Vrbls =X.list()+Y.list() 
+    # Initialization of the non homogeneous equations
+    Eq =[(log((l.operands())[0])).simplify_log().subs(z=0) - (log((l.operands())[1])).simplify_log().subs(z=0) == 0 for l in L]+[(log((l.operands())[0])).simplify_log().coeff(z) - (log((l.operands())[1])).simplify_log().coeff(z)==pi for l in L]
+    # Calling the constraint formator
+    [A,b]=ConstraintFormatorII(Eq,Vrbls)
+    # Setting the signs right
+    V = A.kernel().basis()
+    for i in range(Integer(len(V)/2),len(V)):
+        # Initilization of the index locators
+        c1=-1; c2=-1
+        for j in range(len(V[i])):
+            if V[i][j] == 1 and c1 == -1:
+                c1=j
+            elif V[i][j] == 1 and c1 != -1:
+                c2=j
+                break
+        b[c2,0] = -b[c2,0]
+    # Rewriting the system
+    Eq = [(A*Matrix(SR,len(Vrbls),1,Vrbls))[i,0]==b[i,0] for i in range(A.nrows())]
+    # Computing the Homogeneous solution
+    Sln = solve(Eq,Vrbls)[0]
+    X = X.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+    Y = Y.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+    # Final result
+    return [(X+I*Y).elementwise_base_exponent(e), (X-I*Y).elementwise_base_exponent(e)]
+
+def GeneralUnitaryHypermatrix(od):
+    """
+    Generates an unitary hypermatrix of the appropriate order
+    for which each one of the dimensions are equal to 2.
+    The vectors are not normalized.
+
+    EXAMPLES:
+    ::
+        sage: [A, Ac]=GeneralUnitaryHypermatrixU(4)
+        sage: (Prod(A,Ac.transpose(3),A.transpose(2),Ac.transpose())).simplify()
+        [[[[(e^(4*r18+4*r19+4*r21+4*r24) + e^(4*r19+4*r20+4*r22+4*r23))*e^(-4*r18-4*r21-4*r24),0],[0,0]],[[0,0],[0,0]]],[[[0,0],[0,0]], [[0,0],[0,(e^(4*r17+4*r18+4*r21+4*r24) + e^(4*r17+4*r20+4*r22+4*r23))*e^(-4*r20-4*r22-4*r23)]]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    Lh=GeneralUnitaryHypermatrixU(od)
+    Tp=apply(Prod,[Lh[Integer(mod(i,2))].transpose(i) for i in range(od,0,-1)])
+    Q =Lh[0].copy()
+    Qc=Lh[1].copy()
+    # first row to normalize 
+    entry=[0 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
+    entry[1]=1
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
+    # last row to normalize 
+    entry=[1 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
+    entry[1]=0
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
+    # Final result
+    return [Q,Qc]
+
 def DFT_image_resizer(sz, dm):
+    """
+    Generates a third order hypermatrix of 3 slices
+    for performing third reduction on the size in each color
+    channel.
+
+    EXAMPLES:
+    ::
+        sage: DFT_image_resizer(4,2)
+        [[[[1, 1, 1], [0, 0, 0], [1, 1, 1], [0, 0, 0]], [[1, 1, 1], [0, 0, 0], [-1, -1, -1], [0, 0, 0]], [[0, 0, 0], [1, 1, 1], [0, 0, 0], [1, 1, 1]], [[0, 0, 0], [1, 1, 1], [0, 0, 0], [-1, -1, -1]]],
+ [[[1, 1, 1], [1, 1, 1], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [1, 1, 1], [1, 1, 1]], [[1, 1, 1], [-1, -1, -1], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [1, 1, 1], [-1, -1, -1]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     if mod(sz,dm) == 0:
         # Initializing the identity matrix of the appropriate size
         Idm = identity_matrix(Integer(sz/dm))
@@ -1819,6 +2429,18 @@ def DFT_image_resizer(sz, dm):
         print 'Dimension mismatch !!'  
 
 def channel_product(A,B):
+    """
+    Performs channel specific matrix multiplication
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,3,'a'); Hb=HM(2,2,3,'b')
+        sage:  channel_product(Ha,Hb)
+        [[[a000*b000 + a010*b100, a001*b001 + a011*b101, a002*b002 + a012*b102], [a000*b010 + a010*b110, a001*b011 + a011*b111, a002*b012 + a012*b112]], [[a100*b000 + a110*b100, a101*b001 + a111*b101, a102*b002 + a112*b102], [a100*b010 + a110*b110, a101*b011 + a111*b111, a102*b012 + a112*b112]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     P0 = HM(A.n(0),A.n(1),'zero')
     for i in range(A.n(0)):
         for j in range(A.n(1)):
@@ -1848,111 +2470,6 @@ def channel_product(A,B):
     R2 = Matrix(SR,P2.listHM())*Matrix(SR,Q2.listHM())
     return HM([[(R0[i,:]).list() for i in range(A.n(1))],[(R1[i,:]).list() for i in range(A.n(1))],[(R2[i,:]).list() for i in range(A.n(1))]]).transpose()
 
-# first order Lagrange interpolation
-def lagrange1t(u0, m0):
-    var('x0')
-    f = 1
-    for m in range(m0):
-        if(m!=u0):
-            f = f*(exp(I*2*pi*(x0/m0+0/2)) + exp(I*2*pi*(m/m0+1/2)))/(exp(I*2*pi*(u0/m0+0/2))+ exp(I*2*pi*(m/m0+1/2)))
-    return f
-
-# Secom2 order Lagrange interpolation
-def lagrange2t(u0, m0, u1, m1):
-    var('x0,x1')
-    f = 1
-    for m in range(m0):
-        for n in range(m1):
-            if(m!=u0 or n!=u1):
-                 f = f*(exp(I*2*pi*((x0/m0)^2+(n/m1)+0/3)) + exp(I*2*pi*((m/m0)^2+(x1/m1)+1/3)) + exp(I*2*pi*((m/m0)^2+(n/m1)+2/3)))/(exp(I*2*pi*((u0/m0)^2+(n/m1)+0/3))+ exp(I*2*pi*((m/m0)^2+(u1/m1)+1/3)) + exp(I*2*pi*((m/m0)^2+(n/m1)+2/3)))
-    return f
-
-# Third order Lagrange interpolation
-def lagrange3t(u0, m0, u1, m1, u2, m2):
-    var('x0,x1,x2')
-    f = 1
-    for m in range(m0):
-        for n in range(m1):
-            for p in range(m2):
-                if(m!=u0 or n!=u1 or p!=u2):
-                    f = f*((exp(I*2*pi*((x0/m0)^3+(n/m1)^2+(p/m2)^1+0/4))+exp(I*2*pi*((m/m0)^3+(x1/m1)^2+(p/m2)^1+1/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(x2/m2)^1+2/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(p/m2)^1+3/4))))/((exp(I*2*pi*((u0/m0)^3+(n/m1)^2+(p/m2)^1+0/4))+exp(I*2*pi*((m/m0)^3+(u1/m1)^2+(p/m2)^1+1/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(u2/m2)^1+2/4))+exp(I*2*pi*((m/m0)^3+(n/m1)^2+(p/m2)^1+3/4))))
-    return f
-
-# Fourth order Lagrange interpolation
-def lagrange4t(u0, m0, u1, m1, u2, m2, u3, m3):
-    var('x0,x1,x2,x3')
-    f = 1
-    for m in range(m0):
-        for n in range(m1):
-            for p in range(m2):
-                for q in range(m3):
-                    if(m!=u0 or n!=u1 or p!=u2 or q!=u3):
-                        f = f*(exp(I*2*pi*((x0/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+0/5))+exp(I*2*pi*((m/m0)^4+(x1/m1)^3+(p/m2)^2+(q/m3)^1+1/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(x2/m2)^2+(q/m3)^1+2/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(x3/m3)^1+3/5))+ exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+4/5)))/(exp(I*2*pi*((u0/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+0/5))+exp(I*2*pi*((m/m0)^4+(u1/m1)^3+(p/m2)^2+(q/m3)^1+1/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(u2/m2)^2+(q/m3)^1+2/5))+exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(u3/m3)^1+3/5))+ exp(I*2*pi*((m/m0)^4+(n/m1)^3+(p/m2)^2+(q/m3)^1+4/5)))
-    return f
-
-# Fourth order Lagrange interpolation
-def lagrange5t(u0, m0, u1, m1, u2, m2, u3, m3, u4, m4):
-    var('x0,x1,x2,x3,x4')
-    f = 1
-    for m in range(m0):
-        for n in range(m1):
-            for p in range(m2):
-                for q in range(m3):
-                    for r in range(m4):
-                        if(m!=u0 or n!=u1 or p!=u2 or q!=u3 or r!=u4):
-                            f = f*(exp(I*2*pi*((x0/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+0/6))+exp(I*2*pi*((m/m0)^5+(x1/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+1/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(x2/m2)^3+(q/m3)^2+(r/m4)^1+2/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(x3/m3)^2+(r/m4)^1+3/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(x4/m4)^1+4/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+5/6)))/(exp(I*2*pi*((u0/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+0/6))+exp(I*2*pi*((m/m0)^5+(u1/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)^1+1/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(u2/m2)^3+(q/m3)^2+(r/m4)^1+2/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(u3/m3)^2+(r/m4)+3/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(u4/m4)+4/6))+exp(I*2*pi*((m/m0)^5+(n/m1)^4+(p/m2)^3+(q/m3)^2+(r/m4)+5/6)))
-    return f
-
-# Matrix0 Lagrange interpolation
-def matrix_lagrange_polynomial(A,order):
-    f = -1
-    if order == 1:
-        # Initialix2ation of the polx1nomial
-        f = 0
-        for u0 in range(len(A)):
-            f = f + A[u0]*lagrange1t(u0, Integer(len(A)))
-
-    elif order == 2:
-        # Initialix2ation of the polx1nomial
-        f = 0
-        for u0 in range(len(A)):
-            for u1 in range(len(A[0])):
-                f = f + A[u0][u1]*lagrange2t(u0, Integer(len(A)), u1, Integer(len(A[0])))
-
-    elif order == 3 :
-        # Initialix2ation of the polx1nomial
-        f = 0
-        for u0 in range(len(A)):
-            for u1 in range(len(A[0])):
-                for u2 in range(len(A[0][0])):
-                    f = f + A[u0][u1][u2]*lagrange3t(u0, Integer(len(A)), u1, Integer(len(A[0])), u2, Integer(len(A[0][0])))
-
-    elif order == 4 :
-        # Initialix2ation of the polx1nomial
-        f = 0
-        for u0 in range(len(A)):
-            for u1 in range(len(A[0])):
-                for u2 in range(len(A[0][0])):
-                    for u3 in range(len(A[0][0][0])):
-                        f = f + A[u0][u1][u2][u3]*lagrange4t(u0, Integer(len(A)), u1, Integer(len(A[0])), u2, Integer(len(A[0][0])), u3, Integer(len(A[0][0][0])))
- 
-    elif order == 5 :
-        # Initialix2ation of the polx1nomial
-        f = 0
-        for u0 in range(len(A)):
-            for u1 in range(len(A[0])):
-                for u2 in range(len(A[0][0])):
-                    for u3 in range(len(A[0][0][0])):
-                        for u4 in range(len(A[0][0][0][0])):
-                            f = f + A[u0][u1][u2][u3][u4]*lagrange5t(u0, Integer(len(A)), u1, Integer(len(A[0])), u2, Integer(len(A[0][0])), u3, Integer(len(A[0][0][0])), u4, Integer(len(A[0][0][0][0])))
- 
-    else:
-        print 'The interpolation for order', order,'-tensors is not implemented'
- 
-    return f
-
-
-
 def Deter(A):
     """
     Computes symbolically the determinant of a square matrix
@@ -1960,7 +2477,7 @@ def Deter(A):
 
     EXAMPLES:
     ::
-        sage: M = Matrix(SR, MatrixGenerate(2, 2, 'm')); det(M)
+        sage: M = Matrix(SR, MatrixGenerate(2, 2, 'm')); Deter(M)
         -m01*m10 + m00*m11
 
     AUTHORS:
@@ -1968,171 +2485,78 @@ def Deter(A):
     """
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
-    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*\
-prod([A[k][p[k]] for k in range(A.nrows())]) for p in P])
+    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([A[k][p[k]] for k in range(A.nrows())]) for p in P])
 
-def conj3(z, k):
+ 
+def MeanApproximation(T):
     """
-    Computes the k-th conjugate corresponding to the input complex number
+    Computes  the mean slice approximation. This is mostly used for images
+    as a way to get a hold of the background.
 
     EXAMPLES:
     ::
-        sage: conj3(1+3*I,1)
-        0.999999999999998 - 3.00000000000000*I
+        sage: MeanApproximation(HM(2,2,2,'a'))
+        [[[[1/2*a000 + 1/2*a010, 1/2*a001 + 1/2*a011]], [[1/2*a100 + 1/2*a110, 1/2*a101 + 1/2*a111]]], [[[1/2*a000 + 1/2*a001], [1/2*a010 + 1/2*a011]], [[1/2*a100 + 1/2*a101], [1/2*a110 + 1/2*a111]]], [[[1/2*a000 + 1/2*a100, 1/2*a001 + 1/2*a101], [1/2*a010 + 1/2*a110, 1/2*a011 + 1/2*a111]]]]
+
     AUTHORS:
     - Edinah K. Gnang
     """
-    # Definition of the variables
-    a, b = var('a, b')
-    if 0 < CC(pi+z).arg() and CC(pi+z).arg() <= N(2*pi/3):
-        S = solve([a+b*CC(exp(I*2*pi/3)).real()==CC(z).real(), b*CC(exp(I*2*pi/3)).imag()==CC(z).imag()], a, b)
-        if Integer(mod(k,3))==0:
-            return 1.0*S[0][0].rhs()+1.0*CC(exp(I*2*pi/3))*S[0][1].rhs()
-        elif Integer(mod(k,3))==1:
-            return 1.0*S[0][0].rhs()+1.0*CC(exp(I*4*pi/3))*S[0][1].rhs()
-        elif Integer(mod(k,3))==2:
-            return 1.0*S[0][0].rhs()+1.0*S[0][1].rhs()
-    elif N(2*pi/3) < CC(pi+z).arg() and CC(pi+z).arg() <= N(4*pi/3):
-        S = solve([a*CC(exp(I*2*pi/3)).real()+b*CC(exp(I*4*pi/3)).real()==CC(z).real(), b*CC(exp(I*2*pi/3)).imag()+a*CC(exp(I*4*pi/3)).imag()==CC(z).imag()], a, b)
-        if Integer(mod(k,3))==0:
-            return 1.0*CC(exp(I*2*pi/3))*S[0][0].rhs()+1.0*CC(exp(I*4*pi/3))*S[0][1].rhs()
-        elif Integer(mod(k,3))==1:
-            return 1.0*CC(exp(I*4*pi/3))*S[0][0].rhs()+1.0*CC(exp(I*2*pi/3))*S[0][1].rhs()
-        elif Integer(mod(k,3))==2:
-            return 1.0*S[0][0].rhs()+1.0*S[0][1].rhs()
-    else :
-        S = solve([a+b*CC(exp(I*4*pi/3)).real()==CC(z).real(), b*CC(exp(I*4*pi/3)).imag()==CC(z).imag()], a, b)
-        if Integer(mod(k,3))==0:
-            return 1.0*S[0][0].rhs()+1.0*CC(exp(I*4*pi/3))*S[0][1].rhs()
-        elif Integer(mod(k,3))==1:
-            return 1.0*S[0][0].rhs()+1.0*CC(exp(I*2*pi/3))*S[0][1].rhs()
-        elif Integer(mod(k,3))==2:
-            return 1.0*S[0][0].rhs()+1.0*S[0][1].rhs()
-  
-def MeanApproximation(Im):
-    import pylab, numpy
-    from scipy import misc
     # Initialization of the Slices.
-    A = HM(len(Im), 1         , len(Im[0][0]), 'zero')
-    B = HM(len(Im), len(Im[0]), 1            , 'zero')
-    Ch = HM(1      , len(Im[0]), len(Im[0][0]), 'zero')
-    # Initialization of the Hypermatrix associated with the image.
-    T = HM(len(Im),len(Im[0]),len(Im[0][0]),'zero')
-    # Filling up the image Hypermatrix
-    for i in range(T.nrows()):
-        for j in range(T.ncols()):
-            for k in range(T.ndpts()):
-                T[i,j,k] = Im[i,j,k]
+    Ha = HM(T.n(0), 1     , T.n(2), 'zero')
+    Hb = HM(T.n(0), T.n(1), 1,      'zero')
+    Hc = HM(1     , T.n(1), T.n(2), 'zero')
     # Computing the mean of row depth slice
-    for u in range(A.nrows()):
-        for v in range(A.ndpts()):
-            A[u,0,v] = mean([T[u,i,v] for i in range(T.ncols())])
+    for u in range(Ha.nrows()):
+        for v in range(Ha.ndpts()):
+            Ha[u,0,v] = mean([T[u,i,v] for i in range(T.ncols())])
     # Computing the mean row column slice
-    for u in range(B.nrows()):
-        for v in range(B.ncols()):
-            B[u,v,0] = mean([T[u,v,i] for i in range(T.ndpts())])
+    for u in range(Hb.nrows()):
+        for v in range(Hb.ncols()):
+            Hb[u,v,0] = mean([T[u,v,i] for i in range(T.ndpts())])
     # Computing the mean column depth slice
-    for u in range(Ch.ncols()):
-        for v in range(Ch.ndpts()):
-            Ch[0,u,v] = mean([T[i,u,v] for i in range(T.nrows())])
+    for u in range(Hc.ncols()):
+        for v in range(Hc.ndpts()):
+            Hc[0,u,v] = mean([T[i,u,v] for i in range(T.nrows())])
     # Computing the outer-product of the mean slices.
-    return [T, A, B, Ch]
-
-def MedianApproximation(Im):
-    import pylab, numpy
-    from scipy import misc
-    # Initialization of the Slices.
-    A = HM(len(Im), 1         , len(Im[0][0]), 'zero')
-    B = HM(len(Im), len(Im[0]), 1            , 'zero')
-    Ch = HM(1      , len(Im[0]), len(Im[0][0]), 'zero')
-    # Initialization of the Hypermatrix associated with the image.
-    T = HM(len(Im),len(Im[0]),len(Im[0][0]),'zero')
-    # Filling up the image Hypermatrix
-    for i in range(T.nrows()):
-        for j in range(T.ncols()):
-            for k in range(T.ndpts()):
-                T[i,j,k] = Im[i,j,k]
-    # Computing the mean of row depth slice
-    for u in range(A.nrows()):
-        for v in range(A.ndpts()):
-            A[u,0,v] = median([T[u,i,v] for i in range(T.ncols())])
-    # Computing the mean row column slice
-    for u in range(B.nrows()):
-        for v in range(B.ncols()):
-            B[u,v,0] = median([T[u,v,i] for i in range(T.ndpts())])
-    # Computing the mean column depth slice
-    for u in range(Ch.ncols()):
-        for v in range(Ch.ndpts()):
-            Ch[0,u,v] = median([T[i,u,v] for i in range(T.nrows())])
-    # Computing the outer-product of the mean slices.
-    return [T, A, B, Ch]
-
-
-def GrdDcnt(T, A, B, Ch, p=10, nb_stp=100, stp_sz=0.250):    
-    import pylab, numpy
-    from scipy import misc
-    # Initialization of the variable slices.
-    X  = HM(T.n(0), 1     , T.n(2), 'x'); Rx = A
-    Y  = HM(T.n(0), T.n(1), 1     , 'y'); Ry = B
-    Z  = HM(1     , T.n(1), T.n(2), 'z'); Rz = Ch
-    
-    # Computing the p norm associated
-    f = sum([((T-X*(Y,Z)).elementwise_exponent(p))[i,j,k] for i in range(T.n(0)) for j in range(T.n(1)) for k in range(T.n(2))])
-    
-    # Computing symbolicaly the gradient vector
-    Gv = []
-    for i in range(X.n(0)):
-        for j in range(X.n(1)):
-            for k in range(X.n(2)):
-                Gv.append(f.diff(X[i,j,k]))
-    for i in range(Y.n(0)):
-        for j in range(Y.n(1)):
-            for k in range(Y.n(2)):
-                Gv.append(f.diff(Y[i,j,k]))
-    for i in range(Z.n(0)):
-        for j in range(Z.n(1)):
-            for k in range(Z.n(2)):
-                Gv.append(f.diff(Z[i,j,k]))
-    # Performing the Gradient descent
-    for stp in range(nb_stp):
-        # Updating the Slice Rx
-        indx = 0
-        for i in range(X.n(0)):
-            for j in range(X.n(1)):
-                for k in range(X.n(2)):
-                    Rx[i,j,k] = N(A[i,j,k]-stp_sz*(Gv[indx]/sum([Gv[s]^p for s in range(len(Gv))])^(1/p)).subs(dict([(X[u,v,w],A[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],B[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]+[(Z[u,v,w],Ch[u,v,w]) for u in range(Z.n(0)) for v in range(Z.n(1)) for w in range(Z.n(2))])))
-                    indx = indx+1
-        # Updating the Slice Ry
-        for i in range(Y.n(0)):
-            for j in range(Y.n(1)):
-                for k in range(Y.n(2)):
-                    Ry[i,j,k] = N(B[i,j,k]-stp_sz*(Gv[indx]/sum([Gv[s]^p for s in range(len(Gv))])^(1/p)).subs(dict([(X[u,v,w],A[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],B[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]+[(Z[u,v,w],Ch[u,v,w]) for u in range(Z.n(0)) for v in range(Z.n(1)) for w in range(Z.n(2))])))
-                    indx = indx+1
-        # Updating the Slice Rz
-        for i in range(Z.n(0)):
-            for j in range(Z.n(1)):
-                for k in range(Z.n(2)):
-                    Rz[i,j,k] = N(Ch[i,j,k]-stp_sz*(Gv[indx]/sum([Gv[s]^p for s in range(len(Gv))])^(1/p)).subs(dict([(X[u,v,w],A[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],B[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]+[(Z[u,v,w],Ch[u,v,w]) for u in range(Z.n(0)) for v in range(Z.n(1)) for w in range(Z.n(2))])))
-                    indx = indx+1
-        # Updating the gradient points
-        A = Rx; B = Ry; Ch = Rz
-        # Printing the current error
-        print "At iteration",stp," the error is ",N(f.subs(dict([(X[u,v,w],A[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],B[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]+[(Z[u,v,w],Ch[u,v,w]) for u in range(Z.n(0)) for v in range(Z.n(1)) for w in range(Z.n(2))])))
-    return [A,B,Ch]
+    return [Ha, Hb, Hc]
 
 def ZeroPadding(A):
+    """
+    outputs the zero padding into a cube of the cuboid third order hypermatrix.
+
+    EXAMPLES:
+    ::
+        sage: ZeroPadding(HM(1,1,2,'a'))
+        [[[a000, a001], [0, 0]], [[0, 0], [0, 0]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initializing the size parameter
-    sz = max([A.n(i) for i in range(A.order())])
+    sz = max(A.dimensions())
     # Initializing the Hypermatrix
     T = HM(sz, sz, sz, 'zero')
     # Filling up the Hypermatrix
-    for r in A.n(0):
-        for c in A.n(1):
-            for d in A.n(2):
+    for r in range(A.n(0)):
+        for c in range(A.n(1)):
+            for d in range(A.n(2)):
                 T[r,c,d]=A[r,c,d]
     return T
 
 def GenerateUnitLpNormVector(n,p = 2,indx=0):
+    """
+    outputs a unit lp norm vector.
+
+    EXAMPLES:
+    ::
+        sage: GenerateUnitLpNormVector(2) 
+        [cos(t0), sin(t0)]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     if n == 1:
         return [1]
     else :
@@ -2144,6 +2568,19 @@ def GenerateUnitLpNormVector(n,p = 2,indx=0):
         return X
 
 def ProbabilityMatrix(n, xi=0):
+    """
+    outputs the symbolic parametrization of a doubly stochastic matrix
+
+    EXAMPLES:
+    ::
+        sage: ProbabilityMatrix(2)
+        [     cos(t0)^2      sin(t0)^2]
+        [-cos(t0)^2 + 1 -sin(t0)^2 + 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initializing the matrix to be filled
     M = Matrix(SR, zero_matrix(n,n))
     # Initialixzing the variable index
@@ -2175,6 +2612,19 @@ def ProbabilityMatrix(n, xi=0):
     return M
 
 def ProbabilitySymMatrix(n, xi=0):
+    """
+    outputs the symbolic parametrization of a symetric doubly stochastic matrix
+
+    EXAMPLES:
+    ::
+        sage: ProbabilitySymMatrix(2)
+        [     cos(t0)^2      sin(t0)^2]
+        [-cos(t0)^2 + 1 -sin(t0)^2 + 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initializing the matrix to be filled
     M = Matrix(SR, zero_matrix(n,n))
     # Initialixzing the variable index
@@ -2207,36 +2657,26 @@ def HypermatrixPseudoInversePairsII(A,B):
 
     EXAMPLES:
     ::
-        sage: A1=HM([[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]]\
-,[[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]])
-        sage: A2=HM([[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]]\
-,[[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]])
+        sage: A1=HM([[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]] ,[[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]])
+        sage: A2=HM([[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]] ,[[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]])
         sage: [B1,B2]=HypermatrixPseudoInversePairsII(A1,A2)
+
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
     sz = len(A.listHM())
-
     # Initializing the list of linear constraints
     CnstrLst = []
-
     # Initilizing the variable list
-    Vrbls  = [var('ln_al'+str(i)+str(j)+str(k)) \
-for i in range(sz) for j in range(sz) for k in range(sz)]+\
-[var('ln_bt'+str(i)+str(j)+str(k)) for i in range(sz) for j in range(sz) \
-for k in range(sz)]
+    Vrbls  = [var('ln_al'+str(i)+str(j)+str(k))  for i in range(sz) for j in range(sz) for k in range(sz)]+[var('ln_bt'+str(i)+str(j)+str(k)) for i in range(sz) for j in range(sz) for k in range(sz)]
 
     for m in range(sz):
         for p in range(sz):
             for n in range(sz):
-                V=Matrix(CC, sz, sz, [(A[m,k1,k0])*(B[k0,k1,p]) \
-for k0 in range(sz) for k1 in range(sz)]).inverse()
-                CnstrLst=CnstrLst+[\
-var('ln_al'+str(m)+str(n)+str(k1))+var('ln_bt'+str(k1)+str(n)+str(p))==\
-ln(V[k1,n])  for k1 in range(sz)]
+                V=Matrix(CC, sz, sz, [(A[m,k1,k0])*(B[k0,k1,p]) for k0 in range(sz) for k1 in range(sz)]).inverse()
+                CnstrLst=CnstrLst+[var('ln_al'+str(m)+str(n)+str(k1))+var('ln_bt'+str(k1)+str(n)+str(p))==ln(V[k1,n])  for k1 in range(sz)]
     [A,b]=ConstraintFormator(CnstrLst,Vrbls)
-
     # Importing the Numerical Python package
     # for computing the matrix pseudo inverse
     import numpy
@@ -2254,16 +2694,24 @@ ln(V[k1,n])  for k1 in range(sz)]
     return [R1,R2]
 
 def HypermatrixPseudoInversePairsIII(A,B,p=2,nb_stp=100,stp_sz=0.25):
+    """
+     Outputs the pseudo inverse pairs associated with the input pairs of matrices
+
+    EXAMPLES:
+    ::
+        sage: A1=HM([[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]] ,[[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]])
+        sage: A2=HM([[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]] ,[[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]])
+        sage: [B1,B2]=HypermatrixPseudoInversePairsIII(A1,A2)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Defining the variables
-    #X=HM(2,2,2,'x');Rx=(HM(HypermatrixPermutation([0,1,2])));Mx=Rx 
-    #Y=HM(2,2,2,'y');Ry=(HM(HypermatrixPermutation([0,1,2]))).transpose();My=Ry
     X=HM(2,2,2,'x');Rx=A
     Y=HM(2,2,2,'y');Ry=B
-
     # Computing the associated p norm
     T=HM(2,2,2,'one')-((HM(2,2,2,'one'))*(A,B))*(X,Y)
     f=sum([((HM(2,2,2,'one')-((HM(2,2,2,'one'))*(A,B))*(X,Y)).elementwise_exponent(p))[i,j,k] for i in range(T.n(0)) for j in range(T.n(1)) for k in range(T.n(2))])
-    
     # Computing symbolicaly the gradient vector
     Gv = []
     for i in range(X.n(0)):
@@ -2281,14 +2729,12 @@ def HypermatrixPseudoInversePairsIII(A,B,p=2,nb_stp=100,stp_sz=0.25):
         for i in range(X.n(0)):
             for j in range(X.n(1)):
                 for k in range(X.n(2)):
-                    #Rx[i,j,k] = N(Mx[i,j,k]-stp_sz*(Gv[indx]/sum([Gv[s]^p for s in range(len(Gv))])^(1/p)).subs(dict([(X[u,v,w],Mx[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],My[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))])))
                     Rx[i,j,k] = N(Mx[i,j,k]-stp_sz*Gv[indx].subs(dict([(X[u,v,w],Mx[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],My[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]))/sum([(abs(Gv[l].subs(dict([(X[u,v,w],Mx[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],My[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]))))^p for l in range(len(Gv))])^(1/p))
                     indx = indx+1
         # Updating the Slice Ry
         for i in range(Y.n(0)):
             for j in range(Y.n(1)):
                 for k in range(Y.n(2)):
-                    #Ry[i,j,k] = N(My[i,j,k]-stp_sz*(Gv[indx]/sum([Gv[s]^p for s in range(len(Gv))])^(1/p)).subs(dict([(X[u,v,w],Mx[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],My[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))])))
                     Ry[i,j,k] = N(My[i,j,k]-stp_sz*(Gv[indx]).subs(dict([(X[u,v,w],Mx[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],My[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))])))
                     Ry[i,j,k] = N(My[i,j,k]-stp_sz*Gv[indx].subs(dict([(X[u,v,w],Mx[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],My[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]))/sum([(abs(Gv[l].subs(dict([(X[u,v,w],Mx[u,v,w]) for u in range(X.n(0)) for v in range(X.n(1)) for w in range(X.n(2))]+[(Y[u,v,w],My[u,v,w]) for u in range(Y.n(0)) for v in range(Y.n(1)) for w in range(Y.n(2))]))))^p for l in range(len(Gv))])^(1/p))
                     indx = indx+1
@@ -2304,10 +2750,8 @@ def HypermatrixPseudoInversePairsUnsplit(A,B):
 
     EXAMPLES:
     ::
-        sage: A1=HM([[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]]\
-,[[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]])
-        sage: A2=HM([[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]]\
-,[[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]])
+        sage: A1=HM([[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]], [[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]])
+        sage: A2=HM([[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]], [[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]])
         sage: B1B2=HypermatrixPseudoInversePairsUnsplit(A1,A2)
 
     AUTHORS:
@@ -2345,6 +2789,18 @@ def HypermatrixPseudoInversePairsUnsplit(A,B):
     return XY
 
 def HypermatrixPseudoInversePairAction(T, A, B):
+    """
+     Outputs the pseudo inverse pairs associated with the input pairs of matrices
+
+    EXAMPLES:
+    ::
+        sage: A1=HM([[[0.1631135370902057,0.11600112072013125],[0.9823708115400902,0.39605960486710756]], [[0.061860929755424676,0.2325542810173995],[0.39111210957450926,0.2019809359102137]]])
+        sage: A2=HM([[[0.15508921433883183,0.17820377184410963],[0.48648171594508205,0.01568017636082064]], [[0.8250247759993575,0.1938307874191597],[0.23867299119274843,0.3935578730402869]]])
+        sage: B=HypermatrixPseudoInversePairAction(HM(2,2,2,'one'),A1,A2)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Computing the unsplit Inverse pairs
     XY = HypermatrixPseudoInversePairsUnsplit(A,B)
     Rs = HM(A.nrows(), A.ncols(), A.ndpts(),'zero')
@@ -2355,6 +2811,17 @@ def HypermatrixPseudoInversePairAction(T, A, B):
     return Rs 
 
 def GenerateRandomHypermatrix(*l):
+    """
+     Outputs a random hypermatrix
+
+    EXAMPLES:
+    ::
+        sage: A=GenerateRandomHypermatrix(2,2,2); A
+        [[[0.5381896123570098, 0.17614064161822574], [0.002681324221582626, 0.3889148087368086]], [[0.35090401651983916, 0.5172460210635879], [0.5838421765928398, 0.3732279225915548]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     if prod(list(l)) != 0:
         # Initializing the input for generating a symbolic hypermatrix
         inpts = list(l)+['zero']
@@ -2373,209 +2840,6 @@ def GenerateRandomHypermatrix(*l):
     else :
         raise ValueError, "The Dimensions must all be non-zero."
 
-def nearest_orthogonal2x2x2(A, p=2, stp_sz=0.25, nb_stp=25):
-    # Orthogonal matrix parametrization
-    r1,r2,r3,r4,r5,r6=var('r1,r2,r3,r4,r5,r6')
-    # Complete parametric description of orthogonal hypermatrix
-    Q = HM([[[e^(-r1 + r3 + r6)/(e^(-3*r1 + 3*r3 + 3*r6)+e^(3*r6))^(1/3), e^r4],[e^r6/(e^(-3*r1+3*r3+3*r6)+e^(3*r6))^(1/3), e^r2]],[[-e^(r1+r2-r3-r4+r5),e^r3/(e^(3*r1)+e^(3*r3))^(1/3)],[e^r5, e^r1/(e^(3*r1)+e^(3*r3))^(1/3)]]])
-    # Initializing the values in the orthogonal hypermatrix parametrization
-    Rv = [0, 0, 0, 0, 0, 0]
-    # Initializing the function
-    f = sum([((A-Q).elementwise_exponent(p))[i,j,k] for i in range(2) for j in range(2) for k in range(2)])
-    # Initializing the gradient descent vector
-    Gf = []
-    for i in range(1,7):
-        Gf.append(f.diff(var('r'+str(i))))
-        #print "Gf["+str(i-1)+"] = ",Gf[i-1]
-    # Updating the orthogonality parametrization
-    for stp in range(nb_stp):
-        Tmp = copy(Rv)
-        Rv  = [N(Tmp[i]-stp_sz*(Gf[i].subs(dict([(var('r'+str(j+1)),Tmp[j]) for j in range(6)]))/sum([abs(Gf[s].subs(dict([(var('r'+str(k+1)),Tmp[k]) for k in range(6)])))^p for s in range(len(Gf))])^(1/p))) for i in range(6)]
-        #print "Rv = ",Rv
-    # Outputing of the final computation        
-    return Q.subs(dict([(var('r'+str(j+1)), Rv[j]) for j in range(6)]))
-
-def nearest_orthogonal2x2x2II(A, D, p=2, stp_sz=0.25, nb_stp=25):
-    # Orthogonal matrix parametrization
-    r1,r2,r3,r4,r5,r6=var('r1,r2,r3,r4,r5,r6')
-    # Complete parametric description of orthogonal hypermatrix
-    Q=HM([[[e^(-r1 + r3 + r6)/(e^(-3*r1 + 3*r3 + 3*r6)+e^(3*r6))^(1/3), e^r4],[e^r6/(e^(-3*r1+3*r3+3*r6)+e^(3*r6))^(1/3), e^r2]],[[-e^(r1+r2-r3-r4+r5),e^r3/(e^(3*r1)+e^(3*r3))^(1/3)],[e^r5, e^r1/(e^(3*r1)+e^(3*r3))^(1/3)]]])
-    # Initializing the values in the orthogonal hypermatrix parametrization
-    Rv = [0, 0, 0, 0, 0, 0]
-    # Initializing the function
-    Qs=Q*(D,D.transpose())
-    f=sum([((A-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(p))[i,j,k] for i in range(2) for j in range(2) for k in range(2)])
-    # Initializing the gradient descent vector
-    Gf=[]
-    for i in range(1,7):
-        Gf.append(f.diff(var('r'+str(i))))
-    # Updating the orthogonality parametrization
-    for stp in range(nb_stp):
-        Tmp = copy(Rv)
-        Rv  = [N(Tmp[i]-stp_sz*(Gf[i].subs(dict([(var('r'+str(j+1)),Tmp[j]) for j in range(6)]))/sum([abs(Gf[s].subs(dict([(var('r'+str(k+1)),Tmp[k]) for k in range(6)])))^p for s in range(len(Gf))])^(1/p))) for i in range(6)]
-    # Outputing of the final computation        
-    return Q.subs(dict([(var('r'+str(j+1)), Rv[j]) for j in range(6)]))
-
-def best_diagonal_fit(A, Q, p=2, stp_sz=0.25, nb_stp=50):
-    # Initializing the symbolic diagonal hypermatrix
-    D = HM(Matrix(SR, SymMatrixGenerate(2,'w')))
-    # Initializing the values in the orthogonal hypermatrix parametrization
-    v00 = 1; v01 = 1; v11 = 1
-    # Initializing the function
-    #f = sum([((A-Q*(D,D.transpose())).elementwise_exponent(p))[i,j,k] for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-    f = sum([((  (Q*(D,D.transpose()))*((Q*(D,D.transpose())).transpose(2),(Q*(D,D.transpose())).transpose())-A*(A.transpose(2),A.transpose())  ).elementwise_exponent(p))[i,j,k] for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-    #print f
-    # Initializing the gradient descent vector
-    Gf = [];Gf.append(f.diff(var(w00)));Gf.append(f.diff(var(w01)));Gf.append(f.diff(var(w11)))
-    # Updating the diagonality fit
-    for stp in range(nb_stp):
-        v00 = N(v00-stp_sz*(Gf[0].subs(w00=v00,w01=v01,w11=v11)/sum([abs(Gf[i].subs(w00=v00,w01=v01,w11=v11))^p for i in range(3)])^(1/p)))
-        #print "v00 = ",v00
-        v01 = N(v01-stp_sz*(Gf[1].subs(w00=v00,w01=v01,w11=v11)/sum([abs(Gf[i].subs(w00=v00,w01=v01,w11=v11))^p for i in range(3)])^(1/p)))
-        #print "v01 = ",v01
-        v11 = N(v11-stp_sz*(Gf[2].subs(w00=v00,w01=v01,w11=v11)/sum([abs(Gf[i].subs(w00=v00,w01=v01,w11=v11))^p for i in range(3)])^(1/p)))
-        #print "v11 = ",v11
-    # Outputing of the final computation 
-    return D.subs(dict([(w00,v00), (w01,v01), (w11,v11)]))
-
-def best_diagonal_fitII(A, Q, p=2, stp_sz=0.25, nb_stp=50):
-    # Initializing the symbolic diagonal hypermatrix
-    D = HM(Matrix(SR, SymMatrixGenerate(2,'w')))
-    # Initializing the values in the orthogonal hypermatrix parametrization
-    v00 = 1; v01 = 1; v11 = 1
-    # Initializing the function
-    f = sum([(((Q*(D,D.transpose()))*((Q*(D,D.transpose())).transpose(2),(Q*(D,D.transpose())).transpose())-A).elementwise_exponent(p))[i,j,k] for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-    #print f
-    # Initializing the gradient descent vector
-    Gf = [];Gf.append(f.diff(var(w00)));Gf.append(f.diff(var(w01)));Gf.append(f.diff(var(w11)))
-    # Updating the diagonality fit
-    for stp in range(nb_stp):
-        v00 = N(v00-stp_sz*(Gf[0].subs(w00=v00,w01=v01,w11=v11)/sum([abs(Gf[i].subs(w00=v00,w01=v01,w11=v11))^p for i in range(3)])^(1/p)))
-        #print "v00 = ",v00
-        v01 = N(v01-stp_sz*(Gf[1].subs(w00=v00,w01=v01,w11=v11)/sum([abs(Gf[i].subs(w00=v00,w01=v01,w11=v11))^p for i in range(3)])^(1/p)))
-        #print "v01 = ",v01
-        v11 = N(v11-stp_sz*(Gf[2].subs(w00=v00,w01=v01,w11=v11)/sum([abs(Gf[i].subs(w00=v00,w01=v01,w11=v11))^p for i in range(3)])^(1/p)))
-        #print "v11 = ",v11
-    # Outputing of the final computation 
-    return D.subs(dict([(w00,v00), (w01,v01), (w11,v11)]))
-
-
-def SpectralDecomposition(A,nb_itr):
-    # Initial conditions
-    Qtmp = A
-    """
-    First iteration for setting the initial benchmarks
-    """
-    # Initializing the hypermatrix
-    D = HM(2,2,2,'zero');D[0,0,0]=1;D[1,0,0]=1;D[0,1,1]=1;D[1,1,1]=1
-    # Updating Qtmp to the nearest orthogonal matrix
-    Q = nearest_orthogonal2x2x2II(Qtmp, D, 2, 0.15, 100)
-    # Initialization of the diagonal matrix
-    D = best_diagonal_fitII(A, Q, 2, 0.10, 100)
-    # Inverting the non-zero entries of D in Di
-    Di=D
-    if Di[0,0,0]!=0:
-        Di[0,0,0]=1/Di[0,0,0]
-    if Di[1,0,0]!=0:
-        Di[1,0,0]=1/Di[1,0,0]
-    if Di[0,1,1]!=0:
-        Di[0,1,1]=1/Di[0,1,1]
-    if Di[1,1,1]!=0:
-        Di[1,1,1]=1/Di[1,1,1]
-    # Updating the temporary orthogonal matrix
-    Qs = Q*(D,D.transpose())
-    print "At iteration "+str(0)+" the error is ",sum([abs(((A-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-    err = sum([abs(((A-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-    Qtmp=(HypermatrixPseudoInversePairAction(A,Qs.transpose(2),Qs.transpose()))*(Di,Di.transpose())
-    # Variables for storing the final results.
-    ResQ = Q
-    ResD = D
-    # Main Loop
-    for itr in range(1,nb_itr):
-        # Updating Qtmp to the nearest orthogonal matrix
-        Q = nearest_orthogonal2x2x2II(Qtmp, 2, 0.15, 100)
-        # Initialization of the diagonal matrix
-        D = best_diagonal_fitII(A, Q, 6, 0.10, 100)
-        # Inverting the non-zero entries of D in Di
-        Di = D
-        if Di[0,0,0]!=0:
-            Di[0,0,0]=1/Di[0,0,0]
-        if Di[1,0,0]!=0:
-            Di[1,0,0]=1/Di[1,0,0]
-        if Di[0,1,1]!=0:
-            Di[0,1,1]=1/Di[0,1,1]
-        if Di[1,1,1]!=0:
-            Di[1,1,1]=1/Di[1,1,1]
-        # Updating the temporary orthogonal matrix
-        Qs = Q*(D,D.transpose())
-        print "At iteration "+str(itr)+" the error is ",sum([abs(((A-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-        # Checking if the current run has beaten the past established record
-        if sum([abs(((A-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())]) < err:
-            err=sum([abs(((A-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-            ResQ=Q
-            ResD=D
-        Qtmp=(HypermatrixPseudoInversePairAction(A,Qs.transpose(2),Qs.transpose()))*(Di,Di.transpose())
-    return [ResQ,ResD]
-
-def CoskewnessSpectralDecomposition(A, nb_itr):
-    # Initializing the corresponding symmetric hypermatrix
-    AAttAt = A*(A.transpose(2),A.transpose())
-    print "\nA*(A.transpose(2),A.transpose()) = \n", AAttAt.listHM()
-    # Initial conditions
-    Qtmp = A
-    """
-    First iteration for setting the initial benchmarks
-    """
-    # Updating Qtmp to the nearest orthogonal matrix
-    Q = nearest_orthogonal2x2x2(Qtmp, 2, 0.15, 100)
-    # Initialization of the diagonal matrix
-    D = best_diagonal_fit(A, Q, 2, 0.10, 100)
-    # Inverting the non-zero entries of D in Di
-    Di=D
-    if Di[0,0,0]>10^(-20):
-        Di[0,0,0]=1/Di[0,0,0]
-    if Di[1,0,0]>10^(-20):
-        Di[1,0,0]=1/Di[1,0,0]
-    if Di[0,1,1]>10^(-20):
-        Di[0,1,1]=1/Di[0,1,1]
-    if Di[1,1,1]>10^(-20):
-        Di[1,1,1]=1/Di[1,1,1]
-    # Updating the temporary orthogonal matrix
-    Qs = Q*(D, D.transpose())
-    print "At iteration "+str(0)+" the error is ",sum([abs(((AAttAt-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-    err = sum([abs(((AAttAt-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-    Qtmp=(HypermatrixPseudoInversePairAction(AAttAt,Qs.transpose(2),Qs.transpose()))*(Di,Di.transpose())
-    # Variables for storing the final results.
-    ResQ = Q
-    ResD = D
-    # Main Loop
-    for itr in range(1,nb_itr):
-        # Updating Qtmp to the nearest orthogonal matrix
-        #Q = nearest_orthogonal2x2x2(Qtmp, 2, 0.15, 100)
-        Q = nearest_orthogonal2x2x2II(A, D, 2, 0.15, 100)
-        # Initialization of the diagonal matrix
-        D = best_diagonal_fit(A, Q, 6, 0.10, 100)
-        # Inverting the non-zero entries of D in Di
-        Di = D
-        if Di[0,0,0]>10^(-20):
-            Di[0,0,0]=1/Di[0,0,0]
-        if Di[1,0,0]>10^(-20):
-            Di[1,0,0]=1/Di[1,0,0]
-        if Di[0,1,1]>10^(-20):
-            Di[0,1,1]=1/Di[0,1,1]
-        if Di[1,1,1]>10^(-20):
-            Di[1,1,1]=1/Di[1,1,1]
-        # Updating the temporary orthogonal matrix
-        Qs = Q*(D,D.transpose())
-        print "At iteration "+str(itr)+" the error is ",sum([abs(((AAttAt-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-        # Checking if the current run has beaten the past established record
-        if sum([abs(((AAttAt-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())]) < err:
-            err = sum([abs(((AAttAt-Qs*(Qs.transpose(2),Qs.transpose())).elementwise_exponent(2))[i,j,k]) for i in range(A.nrows()) for j in range(A.ncols()) for k in range(A.ndpts())])
-            ResQ = Q
-            ResD = D
-        Qtmp=(HypermatrixPseudoInversePairAction(AAttAt,Qs.transpose(2),Qs.transpose()))*(Di,Di.transpose())
-    return [ResQ, ResD]
-
 def GeneralStochasticHypermatrix(t, od):
     """
     Generates an stochastic hypermatrix of the appropriate order
@@ -2585,7 +2849,7 @@ def GeneralStochasticHypermatrix(t, od):
     EXAMPLES:
     ::
         sage: Q = GeneralStochasticHypermatrix(var('t'), 2); Q
-        [[cos(t)^2, sin(t)^2], [sin(t)^2, cos(t)^2]]
+        [[cos(t)^2, sin(t)^2],[sin(t)^2, cos(t)^2]]
 
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski
@@ -2620,6 +2884,17 @@ def GeneralStochasticHypermatrix(t, od):
         raise ValueError, "The order must be a positive integer"
 
 def MatrixOrthogonalizationParametrization(sz):
+    """
+    Generates orthogonalization constraints.
+
+    EXAMPLES:
+    ::
+        sage: MatrixOrthogonalizationParametrization(2)
+        [[e^(-(1.96261557335e-17)*log(-c011) + 0.25*log(c011) + (1.96261557335e-17)*log(-c101) + 0.25*log(c101)), e^(0.25*log(-c011) + (3.92523114671e-17)*log(c011) + 0.25*log(-c101))], [e^(-(5.88784672006e-17)*log(-c011) + 0.25*log(c011) - (1.96261557335e-17)*log(-c101) + 0.25*log(c101)), e^(0.25*log(-c011) + (3.92523114671e-17)*log(c011) + 0.25*log(-c101))]]
+
+    AUTHORS:
+    - Edinah K. Gnang, Ori Parzanchevski
+    """
     # Initializing the hadamard matrix
     H = hadamard_matrix(sz)
     # Initialization of the variables associated 
@@ -2650,6 +2925,17 @@ def MatrixOrthogonalizationParametrization(sz):
     return Q   
 
 def HypermatrixOrthogonalizationParametrization(sz):
+    """
+    Generates hypermatrix orthogonalization constraints.
+
+    EXAMPLES:
+    ::
+        sage: f = HypermatrixOrthogonalizationParametrization(2)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     # Initializing the hadamard matrix
     H = hadamard_matrix(sz)
     # Initialization of the variables associated 
@@ -2681,8 +2967,104 @@ def HypermatrixOrthogonalizationParametrization(sz):
                 Q[i,j,k] = exp(sln[k*sz^2+j*sz^1+i*sz^0,0])
     return Q 
 
-def HypermatrixSliceKroneckerProduct(U, V):
-    if (min([U.n(i) for i in range(U.order())])==max([U.n(i) for i in range(U.order())])) and (min([V.n(i) for i in range(V.order())])==max([V.n(i) for i in range(V.order())])):
+def SecondOrderSliceKroneckerProduct(Ha, Hb):
+    """
+    Computes the Kronecker Product for the two input second order hypermatrices.
+
+    EXAMPLES:
+    ::
+        sage: A=SecondOrderSliceKroneckerProduct(HM(2,2,'a'),HM(2,2,'b'))
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrix
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for j0 in range(Hb.n(0)):
+                for j1 in range(Hb.n(1)):
+                    Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1]=Ha[i0,i1]*Hb[j0,j1]
+    return Hc
+
+def ThirdOrderSliceKroneckerProduct(Ha, Hb):
+    """
+    Computes the Kronecker Product for the two input third order hypermatrices.
+
+    EXAMPLES:
+    ::
+        sage: A=SecondOrderSliceKroneckerProduct(HM(2,2,'a'),HM(2,2,'b'))
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrix
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for j0 in range(Hb.n(0)):
+                    for j1 in range(Hb.n(1)):
+                        for j2 in range(Hb.n(2)):
+                            Hc[Hb.n(0)*i0+j0, Hb.n(1)*i1+j1, Hb.n(2)*i2+j2]=Ha[i0,i1,i2]*Hb[j0,j1,j2]
+    return Hc
+
+def FourthOrderSliceKroneckerProduct(Ha, Hb):
+    """
+    Computes the Kronecker Product for the two input fourth order hypermatrices.
+
+    EXAMPLES:
+    ::
+        sage: A=FourthOrderSliceKroneckerProduct(HM(2,2,'a'),HM(2,2,'b'))
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrix
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), Ha.n(3)*Hb.n(3) , 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for i3 in range(Ha.n(3)):
+                    for j0 in range(Hb.n(0)):
+                        for j1 in range(Hb.n(1)):
+                            for j2 in range(Hb.n(2)):
+                                for j3 in range(Hb.n(3)):
+                                    Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1,Hb.n(2)*i2+j2,Hb.n(3)*i3+j3]=Ha[i0,i1,i2,i3]*Hb[j0,j1,j2,j3]
+    return Hc
+
+def FifthOrderSliceKroneckerProduct(Ha, Hb):
+    """
+    Computes the Kronecker Product for the two input fifth order hypermatrices.
+
+    EXAMPLES:
+    ::
+        sage: A=FourthOrderSliceKroneckerProduct(HM(2,2,'a'),HM(2,2,'b'))
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrix
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), Ha.n(3)*Hb.n(3), Ha.n(4)*Hb.n(4), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for i3 in range(Ha.n(3)):
+                    for i4 in range(Ha.n(4)):
+                        for j0 in range(Hb.n(0)):
+                            for j1 in range(Hb.n(1)):
+                                for j2 in range(Hb.n(2)):
+                                    for j3 in range(Hb.n(3)):
+                                        for j4 in range(Hb.n(4)):
+                                            Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1,Hb.n(2)*i2+j2,Hb.n(3)*i3+j3,Hb.n(4)*i4+j4]=Ha[i0,i1,i2,i3,i4]*Hb[j0,j1,j2,j3,j4]
+    return Hc
+
+def ThirdOrderSliceKroneckerProductII(U, V):
+    if (min(U.dimensions())==max(U.dimensions())) and (min(V.dimensions())==max(V.dimensions())):
         # Getting the sizes
         m = U.n(0); n = V.n(0)
         # Initializing the hypermatrices
@@ -2707,6 +3089,49 @@ def HypermatrixSliceKroneckerProduct(U, V):
     else :
         raise ValueError, "Input dimensions must all be the same "
 
+def HypermatrixSliceKroneckerPower(U,n):
+    """
+    Computes the repeated Kronecker Product.
+
+    EXAMPLES:
+    ::
+        sage: A=FourthOrderSliceKroneckerProduct(HM(2,2,'a'),HM(2,2,'b'))
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    T = U.copy()
+    for i in range(n-1):
+        T = T.slicekroneckerproduct(U)
+    return T
+
+def HypermatrixKroneckerSum(A, B):
+    """
+    Computes the  Kronecker sum for third order hypermatrix.
+
+    EXAMPLES:
+    ::
+        sage: Rslt=HypermatrixKroneckerSum(A,B)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the hypermatrix
+    T = HM(A.n(0)+B.n(0), A.n(1)+B.n(1), A.n(2)+B.n(2), 'zero')
+    # Loop filling up the top part of the hypermatrix
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            for k in range(A.n(2)):
+                T[i,j,k] = A[i,j,k]
+    # Loop filling up the bottom part of the hypermatrix
+    for i in range(B.n(0)):
+        for j in range(B.n(1)):
+            for k in range(B.n(2)):
+                T[A.n(0)+i, A.n(1)+j, A.n(2)+k] = B[i,j,k]
+    return T
+
 @cached_function
 def Ca3(n):
     """
@@ -2719,17 +3144,1144 @@ def Ca3(n):
         sage: Ca3(3)
         1
 
-
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
 
     To Do :
     - Try to implement faster version of this procedure
-
     """
     if n == 1 :
         return 1
     else :
         return sum([Ca3(i)*Ca3(j)*Ca3(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
 
+def GeneralDualHypermatrixProductB(*args):
+    """
+    Outputs a list of lists associated with the general
+    Dual to the Bhattacharya-Mesner product of the input 
+    hypermatrices with non trivial background.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GeneralDualHypermatrixProductB(Ha,Hb,Hc,HM(2,2,2,'b')); Rslt
+        [[[a000*b000^2*c000 + a100*b001*b100*c000 + a001*b000*b010*c001 + a101*b011*b100*c001 + a000*b010*b100*c010 + a100*b101*b110*c010 + a001*b010*b110*c011 + a101*b110*b111*c011, a000*b000*b001*c000 + a100*b001*b101*c000 + a001*b001*b010*c001 + a101*b011*b101*c001 + a000*b011*b100*c010 + a100*b101*b111*c010 + a001*b011*b110*c011 + a101*b111^2*c011], [a010*b000^2*c000 + a110*b001*b100*c000 + a011*b000*b010*c001 + a111*b011*b100*c001 + a010*b010*b100*c010 + a110*b101*b110*c010 + a011*b010*b110*c011 + a111*b110*b111*c011, a010*b000*b001*c000 + a110*b001*b101*c000 + a011*b001*b010*c001 + a111*b011*b101*c001 + a010*b011*b100*c010 + a110*b101*b111*c010 + a011*b011*b110*c011 + a111*b111^2*c011]], [[a000*b000^2*c100 + a100*b001*b100*c100 + a001*b000*b010*c101 + a101*b011*b100*c101 + a000*b010*b100*c110 + a100*b101*b110*c110 + a001*b010*b110*c111 + a101*b110*b111*c111, a000*b000*b001*c100 + a100*b001*b101*c100 + a001*b001*b010*c101 + a101*b011*b101*c101 + a000*b011*b100*c110 + a100*b101*b111*c110 + a001*b011*b110*c111 + a101*b111^2*c111], [a010*b000^2*c100 + a110*b001*b100*c100 + a011*b000*b010*c101 + a111*b011*b100*c101 + a010*b010*b100*c110 + a110*b101*b110*c110 + a011*b010*b110*c111 + a111*b110*b111*c111, a010*b000*b001*c100 + a110*b001*b101*c100 + a011*b001*b010*c101 + a111*b011*b101*c101 + a010*b011*b100*c110 + a110*b101*b111*c110 + a011*b011*b110*c111 + a111*b111^2*c111]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [(args[i]).n(i) for i in range(len(args)-1)]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the assignement
+    # Initializing the background hypermatrix
+    B = (args[len(args)-1]).transpose(args[len(args)-1].order()-1)
+    args = tuple([args[id] for id in range(len(args)-1)])
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(args) < 2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(args) >= 2:
+            Rh[tuple(entry)] = 0
+            l2 = [B.n(sz) for sz in range(B.order())]
+            for j in range(prod(l2)):
+                # Turning the index j into an hypermatrix array location using the decimal encoding trick
+                entry2 = [mod(j,l2[0])]
+                sm2 = Integer(mod(j,l2[0]))
+                for z in range(len(l2)-1):
+                    entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[0:z+1])),l2[z+1])))
+                    sm2 = sm2+prod(l2[0:z+1])*entry2[len(entry2)-1]
+                Rh[tuple(entry)] = Rh[tuple(entry)]+prod([args[s][tuple(entry2[0:Integer(mod(s+1,len(args)))]+[entry[Integer(mod(s+1,len(args)))]]+entry2[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry2[0:len(entry2)-1]+[entry[len(entry2)-1]])]]+[args[len(args)-1][tuple([entry[0]]+entry2[1:])]])*B[tuple(entry2)]
+    return Rh
+
+def PathAdjcencyHypermatrix(A, pthl):
+    """
+    Procedure for Generating a (k-1)-Path adjacency hypermatrix
+
+    EXAMPLES:
+    ::
+        sage: M = HM(2,2,'a')
+        sage: A = PathAdjcencyHypermatrix(M, k)
+        [[[a000*b000,a001*b001],[a010*b010,a011*b011]],[[a100*b100,a101*b101],[a110*b110,a111*b111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.order() == 2 and pthl == 1:
+        return A
+    elif A.order() == 2 and pthl > 1:
+        # Initializing the number of vertices in the graph.
+        sz = max(A.n(0), A.n(1))
+        # Initialization of the list specifying the dimensions of the output
+        l = [sz for i in range(pthl)] 
+        # Initializing the input for generating a symbolic hypermatrix
+        inpts = l+['zero']
+        # Initialization of the hypermatrix
+        Rh = HM(*inpts)
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [mod(i,l[0])]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)] = prod([A[tuple([entry[i],entry[i+1]])] for i in range(pthl-1)])
+    else:
+        raise ValueError, "Input hypermatrix must be order 2 and the path length must be an integer greater then 0"
+    return Rh
+
+# program for extending to hypermatrices the background
+# approach to the Cayley-Hamilton Theorem.
+def  GeneralHypermatrixCayleyHamiltonB(A, t):
+    """
+    Implements the background hypermatrix approach to the Cayley-Hamilton theorem.
+
+    EXAMPLES:
+    ::
+        sage: GeneralHypermatrixCayleyHamiltonB(HM(2,2,'a'), 0) 
+        [  1   0   0   1]
+        [a00 a10 a01 a11]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the hypermatrix order.
+    od = A.order()
+
+    # Verifying that the input hypermatrix is cubic
+    if len(Set([A.n(i) for i in range(od)]).list()) == 1:
+        # initial conditions for the recurrence.
+        A0 = GeneralHypermatrixKroneckerDelta(od, A.n(0))
+        A1 = A
+        # Initializing the list assoaciated with the first two rows of the output matrix
+        L = [A0.list(), A1.list()]
+        # Loop filling up the remaining lists which make up the rows of the matrix
+        for j in range(t):
+            # Computing the two next matrices of the recurence.
+            A0 = apply(GeneralHypermatrixProductB, [A for k in range(od)]+[A0])
+            A1 = apply(GeneralHypermatrixProductB, [A for k in range(od)]+[A1])
+            # Append the result to the list
+            L.append(A0.list()); L.append(A1.list())
+        return Matrix(SR,L)
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrix must be cubic"
+
+def Rank1ApproximationI(A):
+    # Initializing the list of variables
+    VbL=[var('ln_u'+str(i)) for i in range(A.n(0))]+[var('ln_v'+str(j)) for j in range(A.n(1))]+[var('ln_w'+str(k)) for k in range(A.n(2))]
+    # Initialization of the constraints
+    CnL=[var('ln_u'+str(i))+var('ln_v'+str(j))+var('ln_w'+str(k))==ln(A[i,j,k]) for i in range(A.n(0)) for j in range(A.n(1)) for k in range(A.n(2))]
+    # Initialization of the matrix and right hand side
+    [M,b] = ConstraintFormatorII(CnL,VbL)
+    # Importing the numpy library
+    import numpy
+    # computing the least square solution to the problem
+    sln = matrix(numpy.linalg.pinv(M))*b
+    # Filling up the hypermatrix
+    U = HM(A.n(0), 1     , 1     , 'zero')
+    V = HM(1     , A.n(1), 1     , 'zero')
+    W = HM(1     , 1     , A.n(2), 'zero')    
+    for i in range(A.n(0)):
+        U[i,0,0]=sln[0 + i, 0]
+    for j in range(A.n(1)):
+        V[0,j,0]=sln[A.n(0) + j, 0]
+    for k in range(A.n(2)):
+        W[0,0,k]=sln[A.n(0) + A.n(1) + k, 0]
+    return [M,VbL,b,U.elementwise_base_exponent(e),V.elementwise_base_exponent(e),W.elementwise_base_exponent(e)]
+
+def Rank1ApproximationII(A):
+    # Initializing the list of variables
+    VbL=[var('ln_u'+str(i)+'0'+str(k)) for i in range(A.n(0)) for k in range(A.n(2))]+[var('ln_v'+str(i)+str(j)+'0') for i in range(A.n(0)) for j in range(A.n(1))]+[var('ln_w'+'0'+str(j)+str(k)) for j in range(A.n(1)) for k in range(A.n(2))]
+    # Initialization of the constraints
+    CnL=[var('ln_u'+str(i)+'0'+str(k))+var('ln_v'+str(i)+str(j)+'0')+var('ln_w'+'0'+str(j)+str(k))==ln(A[i,j,k]) for i in range(A.n(0)) for j in range(A.n(1)) for k in range(A.n(2))]
+    [M,b] = ConstraintFormatorII(CnL,VbL)
+    # Importing the numpy library
+    import numpy
+    # computing the least square solution to the problem
+    sln = matrix(numpy.linalg.pinv(M))*b
+    # Filling up the hypermatrix
+    U = HM(A.n(0), 1     , A.n(2), 'zero')
+    V = HM(A.n(0), A.n(1), 1     , 'zero')
+    W = HM(1     , A.n(1), A.n(2), 'zero')
+    for i in range(A.n(0)):
+        for k in range(A.n(2)):
+            U[i,0,k]=sln[0 + A.n(2)*i+k,0]
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            V[i,j,0]=sln[A.n(0)*A.n(2) + A.n(1)*i+j,0]
+    for j in range(A.n(1)):
+        for k in range(A.n(2)):
+            W[0,j,k]=sln[A.n(0)*A.n(2) + A.n(0)*A.n(1) + A.n(2)*j+k,0]
+    return [M,VbL,b,U.elementwise_base_exponent(e),V.elementwise_base_exponent(e),W.elementwise_base_exponent(e)]
+
+def Rank1MulMtrxApprox(A):
+    # Initializing the list of variables
+    VbL=[var('ln_u'+'0'+str(i)) for i in range(A.n(0))]+[var('ln_v'+str(j)+'0') for j in range(A.n(1))]
+    # Initialization of the constraints
+    CnL=[var('ln_u'+'0'+str(i))+var('ln_v'+str(j)+'0')==ln(A[i,j]) for i in range(A.n(0)) for j in range(A.n(1))]
+    # Initializing the constraints
+    [M, b] = ConstraintFormatorII(CnL, VbL)
+    # Importing the numpy library
+    import numpy
+    # computing the least square solution to the problem
+    sln = matrix(numpy.linalg.pinv(M))*b
+    # Filling up the hypermatrix
+    U = HM(A.n(0), 1     , 'zero')
+    V = HM(1     , A.n(1), 'zero')
+    for i in range(A.n(0)):
+        U[i,0]=sln[0 + i, 0]
+    for j in range(A.n(1)):
+        V[0,j]=sln[A.n(0) + j, 0]
+    return [M,VbL,b,U.elementwise_base_exponent(e), V.elementwise_base_exponent(e)]
+
+def fast_reduce(f, monom, subst):
+    """
+    computes the reduction by monomial substitution
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: fast_reduce(x1^3+x2+x3^3,[x3^3],[1])
+        x1^3+x2+1
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if len(monom) == len(subst):
+        s = str(f)
+        for i in range(len(monom)):
+            s = s.replace(str(monom[i]), str(subst[i]))
+        return expand((SR(s)).simplify_full())
+    else:
+        print 'Error the monomial list and the substitution list must have the same length'
+
+def ThirdOrderHyperdeterminant(H):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A = HM(2,2,2,'a')
+        sage: ThirdOrderHyperdeterminant(A)
+        -a000*a011*a101*a110 + a001*a010*a100*a111
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==3:
+        # Initializing the matrix for the mnemonic construction
+        A = Matrix(SR, H.n(0), H.n(0), [var('x'+str(i)+str(j)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        # Computing the mnemonique polynomial
+        P = Permutations(range(A.nrows()))
+        L = expand(sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([ (A[k][p[k]]) for k in range(A.nrows())]) for p in P])*prod([sum([prod([ (A[k][p[k]])^j for k in range(A.nrows())]) for p in P]) for j in range(2,H.n(0)+1)])).operands()
+        # Computing the polynomial
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
+        # Loop performing the umbral expression
+        for k in range(H.n(0),0,-1):
+            f = fast_reduce(f, [var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))], [var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-1,j-1,k-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
+
+def FourthOrderHyperdeterminant(H):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A = HM(2,2,2,2,'a')
+        sage: FourthOrderHyperdeterminant(A)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==4:
+        # Initializing the matrix for the mnemonic construction
+        A=HM(H.n(0),H.n(0),H.n(0), [var('x'+str(i)+str(j)+str(k)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
+        # Computing the polynomial
+        L=expand(ThirdOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).simplify_radical() for g in ThirdOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        # Computing the polynomial
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^3])
+        # Loop performing the umbral expression
+        for l in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k))^l for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)),H[i-1,j-1,k-1,l-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a fourth order hypercube hypermatrix."
+
+def FifthOrderHyperdeterminant(H):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A = HM(2,2,2,2,2,'a')
+        sage: FifthOrderHyperdeterminant(A)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==5:
+        # Initializing the matrix for the mnemonic construction
+        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
+        # Computing the polynomial
+        L = expand(FourthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).simplify_radical() for g in FourthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^4])
+        # Loop performing the umbral expression
+        for m in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l))^m for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)),H[i-1,j-1,k-1,l-1,m-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a fifth order hypercube hypermatrix."
+
+def SixthOrderHyperdeterminant(H):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A = HM(2,2,2,2,2,2,'a')
+        sage: SixthOrderHyperdeterminant(A)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==6:
+        # Initializing the matrix for the mnemonic construction
+        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
+        # Computing the polynomial
+        L = expand(FifthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).simplify_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^5])
+        # Loop performing the umbral expression
+        for p in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l)+str(m))^p for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)),H[i-1,j-1,k-1,l-1,m-1,p-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0)) for p in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a sixth order hypercube hypermatrix."
+
+
+def GeneralHypermatrixDeterminant(od):
+    """
+    outputs the symbolic expression with the determinant of hypermatrices of arbitrary orders.
+    but every size of the hypermatrix must be equal to two. It ouputs an equality derived via
+    the rank one argument.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: GeneralHypermatrixDeterminant(2):
+        m00*m11-m01*m10
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization the alphabet list
+    AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    # Initializing the list of hypermatrices
+    L=[apply(HM,[2 for i in range(j)]+[1]+[2 for i in range(j+1,od)]+[AlphaB[j]]).elementwise_base_exponent(e) for j in range(1,od)+[0]]
+    # Initilizing the list of variable
+    VrbLst=[]
+    for Q in L:
+        VrbLst = VrbLst + (Q.elementwise_base_logarithm(e)).list()
+    Eq=apply(GeneralHypermatrixProduct, [Q for Q in L])+apply(HM,[2 for i in range(od)]+['m'])
+    # Writting up the constraints
+    Le=Eq.list()
+    # Filling up the linear constraints
+    CnstrLst=[] 
+    for f in Le:
+        CnstrLst.append(ln((f.operands())[1]).simplify_exp() == ln((f.operands())[0]).simplify_exp())
+    [Mtr, b]=ConstraintFormatorII(CnstrLst, VrbLst)
+    # Returning the determinantal equality
+    return exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).simplify_exp().numerator()-exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).simplify_exp().denominator()
+
+def GeneralHypermatrixRank1Parametrization(sz,od):
+    """
+    Outputs the symbolic constraints associated with rank one parametrization
+    of hypermatrices.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: GeneralHypermatrixRank1Parametrization(2,2) 
+        [1 0 1 0]
+        [0 1 1 0]
+        [1 0 0 1]
+        [0 1 0 1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization the alphabet list
+    AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    # Initializing the list of hypermatrices
+    L=[apply(HM,[sz for i in range(j)]+[1]+[sz for i in range(j+1,od)]+[AlphaB[j]]) for j in range(1,od)+[0]]
+    # Initilizing the list of variable
+    VrbLst=[]
+    for Q in L:
+        VrbLst = VrbLst+Q.list()
+    Eq=apply(GeneralHypermatrixLogProduct, [Q for Q in L])
+    CnstrLst=[eq==0 for eq in Eq.list()]
+    return ConstraintFormatorII(CnstrLst, VrbLst)[0]
+
+def SecondOrderHadamardBlockU(l):
+    """
+    outputs the  direct sum construction of hadamard block matrices.
+    the vectors of the matrices are not normalized.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: SecondOrderHadamardBlockU(2)
+        [[1, 1], [1, -1]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    bns = l.str(2)
+    Szl = [(2^(len(bns)-1-i),bns[i]) for i in range(len(bns)) if bns[i]!='0']
+    H = Matrix(QQ,hadamard_matrix(Szl[0][0]))
+    for i in range(1,len(Szl)):
+        if Szl[i][0]==1:
+            H = H.block_sum(Matrix(QQ,1,1,[1]))
+        else:
+            H = H.block_sum(Matrix(QQ,hadamard_matrix(Szl[i][0])))
+    return HM(l,l,H.list())
+
+
+def SecondOrderHadamardBlock(l):
+    """
+    outputs the  direct sum construction of hadamard block matrices.
+    the vectors of the matrices are not normalized.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: SecondOrderHadamardBlock(2)
+        [[1/2*sqrt(2), 1/2*sqrt(2)], [1/2*sqrt(2), -1/2*sqrt(2)]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    bns = l.str(2)
+    Szl = [(2^(len(bns)-1-i),bns[i]) for i in range(len(bns)) if bns[i]!='0']
+    H = (1/sqrt(Szl[0][0]))*Matrix(QQ,hadamard_matrix(Szl[0][0]))
+    for i in range(1,len(Szl)):
+        if Szl[i][0]==1:
+            H = H.block_sum(Matrix(QQ,1,1,[1]))
+        else:
+            H = H.block_sum((1/sqrt(Szl[i][0]))*Matrix(QQ,hadamard_matrix(Szl[i][0])))
+    return HM(l,l,H.list())
+
+def ThirdOrderHadamardBlockU(l):
+    """
+    outputs the  direct sum construction of hadamard block hypermatrices.
+    the vectors of the matrices are not normalized.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: ThirdOrderHadamardBlockU(2)
+        [[[1, 1], [1, 1]], [[-1, 1], [1, 1]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing the 2x2x2 hadamard Hypermatrix.
+    Hd = HM([[[1, 1], [1, 1]], [[-1, 1], [1, 1]]]) 
+    # Obtaining the binary encoding of the input integer
+    bns = l.str(2)
+    Szl = [len(bns)-1-i for i in range(len(bns)) if bns[i] != '0']
+    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > 0]
+    H = Lh[0]
+    if Integer(mod(l,2)) == 0:
+        for i in range(1,len(Lh)):
+            H = H.block_sum(Lh[i])
+    else :
+        for i in range(1,len(Lh)):
+            H = H.block_sum(Lh[i])
+        H = H.block_sum(HM(1,1,1,'one')) 
+    return H
+
+def ThirdOrderHadamardBlock(l):
+    """
+    outputs the  direct sum construction of hadamard block hypermatrices.
+    the vectors of the matrices are not normalized.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: ThirdOrderHadamardBlock(2)
+        [[[(1/2)^(1/3), (1/2)^(1/3)], [(1/2)^(1/3), (1/2)^(1/3)]], [[-(1/2)^(1/3), (1/2)^(1/3)], [(1/2)^(1/3), (1/2)^(1/3)]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing the 2x2x2 hadamard Hypermatrix.
+    Hd = (1/2)^(1/3)*HM([[[1, 1], [1, 1]], [[-1, 1], [1, 1]]]) 
+    # Obtaining the binary encoding of the input integer
+    bns = l.str(2)
+    Szl = [len(bns)-1-i for i in range(len(bns)) if bns[i] != '0']
+    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > 0]
+    H = Lh[0]
+    if Integer(mod(l,2)) == 0:
+        for i in range(1,len(Lh)):
+            H = H.block_sum(Lh[i])
+    else :
+        for i in range(1,len(Lh)):
+            H = H.block_sum(Lh[i])
+        H = H.block_sum(HM(1,1,1,'one')) 
+    return H
+
+def RandomTransposition(n):
+    """
+    outputs  the random transposition permutation of n elements.
+    The fucntion is used for randominzing the Hadamard block construction
+    
+
+    EXAMPLES:
+ 
+    ::  
+        sage: RandomTransposition(3)
+        [1, 0, 2] 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the vector
+    p = [0 .. n-1]
+    idx = ZZ.random_element(n)
+    jdx = idx
+    # avoiding the trivial transposition
+    while jdx == idx:
+        jdx = ZZ.random_element(n)
+    # recording the transposition
+    tmp = p[idx]; p[idx] = p[jdx]; p[jdx] = tmp
+    return p
+
+def RandomColumnSlicePermutation(H):
+    """
+    Outputs a permutation of the slices of the input third order hypermatrix.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: RandomColumnSlicePermutation(HM(2,2,2,'a'))
+        [[[a010, a011], [a000, a001]], [[a110, a111], [a100, a101]]] 
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    sz = H.n(2)
+    for i in range(Integer(ceil(sqrt(sz)))+1):
+        # Initialization of the permutation
+        P = HypermatrixPermutation(RandomTransposition(sz))
+        H = Prod(H, HM(P), HM(P).transpose())
+    return H
+
+def ThirdOrderHypermatrixResolutionPartition(U, V, W, Ha, Hb, Hc):
+    """
+    outputs the spliting of a third order hypermatrix into the pieces
+    as suggested by the resolution of identity. The first three input
+    hypermatrices are uncorrelated tuples.
+    the last three imputs correspond to the factors for the spliting.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [U, V, W] = GeneralUncorrelatedHypermatrixTuple(3)
+        sage: L = ThirdOrderHypermatrixResolutionPartition(U, V, W, HM(2,2,2,'a'), HM(2,2,2,'b'), HM(2,2,2,'c'))
+        sage: len(L)
+        2
+        sage: sum(L).simplify()
+        [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    L = []
+    for i in range(U.n(1)):
+        # Filling up the slice
+        Tp0 = HM(U.n(0), 1, U.n(2), 'zero')
+        for u in range(Tp0.n(0)):
+            for w in range(Tp0.n(2)):
+                Tp0[u,0,w] = U[u,i,w]
+        # Filling up the slice
+        Tp1 = HM(V.n(0), V.n(1), 1, 'zero')
+        for u in range(Tp1.n(0)):
+            for v in range(Tp1.n(1)):
+                Tp1[u,v,0] = V[u,v,i]
+        # Filling up the slice
+        Tp2 = HM(1, W.n(1), W.n(2), 'zero')
+        for v in range(Tp2.n(1)):
+            for w in range(Tp2.n(2)):
+                Tp2[0,v,w] = W[i,v,w]
+
+        # Appending the components to the list
+        L.append(ProdB(Ha, Hb, Hc, Prod(Tp0, Tp1, Tp2)))
+    return L
+
+def FourthOrderHypermatrixResolutionPartition(Q, U, V, W, Ha, Hb, Hc, Hd):
+    """
+    outputs the spliting of a fourth order hypermatrix into the pieces
+    as suggested by the resolution of identity. The first three input
+    hypermatrices are uncorrelated tuples.
+    the last three imputs correspond to the factors for the spliting.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Q, U, V, W] = GeneralUncorrelatedHypermatrixTuple(3)
+        sage: L = FourthOrderHypermatrixResolutionPartition(Q,U,V,W,HM(2,2,2,2,'a'),HM(2,2,2,2,'b'),HM(2,2,2,2,'c'), HM(2,2,2,2,'d'))
+        sage: len(L)
+        2
+        sage: sum(L).simplify()
+        [[[[a0000*b0000*c0000*d0000 + a0100*b0010*c0001*d1000, a0001*b0001*c0000*d0001 + a0101*b0011*c0001*d1001], [a0010*b0000*c0010*d0010 + a0110*b0010*c0011*d1010, a0011*b0001*c0010*d0011 + a0111*b0011*c0011*d1011]], [[a0000*b0100*c0100*d0100 + a0100*b0110*c0101*d1100, a0001*b0101*c0100*d0101 + a0101*b0111*c0101*d1101], [a0010*b0100*c0110*d0110 + a0110*b0110*c0111*d1110, a0011*b0101*c0110*d0111 + a0111*b0111*c0111*d1111]]], [[[a1000*b1000*c1000*d0000 + a1100*b1010*c1001*d1000, a1001*b1001*c1000*d0001 + a1101*b1011*c1001*d1001], [a1010*b1000*c1010*d0010 + a1110*b1010*c1011*d1010, a1011*b1001*c1010*d0011 + a1111*b1011*c1011*d1011]], [[a1000*b1100*c1100*d0100 + a1100*b1110*c1101*d1100, a1001*b1101*c1100*d0101 + a1101*b1111*c1101*d1101], [a1010*b1100*c1110*d0110 + a1110*b1110*c1111*d1110, a1011*b1101*c1110*d0111 + a1111*b1111*c1111*d1111]]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    L = []
+    for i in range(Q.n(1)):
+        # Filling up the slice
+        Tp0 = HM(Q.n(0), 1, Q.n(2), Q.n(3), 'zero')
+        for q in range(Tp0.n(0)):
+            for v in range(Tp0.n(2)):
+                for w in range(Tp0.n(3)):
+                    Tp0[q,0,v,w] = Q[q,i,v,w]
+        # Filling up the slice
+        Tp1 = HM(U.n(0), U.n(1), 1, U.n(3), 'zero')
+        for q in range(Tp1.n(0)):
+            for u in range(Tp1.n(1)):
+                for w in range(Tp1.n(3)):
+                    Tp1[q,u,0,w] = U[q,u,i,w]
+        # Filling up the slice
+        Tp2 = HM(V.n(0), V.n(1), V.n(2), 1, 'zero')
+        for q in range(Tp2.n(0)):
+            for u in range(Tp2.n(1)):
+                for v in range(Tp2.n(2)):
+                    Tp2[q,u,v,0] = V[q,u,v,i]
+        # Filling up the slice
+        Tp3 = HM(1, W.n(1), W.n(2), W.n(3), 'zero')
+        for u in range(Tp3.n(1)):
+            for v in range(Tp3.n(2)):
+                for w in range(Tp3.n(3)):
+                    Tp3[0,u,v,w] = W[i,u,v,w]
+        # Appending the components to the list
+        L.append(ProdB(Ha, Hb, Hc, Hd, Prod(Tp0, Tp1, Tp2, Tp3)))
+    return L
+
+def CanonicalThirdOrderHypermatrixFactors(A):
+    """
+    Outputs the canonical factorization for third order hypermatrices. 
+    The canonical factorization results from the fact that any sum of
+    outer products is a hypermatrix product.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Q,U,V] = CanonicalThirdOrderHypermatrixFactors(HM(2,2,2,'a')):
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the size parameters
+    sz = A.dimensions()
+    # Initializing the list of column vectors
+    e_i=[identity_matrix(sz[0])[:,i] for i in range(sz[0])]
+    e_j=[identity_matrix(sz[1])[:,j] for j in range(sz[1])]
+    e_k=[identity_matrix(sz[2])[:,k] for k in range(sz[2])]
+    # Initializing the first hypermatrix
+    T0 = HM(sz[0],prod(sz),sz[2],'zero')
+    # Initializing the second hypermatrix
+    T1 = HM(sz[0],sz[1],prod(sz),'zero')
+    # Filling up of the third hypermatrix
+    T2 = HM(prod(sz),sz[1],sz[2],'zero')
+    cnt = 0
+    for i in range(len(e_i)):
+        for j in range(len(e_j)):
+            for k in range(len(e_k)):
+                M0 = e_i[i]*e_k[k].transpose()
+                M1 = e_i[i]*e_j[j].transpose()
+                M2 = e_j[j]*e_k[k].transpose()
+                for r in range(sz[0]):
+                    for d in range(sz[2]):
+                        T0[r,cnt,d]=(A[i,j,k])^(1/3)*M0[r,d]
+                for r in range(sz[0]):
+                    for c in range(sz[1]):
+                        T1[r,c,cnt]=(A[i,j,k])^(1/3)*M1[r,c]
+                for c in range(sz[1]):
+                    for d in range(sz[2]):
+                        T2[cnt,c,d]=(A[i,j,k])^(1/3)*M2[c,d]
+                cnt = cnt+1
+    return [T0,T1,T2]
+
+def GeneralHypermatrixCompositionMatrix(*args):
+    """
+    Outputs the matrix constraints associated with the product 
+    this came up when I tried to use system of linear algebra
+    and resoltion of identity to express a composition rule.
+    This was not overall successfull.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Eqnts,Mtr]=GeneralHypermatrixCompositionMatrix(HM(2,1,'a'),HM(1,2,'b'))
+        sage: Eqnts
+        [a00+b00==0,a10+b00==0,a00+b01==0,a10+b01==0]
+        sage: Mtr
+        [1 0 1 0]
+        [0 1 1 0]
+        [1 0 0 1]
+        [0 1 0 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [(args[i]).n(i) for i in range(len(args))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = []
+    # Main loop performing the assignement
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(args)<2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(args) >= 2:
+            Rh = Rh + [sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)] + [args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) == 0 for t in range((args[0]).n(1))]
+    # Initialization of the variables.
+    Vrbls = []
+    for i in range(len(args)):
+        Vrbls = Vrbls + (args[i]).list()
+    return [Rh, ConstraintFormatorII(Rh, Vrbls)[0]]
+
+def GeneralHypermatrixLogProductTermList(*args):
+    """
+    Outputs the matrix constraints associated with the Logproduct 
+    this came up when I tried to use system of linear algebra
+    and resoltion of identity to express a composition rule.
+    This was not overall successfull.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Eqnts,Mtr]=GeneralHypermatrixCompositionMatrix(HM(2,1,'a'),HM(1,2,'b'))
+        sage: Eqnts
+        [a00+b00==0,a10+b00==0,a00+b01==0,a10+b01==0]
+        sage: Mtr
+        [1 0 1 0]
+        [0 1 1 0]
+        [1 0 0 1]
+        [0 1 0 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [(args[i]).n(i) for i in range(len(args))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = []
+    # Main loop performing the assignement
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(args)<2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(args) >= 2:
+            Rh = Rh + [sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)] + [args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))]
+    return Rh
+
+def gaussian_elimination(Cf, rs):
+    """
+    Outputs the row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [RefA, c] = gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: RefA
+        [      1 a01/a00]
+        [      0       1]
+        sage: c
+        [                                b00/a00]
+        [(a10*b00/a00 - b10)/(a01*a10/a00 - a11)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    A = copy(Cf); b = copy(rs)
+    # Zero padding the matrix if necessary.
+    if A.nrows() < A.ncols():
+        # Temporary matrix for A
+        Ta = Matrix(SR, zero_matrix(A.ncols(), A.ncols()))
+        Ta[:A.nrows(), :A.ncols()] = copy(A)
+        # Temporary matrix for b
+        Tb = Matrix(SR, zero_matrix(A.ncols(), b.ncols())) 
+        Tb[:b.nrows(), :b.ncols()] = copy(b)
+        # replacing the matrix with the zero apdding.
+        A = Ta; b = Tb
+    # Initializing the cyclic shift permutation matrix
+    Id = identity_matrix(A.nrows())
+    P  = sum([Id[:,k]*Id[mod(k+1,A.nrows()),:] for k in range(A.nrows())])
+    # Initialization of the row and column index
+    i = 0; j = 0;
+    while i < A.nrows() and j < A.ncols():
+        if (A[:,j]).is_zero():
+            # Incrementing the column index
+            j = j + 1
+        else:
+            while (A[i,j]).is_zero():
+                A = P*A; b = P*b
+            # Performing the row operations.
+            b[i,:] = (1/A[i,j])*b[i,:]
+            A[i,:] = (1/A[i,j])*A[i,:]
+            for r in range(i+1,A.nrows()):
+                b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+        # Incrementing the row and column index.
+        i = i + 1; j = j + 1
+    return [A, b]
+
+def gauss_jordan_elimination(Cf,rs):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [RefA, c] = gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: RefA
+        [1 0]
+        [0 1]
+        sage: c
+        [-a01*(a10*b00/a00 - b10)/(a00*(a01*a10/a00 - a11)) + b00/a00]
+        [                     (a10*b00/a00 - b10)/(a01*a10/a00 - a11)]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b] = gaussian_elimination(Cf,rs)
+    # Initialization of the row and column index
+    i = A.nrows()-1; j = 0
+    while i > 0 or j > 0:
+        if (A[i,:]).is_zero():
+            # decrementing the row index and initializing the column index
+            i = i - 1; j = 0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1, -1, -1):
+                b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+            i = i - 1; j = 0
+    return [A, b]
+
+def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
+    """
+    Outputs the row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [RefA,c]=multiplicative_gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: RefA
+        [1             a01/a00]
+        [0                   1]
+        sage: c
+        [                                                                    (b00*e^(2*I*pi*k0))^(1/a00)]
+        [(((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    A = copy(Cf); b = copy(rs)
+    # Zero padding the matrix if necessary.
+    if A.nrows() < A.ncols():
+        # Temporary matrix for A
+        Ta = Matrix(SR, zero_matrix(A.ncols(), A.ncols()))
+        Ta[:A.nrows(), :A.ncols()] = copy(A)
+        # Temporary matrix for b
+        Tb = Matrix(SR, zero_matrix(A.ncols(), b.ncols())) 
+        Tb[:b.nrows(), :b.ncols()] = copy(b)
+        # replacing the matrix with the zero apdding.
+        A = Ta; b = Tb
+    # Initializing the cyclic shift permutation matrix
+    Id = identity_matrix(A.nrows())
+    P  = sum([Id[:,k]*Id[mod(k+1,A.nrows()),:] for k in range(A.nrows())])
+    # Initialization of the row and column index
+    i = 0; j = 0; indx = jndx
+    while i<A.nrows() and j<A.ncols():
+        if (A[:,j]).is_zero():
+            # Incrementing the column index
+            j=j+1
+        else:
+            while (A[i,j]).is_zero():
+                A=P*A; b=P*b
+            # Performing the row operations.
+            b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
+            indx = indx+1
+            A[i,:]=(1/A[i,j])*A[i,:]
+            for r in range(i+1,A.nrows()):
+                b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                indx = indx+1
+                A[r,:]=-A[r,j]*A[i,:]+A[r,:]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A, b, indx]
+
+def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [RefA, c] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: RefA
+        [1 0]
+        [0 1]
+        sage: c
+        [(b00*e^(2*I*pi*k0))^(1/a00)*((((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))*e^(2*I*pi*k3))^(-a01/a00)]
+        [                                                       (((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b, indx] = multiplicative_gaussian_elimination(Cf,rs,jndx)
+    # Initialization of the row and column index
+    i = A.nrows()-1; j = 0
+    while i > 0 or j > 0:
+        if (A[i,:]).is_zero():
+            # decrementing the row index and initializing the column index
+            i = i - 1; j = 0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1, -1, -1):
+                b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                indx = indx+1
+                A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+            i = i - 1; j = 0
+    return [A, b, indx]
+
+def SecondOrderHadamardFactorization(A,B):
+    """
+    Outputs the matrix factorization induced by hadamard matrices.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [U,V]=SecondOrderHadamardFactorization(HM(2,2,'a'),HM(2,2,'b'))
+        sage: Prod(U,V).simplify()
+        [[-a00*b00-a01*b10-a02*b20-a03*b30, a00*b01+a01*b11+a02*b21+a03*b31, a00*b02+a01*b12+a02*b22 +a03*b32, a00*b03+a01*b13+a02*b23+a03*b33], [a10*b00+a11*b10+a12*b20+a13*b30, -a10*b01-a11*b11-a12*b21-a13*b31, a10*b02+a11*b12+a12*b22+a13*b32, a10*b03+a11*b13+a12*b23+a13*b33], [a20*b00+a21*b10+a22*b20+a23*b30, a20*b01+a21*b11+a22*b21+a23*b31, -a20*b02-a21*b12-a22*b22-a23*b32, a20*b03+a21*b13+a22*b23+a23*b33], [a30*b00+a31*b10+a32*b20+a33*b30, a30*b01+a31*b11+a32*b21+a33*b31, a30*b02+a31*b12+a32*b22+a33*b32, -a30*b03-a31*b13-a32*b23-a33*b33]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if A.n(0)==B.n(1) and A.n(1)==B.n(0) and (log(Integer(A.n(0)),2)).is_integer():
+        # Initializing the hadamard matrix
+        H = SecondOrderHadamardBlockU(Integer(A.n(0)))
+        L = [GeneralUncorrelatedHypermatrixTuple(2) for i in range(log(Integer(A.n(0)),2))]
+        # Initializing the temporary hypermatrices.
+        Tp0 = L[0][0]; Tp1 = L[0][1]
+        for i in range(1,len(L)):
+            Tp0 = Tp0.slicekroneckerproduct(L[i][0])
+            Tp1 = Tp1.slicekroneckerproduct(L[i][1])
+        Tp0 = sqrt(Tp0.n(0))*Tp0
+        Tp1 = sqrt(Tp1.n(0))*Tp1
+        # initializing the extened matrices
+        M0 = HM(A.n(0), 2*A.n(0)-1, 'zero')
+        for j in range(1,A.n(0)):
+            for i in range(A.n(0)):
+                M0[i,j-1] = H[i,j]
+        for j in range(A.n(0), 2*A.n(0)):
+            for i in range(A.n(0)):
+                M0[i,j-1] = Tp0[i,j-A.n(0)]
+        M1 = HM(2*A.n(0)-1,A.n(0), 'zero')
+        for j in range(1,A.n(0)):
+            for i in range(A.n(0)):
+                M1[j-1,i] = -H[i,j]
+        for j in range(A.n(0), 2*A.n(0)):
+            for i in range(A.n(0)):
+                M1[j-1,i] = Tp1[j-A.n(0),i]
+        # Filling up the hypermatrices.
+        U = HM(A.n(0), (2*A.n(0)-1)*A.n(1),'zero')
+        for i in range(A.n(1)):
+            for j in range(M0.n(1)):
+                for k in range(A.n(0)):
+                    U[k, A.n(1)*j+i] = A[k,i]*M0[k,j]
+        V = HM((2*A.n(0)-1)*A.n(1), A.n(0),'zero')
+        for i in range(B.n(0)):
+            for j in range(M1.n(0)):
+                for k in range(B.n(1)):
+                    V[A.n(1)*j+i,k] = B[i,k]*M1[j,k]
+        return [U,V]
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrix are of inapropriate sizes"
+
+def ThirdOrderHadamardFactorization(Ha, Hb, Hc):
+    """
+    Outputs the matrix factorization induced by Hadamard third order hypermatrices.
+    The slices of third order matrices involved in outer-product computations must
+    be square and must have sides whose length is a power of 2.   
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [U,V,W]=ThirdOrderHadamardFactorization(HM(4,2,4,'a'),HM(4,4,2,'b'), HM(2,4,4,'c'))
+        sage: Prod(U, V, W).simplify()
+[[[a000*b000*c000+a010*b001*c100,a001*b000*c001+a011*b001*c101,a002*b000*c002+a012*b001*c102,a003*b000*c003+a013*b001*c103],[a000*b010*c010+a010*b011*c110,a001*b010*c011+a011*b011*c111,a002*b010*c012+a012*b011*c112,a003*b010*c013+a013*b011*c113],[a000*b020*c020+a010*b021*c120,a001*b020*c021+a011*b021*c121,a002*b020*c022+a012*b021*c122,a003*b020*c023+a013*b021*c123],[a000*b030*c030+a010*b031*c130,a001*b030*c031+a011*b031*c131,a002*b030*c032+a012*b031*c132,a003*b030*c033+a013*b031*c133]],[[a100*b100*c000+a110*b101*c100,a101*b100*c001+a111*b101*c101,a102*b100*c002+a112*b101*c102,a103*b100*c003+a113*b101*c103],[a100*b110*c010+a110*b111*c110,a101*b110*c011+a111*b111*c111,a102*b110*c012+a112*b111*c112,a103*b110*c013+a113*b111*c113],[a100*b120*c020+a110*b121*c120,a101*b120*c021+a111*b121*c121,a102*b120*c022+a112*b121*c122,a103*b120*c023+a113*b121*c123],[a100*b130*c030+a110*b131*c130,a101*b130*c031+a111*b131*c131,a102*b130*c032+a112*b131*c132,a103*b130*c033+a113*b131*c133]],[[a200*b200*c000+a210*b201*c100,a201*b200*c001+a211*b201*c101,a202*b200*c002+a212*b201*c102,a203*b200*c003+a213*b201*c103],[a200*b210*c010+a210*b211*c110,a201*b210*c011+a211*b211*c111,a202*b210*c012+a212*b211*c112,a203*b210*c013+a213*b211*c113],[a200*b220*c020+a210*b221*c120,a201*b220*c021+a211*b221*c121,a202*b220*c022+a212*b221*c122,a203*b220*c023+a213*b221*c123],[a200*b230*c030+a210*b231*c130,a201*b230*c031+a211*b231*c131,a202*b230*c032+a212*b231*c132,a203*b230*c033+a213*b231*c133]],[[a300*b300*c000+a310*b301*c100,a301*b300*c001+a311*b301*c101,a302*b300*c002+a312*b301*c102,a303*b300*c003+a313*b301*c103],[a300*b310*c010+a310*b311*c110,a301*b310*c011+a311*b311*c111,a302*b310*c012+a312*b311*c112,a303*b310*c013+a313*b311*c113],[a300*b320*c020+a310*b321*c120,a301*b320*c021+a311*b321*c121,a302*b320*c022+a312*b321*c122,a303*b320*c023+a313*b321*c123],[a300*b330*c030+a310*b331*c130,a301*b330*c031+a311*b331*c131,a302*b330*c032+a312*b331*c132,a303*b330*c033+a313*b331*c133]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if Ha.n(1)==Hb.n(2) and Hb.n(2)==Hc.n(0) and (log(Integer(Ha.n(0)),2)).is_integer():
+        # Initializing the hadamard matrix
+        H = ThirdOrderHadamardBlockU(Integer(Ha.n(0)))
+        # Initializing the hypermatrices for the slice Kronecker product.
+        L = [GeneralUncorrelatedHypermatrixTuple(3) for i in range(log(Integer(Ha.n(0)),2))]
+        # Initializing the temporary hypermatrices.
+        Tp0 = L[0][0]; Tp1 = L[0][1]; Tp2 = L[0][2]
+        # Computing the slice kronecker product
+        for i in range(1,len(L)):
+            Tp0 = Tp0.slicekroneckerproduct(L[i][0])
+            Tp1 = Tp1.slicekroneckerproduct(L[i][1])
+            Tp2 = Tp2.slicekroneckerproduct(L[i][2])
+        Tp0 = (Tp0.n(0))^(1/3)*Tp0
+        Tp1 = (Tp1.n(0))^(1/3)*Tp1
+        Tp2 = (Tp2.n(0))^(1/3)*Tp2
+        print 'Prod(H, H.transpose(2), H.transpose())= ', Prod(H,H.transpose(2),H.transpose())
+        # Initializing the extended third order hypermatrices
+        M0 = HM(Ha.n(0), 2*Ha.n(0)-1, Ha.n(0),'zero')
+        for j in range(Ha.n(0)-1):
+            for k in range(Ha.n(0)):
+                for i in range(Ha.n(0)):
+                    M0[i,j,k] = -H[i,j,k]
+        for j in range(Ha.n(0), 2*Ha.n(0)):
+            for k in range(Ha.n(0)):
+                for i in range(Ha.n(0)):
+                    M0[i,j-1,k] = Tp0[i,j-Ha.n(0),k]
+        M1 = HM(Ha.n(0), Ha.n(0), 2*Ha.n(0)-1, 'zero')
+        for j in range(Ha.n(0)-1):
+            for k in range(Ha.n(0)):
+                for i in range(Ha.n(0)):
+                    M1[i,k,j] = (H.transpose(2))[i,k,j]
+        for j in range(Ha.n(0), 2*Ha.n(0)):
+            for k in range(Ha.n(0)):
+                for i in range(Ha.n(0)):
+                    M1[i,k,j-1] = Tp1[i,k,j-Ha.n(0)]
+        M2 = HM(2*Ha.n(0)-1, Ha.n(0), Ha.n(0),'zero')
+        for j in range(Ha.n(0)-1):
+            for k in range(Ha.n(0)):
+                for i in range(Ha.n(0)):
+                    M2[j,i,k] = (H.transpose())[j,i,k]
+        for j in range(Ha.n(0), 2*Ha.n(0)):
+            for k in range(Ha.n(0)):
+                for i in range(Ha.n(0)):
+                    M2[j-1,i,k] = Tp2[j-Ha.n(0),i,k]
+        # Filling up the three thirdhypermatrices to be outputed.
+        U = HM(Ha.n(0), (2*Ha.n(0)-1)*Ha.n(1), Ha.n(0), 'zero')
+        for i in range(Ha.n(1)):
+            for j in range(M0.n(1)):
+                for k in range(Ha.n(0)):
+                    for l in range(Ha.n(2)):
+                        U[k,Ha.n(1)*j+i,l] = Ha[k,i,l]*M0[k,j,l]
+        V = HM(Ha.n(0), Ha.n(0), (2*Ha.n(0)-1)*Ha.n(1), 'zero')
+        for i in range(Hb.n(2)):
+            for j in range(M1.n(2)):
+                for k in range(Hb.n(0)):
+                    for l in range(Hb.n(1)):
+                        V[k,l,Ha.n(1)*j+i] = Hb[k,l,i]*M1[k,l,j]
+        W = HM((2*Ha.n(0)-1)*Ha.n(1), Ha.n(0), Ha.n(0),'zero')
+        for i in range(Hc.n(0)):
+            for j in range(M2.n(0)):
+                for k in range(Hc.n(1)):
+                    for l in range(Hc.n(2)):
+                        W[Ha.n(1)*j+i,k,l] = Hc[i,k,l]*M2[j,k,l]
+        return [U, V, W]
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrix are of inapropriate sizes"
 
