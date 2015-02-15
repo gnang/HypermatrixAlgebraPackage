@@ -72,9 +72,10 @@ sage: HM(2,2,2,'a').transpose()
 In order to perform two consecutive transposes we use the following instruction
 
 ```python
+sage: HM(2,2,2,2,'a').transpose()
 sage: HM(2,2,2,2,'a').transpose(2)
 sage: HM(2,2,2,2,'a').transpose(3)
-sage: HM(2,2,2,2,'a').transpose(4)
+sage: HM(2,2,2,2,'a').transpose(4) - HM(2,2,2,2,'a')
 ```
 
 The sum of hypermatrices can taken over a list of hypermatrices.
