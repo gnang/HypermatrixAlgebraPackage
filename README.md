@@ -23,7 +23,7 @@ sage: %runfile("Hypermatrix_Algebra_Package_code.sage")
 
 # Usage
 
-To creates a symbolic Hypermatrix instance of size $2\times 2 \times 2$, we use the instruction
+To creates a symbolic Hypermatrix instance of size \\(2\times 2 \times 2\\), we use the instruction
 
 ```python
 sage: Ha = HM(2,3,4,'a')
@@ -98,7 +98,7 @@ some symbolic parametrization of special families of hypermatrices.
 
 Orthogonal hypermatrices are analogous to Orthogonal matrices in the fact that the product of their transposes yields
 the [Kronecker delta](http://en.wikipedia.org/wiki/Kronecker_delta#Properties_of_generalized_Kronecker_delta) of the 
-same size and order. A symbolic paramatetrization of $2\times 2\times 2$ hypermatrices is given by
+same size and order. A symbolic parametetrization of $2\times 2\times 2$ hypermatrices is given by
 
 ```python
 sage: Q = GeneralOrthogonalHypermatrix(3)
@@ -113,7 +113,7 @@ sage: Q = GeneralOrthogonalHypermatrix(4)
 sage: Prod(Q,Q.transpose(3),Q.transpose(2),Q.transpose()).simplify()
 ```
 
-The parameters which appear in the paramatrization can be assigned arbitrary values (be mindful of division by zeros).
+The parameters which appear in the parametrization can be assigned arbitrary values (be mindful of division by zeros).
 The Hypermatrix package provides construction of third order Hadamard Hypermatrices, which are analogous to Hadamard 
 matrices in the fact that the product of the transposes equals to the Kronecker delta of the same order multiplied
 by the side lenght of the cubic hypermatrix. It is infact easy to see that the classical Hadamard matrix 
