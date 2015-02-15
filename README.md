@@ -100,7 +100,7 @@ sage: A.slicekroneckerproduct(B)
 To emphasize that hypermatricess naturally extend the algebra of matrices, we describe here instructions for obtaining
 some symbolic parametrization of special families of hypermatrices.
 
-## Orthogonal matrix
+## Orthogonal hypermatrices
 
 Orthogonal hypermatrices are analogous to Orthogonal matrices in the fact that the product of their transposes yields
 the [Kronecker delta](http://en.wikipedia.org/wiki/Kronecker_delta#Properties_of_generalized_Kronecker_delta) of the 
