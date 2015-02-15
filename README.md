@@ -23,7 +23,7 @@ sage: %runfile("Hypermatrix_Algebra_Package_code.sage")
 
 # Usage
 
-To creates a symbolic Hypermatrix instance of size \\[2\times 2 \times 2\\], we use the instruction
+To creates a symbolic Hypermatrix instance of size 2x3x4, we use the instruction
 
 ```python
 sage: Ha = HM(2,3,4,'a')
@@ -98,14 +98,14 @@ some symbolic parametrization of special families of hypermatrices.
 
 Orthogonal hypermatrices are analogous to Orthogonal matrices in the fact that the product of their transposes yields
 the [Kronecker delta](http://en.wikipedia.org/wiki/Kronecker_delta#Properties_of_generalized_Kronecker_delta) of the 
-same size and order. A symbolic parametetrization of $2\times 2\times 2$ hypermatrices is given by
+same size and order. A symbolic parametetrization of 2x2x2 hypermatrices is given by
 
 ```python
 sage: Q = GeneralOrthogonalHypermatrix(3)
 sage: Prod(Q,Q.transpose(2),Q.transpose()).simplify()
 ```
 
-Similarly a symbolic parametrization of orthogonal parametrization of $2\times 2\times 2\times 2$ hypermatrices is given
+Similarly a symbolic parametrization of orthogonal parametrization of 2x2x2x2 hypermatrices is given
 by
 
 ```python
@@ -121,7 +121,7 @@ by the side lenght of the cubic hypermatrix. It is infact easy to see that the c
 going back to 1867 extends to all Hypermatrices of prime order ( recall that the order refers to the number of indices 
 associated with the hypermatrix entries for instance matrices are second order hypermatrices because every entry has a 
 row and column index). Third order Hadamard hypermatrices whose side length are powers of 2 and in particular in our 
-example of size $4\times 4\times 4$
+example of size 4x4x4
 
 ```python
 sage: H = ThirdOrderHadamardBlockU(4)
@@ -136,7 +136,7 @@ order.
 The Hypermatrix package also provides a symbolic parametrization of even order unitary Hypermatrix with sides length 
 equal to 2. As suggested by [Gowers norm](http://en.wikipedia.org/wiki/Gowers_norm) an even order hypermatrix is said
 to be unitary if the product of the conjugate transposes yield the Kronecker delta of the same order. Consequently,
-second order Unitary matrices correspond to the usual unitary matrices and a symbolic parametrization of $2\times 2$
+second order Unitary matrices correspond to the usual unitary matrices and a symbolic parametrization of 2x2
 unitary matrices is obtained via the commands
 
 ```python
