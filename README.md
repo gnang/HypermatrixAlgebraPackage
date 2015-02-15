@@ -123,11 +123,11 @@ sage: Prod(Q,Q.transpose(3),Q.transpose(2),Q.transpose()).simplify()
 
 The parameters which appear in the parametrization can be assigned arbitrary complex values (one must be mindful of 
 possible division by zeros when assigning values to the parameters).
-The Hypermatrix package also provides construction of cubic third order Hadamard Hypermatrices, which are quite analogous
+The hypermatrix package also provides construction of cubic third order Hadamard hypermatrices, which are quite analogous
 to Hadamard matrices in the fact that the product of the transposes equals to the Kronecker delta ( of the same size and 
 order ) scaled by the side lenght of the hypermatrix. It is infact easy to see that the classical Hadamard matrix 
 [construction](http://en.wikipedia.org/wiki/Hadamard_matrix#Sylvester.27s_construction) proposed by 
-James Joseph Sylvester and going back to 1867 extends to all Hypermatrices of prime order ( recall that the order refers
+James Joseph Sylvester and going back to 1867 extends to all hypermatrices of prime order ( recall that the order refers
 to the number of indices associated with the hypermatrix entries, for instance matrices are second order hypermatrices 
 because every matrix entry has a row and column index). Third order Hadamard hypermatrices whose side length are powers 
 of 2 and in the particular case of size 4x4x4 is obtained as follows
@@ -142,7 +142,7 @@ of prime order.
 
 
 ## Unitary hypermatrices
-The Hypermatrix package also provides a symbolic parametrization of even order unitary Hypermatrix with sides length 
+The hypermatrix package also provides a symbolic parametrization of even order unitary hypermatrix with sides length 
 equal to 2. As suggested by the [Gowers norm](http://en.wikipedia.org/wiki/Gowers_norm), an even order hypermatrix is
 said to be unitary if the product of the conjugate transposes yield the Kronecker delta of the same order and size.
 Consequently, second order unitary hypermatrices correspond to the usual unitary matrices and a symbolic parametrization
@@ -168,8 +168,8 @@ to be unitary.
 The [General linear group](http://en.wikipedia.org/wiki/General_linear_group) plays a crucial role in many areas of
 mathematics. The BM algebra suggest natural generalization for the General linear group, for which very little is known.
 Recall that a pair of square matrices are said to form an inverse pair if their product yields the Kronecker delta of the
-same size and order. Similarly a tuple of cubic Hypermatrices are said to form an uncorrelated tuple if their product
-yield the Kronecker delta of the same order and size. The Hypermatrix package implements a symbolic parametrization for
+same size and order. Similarly a tuple of cubic hypermatrices are said to form an uncorrelated tuple if their product
+yield the Kronecker delta of the same order and size. The hypermatrix package implements a symbolic parametrization for
 uncorrelated tuples of arbitrary order but of side lenght equal to 2 and are obtained as follows
 
 ```python
@@ -178,7 +178,7 @@ sage: [Ha, Hb, Hc]=GeneralUncorrelatedHypermatrixTuple(3); Prod(Ha, Hb, Hc).simp
 sage: [Ha, Hb, Hc, Hd]=GeneralUncorrelatedHypermatrixTuple(4); Prod(Ha, Hb, Hc, Hd).simplify() 
 ```
 
-## Multistochastic Hypermatrices.
+## Multistochastic hypermatrices.
 The hypermatrix package also provide and symbolic parametrization of multistochastic hypermartices of arbitrary orders
 and side lenght equal to 2 obtained as follows
 
@@ -191,7 +191,7 @@ sage: GeneralStochasticHypermatrix(var('x'), 4)
 
 ## Revisiting Hyperdeterminant
 The BM algebra of hypermatrices suggests very natural generalization to the matrix determinant which has also been 
-implemented in the Hypermatrix package. The user must be warn that while it is relatively straight forward to compute
+implemented in the hypermatrix package. The user must be warn that while it is relatively straight forward to compute
 determinant of hypermatrices of arbitrary order of with side length equal to 2 via the following expressions 
 
 ```python
@@ -206,7 +206,7 @@ more difficult as the expression of the proposed generalization of the determina
 [Latin Hypercube](http://en.wikipedia.org/wiki/Latin_hypercube_sampling) of the corresponding order and side lenght.
 Unefortunately as our implementation suggestis we perform a brute forces search for the latin Hypercubes (suggestions for
 improvemements are more then welcome). Consequently the package provides an implementation of the hyperdeterminant of 
-hypermatrices of arbitrary size but order less than 7. The computation of the determinant of a Hypermatrix is obtained 
+hypermatrices of arbitrary size but order less than 7. The computation of the determinant of a hypermatrix is obtained 
 as follows
 
 ```python
