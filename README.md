@@ -190,6 +190,7 @@ sage: GeneralStochasticHypermatrix(var('x'), 4)
 
 
 ## Revisiting Hyperdeterminants
+
 The BM algebra of hypermatrices suggests very natural generalization to the matrix determinant which has also been 
 implemented in the hypermatrix package. The user must be warn that while it is relatively straight forward to compute
 determinant of hypermatrices of arbitrary order of with side length equal to 2 via the following expressions 
@@ -214,5 +215,44 @@ sage: Hc=HM(3,3,3,'c')
 sage: Hc.det()
 ```
 
+# Transposition hypermatrices.
+
+Transposition hypermatrices implement the analog of permutation matrices. The hypermatrix package implements functions
+for implementing permutation hypermatrices. We illustrate here their use for transposing the first and second row slices
+of a 3x3x3 hypermatrix
+
+```python
+sage: A=HM(3,3,3,'a'); A
+sage: P=HM(HypermatrixPermutation([1,0,2])); P
+sage: Prod(P.transpose(),P.transpose(2),A)
+```
+
+For transposing the first two column slices we use the following instructions
+
+```python
+sage: A=HM(3,3,3,'a'); A
+sage: P=HM(HypermatrixPermutation([1,0,2])); P
+sage: Prod(A,P,P.transpose())
+```
+
+For transposing the first two depth slices we use the following instructions
+
+```python
+sage: A=HM(3,3,3,'a'); A
+sage: P=HM(HypermatrixPermutation([1,0,2])); P
+sage: Prod(P,A,P.transpose(2))
+```
+
+Transposition can composed to induce arbitrary permutations as illustrated below
+
+```python
+sage: A=HM(3,3,3,'a'); A
+sage: P=HM(HypermatrixPermutation([1,0,2])); P
+sage: Q=HM(HypermatrixPermutation([2,1,0])); Q
+sage: Prod(Q, Prod(P,A,P.transpose(2)), Q.transpose(2))
+```
+
+
 # Bug report
-Please report any bugs, it will be greatly appreciated.
+
+Please report any bugs, it is greatly appreciated.
