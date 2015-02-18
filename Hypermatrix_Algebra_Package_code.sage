@@ -3990,18 +3990,22 @@ def gaussian_elimination(Cf, rs):
         Tb[:b.nrows(), :b.ncols()] = copy(b)
         # replacing the matrix with the zero apdding.
         A = Ta; b = Tb
-    # Initializing the cyclic shift permutation matrix
-    Id = identity_matrix(A.nrows())
-    P  = sum([Id[:,k]*Id[mod(k+1,A.nrows()),:] for k in range(A.nrows())])
     # Initialization of the row and column index
     i = 0; j = 0;
     while i < A.nrows() and j < A.ncols():
         if (A[:,j]).is_zero():
             # Incrementing the column index
             j = j + 1
-        else:
-            while (A[i,j]).is_zero():
-                A = P*A; b = P*b
+        elif (A[i:,:].is_zero()) == False:
+            while (A[i,j]).is_zero(): 
+                Ta = A[i:,:]
+                Tb = b[i:,:]
+                # Initializing the cyclic shift permutation matrix
+                Id = identity_matrix(Ta.nrows())
+                P  = sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                Ta = P*Ta; Tb = P*Tb
+                A[i:,:] = Ta
+                b[i:,:] = Tb
             # Performing the row operations.
             b[i,:] = (1/A[i,j])*b[i,:]
             A[i,:] = (1/A[i,j])*A[i,:]
@@ -4080,18 +4084,22 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
         Tb[:b.nrows(), :b.ncols()] = copy(b)
         # replacing the matrix with the zero apdding.
         A = Ta; b = Tb
-    # Initializing the cyclic shift permutation matrix
-    Id = identity_matrix(A.nrows())
-    P  = sum([Id[:,k]*Id[mod(k+1,A.nrows()),:] for k in range(A.nrows())])
     # Initialization of the row and column index
     i = 0; j = 0; indx = jndx
     while i<A.nrows() and j<A.ncols():
         if (A[:,j]).is_zero():
             # Incrementing the column index
             j=j+1
-        else:
+        elif (A[i:,:].is_zero()) == False:
             while (A[i,j]).is_zero():
-                A=P*A; b=P*b
+                Ta = A[i:,:]
+                Tb = b[i:,:]
+                # Initializing the cyclic shift permutation matrix
+                Id = identity_matrix(Ta.nrows())
+                P  = sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                Ta = P*Ta; Tb = P*Tb
+                A[i:,:] = Ta
+                b[i:,:] = Tb             
             # Performing the row operations.
             b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
             indx = indx+1
@@ -4138,6 +4146,108 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
             # performing row operations
             for r in range(i-1, -1, -1):
                 b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                indx = indx+1
+                A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+            i = i - 1; j = 0
+    return [A, b, indx]
+
+def log_gaussian_elimination(Cf, rs, jndx=0):
+    """
+    Outputs the row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [RefA, c] = log_gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: RefA
+        [      1 a01/a00]
+        [      0       1]
+        sage: c
+        [                                                          (2*I*pi*k0 + b00)/a00]
+        [((2*I*pi*k1 + (2*I*pi*k0 + b00)/a00)*a10 - 2*I*pi*k2 - b10)/(a01*a10/a00 - a11)]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    A = copy(Cf); b = copy(rs)
+    # Zero padding the matrix if necessary.
+    if A.nrows() < A.ncols():
+        # Temporary matrix for A
+        Ta = Matrix(SR, zero_matrix(A.ncols(), A.ncols()))
+        Ta[:A.nrows(), :A.ncols()] = copy(A)
+        # Temporary matrix for b
+        Tb = Matrix(SR, zero_matrix(A.ncols(), b.ncols())) 
+        Tb[:b.nrows(), :b.ncols()] = copy(b)
+        # replacing the matrix with the zero apdding.
+        A = Ta; b = Tb
+    # Initializing the cyclic shift permutation matrix
+    Id = identity_matrix(A.nrows())
+    P  = sum([Id[:,k]*Id[mod(k+1,A.nrows()),:] for k in range(A.nrows())])
+    # Initialization of the row and column index
+    i = 0; j = 0; indx = jndx
+    while i < A.nrows() and j < A.ncols():
+        if (A[:,j]).is_zero():
+            # Incrementing the column index
+            j = j + 1
+        elif (A[i:,:].is_zero()) == False:
+            while (A[i,j]).is_zero():
+                Ta = A[i:,:]
+                Tb = b[i:,:]
+                # Initializing the cyclic shift permutation matrix
+                Id = identity_matrix(Ta.nrows())
+                P  = sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                Ta = P*Ta; Tb = P*Tb
+                A[i:,:] = Ta
+                b[i:,:] = Tb
+            # Performing the row operations.
+            b[i,0] = (1/A[i,j])*(b[i,0] + I*2*pi*var('k'+str(indx)))
+            indx = indx + 1
+            A[i,:] = (1/A[i,j])*A[i,:]
+            for r in range(i+1,A.nrows()):
+                b[r,0] = -A[r,j]*( b[i,0] + I*2*pi*var('k'+str(indx)) ) + b[r,0]
+                indx = indx+1
+                A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+        # Incrementing the row and column index.
+        i = i + 1; j = j + 1
+    return [A, b, indx]
+
+def log_gauss_jordan_elimination(Cf, rs, jndx=0):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [RefA, c] = log_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: RefA
+        [1 0]
+        [0 1]
+        sage: c
+        [-(2*I*pi*k3 + ((2*I*pi*k1 + (2*I*pi*k0 + b00)/a00)*a10 - 2*I*pi*k2 - b10)/(a01*a10/a00 - a11))*a01/a00 + (2*I*pi*k0 + b00)/a00]
+        [                                               ((2*I*pi*k1 + (2*I*pi*k0 + b00)/a00)*a10 - 2*I*pi*k2 - b10)/(a01*a10/a00 - a11)]
+        
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b, indx] = log_gaussian_elimination(Cf,rs,jndx)
+    # Initialization of the row and column index
+    i = A.nrows()-1; j = 0
+    while i > 0 or j > 0:
+        if (A[i,:]).is_zero():
+            # decrementing the row index and initializing the column index
+            i = i - 1; j = 0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1, -1, -1):
+                b[r,0] = -A[r,j]*(b[i,0] + I*2*pi*var('k'+str(indx))) + b[r,0]
                 indx = indx+1
                 A[r,:] = -A[r,j]*A[i,:]+A[r,:]
             i = i - 1; j = 0
