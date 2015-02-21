@@ -145,10 +145,10 @@ of 2 and in the particular case of size 4x4x4 is obtained as follows
 sage: H=ThirdOrderHadamardBlockU(4); H
 [[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]], [[-1, 1, -1, 1], [1, 1, 1, 1], [-1, 1, -1, 1], [1, 1, 1, 1]], [[-1, -1, 1, 1], [-1, -1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]], [[1, -1, -1, 1], [-1, -1, 1, 1], [-1, 1, -1, 1], [1, 1, 1, 1]]]
 sage: Prod(H, H.transpose(2), H.transpose())
+[[[4, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], [[0, 0, 0, 0], [0, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 4, 0], [0, 0, 0, 0]], [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 4]]]
 ```
 
-One can not help but wonder if the reach of the famous Hadamard matrix conjecture should be extended to all hypermatrices 
-of prime order.
+One can not help but wonder if the reach of the famous Hadamard matrix conjecture extendeds to hypermatrices of prime order.
 
 
 ## Unitary hypermatrices
