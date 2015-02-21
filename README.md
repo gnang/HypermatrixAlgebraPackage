@@ -162,13 +162,15 @@ of 2x2 unitary matrices is obtained from the hypermatrix package via the command
 sage: [U,Uc]=GeneralUnitaryHypermatrix(2); U
 [[e^(-I*pi-I*r1+I*r2+I*r3-r4+r5+r6)/sqrt(e^(-2*r4+2*r5+2*r6)+e^(2*r6)), e^(I*r2+r6)/sqrt(e^(-2*r4+2*r5+2*r6)+e^(2*r6))], [e^(I*r3+r4)/sqrt(e^(2*r4)+e^(2*r5)), e^(I*r1+r5)/sqrt(e^(2*r4)+e^(2*r5))]] 
 sage: Prod(U,Uc.transpose()).simplify()
+[[1, 0], [0, 1]]
 ```
 
 Similarly a symblic paramterization of a fourth order unitary hypermatrix of side length 2 is obtained as follows 
 
 ```python
-sage: [U,Uc]=GeneralUnitaryHypermatrix(4); U 
+sage: [U,Uc]=GeneralUnitaryHypermatrix(4) 
 sage: Prod(U, Uc.transpose(3), U.transpose(2), Uc.transpose()).simplify()
+[[[[1, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[0, 0], [0, 1]]]]
 ```
 
 Note that the symbolic parametrization returns the unitary hypermatrix and it's complex conjugate. It is therefore 
