@@ -61,7 +61,7 @@ class HM:
         elif s == 'perm':
             self.hm=HypermatrixPermutation(dims[0])
         elif s == 'kronecker':
-            self.hm=HypermatrixKroneckerDelta(dims[0])
+            self.hm=apply(GeneralHypermatrixKroneckerDelta, args[:-1]).listHM()
         elif s == 'sym':
             if len(dims) == 2:
                 self.hm=SymHypermatrixGenerate(dims[0],dims[1])
@@ -1788,7 +1788,7 @@ def GeneralHypermatrixLogarithm(A,s=e):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Rh[tuple(entry)]=log(A[tuple(entry)],s).simplify_exp()
+        Rh[tuple(entry)]=log(A[tuple(entry)],s).canonicalize_radical()
     return Rh
 
 def GeneralHypermatrixConjugate(A):
@@ -2154,7 +2154,7 @@ def GeneralUncorrelatedHypermatrixTupleU(od):
     # Filling up the linear constraints
     CnstrLst= [] 
     for f in LeQ:
-        CnstrLst.append(ln((f.operands())[0]).simplify_exp()-I*pi-ln((f.operands())[1]).simplify_exp()==0)
+        CnstrLst.append(ln((f.operands())[0]).canonicalize_radical()-I*pi-ln((f.operands())[1]).canonicalize_radical()==0)
     # Directly solving the constraints
     Sl = solve(CnstrLst, VrbLst)
     # Setting up the list for the dictionary
@@ -2227,7 +2227,7 @@ def GeneralOrthogonalHypermatrixU(od):
     # Filling up the linear constraints
     CnstrLst= [] 
     for f in LeQ:
-        CnstrLst.append(ln((f.operands())[0]).simplify_exp()-I*pi-ln((f.operands())[1]).simplify_exp()==0)
+        CnstrLst.append(ln((f.operands())[0]).canonicalize_radical()-I*pi-ln((f.operands())[1]).canonicalize_radical()==0)
     # Directly solving the constraints
     Sl = solve(CnstrLst,VrbLst)
     # Main loop performing the substitution of the entries
@@ -2240,7 +2240,7 @@ def GeneralOrthogonalHypermatrixU(od):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).simplify_exp()
+        Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).canonicalize_radical()
     return Q
 
 def GeneralOrthogonalHypermatrix(od):
@@ -2277,7 +2277,7 @@ def GeneralOrthogonalHypermatrix(od):
         # Filling up the linear constraints
         CnstrLst= [] 
         for f in LeQ:
-            CnstrLst.append(ln((f.operands())[0]).simplify_exp()-I*pi-ln((f.operands())[1]).simplify_exp()==0)
+            CnstrLst.append(ln((f.operands())[0]).canonicalize_radical()-I*pi-ln((f.operands())[1]).canonicalize_radical()==0)
         # Directly solving the constraints
         Sl = solve(CnstrLst,VrbLst)
         # Main loop performing the substitution of the entries
@@ -2290,7 +2290,7 @@ def GeneralOrthogonalHypermatrix(od):
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
                 sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-            Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).simplify_exp()
+            Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).canonicalize_radical()
         # Initialization of the output hypermatrix
         U = GeneralHypermatrixCopy(Q)
         # first row to normalize 
@@ -3524,10 +3524,10 @@ def GeneralHypermatrixDeterminant(od):
     # Filling up the linear constraints
     CnstrLst=[] 
     for f in Le:
-        CnstrLst.append(ln((f.operands())[1]).simplify_exp() == ln((f.operands())[0]).simplify_exp())
+        CnstrLst.append(ln((f.operands())[1]).canonicalize_radical() == ln((f.operands())[0]).canonicalize_radical())
     [Mtr, b]=ConstraintFormatorII(CnstrLst, VrbLst)
     # Returning the determinantal equality
-    return exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).simplify_exp().numerator()-exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).simplify_exp().denominator()
+    return exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).canonicalize_radical().numerator()-exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).canonicalize_radical().denominator()
 
 def GeneralHypermatrixRank1Parametrization(sz,od):
     """
@@ -3584,7 +3584,6 @@ def SecondOrderHadamardBlockU(l):
         else:
             H = H.block_sum(Matrix(QQ,hadamard_matrix(Szl[i][0])))
     return HM(l,l,H.list())
-
 
 def SecondOrderHadamardBlock(l):
     """
@@ -4061,8 +4060,8 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     EXAMPLES:
  
     ::  
-        sage: [RefA,c]=multiplicative_gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
-        sage: RefA
+        sage: [EfA,c,indx]=multiplicative_gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: EfA
         [1             a01/a00]
         [0                   1]
         sage: c
@@ -4119,7 +4118,7 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
     EXAMPLES:
  
     ::  
-        sage: [RefA, c] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [RefA, c, indx] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
         sage: RefA
         [1 0]
         [0 1]
