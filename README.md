@@ -15,8 +15,8 @@ investigate structural and combinatorial properties of hypermatrices.
 # Installation 
 
 A properly working install of [sage](http://sagemath.org/) is a prerequisite to using the hypermatrix 
-package. In a sage terminal session, the hypermatrix package is to be loaded via the following 
-command:
+package. Download the Hypermatrix sage file into your working directory. Load the hypermatrix package 
+into a sage terminal session the following command:
 
 ```python
 sage: %runfile("Hypermatrix_Algebra_Package_code.sage")
@@ -24,7 +24,7 @@ sage: %runfile("Hypermatrix_Algebra_Package_code.sage")
 
 # Usage
 
-To create a symbolic hypermatrix instance of size 2x3x4 for example, we use the instruction
+To create a symbolic hypermatrix instance of size 2x3x4 for example, we use the instructions
 
 ```python
 sage: Ha = HM(2,3,4,'a'); Ha
@@ -64,7 +64,7 @@ sage: Prod(HM(2,3,'a'),HM(3,4,'c'))
 sage: Prod(HM(2,3,4,'a'),HM(2,2,3,'b'),HM(3,2,4,'c'))
 ```
 
-As illustrated by the previous instructions, the product of compatible second order hypermatrices recover the 
+As illustrated by the previous instructions, the product of compatible second order hypermatrices recovers the 
 usual matrix product. Other basic hypermatrix operations including addition and multiplication by scalars are
 quite similar to their matrix counter part. The hypermatrix transpose amounts to a clyclic permutation of the
 entry indices and is performed as follows 
@@ -122,8 +122,7 @@ sage: Prod(Q,Q.transpose(2),Q.transpose()).simplify()
 [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
 ```
 
-Similarly a symbolic parametrization of orthogonal parametrization of 2x2x2x2 hypermatrices is given
-by
+Similarly a symbolic parametrization of orthogonal parametrization of 2x2x2x2 hypermatrices is given by
 
 ```python
 sage: Q=GeneralOrthogonalHypermatrix(4); Q
