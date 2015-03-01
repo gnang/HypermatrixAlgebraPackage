@@ -16,7 +16,7 @@ investigate structural and combinatorial properties of hypermatrices.
 
 A properly working install of [sage](http://sagemath.org/) is a prerequisite to using the hypermatrix 
 package. Download the Hypermatrix sage file into your working directory. Load the hypermatrix package 
-into a sage terminal session the following command:
+into a sage terminal session using the following command:
 
 ```python
 sage: %runfile("Hypermatrix_Algebra_Package_code.sage")
@@ -39,7 +39,7 @@ sage: Hx=HM(2,2,2,[var('x'+str(i)+str(j)+str(k)) for k in range(1,3) for j in ra
 ```
 
 The hypermatrix entries are not restricted to numbers and symbolic expression, they may be matrices or more generally
-can be other hypermatrices as illustrated below
+can even be other hypermatrices as illustrated below
 
 ```python
 sage: Hh=HM(2,2,2,[(i*2^2+j*2+k)*hadamard_matrix(2) for k in range(2) for j in range(2) for i in range(2)])
@@ -66,7 +66,7 @@ sage: Prod(HM(2,3,4,'a'),HM(2,2,3,'b'),HM(3,2,4,'c'))
 
 As illustrated by the previous instructions, the product of compatible second order hypermatrices recovers the 
 usual matrix product. Other basic hypermatrix operations including addition and multiplication by scalars are
-quite similar to their matrix counter part. The hypermatrix transpose amounts to a clyclic permutation of the
+quite similar to their matrix counter part in sage. The hypermatrix transpose amounts to a clyclic permutation of the
 entry indices and is performed as follows 
 
 ```python
@@ -76,7 +76,7 @@ sage: HM(2,2,2,'a').transpose()
 [[[a000, a100], [a001, a101]], [[a010, a110], [a011, a111]]]
 ```
 
-In order to perform two consecutive transposes we use the following instruction
+In order to perform two or more consecutive transposes we use the following instructions
 
 ```python
 sage: HM(2,2,2,2,'a').transpose()
@@ -86,7 +86,7 @@ sage: HM(2,2,2,2,'a').transpose(4) - HM(2,2,2,2,'a')
 ```
 
 The sum of hypermatrices can taken over a list of hypermatrices.
-We ilustrate this by constructing a symbolic symmetric hypermatrix.
+We ilustrate this by constructing a symbolic symmetric hypermatrix as follows.
 
 ```python
 sage: sum([HM(2,2,2,'a').transpose(i) for i in range(3)])
@@ -112,8 +112,8 @@ some symbolic parametrization of special families of hypermatrices.
 Orthogonal hypermatrices are analogous to Orthogonal matrices in the fact that the product of their transposes yields
 the [Kronecker delta](http://en.wikipedia.org/wiki/Kronecker_delta#Properties_of_generalized_Kronecker_delta) of the 
 same size and order (Kronecker delta is the hypermatrix whose non zero entries equal 1 and correspond the entries whose
-indices are all equal as illustrated by the identity matrices). A symbolic parametetrization of 2x2x2 hypermatrices is 
-given by
+indices are all equal as illustrated by the identity matrices). A symbolic parametetrization of 2x2x2 orthogonal 
+hypermatrices is obtained via the following instructions
 
 ```python
 sage: Q=GeneralOrthogonalHypermatrix(3); Q
@@ -122,23 +122,24 @@ sage: Prod(Q,Q.transpose(2),Q.transpose()).simplify()
 [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
 ```
 
-Similarly a symbolic parametrization of orthogonal parametrization of 2x2x2x2 hypermatrices is given by
+Similarly a symbolic parametrization of orthogonal parametrization of size 2x2x2x2 hypermatrices is obtained via
+the following instructions
 
 ```python
 sage: Q=GeneralOrthogonalHypermatrix(4); Q
 sage: Prod(Q,Q.transpose(3),Q.transpose(2),Q.transpose()).simplify()
 ```
 
-The parameters which appear in the parametrization can be assigned arbitrary complex values (one must be mindful of 
+The parameters which appear in the parametrization can be assigned arbitrary complex values (but one must be mindful of 
 possible division by zeros when assigning values to the parameters).
 The hypermatrix package also provides construction of cubic third order Hadamard hypermatrices, which are quite analogous
-to Hadamard matrices in the fact that the product of the transposes equals to the Kronecker delta ( of the same size and 
-order ) scaled by the side length of the hypermatrix. It is infact easy to see that the classical Hadamard matrix 
+to Hadamard matrices in the fact that the product of the transposes equals to the Kronecker delta (of the same size and 
+order) scaled by the side length of the hypermatrix. It is easy to see that the classical Hadamard matrix 
 [construction](http://en.wikipedia.org/wiki/Hadamard_matrix#Sylvester.27s_construction) proposed by 
-James Joseph Sylvester and going back to 1867 extends to all hypermatrices of prime order ( recall that the order refers
+James Joseph Sylvester and going back to 1867 extends to all hypermatrices of prime order (recall that the order refers
 to the number of indices associated with the hypermatrix entries, for instance matrices are second order hypermatrices 
 because every matrix entry has a row and column index). Third order Hadamard hypermatrices whose side length are powers 
-of 2 and in the particular case of size 4x4x4 is obtained as follows
+of 2 and in the particular case of size 4x4x4 is obtained via the following instructions
 
 ```python
 sage: H=ThirdOrderHadamardBlockU(4); H
@@ -149,13 +150,12 @@ sage: Prod(H, H.transpose(2), H.transpose())
 
 One can not help but wonder if the reach of the famous Hadamard matrix conjecture extendeds to hypermatrices of prime order.
 
-
 ## Unitary hypermatrices
-The hypermatrix package also provides a symbolic parametrization of even order unitary hypermatrix with sides length 
+The hypermatrix package also provides a symbolic parametrization of even order unitary hypermatrices with sides length 
 equal to 2. As suggested by the [Gowers norm](http://en.wikipedia.org/wiki/Gowers_norm), an even order hypermatrix is
 said to be unitary if the product of the conjugate transposes yield the Kronecker delta of the same order and size.
 Consequently, second order unitary hypermatrices correspond to the usual unitary matrices and a symbolic parametrization
-of 2x2 unitary matrices is obtained from the hypermatrix package via the commands
+of 2x2 unitary matrices is obtained from the hypermatrix package via the following commands
 
 ```python
 sage: [U,Uc]=GeneralUnitaryHypermatrix(2); U
@@ -164,7 +164,7 @@ sage: Prod(U,Uc.transpose()).simplify()
 [[1, 0], [0, 1]]
 ```
 
-Similarly a symblic paramterization of a fourth order unitary hypermatrix of side length 2 is obtained as follows 
+Similarly a symbolic paramterization of a fourth order unitary hypermatrix of side length 2 is obtained as follows 
 
 ```python
 sage: [U,Uc]=GeneralUnitaryHypermatrix(4) 
@@ -172,9 +172,9 @@ sage: Prod(U, Uc.transpose(3), U.transpose(2), Uc.transpose()).simplify()
 [[[[1, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[0, 0], [0, 1]]]]
 ```
 
-Note that the symbolic parametrization returns the unitary hypermatrix and it's complex conjugate. It is therefore 
-important to emphasize that all the parameters in the parametrization are to be assigned real values for the hypermatrix
-to be unitary.
+Note that the function returns a symbolic parametrization of unitary hypermatrix and it's complex conjugate.
+It is therefore important to emphasize that all the parameters in the parametrization are to be assigned real
+values for the hypermatrix to be unitary.
 
 ## Uncorrelated tuples: Generalization of matrix inverse pair
 The [general linear group](http://en.wikipedia.org/wiki/General_linear_group) plays a crucial role in many areas of
@@ -225,8 +225,8 @@ m00000*m00011*m00101*m00110*m01001*m01010*m01100*m01111*m10001*m10010*m10100*m10
 ```
 
 however computing determinant of hypermatrices of arbitrary order with side length greater then 3 is considerably 
-more difficult as the expression of the proposed generalization of the determinant involves all 
-[latin hypercubes](http://en.wikipedia.org/wiki/Latin_hypercube_sampling) of the corresponding order and side lenght.
+more difficult as the expression of the proposed generalization of the determinant involves summing over all 
+[latin hypercubes](http://en.wikipedia.org/wiki/Latin_hypercube_sampling) of the corresponding order and side length.
 Unefortunately as our implementation suggestis we perform a brute forces search for the latin Hypercubes (suggestions for
 improvemements are more then welcome). Consequently the package provides an implementation of the hyperdeterminant of 
 hypermatrices of arbitrary size but order less than 7. The computation of the determinant of a hypermatrix is obtained 
@@ -240,8 +240,8 @@ sage: Ha.det()
 
 # Transposition hypermatrices.
 
-Transposition hypermatrices implement the analog of permutation matrices. The hypermatrix package implements functions
-for implementing permutation hypermatrices. We illustrate here their use for transposing the first and second row slices
+Transposition hypermatrices implement the analog of permutation matrices. The package implements the hypermatrix  analog of
+permutation matrices. We illustrate here their use for transposing the first and second row slices
 of a 3x3x3 hypermatrix
 
 ```python
@@ -259,7 +259,9 @@ For transposing the first two column slices we use the following instructions
 sage: A=HM(3,3,3,'a'); A
 [[[a000, a001, a002], [a010, a011, a012], [a020, a021, a022]], [[a100, a101, a102], [a110, a111, a112], [a120, a121, a122]], [[a200, a201, a202], [a210, a211, a212], [a220, a221, a222]]]
 sage: P=HM(HypermatrixPermutation([1,0,2])); P
+[[[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]]]
 sage: Prod(A,P,P.transpose())
+[[[a010, a011, a012], [a000, a001, a002], [a020, a021, a022]], [[a110, a111, a112], [a100, a101, a102], [a120, a121, a122]], [[a210, a211, a212], [a200, a201, a202], [a220, a221, a222]]]
 ```
 
 For transposing the first two depth slices we use the following instructions
@@ -273,7 +275,7 @@ sage: Prod(P,A,P.transpose(2))
 [[[a001, a000, a002], [a011, a010, a012], [a021, a020, a022]], [[a101, a100, a102], [a111, a110, a112], [a121, a120, a122]], [[a201, a200, a202], [a211, a210, a212], [a221, a220, a222]]]
 ```
 
-Transposition can composed to induce arbitrary permutations as illustrated below
+Transposition can composed to perform an arbitrary permutation as illustrated below
 
 ```python
 sage: A=HM(3,3,3,'a'); A
