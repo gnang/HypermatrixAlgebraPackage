@@ -3979,7 +3979,7 @@ def gaussian_elimination(Cf, rs):
     - Edinah K. Gnang
     - To Do: 
     """
-    A = copy(Cf); b = copy(rs)
+    A=copy(Cf); b=copy(rs)
     # Zero padding the matrix if necessary.
     if A.nrows() < A.ncols():
         # Temporary matrix for A
@@ -3993,7 +3993,7 @@ def gaussian_elimination(Cf, rs):
     # Initialization of the row and column index
     i = 0; j = 0;
     while i < A.nrows() and j < A.ncols():
-        if (A[i:,j]).is_zero():
+        while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
             j=j+1
         if (A[i:,:].is_zero()) == False:
@@ -4091,7 +4091,7 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     # Initialization of the row and column index
     i=0; j=0; indx=jndx
     while i<A.nrows() and j<A.ncols():
-        if (A[i:,j]).is_zero():
+        while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
             j=j+1
         if A[i:,:].is_zero()==False:
@@ -4193,7 +4193,7 @@ def log_gaussian_elimination(Cf, rs, jndx=0):
     # Initialization of the row and column index
     i = 0; j = 0; indx = jndx
     while i < A.nrows() and j < A.ncols():
-        if (A[i:,j]).is_zero():
+        while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
             j=j+1
         if (A[i:,:].is_zero()) == False:
