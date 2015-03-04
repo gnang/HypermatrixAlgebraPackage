@@ -4065,7 +4065,7 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     EXAMPLES:
  
     ::  
-        sage: [EfA,c,indx]=multiplicative_gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [EfA,c,indx,Lst]=multiplicative_gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
         sage: EfA
         [1             a01/a00]
         [0                   1]
@@ -4089,7 +4089,7 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
         # replacing the matrix with the zero apdding.
         A=Ta; b=Tb
     # Initialization of the row and column index
-    i=0; j=0; indx=jndx
+    i=0; j=0; indx=jndx; Lst = []
     while i<A.nrows() and j<A.ncols():
         while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
@@ -4107,6 +4107,7 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
             # Performing the row operations.
             b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
             indx = indx+1
+            Lst.append(A[i,j])
             A[i,:]=(1/A[i,j])*A[i,:]
             for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
@@ -4114,11 +4115,13 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
                     r=r+1
                 else:
                     b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
-                    indx = indx+1
+                    if (A[r,j]).is_zero()==False:
+                        indx = indx+1
+                        Lst.append(A[r,j])
                     A[r,:]=-A[r,j]*A[i,:]+A[r,:]
         # Incrementing the row and column index.
         i=i+1; j=j+1
-    return [A, b, indx]
+    return [A, b, indx, Lst]
 
 def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
     """
@@ -4140,7 +4143,7 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
     - Edinah K. Gnang
     - To Do: 
     """
-    [A, b, indx] = multiplicative_gaussian_elimination(Cf,rs,jndx)
+    [A, b, indx, Lst] = multiplicative_gaussian_elimination(Cf,rs,jndx)
     # Initialization of the row and column index
     i = A.nrows()-1; j = 0
     while i > 0 or j > 0:
@@ -4154,10 +4157,12 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
             # performing row operations
             for r in range(i-1, -1, -1):
                 b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
-                indx = indx+1
+                if (A[r,j]).is_zero()==False:
+                    indx = indx+1
+                    Lst.append(A[r,j])
                 A[r,:] = -A[r,j]*A[i,:]+A[r,:]
             i = i - 1; j = 0
-    return [A, b, indx]
+    return [A, b, indx, Lst]
 
 def log_gaussian_elimination(Cf, rs, jndx=0):
     """
