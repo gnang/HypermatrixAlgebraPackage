@@ -2841,6 +2841,36 @@ def GenerateRandomHypermatrix(*l):
     else :
         raise ValueError, "The Dimensions must all be non-zero."
 
+def GenerateRandomIntegerHypermatrix(*l):
+    """
+     Outputs a random hypermatrix
+
+    EXAMPLES:
+    ::
+        sage: A=GenerateRandomIntegerHypermatrix(3,3,3); A
+        [[[-2, 1, 4], [1, 2, 1], [3, 1, -4]], [[-5, 1, 0], [2, -2, 0], [0, -1, -6]], [[0, 2, 1], [-2, -8, -1], [-2, -2, 0]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if prod(list(l)) != 0:
+        # Initializing the input for generating a symbolic hypermatrix
+        inpts = list(l)+['zero']
+        # Initialization of the hypermatrix
+        Rh = HM(*inpts)
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [mod(i,l[0])]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)]=ZZ.random_element()
+        return Rh
+    else :
+        raise ValueError, "The Dimensions must all be non-zero."
+
 def GeneralStochasticHypermatrix(t, od):
     """
     Generates an stochastic hypermatrix of the appropriate order
