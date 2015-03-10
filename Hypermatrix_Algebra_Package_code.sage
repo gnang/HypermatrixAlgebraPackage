@@ -260,6 +260,13 @@ class HM:
             return SixthOrderHyperdeterminant(self)
         else:
             raise ValueError, "The hyperdeterminant is not implemented for order "+str(self.order())+"."
+    def is_zero(self):
+        if Set(self.list()).list()==[0]:
+            return True
+        else:
+            return False
+    def is_symmetric(self):
+        return (A-A.transpose()).is_zero()
 
 # Definition of the functions 
 def MatrixGenerate(nr, nc, c):
