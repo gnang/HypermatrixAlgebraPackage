@@ -266,7 +266,7 @@ class HM:
         else:
             return False
     def is_symmetric(self):
-        return (A-A.transpose()).is_zero()
+        return (self-self.transpose()).is_zero()
 
 # Definition of the functions 
 def MatrixGenerate(nr, nc, c):
