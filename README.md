@@ -258,7 +258,7 @@ of a 3x3x3 hypermatrix
 ```python
 sage: A=HM(3,3,3,'a'); A
 [[[a000, a001, a002], [a010, a011, a012], [a020, a021, a022]], [[a100, a101, a102], [a110, a111, a112], [a120, a121, a122]], [[a200, a201, a202], [a210, a211, a212], [a220, a221, a222]]]
-sage: P=HM(HypermatrixPermutation([1,0,2])); P
+sage: P=HM([1,0,2],'perm'); P
 [[[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]]]
 sage: Prod(P.transpose(),P.transpose(2),A)
 [[[a100, a101, a102], [a110, a111, a112], [a120, a121, a122]], [[a000, a001, a002], [a010, a011, a012], [a020, a021, a022]], [[a200, a201, a202], [a210, a211, a212], [a220, a221, a222]]]
@@ -268,7 +268,7 @@ For transposing the first two column slices we use the following instructions
 
 ```python
 sage: A=HM(3,3,3,'a'); A
-sage: P=HM(HypermatrixPermutation([1,0,2])); P
+sage: P=HM([1,0,2],'perm'); P
 sage: Prod(A,P,P.transpose())
 ```
 
@@ -276,7 +276,7 @@ For transposing the first two depth slices we use the following instructions
 
 ```python
 sage: A=HM(3,3,3,'a'); A
-sage: P=HM(HypermatrixPermutation([1,0,2])); P
+sage: P=HM([1,0,2],'perm'); P
 sage: Prod(P,A,P.transpose(2))
 ```
 
@@ -284,8 +284,8 @@ Transposition can composed to perform an arbitrary permutation as illustrated be
 
 ```python
 sage: A=HM(3,3,3,'a'); A
-sage: P=HM(HypermatrixPermutation([1,0,2])); P
-sage: Q=HM(HypermatrixPermutation([2,1,0])); Q
+sage: P=HM([1,0,2],'perm'); P
+sage: Q=HM([2,1,0],'perm'); Q
 sage: Prod(Q, Prod(P,A,P.transpose(2)), Q.transpose(2))
 ```
 
