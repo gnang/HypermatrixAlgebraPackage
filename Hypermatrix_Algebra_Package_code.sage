@@ -164,8 +164,8 @@ class HM:
     def ndpts(self):
         return len(self.hm[0][0])
     def Print(self):
-        if self.order() == 3:
-            L = self.listHM()
+        if self.order()==3:
+            L=self.listHM()
             for m in L:
                 print '\n'+Matrix(m).str()
         else:
@@ -178,9 +178,9 @@ class HM:
         elif i==2:
             return self.ndpts()
         else:
-            tmp = self.listHM()
+            tmp=self.listHM()
             for j in range(i):
-                tmp = tmp[0]
+                tmp=tmp[0]
             return len(tmp)
     def list(self):
         lst = []
@@ -267,8 +267,9 @@ class HM:
             return False
     def is_symmetric(self):
         return (self-self.transpose()).is_zero()
+    def is_cubical(self):
+        return len(Set(self.dimensions()).list())==1
 
-# Definition of the functions 
 def MatrixGenerate(nr, nc, c):
     """
     Generates a list of lists associated with a symbolic nr x nc
@@ -405,7 +406,6 @@ def SymHypermatrixGenerate(nr, c):
     n_q_rows = nr
     n_q_cols = nr
     n_q_dpts = nr
-
     # Test for dimension match
     if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
         # Initialization of the hypermatrix
@@ -453,7 +453,6 @@ def HypermatrixVectorize(A):
     n_q_rows = len(A)
     n_q_cols = len(A[0])
     n_q_dpts = len(A[0][0])
-
     # Test for dimension match
     if n_q_rows>0 and n_q_cols>0 and n_q_dpts>0:
         # Initialization of the hypermatrix
@@ -1043,7 +1042,7 @@ def DiagonalHypermatrix(Mtrx):
     for i in range(n_d_rows):
         for j in range(n_d_cols):
             for k in range(n_d_dpts):
-                if (D[i][j][k] != 0):
+                if D[i][j][k] != 0:
                     D[i][j][k] = Mtrx[min(i,k),max(i,k)]
     return D
 
@@ -1411,6 +1410,69 @@ def ConstraintFormatorIII(CnstrLst, VrbLst):
             A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
     return [A,b]
 
+def ConstraintFormatorIV(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+
+    EXAMPLES:
+    ::
+        sage: x,y = var('x,y')
+        sage: CnstrLst = [x+y-1, x-y-2]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = ConstraintFormatorIV(CnstrLst, VrbLst)
+        sage: A
+        [ 1  1]
+        [ 1 -1]
+        sage: b
+        [1]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=Matrix(SR,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst)))
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            A[r,c]=CnstrLst[r].coefficient(VrbLst[c])
+    return [A,A*Matrix(SR,len(VrbLst),1,VrbLst)-Matrix(SR,len(CnstrLst),1,CnstrLst)]
+
+def MulitplicativeConstraintFormator(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+
+    EXAMPLES:
+    ::
+        sage: x,y = var('x,y')
+        sage: CnstrLst = [x+y==1, x-y==2]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = ConstraintFormatorII(CnstrLst, VrbLst)
+        sage: A
+        [ 1  1]
+        [ 1 -1]
+        sage: b
+        [1]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=Matrix(SR,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst)))
+    b=vector(SR, [eq.rhs() for eq in CnstrLst]).column()
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
+    return [A,b]
+
 def Companion_matrix(p,vrbl):
     """
     Takes as input a polynomial and a variable
@@ -1584,7 +1646,6 @@ def Prod(*args):
     AUTHORS:
     - Edinah K. Gnang
     """
-
     return GeneralHypermatrixProduct(*args)
 
 def GeneralHypermatrixProductB(*args):
@@ -2403,7 +2464,6 @@ def GeneralUnitaryHypermatrixU(od):
     # Initialization of the variables.
     Vrbls =X.list()+Y.list() 
     # Initialization of the non homogeneous equations
-    #Eq =[(log((l.operands())[0])).simplify_log().subs(z=0) - (log((l.operands())[1])).simplify_log().subs(z=0) == 0 for l in L]+[(log((l.operands())[0])).simplify_log().coeff(z) - (log((l.operands())[1])).simplify_log().coeff(z)==pi for l in L]
     Eq =[(log((l.operands())[0])).simplify_log().subs(z=0) - (log((l.operands())[1])).simplify_log().subs(z=0) == 0 for l in L]+[(log((l.operands())[0])).simplify_log().coefficient(z) - (log((l.operands())[1])).simplify_log().coefficient(z)==pi for l in L]
     # Calling the constraint formator
     [A,b]=ConstraintFormatorII(Eq,Vrbls)
@@ -2553,7 +2613,6 @@ def Deter(A):
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
     return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([A[k][p[k]] for k in range(A.nrows())]) for p in P])
-
  
 def MeanApproximation(T):
     """
@@ -3268,7 +3327,7 @@ def HypermatrixKroneckerSum(A,B):
 
 def GeneralHypermatrixKroneckerSum(A,B):
     """
-    Computes the  Kronecker sum for third order hypermatrix.
+    Computes the  Kronecker sum for arbitrary order hypermatrix.
 
     EXAMPLES:
     ::
@@ -3418,8 +3477,6 @@ def PathAdjcencyHypermatrix(A, pthl):
         raise ValueError, "Input hypermatrix must be order 2 and the path length must be an integer greater then 0"
     return Rh
 
-# program for extending to hypermatrices the background
-# approach to the Cayley-Hamilton Theorem.
 def  GeneralHypermatrixCayleyHamiltonB(A, t):
     """
     Implements the background hypermatrix approach to the Cayley-Hamilton theorem.
@@ -3546,6 +3603,37 @@ def fast_reduce(f, monom, subst):
     else:
         print 'Error the monomial list and the substitution list must have the same length'
 
+def SecondOrderHyperdeterminant(H):
+    """
+    computes second order matrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A=HM(2,2,'a')
+        sage: SecondOrderHyperdeterminant(A)
+        a01*a10-a00*a11
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==2:
+        # Initializing the matrix for the mnemonic construction
+        A=Matrix(SR,H.n(0),1,[var('x'+str(i)) for i in range(1,1+H.n(0))])
+        L=expand(prod([A[u][0]-A[v][0] for u in range(1,A.nrows()) for v in range(u)])*prod([A[i][0] for i in range(A.nrows())])).operands()
+        # Computing the polynomial
+        f=sum(L)
+        # Loop performing the umbral expression
+        for k in range(H.n(0),0,-1):
+            f=fast_reduce(f,[var('x'+str(i))^k for i in range(1,1+H.n(0))],[var('a'+str(i)+str(k)) for i in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(k)),H[i-1,k-1]) for i in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The matrix must be square."
+
+
 def ThirdOrderHyperdeterminant(H):
     """
     computes third order hypermatrix determinant
@@ -3553,9 +3641,9 @@ def ThirdOrderHyperdeterminant(H):
     EXAMPLES:
  
     ::  
-        sage: A = HM(2,2,2,'a')
+        sage: A=HM(2,2,2,'a')
         sage: ThirdOrderHyperdeterminant(A)
-        -a000*a011*a101*a110 + a001*a010*a100*a111
+        -a000*a011*a101*a110+a001*a010*a100*a111
 
     AUTHORS:
     - Edinah K. Gnang
@@ -3564,15 +3652,15 @@ def ThirdOrderHyperdeterminant(H):
     # Testing to see that the hypermatrix is indeed a cube
     if len(Set(H.dimensions()).list())==1 and H.order()==3:
         # Initializing the matrix for the mnemonic construction
-        A = Matrix(SR, H.n(0), H.n(0), [var('x'+str(i)+str(j)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        A=Matrix(SR,H.n(0),H.n(0),[var('x'+str(i)+str(j)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
         # Computing the mnemonique polynomial
-        P = Permutations(range(A.nrows()))
-        L = expand(sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([ (A[k][p[k]]) for k in range(A.nrows())]) for p in P])*prod([sum([prod([ (A[k][p[k]])^j for k in range(A.nrows())]) for p in P]) for j in range(2,H.n(0)+1)])).operands()
+        P=Permutations(range(A.nrows()))
+        L=expand(sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([(A[k][p[k]]) for k in range(A.nrows())]) for p in P])*prod([sum([prod([(A[k][p[k]])^j for k in range(A.nrows())]) for p in P]) for j in range(2,H.n(0)+1)])).operands()
         # Computing the polynomial
-        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
+        f=sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
         # Loop performing the umbral expression
         for k in range(H.n(0),0,-1):
-            f = fast_reduce(f, [var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))], [var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+            f=fast_reduce(f,[var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
         return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-1,j-1,k-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
     else :
         # Print an error message indicating that the matrix must be a cube.
@@ -3598,7 +3686,7 @@ def FourthOrderHyperdeterminant(H):
         # Initializing the matrix for the mnemonic construction
         A=HM(H.n(0),H.n(0),H.n(0), [var('x'+str(i)+str(j)+str(k)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
-        L=expand(ThirdOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).simplify_radical() for g in ThirdOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        L=expand(ThirdOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in ThirdOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         # Computing the polynomial
         f = sum([l for l in L if len((l^2).operands())==(H.n(0))^3])
         # Loop performing the umbral expression
@@ -3629,7 +3717,7 @@ def FifthOrderHyperdeterminant(H):
         # Initializing the matrix for the mnemonic construction
         A=HM(H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
-        L = expand(FourthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).simplify_radical() for g in FourthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        L = expand(FourthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FourthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         f = sum([l for l in L if len((l^2).operands())==(H.n(0))^4])
         # Loop performing the umbral expression
         for m in range(H.n(0),0,-1):
@@ -3659,7 +3747,7 @@ def SixthOrderHyperdeterminant(H):
         # Initializing the matrix for the mnemonic construction
         A=HM(H.n(0),H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
-        L = expand(FifthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).simplify_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        L = expand(FifthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         f = sum([l for l in L if len((l^2).operands())==(H.n(0))^5])
         # Loop performing the umbral expression
         for p in range(H.n(0),0,-1):
@@ -3669,7 +3757,7 @@ def SixthOrderHyperdeterminant(H):
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a sixth order hypercube hypermatrix."
 
-def GeneralSidelength2Hyperdeterminant(od,c):
+def Sidelength2HyperdeterminantExpression(od,c):
     """
     outputs the symbolic expression with the determinant of hypermatrices of arbitrary orders.
     but every size of the hypermatrix must be equal to two. It ouputs an equality derived via
@@ -3678,7 +3766,7 @@ def GeneralSidelength2Hyperdeterminant(od,c):
     EXAMPLES:
  
     ::  
-        sage: GeneralSidelength2Hyperdeterminant(2,'a'):
+        sage: Sidelength2HyperdeterminantExpression(2,'a'):
         a00*a11-a01*a10
 
     AUTHORS:
@@ -3704,46 +3792,104 @@ def GeneralSidelength2Hyperdeterminant(od,c):
     # Returning the determinantal equality
     return exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).canonicalize_radical().numerator()-exp((Matrix(SR, ((Mtr.kernel()).basis()[0]).list())*b)[0,0]).canonicalize_radical().denominator()
 
-def HypermatrixDodgsonCondensation(A):
-    if len(Set(A.dimensions()).list())==1:
-        if A.n(0)==2:
-            # Computing the determinant
-            f=GeneralSidelength2Hyperdeterminant(A.order(),'xi')
-            La=A.list(); Lb=apply(HM,A.dimensions()+['xi']).list()
-            return(f.subs(dict([(Lb[i],La[i]) for i in range(len(La))])))
-        elif A.n(0)>2:
-            # Initializing the copy
-            Bold=A.copy()
-            Bnew=apply(HM,[i-1 for i in Bold.dimensions()]+['zero'])
-            while Bold.n(0)>2:
-                l=Bnew.dimensions()
-                # Main loop performing the transposition of the entries
-                for i in range(prod(l)):
-                    # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                    entry = [mod(i,l[0])]
-                    sm = Integer(mod(i,l[0]))
-                    for k in range(len(l)-1):
-                        entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
-                        sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-                    # Initialization of the summand
-                    Bl=[]
-                    l2=[2 for j in range(A.order())]
-                    for j in range(prod(l2)):
-                        ent=[mod(j,l2[0])]
-                        ms=Integer(mod(j,l2[0]))
-                        for t in range(len(l2)-1):
-                            ent.append(Integer(mod(Integer((j-ms)/prod(l2[0:t+1])),l2[t+1])))
-                            ms = ms+prod(l2[0:t+1])*ent[len(ent)-1]
-                        Bl.append((Matrix(ZZ,entry)+Matrix(ZZ,ent)).list())
-                    Bnew[tuple(entry)]=HypermatrixDodgsonCondensation(apply(HM,[2 for j in range(A.order())]+[[Bold[tuple(entry2)] for entry2 in Bl ]]))
-                # Performing the update
-                Bold=Bnew.copy()
-                Bnew=apply(HM,[i-1 for i in Bold.dimensions()]+['zero'])
-            return HypermatrixDodgsonCondensation(Bold)
-        else:
-            raise ValueError, "The input hypermatrix side length greater then 1."
+def Sidelength2Hyperdeterminant(A):
+    """
+    outputs the symbolic expression with the determinant of hypermatrices of arbitrary orders.
+    but every size of the hypermatrix must be equal to two. It ouputs an equality derived via
+    the rank one argument. The difference with the function above is that this function
+    takes a hypermatrix as input.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: Sidelength2Hyperdeterminant(HM(2,2,'a')):
+        a00*a11-a01*a10
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+
+    if A.is_cubical() and A.n(0)==2:
+        # Computing the determinant
+        f=Sidelength2HyperdeterminantExpression(A.order(),'xi')
+        La=A.list(); Lb=apply(HM,A.dimensions()+['xi']).list()
+        return(f.subs(dict([(Lb[i],La[i]) for i in range(len(La))])))
     else:
-        raise ValueError, "The input hypermatrix must be hypercubic"
+        raise ValueError, "The input hypermatrix must cubical with side lentgh 2."
+
+def DodgsonCondensation(A):
+    """
+    outputs the symbolic expression deduced from the Dodgson condensation applied to matrices
+    and hypermatrices. The side length of the input hypermatrix must be greater then 2.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: DodgsonCondensation(HM(3,3,'a')) 
+        -((a02*a11 - a01*a12)*(a11*a20 - a10*a21) - (a01*a10 - a00*a11)*(a12*a21 - a11*a22))/a11
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+
+    if A.is_cubical() and A.n(0)>2:
+        # Initializing the copy
+        Bold=A.copy()
+        Bnew=apply(HM,[i-1 for i in Bold.dimensions()]+['zero'])
+        Temp=apply(HM,[i-2 for i in Bold.dimensions()]+['zero'])
+        while Bnew.n(0)>1:
+            # Filling up Bnew
+            l=Bnew.dimensions()
+            # Main loop performing the transposition of the entries
+            for i in range(prod(l)):
+                # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                entry=[mod(i,l[0])]
+                sm=Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
+                # Initialization of the summand
+                Bl=[]
+                l2=[2 for j in range(A.order())]
+                for j in range(prod(l2)):
+                    ent=[mod(j,l2[0])]
+                    ms=Integer(mod(j,l2[0]))
+                    for t in range(len(l2)-1):
+                        ent.append(Integer(mod(Integer((j-ms)/prod(l2[0:t+1])),l2[t+1])))
+                        ms=ms+prod(l2[0:t+1])*ent[len(ent)-1]
+                    Bl.append((Matrix(ZZ,entry)+Matrix(ZZ,ent)).list())
+                Bnew[tuple(entry)]=Sidelength2Hyperdeterminant(apply(HM,[2 for j in range(A.order())]+[[Bold[tuple(entry2)] for entry2 in Bl ]]))
+            # Filling up Temp
+            Temp=apply(HM,[i-2 for i in Bold.dimensions()]+['zero'])
+            l=Temp.dimensions()
+            # Main loop performing the transposition of the entries
+            for i in range(prod(l)):
+                # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                entry = [mod(i,l[0])]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                # Initialization of the summand
+                Bl=[]
+                l2=[2 for j in range(A.order())]
+                for j in range(prod(l2)):
+                    ent=[mod(j,l2[0])]
+                    ms=Integer(mod(j,l2[0]))
+                    for t in range(len(l2)-1):
+                        ent.append(Integer(mod(Integer((j-ms)/prod(l2[0:t+1])),l2[t+1])))
+                        ms = ms+prod(l2[0:t+1])*ent[len(ent)-1]
+                    Bl.append((Matrix(ZZ,entry)+Matrix(ZZ,ent)).list())
+                Temp[tuple(entry)]=Sidelength2Hyperdeterminant(apply(HM,[2 for j in range(A.order())]+[[Bnew[tuple(entry2)] for entry2 in Bl ]]))/Bold[tuple((Matrix(ZZ,entry)+ones_matrix(1,len(entry))).list())]
+            # Performing the update
+            if Temp.n(0)>0:
+                Bold=Bnew.copy()
+                Bnew=Temp.copy()
+        return (Temp.list())[0]
+    else:
+        raise ValueError, "The input hypermatrix must be hypercubic of size 2"
 
 def GeneralHypermatrixRank1Parametrization(sz,od):
     """
@@ -3890,7 +4036,6 @@ def ThirdOrderHadamardBlock(l):
         H = H.block_sum(HM(1,1,1,'one')) 
     return H
 
-# Fifth order Hadamard block.
 def FifthOrderHadamardBlockU(l):
     """
     outputs the  direct sum construction of hadamard block hypermatrices.
@@ -4040,10 +4185,11 @@ def ThirdOrderHypermatrixResolutionPartition(U, V, W, Ha, Hb, Hc, NbPrts=2):
             for w in range(Tp2.n(2)):
                 Tp2[0,v,w] = W[i,v,w]
         # Appending the components to the list
-        #L.append(ProdB(Ha, Hb, Hc, Prod(Tp0, Tp1, Tp2)))
         L.append(Prod(Tp0, Tp1, Tp2))
-    #return [sum(L[j*NbPrts:min((j+1)*NbPrts,len(L))]) for j in range(ceil(len(L)/NbPrts))]
-    return [ProdB(Ha,Hb,Hc,sum(L[j*NbPrts:min((j+1)*NbPrts,len(L))])) for j in range(ceil(len(L)/NbPrts))]
+    if len(L)>NbPrts:
+        return [ProdB(Ha,Hb,Hc,sum(L[j*NbPrts:min((j+1)*NbPrts,len(L))])) for j in range(ceil(len(L)/NbPrts))]
+    else:
+        return [ProdB(Ha,Hb,Hc,L[j]) for j in range(len(L))]
 
 def FourthOrderHypermatrixResolutionPartition(Q, U, V, W, Ha, Hb, Hc, Hd):
     """
@@ -4338,35 +4484,6 @@ def gauss_jordan_elimination(Cf,rs):
             i=i-1; j=0
     return [A,b]
 
-def linear_solver(A,b,c):
-    """
-    Outputs the reduced row echelon form of the input matrix and the right hand side.
-
-    EXAMPLES:
- 
-    ::  
-        sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
-        sage: [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(2*sz)])
-        sage: [Ap,bp]=gauss_jordan_elimination(A.transpose()*A,A.transpose()*b)
-        sage: linear_solver(Ap,bp,'t')
-        [ 1/4*a00 + 3/4*a01 - 1/4*a10 + 1/4*a11 - t30]
-        [-1/4*a00 + 1/4*a01 + 1/4*a10 + 3/4*a11 - t30]
-        [ 1/2*a00 - 1/2*a01 + 1/2*a10 - 1/2*a11 + t30]
-        [                                           0]
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Initialization of the reduced echelon form.
-    [Ap,bp]=gauss_jordan_elimination(A,b)
-    # Filling up the matrix to a square.
-    B=Matrix(SR,zero_matrix(max(A.nrows(),A.ncols()),max(Ap.nrows(),Ap.ncols())))
-    B[0:A.nrows(),0:A.ncols()]=Ap
-    # returning the result
-    return bp+((B.elementwise_product(identity_matrix(B.nrows()))-B)*Matrix(HM(B.nrows(),1,[var(c+str(k)) for k in range(B.nrows())]).listHM()))[0:A.nrows()]
-
 def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     """
     Outputs the row echelon form of the input matrix and the right hand side.
@@ -4387,18 +4504,6 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     - To Do: 
     """
     A = copy(Cf); b = copy(rs)
-    """
-    # Zero padding the matrix if necessary.
-    if A.nrows()<A.ncols():
-        # Temporary matrix for A
-        Ta = Matrix(SR, zero_matrix(A.ncols(), A.ncols()))
-        Ta[:A.nrows(), :A.ncols()] = copy(A)
-        # Temporary matrix for b
-        Tb = Matrix(SR, zero_matrix(A.ncols(), b.ncols())) 
-        Tb[:b.nrows(), :b.ncols()] = copy(b)
-        # replacing the matrix with the zero apdding.
-        A=Ta; b=Tb
-    """
     # Initialization of the row and column index
     i=0; j=0; indx=jndx; Lst = []
     while i<A.nrows() and j<A.ncols():
@@ -4441,7 +4546,7 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
     EXAMPLES:
  
     ::  
-        sage: [RefA, c, indx] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [A, b, indx, Lst] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
         sage: RefA
         [1 0]
         [0 1]
@@ -4475,110 +4580,214 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
             i = i - 1; j = 0
     return [A, b, indx, Lst]
 
-def log_gaussian_elimination(Cf, rs, jndx=0):
+def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
     """
     Outputs the row echelon form of the input matrix and the right hand side.
 
     EXAMPLES:
  
     ::  
-        sage: [RefA, c] = log_gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
-        sage: RefA
-        [      1 a01/a00]
-        [      0       1]
+        sage: [EfA,c,indx,Lst]=multiplicative_gaussian_eliminationII(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: EfA
+        [1             a01/a00]
+        [0                   1]
         sage: c
-        [                                                          (2*I*pi*k0 + b00)/a00]
-        [((2*I*pi*k1 + (2*I*pi*k0 + b00)/a00)*a10 - 2*I*pi*k2 - b10)/(a01*a10/a00 - a11)]
-        
+        [                                                                    (b00*e^(2*I*pi*k0))^(1/a00)]
+        [(((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
     A = copy(Cf); b = copy(rs)
-    """
-    # Zero padding the matrix if necessary.
-    if A.nrows() < A.ncols():
-        # Temporary matrix for A
-        Ta = Matrix(SR, zero_matrix(A.ncols(), A.ncols()))
-        Ta[:A.nrows(), :A.ncols()] = copy(A)
-        # Temporary matrix for b
-        Tb = Matrix(SR, zero_matrix(A.ncols(), b.ncols())) 
-        Tb[:b.nrows(), :b.ncols()] = copy(b)
-        # replacing the matrix with the zero apdding.
-        A = Ta; b = Tb
-    """
     # Initialization of the row and column index
-    i = 0; j = 0; indx = jndx
-    while i < A.nrows() and j < A.ncols():
+    i=0; j=0; indx=jndx; Lst = []
+    while i<A.nrows() and j<A.ncols():
         while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
             j=j+1
-        if (A[i:,:].is_zero()) == False:
-            while (A[i,j]).is_zero():
-                Ta = A[i:,:]
-                Tb = b[i:,:]
+        if A[i:,:].is_zero()==False:
+            while A[i,j].is_zero():
+                Ta=A[i:,:]
+                Tb=b[i:,:]
                 # Initializing the cyclic shift permutation matrix
-                Id = identity_matrix(Ta.nrows())
-                P  = sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                Ta = P*Ta; Tb = P*Tb
-                A[i:,:] = Ta
-                b[i:,:] = Tb
+                Id=identity_matrix(Ta.nrows())
+                P =sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                Ta=P*Ta; Tb=P*Tb
+                A[i:,:]=Ta
+                b[i:,:]=Tb 
             # Performing the row operations.
-            b[i,0] = (1/A[i,j])*(b[i,0] + I*2*pi*var('k'+str(indx)))
-            indx = indx + 1
-            A[i,:] = (1/A[i,j])*A[i,:]
+            if A[i,j]==-1 or A[i,j]==1:
+                b[i,0]=b[i,0]^(1/A[i,j])
+            else: 
+                b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
+                indx = indx+1
+                Lst.append(A[i,j])
+            A[i,:]=(1/A[i,j])*A[i,:]
             for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
                 if A[r,:].is_zero():
                     r=r+1
                 else:
-                    b[r,0] = -A[r,j]*( b[i,0] + I*2*pi*var('k'+str(indx)) ) + b[r,0]
-                    indx = indx+1
-                    A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+                    if A[r,j]==-1 or A[r,j]==1:
+                        b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
+                    else:
+                        b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                        if (A[r,j]).is_zero()==False:
+                            indx = indx+1
+                            Lst.append(A[r,j])
+                    A[r,:]=-A[r,j]*A[i,:]+A[r,:]
         # Incrementing the row and column index.
         i=i+1; j=j+1
-    return [A, b, indx]
+    return [A, b, indx, Lst]
 
-def log_gauss_jordan_elimination(Cf, rs, jndx=0):
+def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
 
     EXAMPLES:
  
     ::  
-        sage: [RefA, c] = log_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [RefA, c, indx] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
         sage: RefA
         [1 0]
         [0 1]
         sage: c
-        [-(2*I*pi*k3 + ((2*I*pi*k1 + (2*I*pi*k0 + b00)/a00)*a10 - 2*I*pi*k2 - b10)/(a01*a10/a00 - a11))*a01/a00 + (2*I*pi*k0 + b00)/a00]
-        [                                               ((2*I*pi*k1 + (2*I*pi*k0 + b00)/a00)*a10 - 2*I*pi*k2 - b10)/(a01*a10/a00 - a11)]
-        
+        [(b00*e^(2*I*pi*k0))^(1/a00)*((((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))*e^(2*I*pi*k3))^(-a01/a00)]
+        [                                                       (((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
         
 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
-    [A, b, indx] = log_gaussian_elimination(Cf,rs,jndx)
+    [A, b, indx, Lst] = multiplicative_gaussian_eliminationII(Cf,rs,jndx)
     # Initialization of the row and column index
     i = A.nrows()-1; j = 0
     while i > 0 or j > 0:
         if (A[i,:]).is_zero():
             # decrementing the row index and initializing the column index
-            i = i - 1; j = 0
+            i =i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + 1
+                j=j+1
             # performing row operations
             for r in range(i-1, -1, -1):
-                b[r,0] = -A[r,j]*(b[i,0] + I*2*pi*var('k'+str(indx))) + b[r,0]
-                indx = indx+1
+                if A[r,j]==-1 or A[r,j]==1:
+                    b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
+                else:
+                    b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                    if (A[r,j]).is_zero()==False:
+                        indx = indx+1
+                        Lst.append(A[r,j])
                 A[r,:] = -A[r,j]*A[i,:]+A[r,:]
             i = i - 1; j = 0
-    return [A, b, indx]
+    return [A, b, indx, Lst]
+
+def multiplicative_matrix_product(A,B):
+    """
+    Outputs the result of the multiplicative product of the
+    two input matrices.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: multiplicative_matrix_product(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,2,'b').listHM()))
+        [b00^a00*b10^a01 b01^a00*b11^a01]
+        [b00^a10*b10^a11 b01^a10*b11^a11]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    Rslt=Matrix(SR,zero_matrix(A.nrows(),B.ncols()))
+    for i in range(A.nrows()):
+        for k in range(B.ncols()):
+            Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
+    return Rslt
+
+def linear_solver(A,b,x,v):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+    where A denote the input matrix, b denotes the right-hand side vector and v
+    denote the variable vector.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(2*sz)])
+        sage: Mx=Matrix(SR,A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
+        sage: Mv=Matrix(SR,A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
+        sage: linear_solver(A,b,Mx,Mv)
+        [x0 == a00 - a10 + a11 - t3, x1 == a11 - t3, x2 == a10 - a11 + t3, x3 == t3]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=gauss_jordan_elimination(A,b)
+    AP=Matrix(SR,zero_matrix(max(Ap.nrows(),Ap.ncols()),max(Ap.nrows(),Ap.ncols())))
+    AP[:Ap.nrows(),:Ap.ncols()]=Ap
+    BP=Matrix(SR,zero_matrix(max(Ap.nrows(),Ap.ncols()),1))
+    BP[:bp.nrows(),0]=bp
+    # Initializing the identity matrix
+    Id=identity_matrix(AP.nrows())
+    TmpMtr=zero_matrix(AP.ncols(),AP.ncols())
+    cnt=0
+    for i in range(AP.ncols()):
+        for j in range(Id.ncols()):
+            if (AP[:,i]-Id[:,j]).is_zero():
+                # Setting the column to zero.
+                AP[:,i]=AP[:,i]-Id[:,j]
+                TmpMtr[:,cnt]=Id[:,j]
+                cnt=cnt+1
+    Sln=[(TmpMtr*x)[i,0]==BP[i,0]-(AP*v)[i,0] for i in range(cnt)]
+    Lt=Set(x.list()).difference(Set([Sln[i].lhs() for i in range(len(Sln))])).list() 
+    Sln=Sln+[Lt[i]==fast_reduce(Lt[i],x.list(),v.list()) for i in range(len(Lt))]
+    return Sln
+
+def multiplicative_linear_solver(A,b,x,v):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+    where A denote the input matrix, b denotes the right-hand side vector and v
+    denote the variable vector.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(2*sz)])
+        sage: Mx=Matrix(SR,A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
+        sage: Mv=Matrix(SR,A.ncols(), 1, [var('t'+str(i)) for i in range(A.ncols())])
+        sage: multiplicative_linear_solver(A,b,Mx,Mv)
+        [x0==a00*a11/(a10*t3), x1==a11/t3, x2==a10*t3/a11]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
+    AP=Matrix(SR,zero_matrix(max(Ap.nrows(),Ap.ncols()),max(Ap.nrows(),Ap.ncols())))
+    AP[:Ap.nrows(),:Ap.ncols()]=Ap
+    BP=Matrix(SR,ones_matrix(max(Ap.nrows(),Ap.ncols()),1))
+    BP[:bp.nrows(),0]=bp
+    # Initializing the identity matrix
+    Id=identity_matrix(AP.nrows())
+    TmpMtr=zero_matrix(AP.ncols(),AP.ncols())
+    cnt=0
+    for i in range(AP.ncols()):
+        for j in range(Id.ncols()):
+            if (AP[:,i]-Id[:,j]).is_zero():
+                # Setting the column to zero.
+                AP[:,i]=AP[:,i]-Id[:,j]
+                TmpMtr[:,cnt]=Id[:,j]
+                cnt=cnt+1
+    return [multiplicative_matrix_product(TmpMtr,x)[i,0]==BP[i,0]/multiplicative_matrix_product(AP,v)[i,0] for i in range(cnt)]
 
 def SecondOrderHadamardFactorization(A,B):
     """
@@ -4669,7 +4878,7 @@ def ThirdOrderHadamardFactorization(Ha, Hb, Hc):
         Tp0 = (Tp0.n(0))^(1/3)*Tp0
         Tp1 = (Tp1.n(0))^(1/3)*Tp1
         Tp2 = (Tp2.n(0))^(1/3)*Tp2
-        print 'Prod(H, H.transpose(2), H.transpose())= ', Prod(H,H.transpose(2),H.transpose())
+        #print 'Prod(H, H.transpose(2), H.transpose())= ', Prod(H,H.transpose(2),H.transpose())
         # Initializing the extended third order hypermatrices
         M0 = HM(Ha.n(0), 2*Ha.n(0)-1, Ha.n(0),'zero')
         for j in range(Ha.n(0)-1):
@@ -4722,3 +4931,500 @@ def ThirdOrderHadamardFactorization(Ha, Hb, Hc):
         # return the error message if the input hypermatrix is cubic
         raise ValueError, "The input hypermpatrix are of inapropriate sizes"
 
+def Row_Gram_Schmidt(M):
+    """
+    Implements the naive Gram-Schmidt algorithm for rows.
+
+    EXAMPLES:
+    ::
+        sage: Q=Row_Gram_Schmidt(Matrix(SR,HM(2,2,'a').listHM())); Matrix(SR,[[(Q*Q.transpose())[i,j].simplify_full() for i in range(2)] for j in range(2)])
+        [1 0]
+        [0 1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the resulting matrix
+    Rs = Matrix(SR, zero_matrix(M.nrows(),M.ncols()))
+    # Initializing the first vector
+    # the implementation assumes that the first vector is non zero
+    Rs[0,:] = (1/sqrt(sum([M[0,j]^2 for j in range(M.ncols())])))*M[0,:]
+    for i in range(1,M.nrows()):
+        v = M[i,:]
+        v = v-sum([v*(Rs[j,:].transpose())*Rs[j,:] for j in range(i)])
+        if v!=Matrix(SR,zero_matrix(1,M.ncols())):
+            Rs[i,:] = (1/sqrt(sum([v[0,j]^2 for j in range(M.ncols())])))*v
+        else:
+            Rs[i,:] = v
+    return Rs
+
+def Column_Gram_Schmidt(M):
+    """
+    Implements the naive Gram-Schmidt algorithm for the columns.
+
+    EXAMPLES:
+    ::
+        sage: Q=Column_Gram_Schmidt(Matrix(SR,HM(2,2,'a').listHM())); Matrix(SR,[[(Q*Q.transpose())[i,j].simplify_full() for i in range(2)] for j in range(2)])
+        [1 0]
+        [0 1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the symbolic matrix to be used as output
+    Rs = Matrix(SR, zero_matrix(M.nrows(), M.ncols()))
+    # This implementation assumes that the first column is a non zero column.
+    # Initializing the first vector to a unit vector.
+    Rs[:,0] = (1/sqrt(sum([M[j,0]^2 for j in range(M.nrows())]))) * M[:,0]
+    # Loop removing the bad components for all the remaining vectors
+    for i in range(1, M.ncols()):
+        v = M[:,i]
+        # Removing the bad components for the column M[:,i] 
+        v = v - sum([(v.transpose()*Rs[:,j])[0,0]*Rs[:,j] for j in range(i)])
+        # Checking that the resulting column is not the zero column
+        if v != Matrix(SR,zero_matrix(1,M.nrows())):
+            Rs[:,i] = (1/sqrt(sum([v[j,0]^2 for j in range(M.nrows())]))) * v
+        else:
+            Rs[:,i] = v
+    return Rs
+
+def Nearest_Row_Gram_Schmidt(M):
+    """
+    Takes a square matrix as input and returns an orthognal martix with minimal row distance.
+
+    EXAMPLES:
+    ::
+        sage: Nearest_Row_Gram_Schmidt(random_matrix(RDF,2,2))
+        [
+                                [-0.7078827792601101 -0.7063299305756356]
+            0.8370862696808469, [ 0.7063299305756356   -0.70788277926011],
+
+            [-0.7078827792601101 -0.7063299305756356]
+            [-0.1652169255956404 -0.9862572521896733] ]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Normalizing the Rows of the matrix
+    for i in range(M.nrows()):
+        M[i,:]=M[i,:]/sqrt(sum([vl^2 for vl in (M[i,:]).list()]))
+    # Initilization of the list of Permutations
+    P = Permutations(range(M.nrows()))
+    # Initialization of the current error.
+    cur_err = (M.norm())^2
+    print "Initial error is ",cur_err
+    # Initialization of the final matrix
+    Q = Matrix(RDF, zero_matrix(M.nrows(), M.ncols()))
+    for p in P:
+        # Initialization of the temporary matrix.
+        Rs = Matrix(RDF, zero_matrix(M.nrows(), M.ncols()))
+        # Initialization of the first vector.
+        # the implementation assumes that the first vector is non zero
+        Rs[0,:] = (1/sqrt(sum([M[p[0],j]^2 for j in range(M.ncols())])))*M[p[0],:]
+        for i in range(1,M.nrows()):
+            v = M[p[i],:]
+            v = v-sum([v*(Rs[j,:].transpose())*Rs[j,:] for j in range(i)])
+            if (v-Matrix(RDF,zero_matrix(1,M.ncols()))).norm() > 10^(-10):
+                Rs[i,:] = (1/sqrt(sum([v[0,j]^2 for j in range(M.ncols())])))*v
+            else:
+                Rs[i,:] = v
+        tmp_err=((Rs-M).norm())^2
+        print 'The current error for p= '+str(p)+' is '+str(tmp_err)+'\n'
+        if(tmp_err < cur_err):
+            cur_err=tmp_err
+            Q[:,:] = Rs[:,:]
+    return [cur_err, Q, M]
+
+def Constrained_Inverse_pair(Ha, Hb):
+    """
+    Implements the constrained matrix inverse pair solution algorithm.
+
+    EXAMPLES:
+    ::
+        sage: Contrained_Inverse_pair(HM(2,2,'a'), HM(2,2,'b'))
+        [
+        [1 0 0 0 0 1 0 0]  [ 1/2*(a00*b01-a01*b11)*e^(2*I*pi*k0)]   
+        [0 1 0 0 0 0 0 1]  [-1/2*(a00*b01-a01*b11)*e^(2*I*pi*k1)]   
+        [0 0 1 0 1 0 0 0]  [ 1/2*(a10*b00-a11*b10)*e^(2*I*pi*k2)]   
+        [0 0 0 1 0 0 1 0], [-1/2*(a10*b00-a11*b10)*e^(2*I*pi*k3)], 4,
+
+        [1, 1, 1, 1]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.dimensions()==Hb.dimensions() and Ha.is_cubical():
+        # Initialization of the size parameter
+        sz=Ha.n(0)
+        
+        # Initialization of the equation list. 
+        Eq=[]
+        for i in range(sz):
+            for j in range(sz):
+                for k in range(sz):
+                    if i-j != 0:
+                        Eq.append(var('x'+str(0+sz*i+k))+var('x'+str(sz^2+sz*k+j))==Ha[i,k]*Hb[k,j]-sz^(-1)*sum([Ha[i,t]*Hb[t,j] for t in range(sz)]))
+        
+        # Formating the constraints into a linear equations and a righthand side.
+        [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(2*sz^2)])
+        
+        # Multiplicative Reduced Echelon form
+        [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
+        Mx=Matrix(SR,2*sz^2,1,[var('x'+str(i)) for i in range(2*sz^2)])
+        My=Matrix(SR,2*sz^2,1,[var('y'+str(i)) for i in range(2*sz^2)])
+        return multiplicative_linear_solver(Ap,bp,Mx,My)
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrices are of inapropriate sizes"
+
+def Constrained_Uncorrelated_triplet(Ha, Hb, Hc):
+    """
+    Implements the constrained uncorrelated tuple solution algorithm.
+
+    EXAMPLES:
+    ::
+        sage: L=Contrained_Uncorrelated_triplet(HM(2,2,2,'a'), HM(2,2,2,'b'), HM(2,2,2,'c')); L[0] 
+        [ 1  0  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  1  0  0  0  0  0]
+        [ 0  1  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  1  0  0  0  0]
+        [ 0  0  1  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  0  0  1  0]
+        [ 0  0  0  1  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  0  0  0  1]
+        [ 0  0  0  0  1  0  0  0  0  0  0  0  0  0  1  0  0  0  1  0  0  0  0  0]
+        [ 0  0  0  0  0  1  0  0  0  0  0  0  0  0  1  0 -1  1  1  0  0  0  0  0]
+        [ 0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  1  0]
+        [ 0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  1  0  0  0  0 -1  1  1  0]
+        [ 0  0  0  0  0  0  0  0  1  0 -1  0  0  0  0  0  0  1  0 -1  0  0  0  0]
+        [ 0  0  0  0  0  0  0  0  0  1  0 -1  0  0  0  0  0  0  0  0  0  1  0 -1]
+        [ 0  0  0  0  0  0  0  0  0  0  0  0  1  0 -1  0  1  0 -1  0  0  0  0  0]
+        [ 0  0  0  0  0  0  0  0  0  0  0  0  0  1  0 -1  0  0  0  0  1  0 -1  0]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.dimensions()==Hb.dimensions() and Ha.dimensions()==Hc.dimensions() and Ha.is_cubical():
+        # Initialization of the size parameter
+        sz=Ha.n(0)
+        
+        # Initialization of the equation list. 
+        Eq=[]
+        for i in range(sz):
+            for j in range(sz):
+                for k in range(sz):
+                    for l in range(sz):
+                        if (i+exp(I*1*2*pi/3)*j+exp(I*2*2*pi/3)*k).canonicalize_radical() != 0:
+                            Eq.append(var('x'+str(0+i*sz^2+l*sz+k))+var('x'+str(sz^3+i*sz^2+j*sz+l))+var('x'+str(2*sz^3+l*sz^2+j*sz+k))==Ha[i,l,k]*Hb[i,j,l]*Hc[l,j,k]-sz^(-1)*sum([Ha[i,t,k]*Hb[i,j,t]*Hc[t,j,k] for t in range(sz)]))
+        
+        # Formating the constraints into a linear equations and a righthand side.
+        [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(3*sz^3)])
+        
+        # Multiplicative Reduced Echelon form
+        [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
+        Mx=Matrix(SR,3*sz^3,1,[var('x'+str(i)) for i in range(3*sz^3)])
+        My=Matrix(SR,3*sz^3,1,[var('y'+str(i)) for i in range(3*sz^3)])
+        return multiplicative_linear_solver(Ap,bp,Mx,My)
+        
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrices are of inapropriate sizes"
+
+def Constrained_Uncorrelated_quadruplet(Ha, Hb, Hc, Hd):
+    """
+    Implements the constrained uncorrelated tuple solution algorithm.
+
+    EXAMPLES:
+    ::
+        sage: L=Contrained_Uncorrelated_quadruplet(HM(2,2,2,2,'a'), HM(2,2,2,2,'b'), HM(2,2,2,2,'c'), HM(2,2,2,2,'d')) 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.dimensions()==Hb.dimensions() and Ha.dimensions()==Hc.dimensions() and Ha.dimensions()==Hd.dimensions() and Ha.is_cubical():
+        # Initialization of the size parameter
+        sz=Ha.n(0)
+        
+        # Initialization of the equation list. 
+        Eq=[]
+        for i in range(sz):
+            for j in range(sz):
+                for k in range(sz):
+                    for l in range(sz):
+                        for m in range(sz):
+                            if (i+exp(I*1*2*pi/4)*j+exp(I*2*2*pi/4)*k+exp(I*3*2*pi/4)*l).canonicalize_radical() != 0:
+                                Eq.append(var('x'+str(0+i*sz^3+m*sz^2+k*sz+l))+var('x'+str(sz^4+i*sz^3+j*sz^2+m*sz+l))+var('x'+str(2*sz^4+i*sz^3+j*sz^2+k*sz+m))+var('x'+str(3*sz^4+m*sz^3+j*sz^2+k*sz+l))==Ha[i,m,k,l]*Hb[i,j,m,l]*Hc[i,j,k,m]*Hd[m,j,k,l]-sz^(-1)*sum([Ha[i,t,k,l]*Hb[i,j,t,l]*Hc[i,j,k,t]*Hd[t,j,k,l] for t in range(sz)]))
+        
+        # Formating the constraints into a linear equations and a righthand side.
+        [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(4*sz^4)])
+        
+        # Multiplicative Reduced Echelon form
+        [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
+        Mx=Matrix(SR,4*sz^4,1,[var('x'+str(i)) for i in range(4*sz^4)])
+        My=Matrix(SR,4*sz^4,1,[var('y'+str(i)) for i in range(4*sz^4)])
+        return multiplicative_linear_solver(Ap,bp,Mx,My)
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrices are of inapropriate sizes"
+
+def Constrained_Second_order_orthogonalization(Ha):
+    """
+    Implements the constrained matrix orthogonalization algorithm.
+
+    EXAMPLES:
+    ::
+        sage: Contrained_Second_order_orthogonalization(HM(2,2,'a'))
+        [
+        [1 0 1 0]  [ 1/2*(a00*a10 - a01*a11)*e^(2*I*pi*k0)]           
+        [0 1 0 1], [-1/2*(a00*a10 - a01*a11)*e^(2*I*pi*k1)], 2, [1, 1]
+        ]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.is_cubical():
+        # Initialization of the size parameter
+        sz=Ha.n(0)
+
+        # Initialization of the equation list. 
+        Eq=[]
+        for i in range(sz):
+            for j in range(sz):
+                for k in range(sz):
+                    if i-j != 0:
+                        Eq.append(var('x'+str(sz*i+k))+var('x'+str(sz*j+k))==Ha[i,k]*Ha[j,k]-sz^(-1)*sum([Ha[i,t]*Ha[j,t] for t in range(sz)]))
+        
+        # Formating the constraints into a linear equations and a righthand side.
+        [A,b]=ConstraintFormatorII(Set(Eq).list(),[var('x'+str(i)) for i in range(sz^2)])
+        
+        # Multiplicative Reduced Echelon form
+        [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
+        Mx=Matrix(SR,sz^2,1,[var('x'+str(i)) for i in range(sz^2)])
+        My=Matrix(SR,sz^2,1,[var('y'+str(i)) for i in range(sz^2)])
+        return multiplicative_linear_solver(Ap,bp,Mx,My)
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrix must be cubical"
+
+def Constrained_Third_order_orthogonalization(Ha):
+    """
+    Implements the constrained matrix orthogonalization algorithm.
+
+    EXAMPLES:
+    ::
+        sage: Contrained_Third_order_orthogonalization(HM(2,2,2,'a'))
+        [
+        [ 1  0  0  0  0 -1  0  0]  [(a000*a001*a100 - a010*a011*a110)*e^(2*I*pi*k0 - 2*I*pi*k1 - 2*I*pi*k5)/(a001*a100*a101 - a011*a110*a111)]
+        [ 0  1  0  0  1  1  0  0]  [                                                      1/2*(a001*a100*a101 - a011*a110*a111)*e^(2*I*pi*k1)]
+        [ 0  0  1  0  0  0  0 -1]  [(a000*a001*a100 - a010*a011*a110)*e^(2*I*pi*k2 - 2*I*pi*k3 - 2*I*pi*k4)/(a001*a100*a101 - a011*a110*a111)]
+        [ 0  0  0  1  0  0  1  1], [                                                     -1/2*(a001*a100*a101 - a011*a110*a111)*e^(2*I*pi*k3)],
+
+        6, [1, 1, 1, 1, 1, 1]
+        ]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.is_cubical():
+        # Initialization of the size parameter
+        sz=Ha.n(0)
+
+        # Initialization of the equation list. 
+        Eq=[]
+        for i in range(sz):
+            for j in range(sz):
+                for k in range(sz):
+                    for l in range(sz):
+                        if (i+exp(I*1*2*pi/3)*j+exp(I*2*2*pi/3)*k).canonicalize_radical() != 0:
+                            Eq.append(var('x'+str(sz^2*i+sz*l+k))+var('x'+str(sz^2*j+sz*l+i))+var('x'+str(sz^2*k+sz*l+j))==Ha[i,l,k]*Ha[j,l,i]*Ha[k,l,j]-sz^(-1)*sum([Ha[i,t,k]*Ha[j,t,i]*Ha[k,t,j] for t in range(sz)]))
+        
+        # Formating the constraints into a linear equations and a righthand side.
+        [A,b]=ConstraintFormatorII(Set(Eq).list(),[var('x'+str(i)) for i in range(sz^3)])
+        
+        # Multiplicative Reduced Echelon form
+        [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
+        Mx=Matrix(SR,sz^3,1,[var('x'+str(i)) for i in range(sz^3)])
+        My=Matrix(SR,sz^3,1,[var('y'+str(i)) for i in range(sz^3)])
+        return multiplicative_linear_solver(Ap,bp,Mx,My)
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrix are of inapropriate sizes"
+
+def Constrained_Fourth_order_orthogonalization(Ha):
+    """
+    Implements the constrained matrix orthogonalization algorithm.
+
+    EXAMPLES:
+    ::
+        sage: Contrained_Fourth_order_orthogonalization(HM(2,2,2,2,'a'))
+        [
+        [ 1  1  0  0  0  0  0  0  0  0  1  1  0  0  0  0]  [ 1/2*(a0000*a0001*a0010*a1000 - a0100*a0101*a0110*a1100)*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k0 - 2*I*pi*k1 + 2*I*pi*k2 + 2*I*pi*k8 - 2*I*pi*k9)/(a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)]
+        [ 0  0  1  0  0  0  0  0  1  0 -1 -1  0  0  0  0]  [                                                                                 (a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)*e^(2*I*pi*k1 - 2*I*pi*k2 - 2*I*pi*k8)/(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)]
+        [ 0  0  0  1  0  0  0  0  0  1  1  1  0  0  0  0]  [                                                                                                                                                         1/2*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k2)]
+        [ 0  0  0  0  1  1  0  0  0  0  0  0  0  0  1  1]  [-1/2*(a0000*a0001*a0010*a1000 - a0100*a0101*a0110*a1100)*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k3 - 2*I*pi*k4 + 2*I*pi*k5 + 2*I*pi*k6 - 2*I*pi*k7)/(a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)]
+        [ 0  0  0  0  0  0  1  0  0  0  0  0  1  0 -1 -1]  [                                                                                 (a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)*e^(2*I*pi*k4 - 2*I*pi*k5 - 2*I*pi*k6)/(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)]
+        [ 0  0  0  0  0  0  0  1  0  0  0  0  0  1  1  1], [                                                                                                                                                        -1/2*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k5)],
+        10, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.is_cubical():
+        # Initialization of the size parameter
+        sz=Ha.n(0)
+
+        # Initialization of the equation list. 
+        Eq=[]
+        for i in range(sz):
+            for j in range(sz):
+                for k in range(sz):
+                    for l in range(sz):
+                        for m in range(sz):
+                            if (i+exp(I*1*2*pi/4)*j+exp(I*2*2*pi/4)*k+exp(I*3*2*pi/4)*l).canonicalize_radical() != 0:
+                                Eq.append(var('x'+str(sz^3*i+sz^2*m+sz*k+l))+var('x'+str(sz^3*j+sz^2*m+sz*l+i))+var('x'+str(sz^3*k+sz^2*m+sz*i+j))+var('x'+str(sz^3*l+sz^2*m+sz*j+k))==Ha[i,m,k,l]*Ha[j,m,l,i]*Ha[k,m,i,j]*Ha[l,m,j,k]-sz^(-1)*sum([Ha[i,t,k,l]*Ha[j,t,l,i]*Ha[k,t,i,j]*Ha[l,t,j,k] for t in range(sz)]))
+        # Formating the constraints into a linear equations and a righthand side.
+        [A,b]=ConstraintFormatorII(Set(Eq).list(),[var('x'+str(i)) for i in range(sz^4)])
+        # Multiplicative Reduced Echelon form
+        [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
+        Mx=Matrix(SR,sz^4,1,[var('x'+str(i)) for i in range(sz^4)])
+        My=Matrix(SR,sz^4,1,[var('y'+str(i)) for i in range(sz^4)])
+        return multiplicative_linear_solver(Ap,bp,Mx,My)
+    else:
+        # return the error message if the input hypermatrix is cubic
+        raise ValueError, "The input hypermpatrix are of inapropriate sizes"
+
+def SecondOrderRank(A,rk):
+    """
+    Returns the reduced echelon form associated with 
+    a rank rk expansion of the input matrix A.
+    The implementation is designed so that the function
+    takes as input either either object of type Matrix(SR,)
+    or hypermatrix object.
+    The function simply return the output of the multiplica-
+    tive gaussian elimination.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [A, b, indx, Lst]=SecondOrderRank(HM(2,2,'a'),1)
+        sage: A
+        [1 0 0 0]
+        [0 1 0 0]
+        [0 0 1 0]
+        [0 0 0 0]
+        sage: b
+        [                                                 a01*e^(-2*I*pi*k1 + 2*I*pi*k4 - 2*I*pi*k7)]
+        [                 a01*a10*e^(-2*I*pi*k0 - 2*I*pi*k1 + 2*I*pi*k2 + 2*I*pi*k4 - 2*I*pi*k6)/a00]
+        [                                              a00*e^(2*I*pi*k0 + 2*I*pi*k1 - 2*I*pi*k4)/a01]
+        [a00*a11*e^(2*I*pi*k0 + 2*I*pi*k1 - 2*I*pi*k2 - 2*I*pi*k3 - 2*I*pi*k4 + 2*I*pi*k5)/(a01*a10)]
+        sage: Lst
+        [1, 1, 1, 1, -1, -1, 1, 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the DFT matrix of size rk x rk
+    DFT=Matrix(SR,rk,rk,[exp(I*2*pi*i*j/rk) for i in range(rk) for j in range(rk)])
+    # Initialization of the constraints
+    Cnstr=[var('u'+str(i)+str(t))+var('v'+str(j)+str(t))==var('a'+str(i)+str(j))/rk+sum([var('b'+str(i)+str(j)+str(k))*DFT[k,t] for k in range(1,rk)]) for t in range(rk) for j in range(A.ncols()) for i in range(A.nrows())]
+    # Formating the constraints.
+    [Mtr,b]=ConstraintFormatorII(Cnstr, HM(A.nrows(),rk,'u').list()+HM(rk,A.ncols(),'v').list())
+    # Solving the linear equations.
+    return multiplicative_gauss_jordan_eliminationII(Mtr,b)
+ 
+def ThirdOrderRank(A,rk):
+    """
+    Returns the reduced echelon form associated with 
+    a rank rk expansion of the input matrix A.
+    The implementation takes as input object of type 
+    of hypermatrix.
+    The function simply return the output of the multiplica-
+    tive gaussian elimination.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [A, b, indx, Lst]=ThirdOrderRank(HM(2,2,2,'a'),1)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the DFT matrix of size rk x rk
+    DFT=Matrix(SR,rk,rk,[exp(I*2*pi*i*j/rk) for i in range(rk) for j in range(rk)])
+    # Initialization of the constraints
+    Cnstr=[var('u'+str(i)+str(t)+str(k))+var('v'+str(i)+str(j)+str(t))+var('w'+str(t)+str(j)+str(k))==var('a'+str(i)+str(j)+str(k))/rk+sum([var('b'+str(i)+str(j)+str(k)+str(l))*DFT[l,t] for l in range(1,rk)]) for t in range(rk) for k in range(A.ndpts()) for j in range(A.ncols()) for i in range(A.nrows())]
+    # Formating the constraints.
+    [Mtr,b]=ConstraintFormatorII(Cnstr, HM(A.nrows(),rk,A.ndpts(),'u').list()+HM(A.nrows(),A.ncols(),rk,'v').list()+HM(rk,A.ncols(),A.ndpts(),'w').list())
+    # Solving the linear equations.
+    return multiplicative_gauss_jordan_eliminationII(Mtr,b)
+
+def SecondOrderDerivation(sz):
+    """
+    Returns a symbolic derivation of the determinant polynomial
+    via the rank argument for szxsz matrices.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: SecondOrderDerivation(2)
+        [-a10*c01 + a00*c11, -a01*a10 + a00*a11]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initiailization of the hypermatrices
+    Ha=HM(sz,sz-1,'a');Hb=HM(sz-1, sz,'b'); Hc=HM(sz,sz,'c')
+    # Initialization and formating of the first set of constraints
+    [A1,b1]=ConstraintFormatorIV((Prod(Ha,Hb)-Hc).list(), Hb.list())
+    # Performing gaussian elimination
+    [Ap,bp]=gauss_jordan_elimination(A1,b1)
+    # Initializing the index to the first zero row
+    indx=0
+    while not (Ap[indx,:]).is_zero():
+        indx=indx+1
+    # Computing the result
+    return [(f-1).numerator() for f in bp[indx:,0].list()]
+
+def ThirdOrderDerivation(sz):
+    """
+    Returns a symbolic derivation of the determinant polynomial
+    via the rank argument for szxsz matrices.
+
+    EXAMPLES:
+ 
+    ::  
+        sage: ThirdOrderDerivation(2)
+        [a000*a101*d011*d110 - a001*a100*d010*d111, a000*a011*a101*a110 - a001*a010*a100*a111]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialixation of the constraints
+    Cnstr1=[Prod(HM(sz,sz-1,sz,'a'),HM(sz,sz,sz-1,'b'),HM(sz-1,sz,sz,'c'))[i,j,k]==var('d'+str(i)+str(j)+str(k)) for i in range(sz) for j in range(sz) for k in range(sz)]
+    # Initialization of the variables
+    Vrbls1=[var('b'+str(i)+str(j)+str(t))*var('c'+str(t)+str(j)+str(k)) for i in range(sz) for j in range(sz) for k in range(sz) for t in range(sz-1)]
+    # Formatting the constraints
+    [A1,b1]=ConstraintFormatorII(Cnstr1,Vrbls1)
+    # Deriving the solution
+    Sln1=linear_solver(A1,b1,Matrix(SR,len(Vrbls1),1,Vrbls1),Matrix(SR,len(Vrbls1),1,Vrbls1))
+    # Initializing the second set of constraints
+    Cnstr2=[sum(f.lhs().operands())==f.rhs() for f in Sln1[:A1.nrows()]]
+    # Initialization of the variables.
+    Vrbls2=HM(sz,sz,sz-1,'b').list()+HM(sz-1,sz,sz,'c').list()
+    # Formating the constraints.
+    [A2,b2]=ConstraintFormatorII(Cnstr2,Vrbls2)
+    # Performing the multiplicative Gauss-Jordan elmination.
+    [Ap,bp,ix,Lst]=multiplicative_gauss_jordan_eliminationII(A2,b2)
+    # Initialization of the index of the first zero row
+    indx=0
+    while not (Ap[indx,:]).is_zero():
+        indx=indx+1
+    # The result is therefore give by 
+    return [(f-1).numerator() for f in bp[indx:,0].list()]
+    
+    
