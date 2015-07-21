@@ -392,11 +392,60 @@ Quite similarly the a action of a hypermatrices of size 2,3,4 on a pair
 depth slice matrices of respective sizes 2 by 4 and 4 by 3 is prescribed
 by the product resulting in a matrix slice of size 2 by 3
 ```python
-sage: Prod(HM(2,4,1,'x'), HM(2,3,4,'a'), HM(4,3,1,'y'))
-[[[a000*x000*y000 + a001*x010*y100 + a002*x020*y200 + a003*x030*y300], [a010*x000*y010 + a011*x010*y110 + a012*x020*y210 + a013*x030*y310], [a020*x000*y020 + a021*x010*y120 + a022*x020*y220 + a023*x030*y320]], [[a100*x100*y000 + a101*x110*y100 + a102*x120*y200 + a103*x130*y300], [a110*x100*y010 + a111*x110*y110 + a112*x120*y210 + a113*x130*y310], [a120*x100*y020 + a121*x110*y120 + a122*x120*y220 + a123*x130*y320]]]
+sage: Prod(HM(2,4,1,'x'),HM(2,3,4,'a'),HM(4,3,1,'y'))[0,0,0]
+a000*x000*y000 + a001*x010*y100 + a002*x020*y200 + a003*x030*y300
+sage: Prod(HM(2,4,1,'x'),HM(2,3,4,'a'),HM(4,3,1,'y'))[1,0,0]
+a100*x100*y000 + a101*x110*y100 + a102*x120*y200 + a103*x130*y300
 ```
 By transposing the result we the product we obtain derivation of the action of a third order hypermatrix on other
 pair of matrix slices.
+
+# Triangulations and Tetrahedralizations
+The algebra of matrices can be used to produce edge lists for triangulations of convex polygon
+To list all the triangulation of a convex polygon on 5 vertices for instance we proceed as follows
+```python
+sage: TriangulationGraphs(4)
+[[a01, a04, a12, a14, a23, a24, a34],
+ [a01, a04, a12, a13, a14, a23, a34],
+ [a01, a02, a04, a12, a23, a24, a34],
+ [a01, a03, a04, a12, a13, a23, a34],
+ [a01, a02, a03, a04, a12, a23, a34]]
+```
+For sampling such triangulations uniformly at random we proceed by initializing the adjacency matrix
+of the graph which embeds all the triangulations
+
+```python
+sage: sz=4
+sage: A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+sage: for i0 in range(1,sz):
+    :   for i1 in range(i0):
+    :       A[i0,i1]=0
+```
+Once the adjancency matrix A has been initialized, we sample as follows
+```python
+sage: Set(RandomTriangulation(A,A,sz-1,sz)[0].list()).difference(Set([0])).list()[0]
+```
+
+Similarly the BM algebra can be used to list tetrahedralization embeded in some hypergraph
+as follows. First we initialize the following Hypergraph on 5 vertices
+```python
+sage: sz=5; S=HM(sz,sz,sz,'zero') 
+sage: for i in range(sz): 
+....:   for j in range(sz):
+....:       for k in range(sz):       
+....:           if i<j and j<k:
+....:               S[i,j,k]=1; S[i,k,j]=1
+sage: A=HM(sz,sz,sz,'a').elementwise_product(S)
+```
+The hypermatrix A denotes the symbolic adjacency hypermatrix of the hypergraph. The
+tetrahedralization is obtained as follows
+ ```python
+sage: L=Tetrahedralizations(A,A,sz,sz)
+sage: [Set(f.list()).difference(Set([0])).list() for f in L]
+[[a013*a041*a043*a123*a142*a143*a243, a014*a031*a034*a124*a132*a134*a234],
+ [a012*a023*a041*a042*a043*a142*a243, a012*a024*a031*a032*a034*a132*a234],
+ [a014*a021*a024*a032*a034*a124*a234, a013*a021*a023*a042*a043*a123*a243]]
+```
 
 # Bug report
 

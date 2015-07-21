@@ -1,13 +1,14 @@
 #*************************************************************************#
-#       Copyright (C) 2014 Edinah K. Gnang <kgnang@gmail.com>,            #
+#       Copyright (C) 2015 Edinah K. Gnang <kgnang@gmail.com>,            #
 #                          Ori Parzanchevski                              #
 #                          Yuval Filmus                                   #
+#                          Doron Zeilberger                               #
 #                                                                         #
 #  Distributed under the terms of the GNU General Public License (GPL)    #
 #                                                                         #
 #    This code is distributed in the hope that it will be useful,         #
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of       #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU    #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU     #
 #    General Public License for more details.                             #
 #                                                                         #
 #  The full text of the GPL is available at:                              #
@@ -73,6 +74,8 @@ class HM:
             self.hm=apply(HypermatrixGenerate, args)
     def __repr__(self):
         return `self.hm`
+    def __pow__(self, other):
+        return GeneralHypermatrixHadamardExponent(self,other)
     def __add__(self, other):
         return GeneralHypermatrixAdd(self,other)
     def __radd__(self, other):
@@ -138,6 +141,8 @@ class HM:
         return GeneralHypermatrixExpand(self)
     def simplify(self):
         return GeneralHypermatrixSimplify(self)
+    def canonicalize_radical(self):
+        return GeneralHypermatrixCanonicalizeRadical(self)
     def subs(self,Dct):
         return GeneralHypermatrixSubstitute(self, Dct)
     def subsn(self,Dct):
@@ -977,6 +982,25 @@ def HypermatrixKroneckerDelta(nr):
     else :
         raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integer."
 
+def Vandermonde(l):
+    """
+    Constructs a Vamdermonde matrix from the input list
+    assumed to be either numbers or symbolic variables
+    nothing breaks however if one presents as input a list of
+    hypermatrices.
+
+    EXAMPLES:
+    ::
+        sage: Vandermonde(HM(2,'x').list())
+        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return HM(len(l),len(l),[l[j]^i for j in range(len(l)) for i in range(len(l))])
+
+
 def HypermatrixPermutation(s):
     """
     Generates a list of lists associated with the permutation
@@ -1321,6 +1345,7 @@ def ConstraintFormator(CnstrLst, VrbLst):
     and a list of variables and outputs matrix
     and the right hand side vector associate
     with the matrix formulation of the constraints.
+    working over CC for both A and b.
 
     EXAMPLES:
     ::
@@ -1352,6 +1377,7 @@ def ConstraintFormatorII(CnstrLst, VrbLst):
     and a list of variables and outputs matrix
     and the right hand side vector associate
     with the matrix formulation of the constraints.
+    working over SR for both A and b.
 
     EXAMPLES:
     ::
@@ -1384,16 +1410,17 @@ def ConstraintFormatorIII(CnstrLst, VrbLst):
     and a list of variables and outputs matrix
     and the right hand side vector associate
     with the matrix formulation of the constraints.
+    working over CC for A and SR for b
 
     EXAMPLES:
     ::
         sage: x,y = var('x,y')
         sage: CnstrLst = [x+y==1, x-y==2]
         sage: VrbLst = [x, y]
-        sage: [A,b] = ConstraintFormatorII(CnstrLst, VrbLst)
+        sage: [A,b] = ConstraintFormatorIII(CnstrLst, VrbLst)
         sage: A
-        [ 1  1]
-        [ 1 -1]
+        [ 1.0  1.0]
+        [ 1.0 -1.0]
         sage: b
         [1]
         [2]
@@ -1416,6 +1443,8 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
     and a list of variables and outputs matrix
     and the right hand side vector associate
     with the matrix formulation of the constraints.
+    this implementation allows for the lefthand side not to be specified
+    but iinput variables must not be monomials.
 
     EXAMPLES:
     ::
@@ -2016,6 +2045,37 @@ def GeneralHypermatrixSimplify(A):
         Rh[tuple(entry)]=(A[tuple(entry)]).simplify_full()
     return Rh
 
+def GeneralHypermatrixCanonicalizeRadical(A):
+    """
+    Performs the symbolic simplification of the expressions
+    associated with the hypermatrix entries. 
+
+    EXAMPLES:
+    ::
+        sage: x,y = var('x,y') 
+        sage:((x+y)^2*HM(2,2,2,'one')).simplify() 
+        [[[x^2+2*x*y+y^2,x^2+2*x*y+y^2],[x^2+2*x*y+y^2,x^2+2*x*y+y^2]],[[x^2+2*x*y+y^2,x^2+2*x*y+y^2],[x^2+2*x*y+y^2,x^2+2*x*y+y^2]]]
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=(A[tuple(entry)]).canonicalize_radical()
+    return Rh
+
 def GeneralHypermatrixSubstitute(A, Dct):
     """
     Procedure for computes the substitution in the Hypermatrix entries
@@ -2213,6 +2273,42 @@ def GeneralHypermatrixHadamardProduct(A,B):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
                 sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             Rh[tuple(entry)]=A[tuple(entry)]*B[tuple(entry)]
+        return Rh
+    else:
+        raise ValueError, "The Dimensions of the input hypermatrices must match."
+
+def GeneralHypermatrixHadamardExponent(A,B):
+    """
+    Procedure for computing Hypermatrix elementwise exponent of two input hypermatrices.
+
+    EXAMPLES:
+    ::
+        sage: A = HM(2,2,2,'a');B = HM(2,2,2,'b')
+        sage: R = GeneralHypermatrixHadamardExponent(A,B);R
+        [[[a000^b000,a001^b001],[a010^b010,a011^b011]],[[a100^b100,a101^b101],[a110^b110,a111^b111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    s = [B.n(i) for i in range(B.order())]
+    # Testing the dimensions 
+    x = var('x')
+    if(sum([l[i]*x^i for i in range(len(l))])==sum([s[i]*x^i for i in range(len(s))])):
+        # Initializing the input for generating a symbolic hypermatrix
+        inpts = l+['zero']
+        # Initialization of the hypermatrix
+        Rh = HM(*inpts)
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [mod(i,l[0])]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)]=A[tuple(entry)]^B[tuple(entry)]
         return Rh
     else:
         raise ValueError, "The Dimensions of the input hypermatrices must match."
@@ -3368,6 +3464,29 @@ def GeneralHypermatrixKroneckerSum(A,B):
         raise ValueError, "The order of the input hypermatrices must match."
  
 @cached_function
+def Ca(n):
+    """
+    Outputs the number of formula-binary trees only using addition gates.
+
+    EXAMPLES:
+    The input n must be greater than 0
+    ::
+        sage: Ca(3)
+        2
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return 1
+    else :
+        return sum([Ca(i)*Ca(n-i) for i in range(1,n)])
+
+@cached_function
 def Ca3(n):
     """
     Outputs the number of formula-binary trees only using fan-in three addition gates.
@@ -3389,6 +3508,31 @@ def Ca3(n):
         return 1
     else :
         return sum([Ca3(i)*Ca3(j)*Ca3(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
+
+def RollLD(L):
+    """
+    Given an Loaded die, L, the procedures rolls it
+
+
+    EXAMPLES:
+    The tacitly assume that the input is a valid binary tree expression
+    ::
+        sage: RollLD([1, 2, 3])
+        '+11'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    N = sum(L)
+    r = randint(1,N)
+    for i in range(len(L)):
+        if sum(L[:i+1]) >= r:
+            return 1+i
 
 def GeneralDualHypermatrixProductB(*args):
     """
@@ -3633,7 +3777,6 @@ def SecondOrderHyperdeterminant(H):
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The matrix must be square."
 
-
 def ThirdOrderHyperdeterminant(H):
     """
     computes third order hypermatrix determinant
@@ -3665,6 +3808,52 @@ def ThirdOrderHyperdeterminant(H):
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
+
+def ThirdOrderHyperdeterminantII(A):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A=HM(2,2,2,'a')
+        sage: ThirdOrderHyperdeterminantII(A)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if A.is_cubical() and A.n(0)==2:
+        return ThirdOrderHyperdeterminant(A)
+    elif A.is_cubical() and A.n(0)>2:
+        # Initializing of the size parameter.
+        sz=A.n(0)
+        # Initialization of the hypermatrix X
+        X=HM(sz,sz,sz,[var('x'+str(i)+str(j)) for k in range(sz) for j in range(sz) for i in range(sz)])
+        Y=HM(sz,sz,sz,[var('r'+str(i)+str(j)) for k in range(sz) for j in range(sz) for i in range(sz)])
+        # Performing the Hadamard product of the two hypermatrices.
+        B=A.elementwise_product(X)
+        # Initializing the list of polynomials.
+        Lst=[]
+        for t in range(sz):
+            Lst.append(expand(Matrix(SR,sz,sz,[B[i,j,t] for i in range(sz) for j in range(sz)]).det()))
+        # Initialization of the permutation .
+        P=Permutations(range(sz))
+        # Initialization of the variable list.
+        Vrbls=[prod([X[k,p[k],0] for k in range(sz)]) for p in P]
+        Wrbls=[prod([Y[k,p[k],0] for k in range(sz)]) for p in P]
+        # Formating the constraints and obtaining the determinant.
+        [Mtr, b]=ConstraintFormatorIV(Lst, Vrbls)
+        # Writing down the solution.
+        TmpSln=linear_solver(Mtr,b,Matrix(SR,len(Vrbls),1,Vrbls),Matrix(SR,len(Wrbls),1,Wrbls))
+        #print TmpSln
+        Eq=[sum(eq.lhs().operands())==eq.rhs() for eq in TmpSln]
+        #print Eq
+        # Formating the constraints
+        [Mtr2,b2]=ConstraintFormatorII(Eq, HM(sz,sz,'x').list())
+        return multiplicative_gauss_jordan_eliminationII(Mtr2,b2)
+    else :
+        raise ValueError, "The input hypermpatrix must be cubic"
 
 def FourthOrderHyperdeterminant(H):
     """
@@ -4648,7 +4837,7 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
     EXAMPLES:
  
     ::  
-        sage: [RefA, c, indx] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [RefA, c, indx, L] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
         sage: RefA
         [1 0]
         [0 1]
@@ -5426,5 +5615,152 @@ def ThirdOrderDerivation(sz):
         indx=indx+1
     # The result is therefore give by 
     return [(f-1).numerator() for f in bp[indx:,0].list()]
+
+def Triangulations(A,Ha,n,sz):
+    """
+    Outpts a list of second order hypermatrices each of which have a single nonzero symbolic entry which
+    describes a triangulation of a regular polygon on n vertices. The input matrix is meant to be 
+    upper-triangular matrices.
+
+     EXAMPLES:
+    ::
+        sage: sz=4
+        sage: A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+        sage: for i0 in range(1,sz):
+            :   for i1 in range(i0):
+            :       A[i0,i1]=0
+        sage: L=Triangulations(A,A,sz-1,sz)
+        sage: L[0]
+        sage: L[1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if n == 1:
+        return [A]
+    else:
+        gu = []
+        for i in range(1,n):
+            gu = gu+[Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in Triangulations(A,Ha,i,sz) for g2 in Triangulations(A,Ha,n-i,sz)]
+        return gu
+
+def TriangulationGraphs(sz):
+    """
+    Takes as input the size paramater which corresponds to the number of vertices of the graph
+    and outputs list of triangulation of the convex regular polygon. Each graph in the list
+    is describe by as a list of edges.
     
+     EXAMPLES:
+    ::
+        sage: TriangulationGraphs(4)
+        [[a01, a03, a12, a13, a23], [a01, a02, a03, a12, a23]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrix 
+    A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+    for i0 in range(1,sz):
+        for i1 in range(i0):
+            A[i0,i1]=0
+    # Computing the list of triangulations
+    L=Triangulations(A,A,sz-1,sz)
+    # Initializing the list which will store triangularions
+    # as a list of edges  
+    list_of_graphs=[]
+    for h in L:
+        list_of_graphs.append((Set(h.list()).list())[1].operands())
+    return list_of_graphs
+
+def TriangulationGraphsII(sz):
+    """
+    Takes as input the size paramater which corresponds to the number of vertices of the graph
+    and outputs list of triangulation of the convex regular polygon. Each graph in the list
+    is describe by as a list of triangle specified by their edges with exponential variables
+    associated with edge colorings.
     
+     EXAMPLES:
+    ::
+        sage: TriangulationGraphsII(4)
+        [[[a01^b01, a03^b03, a13^b13], [a12^b12, a13^b13, a23^b23]], [[a01^b01, a02^b02, a12^b12], [a02^b02, a03^b03, a23^b23]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Obtaining the list of triangles from edge list
+    L=TriangulationGraphs(sz)
+    # Initializing the list of graphs
+    list_of_graphs=[]
+    for l in L:
+        # Initializing the color variables
+        Ha=HM(sz,sz,'a')
+        Hb=HM(sz,sz,'b')
+        # Initialzing the colored hypermatrix
+        Ht=Ha**Hb
+        for i in range(sz):
+            for j in range(sz):
+                if Ha[i,j] not in l:
+                    Ht[i,j]=0
+        # Initialization of the result
+        Hr=GeneralHypermatrixHadamardProduct(Prod(Ht,Ht),Ht)
+        list_of_graphs.append([f. operands() for f in Set(Hr.list()).difference(Set([0])).list()])
+    return list_of_graphs
+
+def Tetrahedralizations(A,B,n,sz):
+    """
+    Outpts a list of hypermatrices whoes nonzero symbolic entries describes
+    a tetrahedral partition of a regular convex polytope on n vertices.
+    In order to avoid degenerate hyperedges in the triangulation induced
+    by the BM algebra, the input hypermatrix should be of the type illustrated
+    in the example bellow.
+
+     EXAMPLES:
+    ::
+        sage: sz=4; S=HM(sz,sz,sz,'zero') 
+        sage: for i in range(sz): 
+        ....:   for j in range(sz):
+        ....:       for k in range(sz):       
+        ....:           if i<j and j<k:
+        ....:               S[i,j,k]=1; S[i,k,j]=1
+        sage: A=HM(sz,sz,sz,'a').elementwise_product(S)
+        sage: L=Tetrahedralizations(A,A,sz-1,sz)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if n == 1:
+        return [A]
+    else:
+        gu = []
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
+                gu=gu+[B.elementwise_product(Prod(g1,g2,g3)).expand() for g1 in Tetrahedralizations(A,B,i,sz) for g2 in Tetrahedralizations(A,B,j,sz) for g3 in Tetrahedralizations(A,B,n-(i+j),sz)]
+        return gu
+
+def RandomTriangulation(A,Ha,n,sz):
+    """
+    Outpts a list of second order hypermatrices each of which have a single nonzero symbolic entry which
+    describes a triangulation of a regular polygon on n vertices. The input matrix is meant to be 
+    upper-triangular matrices.
+
+     EXAMPLES:
+    ::
+        sage: sz=4
+        sage: A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+        sage: for i0 in range(1,sz):
+            :   for i1 in range(i0):
+            :       A[i0,i1]=0
+        sage: RandomTriangulation(A,A,sz-1,sz)
+        [[[0, 0, 0, a01*a03*a12*a13*a23], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if n == 1:
+        return [A]
+    else:
+        gu = []
+        j = RollLD([Ca(i)*Ca(n-i) for i in range(1,n+1)])
+        return [Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in RandomTriangulation(A,Ha,j,sz) for g2 in RandomTriangulation(A,Ha,n-j,sz)]
+
+
