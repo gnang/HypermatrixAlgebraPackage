@@ -67,7 +67,7 @@ class HM:
             if len(dims) == 2:
                 self.hm=SymHypermatrixGenerate(dims[0],dims[1])
             else:
-                raise ValueError, "kronecker not supported for order %d tensors" % len(dims)
+                raise ValueError, "SymHypermatrixGenerate not supported for order %d tensors" % len(dims)
         elif type(s) == list:
             self.hm=(apply(List2Hypermatrix, args)).listHM()
         else:
@@ -1136,7 +1136,7 @@ def HypermatrixCayleyHamiltonListII(A,n):
      EXAMPLES:
     ::
         sage: A = HypermatrixGenerate(2,2,2,'a')
-        sage: Lst = HypermatrixCayleyHamiltonList(A,3); Lst
+        sage: Lst = HypermatrixCayleyHamiltonListII(A,3); Lst
         [[[[a000^3 + a001*a010*a100, a000*a001^2 + a001*a011*a101], [a000*a010^2 + a010*a011*a110, a001*a010*a011 + a011^2*a111]], [[a000*a100^2 + a100*a101*a110, a001*a100*a101 + a101^2*a111], [a010*a100*a110 + a110^2*a111, a011*a101*a110 + a111^3]]]]
 
     AUTHORS:
@@ -1148,7 +1148,7 @@ def HypermatrixCayleyHamiltonListII(A,n):
         gu = []
         for i in range(1,n,2):
             for j in range(1,n-i,2):
-                gu = gu + [HypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonList(A,j) for g3 in HypermatrixCayleyHamiltonList(A,n-(i+j))]
+                gu = gu + [HypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
         return gu
 
 def HypermatrixCayleyHamiltonListIII(A,n):
@@ -1162,7 +1162,7 @@ def HypermatrixCayleyHamiltonListIII(A,n):
      EXAMPLES:
     ::
         sage: A = HM(2,2,2,'a')
-        sage: L = HypermatrixCayleyHamiltonListII(A,3)
+        sage: L = HypermatrixCayleyHamiltonListIII(A,3)
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -1174,7 +1174,7 @@ def HypermatrixCayleyHamiltonListIII(A,n):
             gu = []
             for i in range(1,n,2):
                 for j in range(1,n-i,2):
-                    gu = gu + [GeneralHypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
+                    gu = gu + [GeneralHypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,n-(i+j))]
             return gu
     # Case of order 4
     elif A.order()==4:
@@ -1185,7 +1185,8 @@ def HypermatrixCayleyHamiltonListIII(A,n):
             for i in range(1,n,2):
                 for j in range(1,n-i,2):
                     for k in range(1,n-i-j,2):
-                        gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k))]
+                        gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k))]
+            return gu
     # Case of order 5
     elif A.order()==5:
         if n == 1:
@@ -1196,7 +1197,8 @@ def HypermatrixCayleyHamiltonListIII(A,n):
                 for j in range(1,n-i,2):
                     for k in range(1,n-i-j,2):
                         for l in range(1,n-i-j-k,2):
-                            gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l))]
+                            gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l))]
+            return gu
     # Case of order 6
     elif A.order()==6:
         if n == 1:
@@ -1208,7 +1210,8 @@ def HypermatrixCayleyHamiltonListIII(A,n):
                     for k in range(1,n-i-j,2):
                         for l in range(1,n-i-j-k,2):
                             for m in range(1,n-i-j-k-l,2):
-                                gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m))]
+                                gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m))]
+            return gu
     # Case of order 7
     elif A.order()==7:
         if n == 1:
@@ -1221,7 +1224,8 @@ def HypermatrixCayleyHamiltonListIII(A,n):
                         for l in range(1,n-i-j-k,2):
                             for m in range(1,n-i-j-k-l,2):
                                 for o in range(1,n-i-j-k-l,2):
-                                    gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))]
+                                    gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m+o))]
+            return gu
     # Case of order 8
     elif A.order()==8:
         if n == 1:
@@ -1235,7 +1239,8 @@ def HypermatrixCayleyHamiltonListIII(A,n):
                             for m in range(1,n-i-j-k-l,2):
                                 for o in range(1,n-i-j-k-l,2):
                                     for p in range(1,n-i-j-k-l-o,2):
-                                        gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p))]
+                                        gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m+o+p))]
+            return gu
     else :
         raise ValueError, "Not supported for order > 4 and for non cube hypermpatrix of order 3 "
    
@@ -2428,22 +2433,22 @@ def GeneralOrthogonalHypermatrixU(od):
 
     EXAMPLES:
     ::
-        sage: Q = GeneralOrthogonalHypermatrixU(3); Q
+        sage: Q=GeneralOrthogonalHypermatrixU(3); Q
         [[[e^(-r1+r3+r6),e^r4],[e^r6,e^r2]],[[-e^(r1+r2-r3-r4+r5),e^r3],[e^r5,e^r1]]]
 
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
     # Initializing the hypermatrix
-    Q = apply(HM,[2 for i in range(od)]+['q'])
+    Q=apply(HM,[2 for i in range(od)]+['q'])
     # Initilizing the list of variable
-    VrbLst = Q.list()
+    VrbLst=Q.list()
     # Reinitializing of Q by exponentiation 
-    Q = Q.elementwise_base_exponent(e)
+    Q=Q.elementwise_base_exponent(e)
     # Computing the product
-    Eq = apply(GeneralHypermatrixProduct, [Q.transpose(j) for j in range(od,0,-1)])
+    Eq=apply(GeneralHypermatrixProduct, [Q.transpose(j) for j in range(od,0,-1)])
     # Writting up the constraints
-    LeQ = (Set(Eq.list())).list()
+    LeQ=(Set(Eq.list())).list()
     # Removing the normalization constraints
     LeQ.remove(e^(od*var('q'+''.join(['0' for i in range(od)])))+e^(od*var('q01'+''.join(['0' for i in range(od-2)]))))
     LeQ.remove( e^(od*var('q10'+''.join(['1' for i in range(od-2)])))+e^(od*var('q'+''.join(['1' for i in range(od)]))))
@@ -4735,7 +4740,7 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
     EXAMPLES:
  
     ::  
-        sage: [A, b, indx, Lst] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [RefA, c, indx, Lst] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
         sage: RefA
         [1 0]
         [0 1]
@@ -4772,6 +4777,9 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
 def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
     """
     Outputs the row echelon form of the input matrix and the right hand side.
+    The solver here differs from the one above in the fact that it assumes
+    that the entries of the Cf matrix are not symbolic and checks during
+    the elimination steps whether or  we are indeed adding new branches.
 
     EXAMPLES:
  
@@ -4806,9 +4814,10 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
                 A[i:,:]=Ta
                 b[i:,:]=Tb 
             # Performing the row operations.
-            if A[i,j]==-1 or A[i,j]==1:
+            #if A[i,j]==-1 or A[i,j]==1:
+            if (A[i,j].numerator()==1 or A[i,j].numerator()==-1) and A[i,j].denominator().is_integer():
                 b[i,0]=b[i,0]^(1/A[i,j])
-            else: 
+            else:
                 b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
                 indx = indx+1
                 Lst.append(A[i,j])
@@ -4818,13 +4827,14 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
                 if A[r,:].is_zero():
                     r=r+1
                 else:
-                    if A[r,j]==-1 or A[r,j]==1:
+                    #if A[r,j]==-1 or A[r,j]==1:
+                    if A[r,j].is_integer():
                         b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
                     else:
                         b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
                         if (A[r,j]).is_zero()==False:
                             indx = indx+1
-                            Lst.append(A[r,j])
+                            Lst.append(1/A[r,j])
                     A[r,:]=-A[r,j]*A[i,:]+A[r,:]
         # Incrementing the row and column index.
         i=i+1; j=j+1
@@ -4833,11 +4843,14 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
 def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
+    The solver here differs from the one above in the fact that it assumes
+    that the entries of the Cf matrix are not symbolic and checks during
+    the elimination steps whether or  we are indeed adding new branches.
 
     EXAMPLES:
  
     ::  
-        sage: [RefA, c, indx, L] = multiplicative_gauss_jordan_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [RefA, c, indx, L] = multiplicative_gauss_jordan_eliminationII(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
         sage: RefA
         [1 0]
         [0 1]
@@ -4863,13 +4876,14 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
                 j=j+1
             # performing row operations
             for r in range(i-1, -1, -1):
-                if A[r,j]==-1 or A[r,j]==1:
+                #if A[r,j]==-1 or A[r,j]==1:
+                if A[r,j].is_integer():
                     b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
                 else:
                     b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
                     if (A[r,j]).is_zero()==False:
                         indx = indx+1
-                        Lst.append(A[r,j])
+                        Lst.append(1/A[r,j])
                 A[r,:] = -A[r,j]*A[i,:]+A[r,:]
             i = i - 1; j = 0
     return [A, b, indx, Lst]
@@ -5750,7 +5764,7 @@ def RandomTriangulation(A,Ha,n,sz):
         sage: for i0 in range(1,sz):
             :   for i1 in range(i0):
             :       A[i0,i1]=0
-        sage: RandomTriangulation(A,A,sz-1,sz)
+        sage: L=RandomTriangulation(A,A,sz-1,sz)
         [[[0, 0, 0, a01*a03*a12*a13*a23], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
 
     AUTHORS:
