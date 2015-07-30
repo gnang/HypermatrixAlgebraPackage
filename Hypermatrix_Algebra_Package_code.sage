@@ -1518,8 +1518,8 @@ def Companion_matrix(p,vrbl):
         sage: x,y=var('x,y')
         sage: p=x^2+2*x*y+1
         sage: Companion_matrix(p,x)
-        [0   1]
-        [1 2*y]
+        [-2*y   -1]
+        [   1    0]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -1532,12 +1532,81 @@ def Companion_matrix(p,vrbl):
             # Filling up the matrix
             A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
             for i in range(1,dg):
-                A[dg-1,i]=-p.coefficient(vrbl^i)/p.coefficient(vrbl^dg); A[i,i-1]=1
+                A[0,dg-i-1]=-p.coefficient(vrbl^i)/p.coefficient(vrbl^dg)
+                A[i,Integer(mod(i+1,dg))]=1
             return A
+        elif dg==1:
+            return Matrix(SR,1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
         else:
-            raise ValueError, "Must be of degree at least 2."
+            raise ValueError, "Must be of degree at least 1."
     else:
         raise ValueError, "Must be a polynomial in the input variable."
+
+def Sylvester_matrix(p,q,vrbl):
+    """
+    Takes as input two polynomials and a variable
+    and outputs the Sylvester matrix associated
+    with the polynomials in the specified variables.
+
+    EXAMPLES:
+    ::
+        sage: x=var('x')
+        sage: p=2*x+3
+        sage: q=7*x-5
+        sage: Resultant(p,q,x)
+        [2   3]
+        [7  -5]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
+        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        # Initialization of the matrix
+        A=Matrix(SR,HM(dp+dq,dp+dq,'zero').listHM())
+        # Filling up the matrix
+        cp=0
+        for i in range(dq):
+            for j in range(dp):
+                A[i,cp+j]=p.coefficient(vrbl^(dp-j))
+            A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
+            cp=cp+1
+        cq=0
+        for i in range(dp):
+            for j in range(dq):
+                A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
+            A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
+            cq=cq+1
+        return A
+    else:
+        raise ValueError, "The inputs must both be polynomials in the input variable."
+
+def Gmatrix(p,q,vrbl):
+    """
+    Takes as input two polynomials and a variable
+    and outputs the G matrix associated with the 
+    polynomial in the specified variables.
+
+    EXAMPLES:
+    ::
+        sage: x=var('x')
+        sage: p=x^2+2*x+3
+        sage: q=7*x-5
+        sage: Gmatrix(p,q,x)
+        [-9/7   -3]
+        [   1  5/7]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
+        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        if dp >= 1 and dq >= 1:
+            return identity_matrix(dq).tensor_product(Companion_matrix(p,vrbl))-(Companion_matrix(q,vrbl)).tensor_product(identity_matrix(dp))
+        else:
+            raise ValueError, "Both inputs must be of degree at least 2."
+    else:
+        raise ValueError, "Both inputs must be polynomials in the input variable."
 
 def substitute_matrix(p, vrbl, A):
     """
