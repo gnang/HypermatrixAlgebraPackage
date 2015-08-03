@@ -4994,7 +4994,10 @@ def linear_solver(A,b,x,v):
         sage: Mx=Matrix(SR,A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
         sage: Mv=Matrix(SR,A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
         sage: linear_solver(A,b,Mx,Mv)
-        [x0 == a00 - a10 + a11 - t3, x1 == a11 - t3, x2 == a10 - a11 + t3, x3 == t3]
+        [x0 == a00 - a10 + a11 - t3,
+         x1 == a11 - t3,
+         x2 == a10 - a11 + t3,
+         0  == -a00 + a01 + a10 - a11]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5002,25 +5005,19 @@ def linear_solver(A,b,x,v):
     """
     # Initialization of the reduced echelon form.
     [Ap,bp]=gauss_jordan_elimination(A,b)
-    AP=Matrix(SR,zero_matrix(max(Ap.nrows(),Ap.ncols()),max(Ap.nrows(),Ap.ncols())))
-    AP[:Ap.nrows(),:Ap.ncols()]=Ap
-    BP=Matrix(SR,zero_matrix(max(Ap.nrows(),Ap.ncols()),1))
-    BP[:bp.nrows(),0]=bp
-    # Initializing the identity matrix
-    Id=identity_matrix(AP.nrows())
-    TmpMtr=zero_matrix(AP.ncols(),AP.ncols())
-    cnt=0
-    for i in range(AP.ncols()):
-        for j in range(Id.ncols()):
-            if (AP[:,i]-Id[:,j]).is_zero():
-                # Setting the column to zero.
-                AP[:,i]=AP[:,i]-Id[:,j]
-                TmpMtr[:,cnt]=Id[:,j]
-                cnt=cnt+1
-    Sln=[(TmpMtr*x)[i,0]==BP[i,0]-(AP*v)[i,0] for i in range(cnt)]
-    Lt=Set(x.list()).difference(Set([Sln[i].lhs() for i in range(len(Sln))])).list() 
-    Sln=Sln+[Lt[i]==fast_reduce(Lt[i],x.list(),v.list()) for i in range(len(Lt))]
-    return Sln
+    Id1 = identity_matrix(Ap.nrows())
+    Id2 = identity_matrix(Ap.ncols())
+    # Obtainin the list of pivot variables.
+    Pm=Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
+    for i in range(Ap.nrows()):
+        if not Ap[i,:].is_zero():
+            for j in range(Ap.ncols()):
+                if Ap[i,j]==1:
+                    break
+            Pm=Pm+Id1[:,i]*Id2[j,:]
+    # Expressing the solutions
+    tp1=Pm*x; tp2=bp-(Ap-Pm)*v
+    return [tp1[i,0]==tp2[i,0] for i in range(tp1.nrows())]
 
 def multiplicative_linear_solver(A,b,x,v):
     """
@@ -5034,9 +5031,12 @@ def multiplicative_linear_solver(A,b,x,v):
         sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
         sage: [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(2*sz)])
         sage: Mx=Matrix(SR,A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
-        sage: Mv=Matrix(SR,A.ncols(), 1, [var('t'+str(i)) for i in range(A.ncols())])
+        sage: Mv=Matrix(SR,A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
         sage: multiplicative_linear_solver(A,b,Mx,Mv)
-        [x0==a00*a11/(a10*t3), x1==a11/t3, x2==a10*t3/a11]
+        [x0 == a00*a11/(a10*t3),
+         x1 == a11/t3,
+         x2 == a10*t3/a11,
+         1 == a01*a10/(a00*a11)]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5044,22 +5044,20 @@ def multiplicative_linear_solver(A,b,x,v):
     """
     # Initialization of the reduced echelon form.
     [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
-    AP=Matrix(SR,zero_matrix(max(Ap.nrows(),Ap.ncols()),max(Ap.nrows(),Ap.ncols())))
-    AP[:Ap.nrows(),:Ap.ncols()]=Ap
-    BP=Matrix(SR,ones_matrix(max(Ap.nrows(),Ap.ncols()),1))
-    BP[:bp.nrows(),0]=bp
-    # Initializing the identity matrix
-    Id=identity_matrix(AP.nrows())
-    TmpMtr=zero_matrix(AP.ncols(),AP.ncols())
-    cnt=0
-    for i in range(AP.ncols()):
-        for j in range(Id.ncols()):
-            if (AP[:,i]-Id[:,j]).is_zero():
-                # Setting the column to zero.
-                AP[:,i]=AP[:,i]-Id[:,j]
-                TmpMtr[:,cnt]=Id[:,j]
-                cnt=cnt+1
-    return [multiplicative_matrix_product(TmpMtr,x)[i,0]==BP[i,0]/multiplicative_matrix_product(AP,v)[i,0] for i in range(cnt)]
+    Id1=identity_matrix(Ap.nrows())
+    Id2=identity_matrix(Ap.ncols())
+    # Obtainin the list of pivot variables.
+    Pm=Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
+    for i in range(Ap.nrows()):
+        if not Ap[i,:].is_zero():
+            for j in range(Ap.ncols()):
+                if Ap[i,j]==1:
+                    break
+            Pm=Pm+Id1[:,i]*Id2[j,:]
+    # Expressing the solutions
+    tp1=multiplicative_matrix_product(Pm,x)
+    tp2=multiplicative_matrix_product((Ap-Pm),v)
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def SecondOrderHadamardFactorization(A,B):
     """
@@ -5313,14 +5311,12 @@ def Constrained_Inverse_pair(Ha, Hb):
 
     EXAMPLES:
     ::
-        sage: Contrained_Inverse_pair(HM(2,2,'a'), HM(2,2,'b'))
-        [
-        [1 0 0 0 0 1 0 0]  [ 1/2*(a00*b01-a01*b11)*e^(2*I*pi*k0)]   
-        [0 1 0 0 0 0 0 1]  [-1/2*(a00*b01-a01*b11)*e^(2*I*pi*k1)]   
-        [0 0 1 0 1 0 0 0]  [ 1/2*(a10*b00-a11*b10)*e^(2*I*pi*k2)]   
-        [0 0 0 1 0 0 1 0], [-1/2*(a10*b00-a11*b10)*e^(2*I*pi*k3)], 4,
-
-        [1, 1, 1, 1]]
+        sage: Constrained_Inverse_pair(HM(2,2,'a'),HM(2,2,'b'))
+        [x0 == 1/2*(a00*b01-a01*b11)/y5,
+         x1 == -1/2*(a00*b01-a01*b11)/y7,
+         x2 == 1/2*(a10*b00-a11*b10)/y4,
+         x3 == -1/2*(a10*b00-a11*b10)/y6]
+        
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5344,7 +5340,10 @@ def Constrained_Inverse_pair(Ha, Hb):
         [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
         Mx=Matrix(SR,2*sz^2,1,[var('x'+str(i)) for i in range(2*sz^2)])
         My=Matrix(SR,2*sz^2,1,[var('y'+str(i)) for i in range(2*sz^2)])
-        return multiplicative_linear_solver(Ap,bp,Mx,My)
+        #Sln=multiplicative_linear_solver(Ap,bp,Mx,My)
+        Sln=multiplicative_linear_solver(Ap,bp,Mx,My)
+        return Sln
+
     else:
         # return the error message if the input hypermatrix is cubic
         raise ValueError, "The input hypermpatrices are of inapropriate sizes"
@@ -5355,19 +5354,20 @@ def Constrained_Uncorrelated_triplet(Ha, Hb, Hc):
 
     EXAMPLES:
     ::
-        sage: L=Contrained_Uncorrelated_triplet(HM(2,2,2,'a'), HM(2,2,2,'b'), HM(2,2,2,'c')); L[0] 
-        [ 1  0  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  1  0  0  0  0  0]
-        [ 0  1  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  1  0  0  0  0]
-        [ 0  0  1  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  0  0  1  0]
-        [ 0  0  0  1  0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  0  0  0  1]
-        [ 0  0  0  0  1  0  0  0  0  0  0  0  0  0  1  0  0  0  1  0  0  0  0  0]
-        [ 0  0  0  0  0  1  0  0  0  0  0  0  0  0  1  0 -1  1  1  0  0  0  0  0]
-        [ 0  0  0  0  0  0  1  0  0  0  0  0  0  0  0  1  0  0  0  0  0  0  1  0]
-        [ 0  0  0  0  0  0  0  1  0  0  0  0  0  0  0  1  0  0  0  0 -1  1  1  0]
-        [ 0  0  0  0  0  0  0  0  1  0 -1  0  0  0  0  0  0  1  0 -1  0  0  0  0]
-        [ 0  0  0  0  0  0  0  0  0  1  0 -1  0  0  0  0  0  0  0  0  0  1  0 -1]
-        [ 0  0  0  0  0  0  0  0  0  0  0  0  1  0 -1  0  1  0 -1  0  0  0  0  0]
-        [ 0  0  0  0  0  0  0  0  0  0  0  0  0  1  0 -1  0  0  0  0  1  0 -1  0]
+        sage: Constrained_Uncorrelated_triplet(HM(2,2,2,'a'), HM(2,2,2,'b'), HM(2,2,2,'c'))
+        [x0 == 1/2*(a000*b010*c010 - a010*b011*c110)/(y10*y18),
+         x1 == 1/2*(a001*b010*c011 - a011*b011*c111)/(y10*y19),
+         x2 == -1/2*(a000*b010*c010 - a010*b011*c110)/(y11*y22),
+         x3 == -1/2*(a001*b010*c011 - a011*b011*c111)/(y11*y23),
+         x4 == 1/2*(a100*b110*c010 - a110*b111*c110)/(y14*y18),
+         x5 == 1/2*(a101*b100*c001 - a111*b101*c101)*(a100*b110*c010 - a110*b111*c110)*y16/((a100*b100*c000 - a110*b101*c100)*y14*y17*y18),
+         x6 == -1/2*(a100*b110*c010 - a110*b111*c110)/(y15*y22),
+         x7 == -1/2*(a101*b100*c001 - a111*b101*c101)*(a100*b110*c010 - a110*b111*c110)*y20/((a100*b100*c000 - a110*b101*c100)*y15*y21*y22),
+         x8 == (a001*b000*c001 - a011*b001*c101)*y10*y19/((a001*b010*c011 - a011*b011*c111)*y17),
+         x9 == (a001*b000*c001 - a011*b001*c101)*y11*y23/((a001*b010*c011 - a011*b011*c111)*y21),
+         x12 == (a100*b100*c000 - a110*b101*c100)*y14*y18/((a100*b110*c010 - a110*b111*c110)*y16),
+         x13 == (a100*b100*c000 - a110*b101*c100)*y15*y22/((a100*b110*c010 - a110*b111*c110)*y20)]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5441,11 +5441,8 @@ def Constrained_Second_order_orthogonalization(Ha):
 
     EXAMPLES:
     ::
-        sage: Contrained_Second_order_orthogonalization(HM(2,2,'a'))
-        [
-        [1 0 1 0]  [ 1/2*(a00*a10 - a01*a11)*e^(2*I*pi*k0)]           
-        [0 1 0 1], [-1/2*(a00*a10 - a01*a11)*e^(2*I*pi*k1)], 2, [1, 1]
-        ]
+        sage: Constrained_Second_order_orthogonalization(HM(2,2,'a'))
+        [x0 == 1/2*(a00*a10 - a01*a11)/y2, x1 == -1/2*(a00*a10 - a01*a11)/y3]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5480,15 +5477,11 @@ def Constrained_Third_order_orthogonalization(Ha):
 
     EXAMPLES:
     ::
-        sage: Contrained_Third_order_orthogonalization(HM(2,2,2,'a'))
-        [
-        [ 1  0  0  0  0 -1  0  0]  [(a000*a001*a100 - a010*a011*a110)*e^(2*I*pi*k0 - 2*I*pi*k1 - 2*I*pi*k5)/(a001*a100*a101 - a011*a110*a111)]
-        [ 0  1  0  0  1  1  0  0]  [                                                      1/2*(a001*a100*a101 - a011*a110*a111)*e^(2*I*pi*k1)]
-        [ 0  0  1  0  0  0  0 -1]  [(a000*a001*a100 - a010*a011*a110)*e^(2*I*pi*k2 - 2*I*pi*k3 - 2*I*pi*k4)/(a001*a100*a101 - a011*a110*a111)]
-        [ 0  0  0  1  0  0  1  1], [                                                     -1/2*(a001*a100*a101 - a011*a110*a111)*e^(2*I*pi*k3)],
-
-        6, [1, 1, 1, 1, 1, 1]
-        ]
+        sage: Constrained_Third_order_orthogonalization(HM(2,2,2,'a'))
+        [x0 == (a000*a001*a100 - a010*a011*a110)*y5/(a001*a100*a101 - a011*a110*a111),
+         x1 == 1/2*(a001*a100*a101 - a011*a110*a111)/(y4*y5),
+         x2 == (a000*a001*a100 - a010*a011*a110)*y7/(a001*a100*a101 - a011*a110*a111),
+         x3 == -1/2*(a001*a100*a101 - a011*a110*a111)/(y6*y7)]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5524,17 +5517,10 @@ def Constrained_Fourth_order_orthogonalization(Ha):
 
     EXAMPLES:
     ::
-        sage: Contrained_Fourth_order_orthogonalization(HM(2,2,2,2,'a'))
-        [
-        [ 1  1  0  0  0  0  0  0  0  0  1  1  0  0  0  0]  [ 1/2*(a0000*a0001*a0010*a1000 - a0100*a0101*a0110*a1100)*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k0 - 2*I*pi*k1 + 2*I*pi*k2 + 2*I*pi*k8 - 2*I*pi*k9)/(a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)]
-        [ 0  0  1  0  0  0  0  0  1  0 -1 -1  0  0  0  0]  [                                                                                 (a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)*e^(2*I*pi*k1 - 2*I*pi*k2 - 2*I*pi*k8)/(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)]
-        [ 0  0  0  1  0  0  0  0  0  1  1  1  0  0  0  0]  [                                                                                                                                                         1/2*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k2)]
-        [ 0  0  0  0  1  1  0  0  0  0  0  0  0  0  1  1]  [-1/2*(a0000*a0001*a0010*a1000 - a0100*a0101*a0110*a1100)*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k3 - 2*I*pi*k4 + 2*I*pi*k5 + 2*I*pi*k6 - 2*I*pi*k7)/(a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)]
-        [ 0  0  0  0  0  0  1  0  0  0  0  0  1  0 -1 -1]  [                                                                                 (a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)*e^(2*I*pi*k4 - 2*I*pi*k5 - 2*I*pi*k6)/(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)]
-        [ 0  0  0  0  0  0  0  1  0  0  0  0  0  1  1  1], [                                                                                                                                                        -1/2*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*e^(2*I*pi*k5)],
-        10, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        ]
-
+        sage: Constrained_Fourth_order_orthogonalization(HM(2,2,2,2,'a'))
+        x6 == (a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)*y14*y15/((a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*y12),
+        x7 == -1/2*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)/(y13*y14*y15)] 
+ 
     AUTHORS:
     - Edinah K. Gnang
     """
