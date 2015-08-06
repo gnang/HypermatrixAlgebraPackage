@@ -1106,6 +1106,29 @@ def Orthogonal3x3x3Hypermatrix(t1,t2):
     s2=sin(t2)^(2/3)
     return [[[c1,s1*c2,0],[s1*c2,s1*s2,0],[s1*s2,exp(-I*2*pi/3)*c1,0]], [[s1*s2,c1,exp(-I*2*pi/3)*s1*c2],[exp(I*2*pi/3)*c1,s1*c2,s1*s2], [s1*c2,s1*s2,c1]],[[0,s1*s2,c1],[0,c1,s1*c2],[0,exp(I*2*pi/3)*s1*c2,s1*s2]]]
 
+def HypermatrixCayleyHamiltonStringList(n):
+    """
+    Outpts a list of strings describint hypermatrix powers of degree n. 
+
+     EXAMPLES:
+    ::
+        sage: HypermatrixCayleyHamiltonStringList(5)
+        ['Prod(A,A,Prod(A,A,A))',
+         'Prod(A,Prod(A,A,A),A)',
+         'Prod(Prod(A,A,A),A,A)']
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    if n == 1:
+        return ['A']
+    else:
+        gu = []
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
+                gu = gu + ["Prod("+g1+", "+g2+", "+g3+")" for g1 in HypermatrixCayleyHamiltonStringList(i) for g2 in HypermatrixCayleyHamiltonStringList(j) for g3 in HypermatrixCayleyHamiltonStringList(n-(i+j))]
+        return gu
+
 def HypermatrixCayleyHamiltonList(A,n):
     """
     Outpts a list of hypermatrices (each of which is encapsulated as a single list) of all product composition of degree n.
@@ -1634,6 +1657,57 @@ def substitute_matrix(p, vrbl, A):
         return T
     else:
         raise ValueError, "Must be a polynomial in the input variable."
+
+def HypermatrixInversePair(U,V):
+    """
+    Outputs the pseudo inverse pairs associated with the input pairs of hypermatrices
+
+    EXAMPLES:
+    ::
+        sage: HypermatrixInversePair(HM(2,2,2,'u'), HM(2,2,2,'v')) 
+        [x000 == -(u001*u010*v001*v100/((u001*u010*v001*v100/(u000*v000) - u011*v101)*u000^2*v000^2) - 1/(u000*v000))*(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010))/(g010*(u101*u110*v001*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*u100^2*v000^2) - 1/(u100*v000))),
+ x100 == -(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010))/g010,
+ x010 == (u101*u110*v001*v100/(u100*v000) - u111*v101)*u010*v110/((u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)*g110*u000*v010),
+ x110 == u110*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*g110*u100*v010),
+ x001 == u001*v011/((u001*u010*v011*v110/(u000*v010) - u011*v111)*g011*u000*v010),
+ x101 == (u001*u010*v001*v100/(u000*v000) - u011*v101)*u101*v011/((u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)*g011*u100*v010),
+ x011 == -1/((u001*u010*v011*v110/(u000*v010) - u011*v111)*g111),
+ x111 == -(u001*u010*v001*v100/(u000*v000) - u011*v101)/((u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)*g111),
+ y000 == g010*(u101*u110*v001*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*u100^2*v000^2) - 1/(u100*v000))/(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010)),
+ y100 == (u101*u110*v011*v110/(u100*v010) - u111*v111)*g110*v010*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*v000*v110),
+ y001 == (u001*u010*v011*v110/(u000*v010) - u011*v111)*g011*v001*v010/((u001*u010*v001*v100/(u000*v000) - u011*v101)*v000*v011),
+ y101 == (u001*u010*v011*v110/(u000*v010) - u011*v111)*g111/(u001*u010*v001*v100/(u000*v000) - u011*v101),
+ 1 == (u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)/((u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)),
+ 1 == (u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)/((u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)),
+ 1 == (u101*u110*v001*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*u100^2*v000^2) - 1/(u100*v000))*(u001*u010*v011*v110/((u001*u010*v011*v110/(u000*v010) - u011*v111)*u000^2*v010^2) - 1/(u000*v010))/((u001*u010*v001*v100/((u001*u010*v001*v100/(u000*v000) - u011*v101)*u000^2*v000^2) - 1/(u000*v000))*(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010))),
+ 1 == (u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)/((u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111))]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if U.is_cubical() and V.is_cubical() and U.dimensions()==V.dimensions() and U.order()==3:
+        # Initialization of the size parameter
+        sz=U.n(0)
+        # Initialization of the container matrix
+        M = Matrix(SR,HM(sz^3, sz^3, 'zero').listHM())
+        for i in range(sz):
+            for j in range(sz):
+                for k in range(sz):
+                    for t in range(sz):
+                        M[i*sz^2+j*sz+k,i*sz^2+j*sz+t]=U[i,t,k]*V[t,j,k]
+        # Computing the matrix inverse
+        B=M.inverse()
+        # Initializing the multiplicative constraints.
+        X=HM(sz,sz,sz,'x');Y=HM(sz,sz,sz,'y')
+        Eq=[X[i,s,t]+Y[s,j,t]==B[i*sz^2+j*sz+t,sz^2*i+sz*j+s] for i in range(sz) for j in range(sz) for s in range(sz) for t in range(sz)]
+        # Formating the constraints
+        [A,b]=ConstraintFormatorII(Eq, X.list()+Y.list())
+        Mx=Matrix(SR,A.ncols(), 1, X.list()+Y.list())
+        Mv=Matrix(SR,A.ncols(), 1, HM(sz,sz,sz,'f').list()+HM(sz,sz,sz,'g').list()) 
+        return multiplicative_linear_solver(A,b,Mx,Mv)
+    else:
+        raise ValueError, "The input hypermatrices must be cubical third order hypermatrices of the same sizes."
      
 def HypermatrixPseudoInversePairs(A,B):
     """
@@ -2949,7 +3023,7 @@ def ProbabilitySymMatrix(n, xi=0):
 
 def HypermatrixPseudoInversePairsII(A,B):
     """
-     Outputs the pseudo inverse pairs associated with the input pairs of matrices
+     Outputs the pseudo inverse pairs associated with the input pairs of hypermatrices
 
     EXAMPLES:
     ::
