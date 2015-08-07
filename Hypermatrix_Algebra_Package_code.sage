@@ -139,6 +139,8 @@ class HM:
         return GeneralHypermatrixKroneckerSum(self, V)
     def expand(self):
         return GeneralHypermatrixExpand(self)
+    def factor(self):
+        return GeneralHypermatrixFactor(self)
     def simplify(self):
         return GeneralHypermatrixSimplify(self)
     def canonicalize_radical(self):
@@ -687,6 +689,61 @@ def HypermatrixProduct(A, B, C):
 
     else :
         raise ValueError, "Hypermatrix dimension mismatch."
+
+def HypermatrixProductII(A, B, C, support):
+    """
+    Outputs a list of lists associated with the ternary
+    Bhattacharya-Mesner product of the input third order 
+    hypermatrices A, B and C. But we restrict the sum in products
+    to the support 
+    The code writen here handles both list of list data
+    structures as well as the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: M = HypermatrixProductII(HM(2,2,2,'a'), HM(2,2,2,'b'), HM(2,2,2,'c'), [0]); M
+        [[[a000*b000*c000, a001*b000*c001], [a000*b010*c010, a001*b010*c011]], [[a100*b100*c000, a101*b100*c001], [a100*b110*c010, a101*b110*c011]]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    typ = 'list'
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
+        A = A.listHM(); B = B.listHM(); C = C.listHM()
+        typ = 'HM'
+    # Setting the dimensions parameters.
+    n_a_rows = len(A)
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
+    n_b_rows = len(B)
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
+    n_c_rows = len(C)
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
+    # Test for dimension match
+    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
+        # Initialization of the hypermatrix
+        q = []
+        for i in range(n_a_rows):
+            q.append([])
+        for i in range(len(q)):
+            for j in range(n_b_cols):
+                (q[i]).append([])
+        for i in range(len(q)):
+            for j in range(len(q[i])):
+                for k in range(n_c_dpts):
+                    #(q[i][j]).append(sum([A[i][l][k]*B[i][j][l]*C[l][j][k] for l in range(n_a_cols)]))
+                    (q[i][j]).append(sum([A[i][l][k]*B[i][j][l]*C[l][j][k] for l in support]))
+        if typ=='list':
+            return q
+        else:
+            return HM(q)
+
+    else :
+        raise ValueError, "Hypermatrix dimension mismatch."
+
+
 
 def HypermatrixLogProduct(A, B, C):
     """
@@ -2161,6 +2218,44 @@ def GeneralHypermatrixExpand(A):
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=(A[tuple(entry)]).expand()
     return Rh
+
+def GeneralHypermatrixFactor(A):
+    """
+    Outputs a list of lists associated with the general
+    hypermatrix with expressions in the entries in their
+    factored form.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+    ::
+        sage: sz=2; vx=HM(sz,'x').list(); vy=HM(sz,'y').list(); vz=HM(sz,'z').list()
+        sage: X=HM(sz, 1, sz, [vx[u] for v in range(sz) for t in range(1) for u in range(sz)])
+        sage: Y=HM(sz, 1, sz, [vy[u] for v in range(sz) for t in range(1) for u in range(sz)])
+        sage: Z=HM(sz, 1, sz, [vz[u] for v in range(sz) for t in range(1) for u in range(sz)])
+        sage: A=Prod(X, Y.transpose(2), Z.transpose())
+        sage: GeneralHypermatrixFactor(Prod(A,A,A))
+        [[[(x0*y0*z0 + x1*y1*z1)*x0^2*y0^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x0^2*y0^2*z1^2], [(x0*y0*z0 + x1*y1*z1)*x0^2*y1^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x0^2*y1^2*z1^2]], [[(x0*y0*z0 + x1*y1*z1)*x1^2*y0^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x1^2*y0^2*z1^2], [(x0*y0*z0 + x1*y1*z1)*x1^2*y1^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x1^2*y1^2*z1^2]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=(A[tuple(entry)]).factor()
+    return Rh
+
 
 def GeneralHypermatrixSimplify(A):
     """
