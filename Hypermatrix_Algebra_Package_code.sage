@@ -254,6 +254,19 @@ class HM:
         return GeneralHypermatrixCopy(self)
     def norm(self,p=2):
         return sum([abs(i)^p for i in self.list()])
+    def per(self):
+        if self.order()==2:
+            return Per(Matrix(SR,self.listHM()))
+        elif self.order()==3:
+            return ThirdOrderPermanent(self)
+        elif self.order()==4:
+            return FourthOrderPermanent(self)
+        elif self.order()==5:
+            return FifthOrderPermanent(self)
+        elif self.order()==6:
+            return SixthOrderPermanent(self)
+        else:
+            raise ValueError, "The permanent is not implemented for order "+str(self.order())+"."
     def det(self):
         if self.order()==2:
             return Deter(Matrix(SR,self.listHM()))
@@ -280,7 +293,7 @@ class HM:
 def MatrixGenerate(nr, nc, c):
     """
     Generates a list of lists associated with a symbolic nr x nc
-    matrix using the input character c followed by indices.
+    matrix by indexing the input character c by the indices.
 
     EXAMPLES:
     ::
@@ -291,8 +304,7 @@ def MatrixGenerate(nr, nc, c):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Setting the dimensions parameters.
-    n_q_rows = nr
-    n_q_cols = nc
+    n_q_rows = nr; n_q_cols = nc
     # Test for dimension match
     if n_q_rows > 0 and n_q_cols > 0:
         # Initialization of the hypermatrix
@@ -310,8 +322,7 @@ def MatrixGenerate(nr, nc, c):
 def SymMatrixGenerate(nr, c):
     """
     Generates a list of lists associated with a symbolic nr x nr
-    symmetric matrix using the input character c followed by
-    indices.
+    symmetric matrix by indexing the input character c by indices.
 
     EXAMPLES:
     ::
@@ -322,9 +333,7 @@ def SymMatrixGenerate(nr, c):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Setting the dimensions parameters.
-    n_q_rows = nr
-    n_q_cols = nr
-
+    n_q_rows = nr; n_q_cols = nr
     # Test for dimension match
     if n_q_rows > 0 and n_q_cols > 0:
         # Initialization of the hypermatrix
@@ -336,7 +345,6 @@ def SymMatrixGenerate(nr, c):
                 # Filling up the matrix
                 (q[i]).append(var(c+str(min(i,j))+str(max(i,j))))
         return q
-
     else :
         raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integers."
 
@@ -745,18 +753,17 @@ def HypermatrixProductII(A, B, C, support):
 
 
 
-def HypermatrixLogProduct(A, B, C):
+def HypermatrixLogProduct(A,B,C):
     """
     Outputs a list of lists associated with the ternary
     product of the input hypermatrices A, B and C.
 
     EXAMPLES:
     ::
-        sage: Ha = HypermatrixGenerate(2, 1, 2, 'a')
-        sage: Hb = HypermatrixGenerate(2, 2, 1, 'b')
-        sage: Hc = HypermatrixGenerate(1, 2, 2, 'c')
-        sage: Rslt = HypermatrixProduct(Ha, Hb, Hc); Rslt
-
+        sage: Ha=HM(2,1,2,'a'); Hb=HM(2,2,1,'b'); Hc=HM(1,2,2,'c')
+        sage: HypermatrixProduct(Ha,Hb,Hc)
+        [[[a000+b000+c000, a001+b000+c001], [a000+b010+c010, a001+b010+c011]],
+         [[a100+b100+c000, a101+b100+c001], [a100+b110+c010, a101+b110+c011]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -2953,6 +2960,23 @@ def Deter(A):
     P = Permutations(range(A.nrows()))
     return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([A[k][p[k]] for k in range(A.nrows())]) for p in P])
  
+def Per(A):
+    """
+    Computes symbolically the determinant of a square matrix
+    using the sum over permutation formula.
+
+    EXAMPLES:
+    ::
+        sage: M = Matrix(SR, MatrixGenerate(2, 2, 'm')); Deter(M)
+        -m01*m10 + m00*m11
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the permutations
+    P = Permutations(range(A.nrows()))
+    return sum([prod([A[k][p[k]] for k in range(A.nrows())]) for p in P])
+ 
 def MeanApproximation(T):
     """
     Computes  the mean slice approximation. This is mostly used for images
@@ -3834,8 +3858,8 @@ def PathAdjcencyHypermatrix(A, pthl):
     EXAMPLES:
     ::
         sage: M = HM(2,2,'a')
-        sage: A = PathAdjcencyHypermatrix(M, k)
-        [[[a000*b000,a001*b001],[a010*b010,a011*b011]],[[a100*b100,a101*b101],[a110*b110,a111*b111]]]
+        sage: A = PathAdjcencyHypermatrix(M, 3)
+        [[[a00^2, a00*a01], [a01*a10, a01*a11]], [[a00*a10, a01*a10], [a10*a11, a11^2]]]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -3880,7 +3904,6 @@ def  GeneralHypermatrixCayleyHamiltonB(A, t):
     """
     # Initializing the hypermatrix order.
     od = A.order()
-
     # Verifying that the input hypermatrix is cubic
     if len(Set([A.n(i) for i in range(od)]).list()) == 1:
         # initial conditions for the recurrence.
@@ -3899,74 +3922,6 @@ def  GeneralHypermatrixCayleyHamiltonB(A, t):
     else:
         # return the error message if the input hypermatrix is cubic
         raise ValueError, "The input hypermpatrix must be cubic"
-
-def Rank1ApproximationI(A):
-    # Initializing the list of variables
-    VbL=[var('ln_u'+str(i)) for i in range(A.n(0))]+[var('ln_v'+str(j)) for j in range(A.n(1))]+[var('ln_w'+str(k)) for k in range(A.n(2))]
-    # Initialization of the constraints
-    CnL=[var('ln_u'+str(i))+var('ln_v'+str(j))+var('ln_w'+str(k))==ln(A[i,j,k]) for i in range(A.n(0)) for j in range(A.n(1)) for k in range(A.n(2))]
-    # Initialization of the matrix and right hand side
-    [M,b] = ConstraintFormatorII(CnL,VbL)
-    # Importing the numpy library
-    import numpy
-    # computing the least square solution to the problem
-    sln = matrix(numpy.linalg.pinv(M))*b
-    # Filling up the hypermatrix
-    U = HM(A.n(0), 1     , 1     , 'zero')
-    V = HM(1     , A.n(1), 1     , 'zero')
-    W = HM(1     , 1     , A.n(2), 'zero')    
-    for i in range(A.n(0)):
-        U[i,0,0]=sln[0 + i, 0]
-    for j in range(A.n(1)):
-        V[0,j,0]=sln[A.n(0) + j, 0]
-    for k in range(A.n(2)):
-        W[0,0,k]=sln[A.n(0) + A.n(1) + k, 0]
-    return [M,VbL,b,U.elementwise_base_exponent(e),V.elementwise_base_exponent(e),W.elementwise_base_exponent(e)]
-
-def Rank1ApproximationII(A):
-    # Initializing the list of variables
-    VbL=[var('ln_u'+str(i)+'0'+str(k)) for i in range(A.n(0)) for k in range(A.n(2))]+[var('ln_v'+str(i)+str(j)+'0') for i in range(A.n(0)) for j in range(A.n(1))]+[var('ln_w'+'0'+str(j)+str(k)) for j in range(A.n(1)) for k in range(A.n(2))]
-    # Initialization of the constraints
-    CnL=[var('ln_u'+str(i)+'0'+str(k))+var('ln_v'+str(i)+str(j)+'0')+var('ln_w'+'0'+str(j)+str(k))==ln(A[i,j,k]) for i in range(A.n(0)) for j in range(A.n(1)) for k in range(A.n(2))]
-    [M,b] = ConstraintFormatorII(CnL,VbL)
-    # Importing the numpy library
-    import numpy
-    # computing the least square solution to the problem
-    sln = matrix(numpy.linalg.pinv(M))*b
-    # Filling up the hypermatrix
-    U = HM(A.n(0), 1     , A.n(2), 'zero')
-    V = HM(A.n(0), A.n(1), 1     , 'zero')
-    W = HM(1     , A.n(1), A.n(2), 'zero')
-    for i in range(A.n(0)):
-        for k in range(A.n(2)):
-            U[i,0,k]=sln[0 + A.n(2)*i+k,0]
-    for i in range(A.n(0)):
-        for j in range(A.n(1)):
-            V[i,j,0]=sln[A.n(0)*A.n(2) + A.n(1)*i+j,0]
-    for j in range(A.n(1)):
-        for k in range(A.n(2)):
-            W[0,j,k]=sln[A.n(0)*A.n(2) + A.n(0)*A.n(1) + A.n(2)*j+k,0]
-    return [M,VbL,b,U.elementwise_base_exponent(e),V.elementwise_base_exponent(e),W.elementwise_base_exponent(e)]
-
-def Rank1MulMtrxApprox(A):
-    # Initializing the list of variables
-    VbL=[var('ln_u'+'0'+str(i)) for i in range(A.n(0))]+[var('ln_v'+str(j)+'0') for j in range(A.n(1))]
-    # Initialization of the constraints
-    CnL=[var('ln_u'+'0'+str(i))+var('ln_v'+str(j)+'0')==ln(A[i,j]) for i in range(A.n(0)) for j in range(A.n(1))]
-    # Initializing the constraints
-    [M, b] = ConstraintFormatorII(CnL, VbL)
-    # Importing the numpy library
-    import numpy
-    # computing the least square solution to the problem
-    sln = matrix(numpy.linalg.pinv(M))*b
-    # Filling up the hypermatrix
-    U = HM(A.n(0), 1     , 'zero')
-    V = HM(1     , A.n(1), 'zero')
-    for i in range(A.n(0)):
-        U[i,0]=sln[0 + i, 0]
-    for j in range(A.n(1)):
-        V[0,j]=sln[A.n(0) + j, 0]
-    return [M,VbL,b,U.elementwise_base_exponent(e), V.elementwise_base_exponent(e)]
 
 def fast_reduce(f, monom, subst):
     """
@@ -4052,6 +4007,39 @@ def ThirdOrderHyperdeterminant(H):
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
 
+def ThirdOrderPermanent(H):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A=HM(2,2,2,'a')
+        sage: ThirdOrderPermanent(A)
+        a000*a011*a101*a110+a001*a010*a100*a111
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==3:
+        # Initializing the matrix for the mnemonic construction
+        A=Matrix(SR,H.n(0),H.n(0),[var('x'+str(i)+str(j)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        # Computing the mnemonique polynomial
+        P=Permutations(range(A.nrows()))
+        L=expand(sum([prod([(A[k][p[k]]) for k in range(A.nrows())]) for p in P])*prod([sum([prod([(A[k][p[k]])^j for k in range(A.nrows())]) for p in P]) for j in range(2,H.n(0)+1)])).operands()
+        # Computing the polynomial
+        f=sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
+        # Loop performing the umbral expression
+        for k in range(H.n(0),0,-1):
+            f=fast_reduce(f,[var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-1,j-1,k-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
+
+
 def ThirdOrderHyperdeterminantII(A):
     """
     computes third order hypermatrix determinant
@@ -4129,6 +4117,37 @@ def FourthOrderHyperdeterminant(H):
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a fourth order hypercube hypermatrix."
 
+def FourthOrderPermanent(H):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A = HM(2,2,2,2,'a')
+        sage: FourthOrderPermanent(A)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==4:
+        # Initializing the matrix for the mnemonic construction
+        A=HM(H.n(0),H.n(0),H.n(0), [var('x'+str(i)+str(j)+str(k)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
+        # Computing the polynomial
+        L=expand(ThirdOrderPermanent(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in ThirdOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        # Computing the polynomial
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^3])
+        # Loop performing the umbral expression
+        for l in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k))^l for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)),H[i-1,j-1,k-1,l-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a fourth order hypercube hypermatrix."
+
 def FifthOrderHyperdeterminant(H):
     """
     computes third order hypermatrix determinant
@@ -4159,6 +4178,36 @@ def FifthOrderHyperdeterminant(H):
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a fifth order hypercube hypermatrix."
 
+def FifthOrderPermanent(H):
+    """
+    computes fifth order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A = HM(2,2,2,2,2,'a')
+        sage: FifthOrderHyperdeterminant(A)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==5:
+        # Initializing the matrix for the mnemonic construction
+        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
+        # Computing the polynomial
+        L = expand(FourthOrderPermanent(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FourthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^4])
+        # Loop performing the umbral expression
+        for m in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l))^m for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)),H[i-1,j-1,k-1,l-1,m-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a fifth order hypercube hypermatrix."
+
 def SixthOrderHyperdeterminant(H):
     """
     computes third order hypermatrix determinant
@@ -4180,6 +4229,36 @@ def SixthOrderHyperdeterminant(H):
         A=HM(H.n(0),H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
         L = expand(FifthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^5])
+        # Loop performing the umbral expression
+        for p in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l)+str(m))^p for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)),H[i-1,j-1,k-1,l-1,m-1,p-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0)) for p in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a sixth order hypercube hypermatrix."
+
+def SixthOrderPermanent(H):
+    """
+    computes third order hypermatrix determinant
+    
+    EXAMPLES:
+ 
+    ::  
+        sage: A = HM(2,2,2,2,2,2,'a')
+        sage: SixthOrderHyperdeterminant(A)
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==6:
+        # Initializing the matrix for the mnemonic construction
+        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
+        # Computing the polynomial
+        L = expand(FifthOrderPermanent(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         f = sum([l for l in L if len((l^2).operands())==(H.n(0))^5])
         # Loop performing the umbral expression
         for p in range(H.n(0),0,-1):
@@ -5882,7 +5961,7 @@ def Triangulations(A,Ha,n,sz):
             gu = gu+[Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in Triangulations(A,Ha,i,sz) for g2 in Triangulations(A,Ha,n-i,sz)]
         return gu
 
-def TriangulationGraphs(sz):
+def TriangulationGraphsEdgeList(sz):
     """
     Takes as input the size paramater which corresponds to the number of vertices of the graph
     and outputs list of triangulation of the convex regular polygon. Each graph in the list
@@ -5890,7 +5969,7 @@ def TriangulationGraphs(sz):
     
      EXAMPLES:
     ::
-        sage: TriangulationGraphs(4)
+        sage: TriangulationGraphsEdgeList(4)
         [[a01, a03, a12, a13, a23], [a01, a02, a03, a12, a23]]
 
     AUTHORS:
@@ -5910,7 +5989,7 @@ def TriangulationGraphs(sz):
         list_of_graphs.append((Set(h.list()).list())[1].operands())
     return list_of_graphs
 
-def TriangulationGraphsII(sz):
+def TriangulationGraphsTriangleList(sz):
     """
     Takes as input the size paramater which corresponds to the number of vertices of the graph
     and outputs list of triangulation of the convex regular polygon. Each graph in the list
@@ -5919,22 +5998,21 @@ def TriangulationGraphsII(sz):
     
      EXAMPLES:
     ::
-        sage: TriangulationGraphsII(4)
-        [[[a01^b01, a03^b03, a13^b13], [a12^b12, a13^b13, a23^b23]], [[a01^b01, a02^b02, a12^b12], [a02^b02, a03^b03, a23^b23]]]
+        sage: TriangulationGraphsTriangleList(4)
+        [[[a01, a03, a13], [a12, a13, a23]], [[a01, a02, a12], [a02, a03, a23]]]
 
     AUTHORS:
     - Edinah K. Gnang
     """
     # Obtaining the list of triangles from edge list
-    L=TriangulationGraphs(sz)
+    L=TriangulationGraphsEdgeList(sz)
     # Initializing the list of graphs
     list_of_graphs=[]
     for l in L:
         # Initializing the color variables
         Ha=HM(sz,sz,'a')
-        Hb=HM(sz,sz,'b')
         # Initialzing the colored hypermatrix
-        Ht=Ha**Hb
+        Ht=Ha
         for i in range(sz):
             for j in range(sz):
                 if Ha[i,j] not in l:
@@ -5942,6 +6020,44 @@ def TriangulationGraphsII(sz):
         # Initialization of the result
         Hr=GeneralHypermatrixHadamardProduct(Prod(Ht,Ht),Ht)
         list_of_graphs.append([f. operands() for f in Set(Hr.list()).difference(Set([0])).list()])
+    return list_of_graphs
+
+def TriangulationGraphsDualAdjacencyMatrixList(sz):
+    """
+    Takes as input the size paramater which corresponds to the number of vertices of the graph
+    and outputs list of triangulation of the convex regular polygon. Each graph in the list
+    is describe by as a list of triangle specified by their edges with exponential variables
+    associated with edge colorings.
+    
+     EXAMPLES:
+    ::
+        sage: TriangulationGraphsDualAdjacencyMatrixList(5)
+        [
+        [0 1 1]  [0 0 1]  [0 1 0]
+        [1 0 0]  [0 0 1]  [1 0 1]
+        [1 0 0], [1 1 0], [0 1 0]
+        ]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Obtaining the list of graphs as list of triangles
+    L = TriangulationGraphsTriangleList(sz)
+    list_of_graphs=[]
+    for l in L:
+        # Initialization of the temporary adjacency matrix
+        TmpA = Matrix(SR,HM(sz-2,sz-2,'zero').listHM())
+        for i in range(1,len(l)):
+            for j in range(i):
+                if not Set(l[i]).intersection(Set(l[j])).is_empty():
+                    TmpA[i,j]=1; TmpA[j,i]=1
+        repeat=False
+        for M in list_of_graphs:
+            if (M-TmpA).is_zero():
+                repeat=True
+                break
+        if not repeat:
+            list_of_graphs.append(copy(TmpA)) 
     return list_of_graphs
 
 def Tetrahedralizations(A,B,n,sz):
