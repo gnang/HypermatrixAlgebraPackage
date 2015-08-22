@@ -5935,7 +5935,7 @@ def ThirdOrderDerivation(sz):
 
 def Triangulations(A,Ha,n,sz):
     """
-    Outpts a list of second order hypermatrices each of which have a single nonzero symbolic entry which
+    Outputs a list of second order hypermatrices each of which have a single nonzero symbolic entry which
     describes a triangulation of a regular polygon on n vertices. The input matrix is meant to be 
     upper-triangular matrices.
 
@@ -5982,7 +5982,7 @@ def TriangulationGraphsEdgeList(sz):
             A[i0,i1]=0
     # Computing the list of triangulations
     L=Triangulations(A,A,sz-1,sz)
-    # Initializing the list which will store triangularions
+    # Initializing the list which will store triangulations
     # as a list of edges  
     list_of_graphs=[]
     for h in L:
@@ -6032,32 +6032,57 @@ def TriangulationGraphsDualAdjacencyMatrixList(sz):
      EXAMPLES:
     ::
         sage: TriangulationGraphsDualAdjacencyMatrixList(5)
-        [
-        [0 1 1]  [0 0 1]  [0 1 0]
-        [1 0 0]  [0 0 1]  [1 0 1]
-        [1 0 0], [1 1 0], [0 1 0]
-        ]
-
+        [[
+        [0 0 1]                                     
+        [0 0 1]                                     
+        [1 1 0], [a01, a04, a12, a14, a23, a24, a34],
+        
+        [[a01, a04, a14], [a23, a24, a34], [a12, a14, a24]]
+        ],
+         [
+        [0 0 1]                                     
+        [0 0 1]                                     
+        [1 1 0], [a01, a04, a12, a13, a14, a23, a34],
+        
+        [[a01, a04, a14], [a12, a13, a23], [a13, a14, a34]]
+        ],
+         [
+        [0 0 1]                                     
+        [0 0 1]                                     
+        [1 1 0], [a01, a02, a04, a12, a23, a24, a34],
+        
+        [[a01, a02, a12], [a23, a24, a34], [a02, a04, a24]]
+        ],
+         [
+        [0 1 0]                                     
+        [1 0 1]                                     
+        [0 1 0], [a01, a03, a04, a12, a13, a23, a34],
+        
+        [[a03, a04, a34], [a01, a03, a13], [a12, a13, a23]]
+        ],
+         [
+        [0 0 1]                                     
+        [0 0 1]                                     
+        [1 1 0], [a01, a02, a03, a04, a12, a23, a34],
+        
+        [[a01, a02, a12], [a03, a04, a34], [a02, a03, a23]]
+        ]]
+        
     AUTHORS:
     - Edinah K. Gnang
     """
     # Obtaining the list of graphs as list of triangles
     L = TriangulationGraphsTriangleList(sz)
+    L2= TriangulationGraphsEdgeList(sz)
     list_of_graphs=[]
-    for l in L:
+    for l in range(len(L)):
         # Initialization of the temporary adjacency matrix
         TmpA = Matrix(SR,HM(sz-2,sz-2,'zero').listHM())
-        for i in range(1,len(l)):
+        for i in range(1,len(L[l])):
             for j in range(i):
-                if not Set(l[i]).intersection(Set(l[j])).is_empty():
+                if not Set(L[l][i]).intersection(Set(L[l][j])).is_empty():
                     TmpA[i,j]=1; TmpA[j,i]=1
-        repeat=False
-        for M in list_of_graphs:
-            if (M-TmpA).is_zero():
-                repeat=True
-                break
-        if not repeat:
-            list_of_graphs.append(copy(TmpA)) 
+        list_of_graphs.append([copy(TmpA),L2[l],L[l]]) 
     return list_of_graphs
 
 def Tetrahedralizations(A,B,n,sz):
