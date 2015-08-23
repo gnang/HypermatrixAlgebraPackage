@@ -5989,6 +5989,39 @@ def TriangulationGraphsEdgeList(sz):
         list_of_graphs.append((Set(h.list()).list())[1].operands())
     return list_of_graphs
 
+def TriangulationGraphsAdjacencyMatrix(sz):
+    """
+    Takes as input the size paramater which corresponds to the number of vertices of the graph
+    and outputs list of triangulation of the convex regular polygon. Each graph in the list
+    is describe by its adjacency matrix.
+    
+     EXAMPLES:
+    ::
+        sage: TriangulationGraphsAdjacencyMatrix(4)
+        [
+        [0 1 0 1]  [0 1 1 1]
+        [1 0 1 1]  [1 0 1 0]
+        [0 1 0 1]  [1 1 0 1]
+        [1 1 1 0], [1 0 1 0]
+        ]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Obtaining the list of triangles from edge list
+    L=TriangulationGraphsEdgeList(sz)
+    # Initializing the list of graphs
+    list_of_graphs=[]
+    for l in L:
+        Ha=HM(sz,sz,'a'); Ht=HM(sz,sz,'zero')
+        for i in range(1,sz):
+            for j in range(i):
+                if Ha[j,i] in l:
+                    Ht[j,i]=1; Ht[i,j]=1
+        # Initialization of the result
+        list_of_graphs.append(Matrix(SR,Ht.listHM()))
+    return list_of_graphs
+
 def TriangulationGraphsTriangleList(sz):
     """
     Takes as input the size paramater which corresponds to the number of vertices of the graph
@@ -6019,7 +6052,7 @@ def TriangulationGraphsTriangleList(sz):
                     Ht[i,j]=0
         # Initialization of the result
         Hr=GeneralHypermatrixHadamardProduct(Prod(Ht,Ht),Ht)
-        list_of_graphs.append([f. operands() for f in Set(Hr.list()).difference(Set([0])).list()])
+        list_of_graphs.append([f.operands() for f in Set(Hr.list()).difference(Set([0])).list()])
     return list_of_graphs
 
 def TriangulationGraphsDualAdjacencyMatrixList(sz):
@@ -6039,28 +6072,28 @@ def TriangulationGraphsDualAdjacencyMatrixList(sz):
         
         [[a01, a04, a14], [a23, a24, a34], [a12, a14, a24]]
         ],
-         [
+        [
         [0 0 1]                                     
         [0 0 1]                                     
         [1 1 0], [a01, a04, a12, a13, a14, a23, a34],
         
         [[a01, a04, a14], [a12, a13, a23], [a13, a14, a34]]
         ],
-         [
+        [
         [0 0 1]                                     
         [0 0 1]                                     
         [1 1 0], [a01, a02, a04, a12, a23, a24, a34],
         
         [[a01, a02, a12], [a23, a24, a34], [a02, a04, a24]]
         ],
-         [
+        [
         [0 1 0]                                     
         [1 0 1]                                     
         [0 1 0], [a01, a03, a04, a12, a13, a23, a34],
         
         [[a03, a04, a34], [a01, a03, a13], [a12, a13, a23]]
         ],
-         [
+        [
         [0 0 1]                                     
         [0 0 1]                                     
         [1 1 0], [a01, a02, a03, a04, a12, a23, a34],
@@ -6141,5 +6174,4 @@ def RandomTriangulation(A,Ha,n,sz):
         gu = []
         j = RollLD([Ca(i)*Ca(n-i) for i in range(1,n+1)])
         return [Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in RandomTriangulation(A,Ha,j,sz) for g2 in RandomTriangulation(A,Ha,n-j,sz)]
-
 
