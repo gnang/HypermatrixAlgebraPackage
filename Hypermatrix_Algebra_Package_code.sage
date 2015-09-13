@@ -124,7 +124,7 @@ class HM:
         return GeneralHypermatrixBaseExponent(self, s)
     def elementwise_base_logarithm(self, s):
         return GeneralHypermatrixLogarithm(self, s)
-    def slicekroneckerproduct(self, V):
+    def tensor_product(self, V):
         if  self.order()==2:
             return SecondOrderSliceKroneckerProduct(self, V)
         elif self.order()==3:
@@ -751,8 +751,6 @@ def HypermatrixProductII(A, B, C, support):
     else :
         raise ValueError, "Hypermatrix dimension mismatch."
 
-
-
 def HypermatrixLogProduct(A,B,C):
     """
     Outputs a list of lists associated with the ternary
@@ -810,9 +808,9 @@ def HypermatrixKroneckerProduct(A, B, C):
 
     EXAMPLES:
     ::
-        sage: X=HypermatrixGenerate(2,1,1,'x'); Y=HypermatrixGenerate(1,2,1,'y'); Z=HypermatrixGenerate(1,1,2,'z') 
+        sage: X=HM(2, 1, 1, HM(2, 'x').list()); Y=HM(1, 2, 1, HM(2, 'y').list()); Z=HM(1, 1, 2, HM(2, 'z').list())
         sage: T=HypermatrixKroneckerProduct(X, Y, Z); T
-        [[[x000*y000*z000, x000*y000*z001], [x000*y010*z000, x000*y010*z001]], [[x100*y000*z000, x100*y000*z001], [x100*y010*z000, x100*y010*z001]]]
+        [[[x0*y0*z0, x0*y0*z1], [x0*y1*z0, x0*y1*z1]], [[x1*y0*z0, x1*y0*z1], [x1*y1*z0, x1*y1*z1]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -1170,13 +1168,13 @@ def Orthogonal3x3x3Hypermatrix(t1,t2):
     s2=sin(t2)^(2/3)
     return [[[c1,s1*c2,0],[s1*c2,s1*s2,0],[s1*s2,exp(-I*2*pi/3)*c1,0]], [[s1*s2,c1,exp(-I*2*pi/3)*s1*c2],[exp(I*2*pi/3)*c1,s1*c2,s1*s2], [s1*c2,s1*s2,c1]],[[0,s1*s2,c1],[0,c1,s1*c2],[0,exp(I*2*pi/3)*s1*c2,s1*s2]]]
 
-def HypermatrixCayleyHamiltonStringList(n):
+def HypermatrixCayleyHamiltonStringList(n,c):
     """
     Outpts a list of strings describint hypermatrix powers of degree n. 
 
      EXAMPLES:
     ::
-        sage: HypermatrixCayleyHamiltonStringList(5)
+        sage: HypermatrixCayleyHamiltonStringList(5,'A')
         ['Prod(A,A,Prod(A,A,A))',
          'Prod(A,Prod(A,A,A),A)',
          'Prod(Prod(A,A,A),A,A)']
@@ -1185,12 +1183,12 @@ def HypermatrixCayleyHamiltonStringList(n):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     if n == 1:
-        return ['A']
+        return [c]
     else:
         gu = []
         for i in range(1,n,2):
             for j in range(1,n-i,2):
-                gu = gu + ["Prod("+g1+", "+g2+", "+g3+")" for g1 in HypermatrixCayleyHamiltonStringList(i) for g2 in HypermatrixCayleyHamiltonStringList(j) for g3 in HypermatrixCayleyHamiltonStringList(n-(i+j))]
+                gu = gu + ["Prod("+g1+", "+g2+", "+g3+")" for g1 in HypermatrixCayleyHamiltonStringList(i,c) for g2 in HypermatrixCayleyHamiltonStringList(j,c) for g3 in HypermatrixCayleyHamiltonStringList(n-(i+j),c)]
         return gu
 
 def HypermatrixCayleyHamiltonList(A,n):
@@ -1722,29 +1720,25 @@ def substitute_matrix(p, vrbl, A):
     else:
         raise ValueError, "Must be a polynomial in the input variable."
 
-def HypermatrixInversePair(U,V):
+def OuterHypermatrixInversePair(U, V):
     """
     Outputs the pseudo inverse pairs associated with the input pairs of hypermatrices
 
     EXAMPLES:
     ::
-        sage: HypermatrixInversePair(HM(2,2,2,'u'), HM(2,2,2,'v')) 
-        [x000 == -(u001*u010*v001*v100/((u001*u010*v001*v100/(u000*v000) - u011*v101)*u000^2*v000^2) - 1/(u000*v000))*(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010))/(g010*(u101*u110*v001*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*u100^2*v000^2) - 1/(u100*v000))),
- x100 == -(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010))/g010,
- x010 == (u101*u110*v001*v100/(u100*v000) - u111*v101)*u010*v110/((u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)*g110*u000*v010),
- x110 == u110*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*g110*u100*v010),
- x001 == u001*v011/((u001*u010*v011*v110/(u000*v010) - u011*v111)*g011*u000*v010),
- x101 == (u001*u010*v001*v100/(u000*v000) - u011*v101)*u101*v011/((u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)*g011*u100*v010),
- x011 == -1/((u001*u010*v011*v110/(u000*v010) - u011*v111)*g111),
- x111 == -(u001*u010*v001*v100/(u000*v000) - u011*v101)/((u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)*g111),
- y000 == g010*(u101*u110*v001*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*u100^2*v000^2) - 1/(u100*v000))/(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010)),
- y100 == (u101*u110*v011*v110/(u100*v010) - u111*v111)*g110*v010*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*v000*v110),
- y001 == (u001*u010*v011*v110/(u000*v010) - u011*v111)*g011*v001*v010/((u001*u010*v001*v100/(u000*v000) - u011*v101)*v000*v011),
- y101 == (u001*u010*v011*v110/(u000*v010) - u011*v111)*g111/(u001*u010*v001*v100/(u000*v000) - u011*v101),
- 1 == (u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)/((u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)),
- 1 == (u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111)/((u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)),
- 1 == (u101*u110*v001*v100/((u101*u110*v001*v100/(u100*v000) - u111*v101)*u100^2*v000^2) - 1/(u100*v000))*(u001*u010*v011*v110/((u001*u010*v011*v110/(u000*v010) - u011*v111)*u000^2*v010^2) - 1/(u000*v010))/((u001*u010*v001*v100/((u001*u010*v001*v100/(u000*v000) - u011*v101)*u000^2*v000^2) - 1/(u000*v000))*(u101*u110*v011*v110/((u101*u110*v011*v110/(u100*v010) - u111*v111)*u100^2*v010^2) - 1/(u100*v010))),
- 1 == (u001*u010*v001*v100/(u000*v000) - u011*v101)*(u101*u110*v011*v110/(u100*v010) - u111*v111)/((u101*u110*v001*v100/(u100*v000) - u111*v101)*(u001*u010*v011*v110/(u000*v010) - u011*v111))]
+        sage: Hu=HM(2,2,2,'u'); Hv=HM(2,2,2,'v')
+        sage: [Sln, Tx, Ty]=OuterHypermatrixInversePair(Hu, Hv)
+        sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]])) 
+        sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]]))
+        sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
+        [a000,
+         a100,
+         (u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)*a010/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)),
+         a110,
+         a001,
+         a101,
+         a011,
+         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)*a111/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111))]  
 
 
     AUTHORS:
@@ -1761,18 +1755,72 @@ def HypermatrixInversePair(U,V):
                     for t in range(sz):
                         M[i*sz^2+j*sz+k,i*sz^2+j*sz+t]=U[i,t,k]*V[t,j,k]
         # Computing the matrix inverse
-        B=M.inverse()
+        #B=M.inverse()
+        Fq=(Prod(HM(M.nrows(), M.ncols(), M.list()).transpose(), HM(M.nrows(), M.ncols(), 'z'))-HM(2, M.nrows(), 'kronecker')).list()
+        [F, g]=ConstraintFormatorIV(Fq, HM(M.nrows(), M.ncols(), 'z').list())
+        Mz=Matrix(SR, F.ncols(), 1, HM(M.nrows(), M.ncols(), 'z').list())
+        TSln=linear_solver(F.transpose()*F, F.transpose()*g, Mz, Mz)
+        B=Matrix(SR, HM(M.nrows(), M.ncols(), 'z').subs(dict([(s.lhs(),s.rhs()) for s in TSln])).listHM())
         # Initializing the multiplicative constraints.
         X=HM(sz,sz,sz,'x');Y=HM(sz,sz,sz,'y')
         Eq=[X[i,s,t]+Y[s,j,t]==B[i*sz^2+j*sz+t,sz^2*i+sz*j+s] for i in range(sz) for j in range(sz) for s in range(sz) for t in range(sz)]
         # Formating the constraints
         [A,b]=ConstraintFormatorII(Eq, X.list()+Y.list())
-        Mx=Matrix(SR,A.ncols(), 1, X.list()+Y.list())
-        Mv=Matrix(SR,A.ncols(), 1, HM(sz,sz,sz,'f').list()+HM(sz,sz,sz,'g').list()) 
-        return multiplicative_linear_solver(A,b,Mx,Mv)
+        Mx=Matrix(SR, A.ncols(), 1, X.list()+Y.list())
+        return [multiplicative_linear_solver(A,b,Mx,Mx), X, Y]
     else:
         raise ValueError, "The input hypermatrices must be cubical third order hypermatrices of the same sizes."
-     
+
+def InnerHypermatrixInversePair(X, Y):
+    """
+    Outputs the pseudo inverse pairs associated with the input pairs of hypermatrices
+
+    EXAMPLES:
+    ::
+        sage: Hx=HM(2,2,2,'x'); Hy=HM(2,2,2,'y')
+        sage: [Sln, Tu, Tv]=InnerHypermatrixInversePair(Hx, Hy)
+        sage: Hu=Tu.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]])) 
+        sage: Hv=Tv.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]]))
+        sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
+        [a000,
+         a100,
+         (x101*x110*y001*y100 - x100*x111*y000*y101)*(x001*x010*y011*y110 - x000*x011*y010*y111)*a010/((x001*x010*y001*y100 - x000*x011*y000*y101)*(x101*x110*y011*y110 - x100*x111*y010*y111)),
+         a110,
+         a001,
+         a101,
+         (x101*x110*y001*y100 - x100*x111*y000*y101)*(x001*x010*y011*y110 - x000*x011*y010*y111)*a011/((x001*x010*y001*y100 - x000*x011*y000*y101)*(x101*x110*y011*y110 - x100*x111*y010*y111)),
+         a111]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if X.is_cubical() and Y.is_cubical() and X.dimensions()==Y.dimensions() and X.order()==3:
+        # Initialization of the size parameter
+        sz=X.n(0)
+        # Initialization of the container matrix
+        M=Matrix(SR,HM(sz^3, sz^3, 'zero').listHM())
+        for i in range(sz):
+            for j in range(sz):
+                for s in range(sz):
+                    for t in range(sz):
+                        M[i*sz^2+j*sz+t,sz^2*i+sz*j+s]=X[i,s,t]*Y[s,j,t]
+        # Computing the matrix inverse
+        #B=M.inverse()
+        Fq=(Prod(HM(M.nrows(), M.ncols(), M.list()).transpose(), HM(M.nrows(), M.ncols(), 'z'))-HM(2, M.nrows(), 'kronecker')).list()
+        [F, g]=ConstraintFormatorIV(Fq, HM(M.nrows(), M.ncols(), 'z').list())
+        Mz=Matrix(SR, F.ncols(), 1, HM(M.nrows(), M.ncols(), 'z').list())
+        TSln=linear_solver(F.transpose()*F, F.transpose()*g, Mz, Mz)
+        B=Matrix(SR, HM(M.nrows(), M.ncols(), 'z').subs(dict([(s.lhs(),s.rhs()) for s in TSln])).listHM())
+        # Initializing the multiplicative constraints.
+        U=HM(sz,sz,sz,'u'); V=HM(sz,sz,sz,'v')
+        Eq=[U[i,t,k]+V[t,j,k]==B[i*sz^2+j*sz+k,i*sz^2+j*sz+t] for i in range(sz) for j in range(sz) for k in range(sz) for t in range(sz)]
+        # Formating the constraints
+        [A,b]=ConstraintFormatorII(Eq, U.list()+V.list())
+        Mx=Matrix(SR, A.ncols(), 1, U.list()+V.list())
+        return [multiplicative_linear_solver(A,b,Mx,Mx), U, V]
+    else:
+        raise ValueError, "The input hypermatrices must be cubical third order hypermatrices of the same sizes."
+
 def HypermatrixPseudoInversePairs(A,B):
     """
      Outputs the pseudo inverse pairs associated with the input pairs of matrices
@@ -2367,7 +2415,7 @@ def GeneralHypermatrixSubstituteN(A, Dct):
     EXAMPLES:
     ::
         sage: A = HM(2,'a','sym')
-        sage: R = GeneralHypermatrixAdd(A,dict([(a011,var('x')),(a001,var('y')),(a000,var('z')),(a111,var('t'))]));R
+        sage: R = GeneralHypermatrixAdd(A,dict([(a011,var('x')),(a001,var('y')),(a000,var('z')),(a111,var('t'))])); R
         [[[z, y], [y, x]], [[y, x], [x, t]]]
 
     AUTHORS:
@@ -4344,7 +4392,6 @@ def DodgsonCondensation(A):
     - Edinah K. Gnang
     - To Do: 
     """
-
     if A.is_cubical() and A.n(0)>2:
         # Initializing the copy
         Bold=A.copy()
@@ -4712,7 +4759,7 @@ def FourthOrderHypermatrixResolutionPartition(Q, U, V, W, Ha, Hb, Hc, Hd):
     EXAMPLES:
  
     ::  
-        sage: [Q, U, V, W] = GeneralUncorrelatedHypermatrixTuple(3)
+        sage: [Q, U, V, W] = GeneralUncorrelatedHypermatrixTuple(4)
         sage: L = FourthOrderHypermatrixResolutionPartition(Q,U,V,W,HM(2,2,2,2,'a'),HM(2,2,2,2,'b'),HM(2,2,2,2,'c'), HM(2,2,2,2,'d'))
         sage: len(L)
         2
@@ -4915,18 +4962,6 @@ def gaussian_elimination(Cf, rs):
     - To Do: 
     """
     A=copy(Cf); b=copy(rs)
-    """
-    # Zero padding the matrix if necessary.
-    if A.nrows() < A.ncols():
-        # Temporary matrix for A
-        Ta = Matrix(SR, zero_matrix(A.ncols(), A.ncols()))
-        Ta[:A.nrows(), :A.ncols()] = copy(A)
-        # Temporary matrix for b
-        Tb = Matrix(SR, zero_matrix(A.ncols(), b.ncols())) 
-        Tb[:b.nrows(), :b.ncols()] = copy(b)
-        # replacing the matrix with the zero apdding.
-        A = Ta; b = Tb
-    """
     # Initialization of the row and column index
     i = 0; j = 0;
     while i < A.nrows() and j < A.ncols():
@@ -5222,7 +5257,7 @@ def multiplicative_matrix_product(A,B):
     - Edinah K. Gnang
     - To Do: 
     """
-    Rslt=Matrix(SR,zero_matrix(A.nrows(),B.ncols()))
+    Rslt=Matrix(SR,zero_matrix(A.nrows(), B.ncols()))
     for i in range(A.nrows()):
         for k in range(B.ncols()):
             Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
@@ -5375,7 +5410,7 @@ def ThirdOrderHadamardFactorization(Ha, Hb, Hc):
     ::  
         sage: [U,V,W]=ThirdOrderHadamardFactorization(HM(4,2,4,'a'),HM(4,4,2,'b'), HM(2,4,4,'c'))
         sage: Prod(U, V, W).simplify()
-[[[a000*b000*c000+a010*b001*c100,a001*b000*c001+a011*b001*c101,a002*b000*c002+a012*b001*c102,a003*b000*c003+a013*b001*c103],[a000*b010*c010+a010*b011*c110,a001*b010*c011+a011*b011*c111,a002*b010*c012+a012*b011*c112,a003*b010*c013+a013*b011*c113],[a000*b020*c020+a010*b021*c120,a001*b020*c021+a011*b021*c121,a002*b020*c022+a012*b021*c122,a003*b020*c023+a013*b021*c123],[a000*b030*c030+a010*b031*c130,a001*b030*c031+a011*b031*c131,a002*b030*c032+a012*b031*c132,a003*b030*c033+a013*b031*c133]],[[a100*b100*c000+a110*b101*c100,a101*b100*c001+a111*b101*c101,a102*b100*c002+a112*b101*c102,a103*b100*c003+a113*b101*c103],[a100*b110*c010+a110*b111*c110,a101*b110*c011+a111*b111*c111,a102*b110*c012+a112*b111*c112,a103*b110*c013+a113*b111*c113],[a100*b120*c020+a110*b121*c120,a101*b120*c021+a111*b121*c121,a102*b120*c022+a112*b121*c122,a103*b120*c023+a113*b121*c123],[a100*b130*c030+a110*b131*c130,a101*b130*c031+a111*b131*c131,a102*b130*c032+a112*b131*c132,a103*b130*c033+a113*b131*c133]],[[a200*b200*c000+a210*b201*c100,a201*b200*c001+a211*b201*c101,a202*b200*c002+a212*b201*c102,a203*b200*c003+a213*b201*c103],[a200*b210*c010+a210*b211*c110,a201*b210*c011+a211*b211*c111,a202*b210*c012+a212*b211*c112,a203*b210*c013+a213*b211*c113],[a200*b220*c020+a210*b221*c120,a201*b220*c021+a211*b221*c121,a202*b220*c022+a212*b221*c122,a203*b220*c023+a213*b221*c123],[a200*b230*c030+a210*b231*c130,a201*b230*c031+a211*b231*c131,a202*b230*c032+a212*b231*c132,a203*b230*c033+a213*b231*c133]],[[a300*b300*c000+a310*b301*c100,a301*b300*c001+a311*b301*c101,a302*b300*c002+a312*b301*c102,a303*b300*c003+a313*b301*c103],[a300*b310*c010+a310*b311*c110,a301*b310*c011+a311*b311*c111,a302*b310*c012+a312*b311*c112,a303*b310*c013+a313*b311*c113],[a300*b320*c020+a310*b321*c120,a301*b320*c021+a311*b321*c121,a302*b320*c022+a312*b321*c122,a303*b320*c023+a313*b321*c123],[a300*b330*c030+a310*b331*c130,a301*b330*c031+a311*b331*c131,a302*b330*c032+a312*b331*c132,a303*b330*c033+a313*b331*c133]]]
+        [[[a000*b000*c000+a010*b001*c100,a001*b000*c001+a011*b001*c101,a002*b000*c002+a012*b001*c102,a003*b000*c003+a013*b001*c103],[a000*b010*c010+a010*b011*c110,a001*b010*c011+a011*b011*c111,a002*b010*c012+a012*b011*c112,a003*b010*c013+a013*b011*c113],[a000*b020*c020+a010*b021*c120,a001*b020*c021+a011*b021*c121,a002*b020*c022+a012*b021*c122,a003*b020*c023+a013*b021*c123],[a000*b030*c030+a010*b031*c130,a001*b030*c031+a011*b031*c131,a002*b030*c032+a012*b031*c132,a003*b030*c033+a013*b031*c133]],[[a100*b100*c000+a110*b101*c100,a101*b100*c001+a111*b101*c101,a102*b100*c002+a112*b101*c102,a103*b100*c003+a113*b101*c103],[a100*b110*c010+a110*b111*c110,a101*b110*c011+a111*b111*c111,a102*b110*c012+a112*b111*c112,a103*b110*c013+a113*b111*c113],[a100*b120*c020+a110*b121*c120,a101*b120*c021+a111*b121*c121,a102*b120*c022+a112*b121*c122,a103*b120*c023+a113*b121*c123],[a100*b130*c030+a110*b131*c130,a101*b130*c031+a111*b131*c131,a102*b130*c032+a112*b131*c132,a103*b130*c033+a113*b131*c133]],[[a200*b200*c000+a210*b201*c100,a201*b200*c001+a211*b201*c101,a202*b200*c002+a212*b201*c102,a203*b200*c003+a213*b201*c103],[a200*b210*c010+a210*b211*c110,a201*b210*c011+a211*b211*c111,a202*b210*c012+a212*b211*c112,a203*b210*c013+a213*b211*c113],[a200*b220*c020+a210*b221*c120,a201*b220*c021+a211*b221*c121,a202*b220*c022+a212*b221*c122,a203*b220*c023+a213*b221*c123],[a200*b230*c030+a210*b231*c130,a201*b230*c031+a211*b231*c131,a202*b230*c032+a212*b231*c132,a203*b230*c033+a213*b231*c133]],[[a300*b300*c000+a310*b301*c100,a301*b300*c001+a311*b301*c101,a302*b300*c002+a312*b301*c102,a303*b300*c003+a313*b301*c103],[a300*b310*c010+a310*b311*c110,a301*b310*c011+a311*b311*c111,a302*b310*c012+a312*b311*c112,a303*b310*c013+a313*b311*c113],[a300*b320*c020+a310*b321*c120,a301*b320*c021+a311*b321*c121,a302*b320*c022+a312*b321*c122,a303*b320*c023+a313*b321*c123],[a300*b330*c030+a310*b331*c130,a301*b330*c031+a311*b331*c131,a302*b330*c032+a312*b331*c132,a303*b330*c033+a313*b331*c133]]]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5556,44 +5591,53 @@ def Nearest_Row_Gram_Schmidt(M):
 def Constrained_Inverse_pair(Ha, Hb):
     """
     Implements the constrained matrix inverse pair solution algorithm.
+    where the input matrices are of sizes m x n and n x m respectively.
 
     EXAMPLES:
     ::
-        sage: Constrained_Inverse_pair(HM(2,2,'a'),HM(2,2,'b'))
-        [x0 == 1/2*(a00*b01-a01*b11)/y5,
-         x1 == -1/2*(a00*b01-a01*b11)/y7,
-         x2 == 1/2*(a10*b00-a11*b10)/y4,
-         x3 == -1/2*(a10*b00-a11*b10)/y6]
-        
+        sage: [Sln, Ta, Tb]=Constrained_Inverse_pair(HM(2, 3, 'a'),HM(3, 2, 'b'))
+        sage: Ha=Ta.subs(dict([(s.lhs(),s.rhs()) for s in Sln]+[(x12, 1),(x13, 1)]))
+        sage: Hb=Tb.subs(dict([(s.lhs(),s.rhs()) for s in Sln]+[(x12, 1),(x13, 1)]))
+        sage: Prod(Ha, Hb)[0, 1]
+        0
+        sage:Prod(Ha, Hb)[1, 0]
+        0
+        sage: [Sln, Ta, Tb]=Constrained_Inverse_pair(HM(2, 2, 'a'),HM(2, 2, 'b'))
+        sage: Ha=Ta.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: Hb=Tb.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: Prod(Ha,Hb).list()
+        [1/2*(a00*b01 - a01*b11)*x4/x5 - 1/2*(a00*b01 - a01*b11)*x6/x7,
+         0,
+         0,
+         1/2*(a10*b00 - a11*b10)*x5/x4 - 1/2*(a10*b00 - a11*b10)*x7/x6]
+
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    if Ha.dimensions()==Hb.dimensions() and Ha.is_cubical():
-        # Initialization of the size parameter
-        sz=Ha.n(0)
-        
+    if Ha.n(1) == Hb.n(0) and Ha.n(0) == Hb.n(1):
+        # Initialization of the size parameter.
+        sz1=Ha.n(0)
+        sz2=Ha.n(1)
         # Initialization of the equation list. 
         Eq=[]
-        for i in range(sz):
-            for j in range(sz):
-                for k in range(sz):
+        Ah=HM(sz1,sz2,[var('x'+str(0*sz1*sz2 + sz1*i+j)) for j in range(sz2) for i in range(sz1)])
+        Bh=HM(sz2,sz1,[var('x'+str(1*sz1*sz2 + sz2*i+j)) for j in range(sz1) for i in range(sz2)])
+        for i in range(sz1):
+            for j in range(sz1):
+                for k in range(sz2):
                     if i-j != 0:
-                        Eq.append(var('x'+str(0+sz*i+k))+var('x'+str(sz^2+sz*k+j))==Ha[i,k]*Hb[k,j]-sz^(-1)*sum([Ha[i,t]*Hb[t,j] for t in range(sz)]))
-        
-        # Formating the constraints into a linear equations and a righthand side.
-        [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(2*sz^2)])
-        
-        # Multiplicative Reduced Echelon form
+                        Eq.append(Ah[i,k]+Bh[k,j]==Ha[i,k]*Hb[k,j]-sz2^(-1)*sum([Ha[i,t]*Hb[t,j] for t in range(sz2)]))
+        # Formating the constraints into a linear equations and a right hand side.
+        [A, b]=ConstraintFormatorII(Eq, [var('x'+str(i)) for i in range(2*sz1*sz2)])
+        # Multiplicative Reduced Echelon form.
         [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
-        Mx=Matrix(SR,2*sz^2,1,[var('x'+str(i)) for i in range(2*sz^2)])
-        My=Matrix(SR,2*sz^2,1,[var('y'+str(i)) for i in range(2*sz^2)])
-        #Sln=multiplicative_linear_solver(Ap,bp,Mx,My)
-        Sln=multiplicative_linear_solver(Ap,bp,Mx,My)
-        return Sln
-
+        Mx = Matrix(SR, 2*sz1*sz2, 1, [var('x'+str(i)) for i in range(2*sz1*sz2)])
+        # Computing the solutions.
+        Sln = multiplicative_linear_solver(Ap, bp, Mx, Mx)
+        return [Sln, Ah, Bh]
     else:
-        # return the error message if the input hypermatrix is cubic
+        # return the error message if the input hypermatrix is of the appropriate size
         raise ValueError, "The input hypermpatrices are of inapropriate sizes"
 
 def Constrained_Uncorrelated_triplet(Ha, Hb, Hc):
@@ -5602,95 +5646,70 @@ def Constrained_Uncorrelated_triplet(Ha, Hb, Hc):
 
     EXAMPLES:
     ::
-        sage: Constrained_Uncorrelated_triplet(HM(2,2,2,'a'), HM(2,2,2,'b'), HM(2,2,2,'c'))
-        [x0 == 1/2*(a000*b010*c010 - a010*b011*c110)/(y10*y18),
-         x1 == 1/2*(a001*b010*c011 - a011*b011*c111)/(y10*y19),
-         x2 == -1/2*(a000*b010*c010 - a010*b011*c110)/(y11*y22),
-         x3 == -1/2*(a001*b010*c011 - a011*b011*c111)/(y11*y23),
-         x4 == 1/2*(a100*b110*c010 - a110*b111*c110)/(y14*y18),
-         x5 == 1/2*(a101*b100*c001 - a111*b101*c101)*(a100*b110*c010 - a110*b111*c110)*y16/((a100*b100*c000 - a110*b101*c100)*y14*y17*y18),
-         x6 == -1/2*(a100*b110*c010 - a110*b111*c110)/(y15*y22),
-         x7 == -1/2*(a101*b100*c001 - a111*b101*c101)*(a100*b110*c010 - a110*b111*c110)*y20/((a100*b100*c000 - a110*b101*c100)*y15*y21*y22),
-         x8 == (a001*b000*c001 - a011*b001*c101)*y10*y19/((a001*b010*c011 - a011*b011*c111)*y17),
-         x9 == (a001*b000*c001 - a011*b001*c101)*y11*y23/((a001*b010*c011 - a011*b011*c111)*y21),
-         x12 == (a100*b100*c000 - a110*b101*c100)*y14*y18/((a100*b110*c010 - a110*b111*c110)*y16),
-         x13 == (a100*b100*c000 - a110*b101*c100)*y15*y22/((a100*b110*c010 - a110*b111*c110)*y20)]
+        sage: [Sln, Ta, Tb, Tc]=Constrained_Uncorrelated_triplet(HM(2,2,2,'a'), HM(2,2,2,'b'), HM(2,2,2,'c'))
+        sage: Ha=Ta.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: Hb=Tb.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: Hc=Tc.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: Prod(Ha,Hb,Hc).list()
+        [1/2*(a001*b000*c001 - a011*b001*c101)*(a000*b010*c010 - a010*b011*c110)*x16*x19/((a001*b010*c011 - a011*b011*c111)*x17*x18) - 1/2*(a001*b000*c001 - a011*b001*c101)*(a000*b010*c010 - a010*b011*c110)*x20*x23/((a001*b010*c011 - a011*b011*c111)*x21*x22),
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1/2*(a101*b100*c001 - a111*b101*c101)*(a100*b110*c010 - a110*b111*c110)*x16*x19/((a100*b100*c000 - a110*b101*c100)*x17*x18) - 1/2*(a101*b100*c001 - a111*b101*c101)*(a100*b110*c010 - a110*b111*c110)*x20*x23/((a100*b100*c000 - a110*b101*c100)*x21*x22)]
 
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    if Ha.dimensions()==Hb.dimensions() and Ha.dimensions()==Hc.dimensions() and Ha.is_cubical():
+    if Ha.n(1)==Hb.n(2) and Hb.n(2)==Hc.n(0) and Ha.n(0)==Ha.n(2) and Hb.n(0)==Hb.n(1) and Hc.n(1)==Hc.n(2) and Ha.n(0)==Hb.n(0) and Hb.n(0)==Hc.n(1) :
         # Initialization of the size parameter
-        sz=Ha.n(0)
+        sz1=Ha.n(0)
+        sz2=Ha.n(1)
         
         # Initialization of the equation list. 
         Eq=[]
-        for i in range(sz):
-            for j in range(sz):
-                for k in range(sz):
-                    for l in range(sz):
-                        if (i+exp(I*1*2*pi/3)*j+exp(I*2*2*pi/3)*k).canonicalize_radical() != 0:
-                            Eq.append(var('x'+str(0+i*sz^2+l*sz+k))+var('x'+str(sz^3+i*sz^2+j*sz+l))+var('x'+str(2*sz^3+l*sz^2+j*sz+k))==Ha[i,l,k]*Hb[i,j,l]*Hc[l,j,k]-sz^(-1)*sum([Ha[i,t,k]*Hb[i,j,t]*Hc[t,j,k] for t in range(sz)]))
+        Ah=HM(sz1,sz2,sz1,[var('x'+str(0*sz2*sz1^2 + i*sz2*sz1+j*sz2+k)) for k in range(sz1) for j in range(sz2) for i in range(sz1)])
+        Bh=HM(sz1,sz1,sz2,[var('x'+str(1*sz2*sz1^2 + i*sz1*sz2+j*sz1+k)) for k in range(sz2) for j in range(sz1) for i in range(sz1)])
+        Ch=HM(sz2,sz1,sz1,[var('x'+str(2*sz2*sz1^2 + i*sz1*sz1+j*sz1+k)) for k in range(sz1) for j in range(sz1) for i in range(sz2)])
+        for i in range(sz1):
+            for j in range(sz1):
+                for k in range(sz1):
+                    for l in range(sz2):
+                        if not (i+exp(I*1*2*pi/3)*j+exp(I*2*2*pi/3)*k).is_zero():
+                            Eq.append(Ah[i,l,k]+Bh[i,j,l]+Ch[l,j,k]==Ha[i,l,k]*Hb[i,j,l]*Hc[l,j,k]-sz2^(-1)*sum([Ha[i,t,k]*Hb[i,j,t]*Hc[t,j,k] for t in range(sz2)]))
         
         # Formating the constraints into a linear equations and a righthand side.
-        [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(3*sz^3)])
+        [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(3*sz2*sz1^2)])
         
         # Multiplicative Reduced Echelon form
         [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
-        Mx=Matrix(SR,3*sz^3,1,[var('x'+str(i)) for i in range(3*sz^3)])
-        My=Matrix(SR,3*sz^3,1,[var('y'+str(i)) for i in range(3*sz^3)])
-        return multiplicative_linear_solver(Ap,bp,Mx,My)
+        Mx=Matrix(SR,3*sz2*sz1^2,1,[var('x'+str(i)) for i in range(3*sz2*sz1^2)])
+        # Computing the solutions.
+        Sln=multiplicative_linear_solver(Ap, bp, Mx, Mx)
+        return [Sln, Ah, Bh, Ch]
         
     else:
-        # return the error message if the input hypermatrix is cubic
-        raise ValueError, "The input hypermpatrices are of inapropriate sizes"
-
-def Constrained_Uncorrelated_quadruplet(Ha, Hb, Hc, Hd):
-    """
-    Implements the constrained uncorrelated tuple solution algorithm.
-
-    EXAMPLES:
-    ::
-        sage: L=Contrained_Uncorrelated_quadruplet(HM(2,2,2,2,'a'), HM(2,2,2,2,'b'), HM(2,2,2,2,'c'), HM(2,2,2,2,'d')) 
-
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    if Ha.dimensions()==Hb.dimensions() and Ha.dimensions()==Hc.dimensions() and Ha.dimensions()==Hd.dimensions() and Ha.is_cubical():
-        # Initialization of the size parameter
-        sz=Ha.n(0)
-        
-        # Initialization of the equation list. 
-        Eq=[]
-        for i in range(sz):
-            for j in range(sz):
-                for k in range(sz):
-                    for l in range(sz):
-                        for m in range(sz):
-                            if (i+exp(I*1*2*pi/4)*j+exp(I*2*2*pi/4)*k+exp(I*3*2*pi/4)*l).canonicalize_radical() != 0:
-                                Eq.append(var('x'+str(0+i*sz^3+m*sz^2+k*sz+l))+var('x'+str(sz^4+i*sz^3+j*sz^2+m*sz+l))+var('x'+str(2*sz^4+i*sz^3+j*sz^2+k*sz+m))+var('x'+str(3*sz^4+m*sz^3+j*sz^2+k*sz+l))==Ha[i,m,k,l]*Hb[i,j,m,l]*Hc[i,j,k,m]*Hd[m,j,k,l]-sz^(-1)*sum([Ha[i,t,k,l]*Hb[i,j,t,l]*Hc[i,j,k,t]*Hd[t,j,k,l] for t in range(sz)]))
-        
-        # Formating the constraints into a linear equations and a righthand side.
-        [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(4*sz^4)])
-        
-        # Multiplicative Reduced Echelon form
-        [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
-        Mx=Matrix(SR,4*sz^4,1,[var('x'+str(i)) for i in range(4*sz^4)])
-        My=Matrix(SR,4*sz^4,1,[var('y'+str(i)) for i in range(4*sz^4)])
-        return multiplicative_linear_solver(Ap,bp,Mx,My)
-    else:
-        # return the error message if the input hypermatrix is cubic
+        # return the error message if the input hypermatrix is not of the appropriate size
         raise ValueError, "The input hypermpatrices are of inapropriate sizes"
 
 def Constrained_Second_order_orthogonalization(Ha):
     """
     Implements the constrained matrix orthogonalization algorithm.
+    where the indexing sz*i+j for the entry i,j.
 
     EXAMPLES:
     ::
-        sage: Constrained_Second_order_orthogonalization(HM(2,2,'a'))
-        [x0 == 1/2*(a00*a10 - a01*a11)/y2, x1 == -1/2*(a00*a10 - a01*a11)/y3]
+        sage: [Sln, Ta]=Constrained_Second_order_orthogonalization(HM(2,2,'a'))
+        sage: Ha=Ta.subs(dict([(s.lhs(), s.rhs()) for s in Sln]))
+        sage: Prod(Ha, Ha.transpose()).list()
+        [1/4*(a00*a10 - a01*a11)^2/x2^2 + 1/4*(a00*a10 - a01*a11)^2/x3^2,
+         0,
+         0,
+         x2^2 + x3^2]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5698,26 +5717,24 @@ def Constrained_Second_order_orthogonalization(Ha):
     if Ha.is_cubical():
         # Initialization of the size parameter
         sz=Ha.n(0)
-
         # Initialization of the equation list. 
         Eq=[]
+        Ah=HM(sz,sz,[var('x'+str(i*sz+j)) for j in range(sz) for i in range(sz)])
         for i in range(sz):
             for j in range(sz):
                 for k in range(sz):
-                    if i-j != 0:
-                        Eq.append(var('x'+str(sz*i+k))+var('x'+str(sz*j+k))==Ha[i,k]*Ha[j,k]-sz^(-1)*sum([Ha[i,t]*Ha[j,t] for t in range(sz)]))
-        
+                    if (i-j)!=0:
+                        Eq.append(Ah[i,k]+Ah[j,k]==Ha[i,k]*Ha[j,k]-sz^(-1)*sum([Ha[i,t]*Ha[j,t] for t in range(sz)]))
         # Formating the constraints into a linear equations and a righthand side.
         [A,b]=ConstraintFormatorII(Set(Eq).list(),[var('x'+str(i)) for i in range(sz^2)])
-        
         # Multiplicative Reduced Echelon form
         [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
         Mx=Matrix(SR,sz^2,1,[var('x'+str(i)) for i in range(sz^2)])
-        My=Matrix(SR,sz^2,1,[var('y'+str(i)) for i in range(sz^2)])
-        return multiplicative_linear_solver(Ap,bp,Mx,My)
+        Sln = multiplicative_linear_solver(Ap, bp, Mx, Mx)
+        return [Sln, Ah]
     else:
         # return the error message if the input hypermatrix is cubic
-        raise ValueError, "The input hypermpatrix must be cubical"
+        raise ValueError, "The input matrix must be square"
 
 def Constrained_Third_order_orthogonalization(Ha):
     """
@@ -5725,11 +5742,18 @@ def Constrained_Third_order_orthogonalization(Ha):
 
     EXAMPLES:
     ::
-        sage: Constrained_Third_order_orthogonalization(HM(2,2,2,'a'))
-        [x0 == (a000*a001*a100 - a010*a011*a110)*y5/(a001*a100*a101 - a011*a110*a111),
-         x1 == 1/2*(a001*a100*a101 - a011*a110*a111)/(y4*y5),
-         x2 == (a000*a001*a100 - a010*a011*a110)*y7/(a001*a100*a101 - a011*a110*a111),
-         x3 == -1/2*(a001*a100*a101 - a011*a110*a111)/(y6*y7)]
+        sage: [Sln, Ta]=Constrained_Third_order_orthogonalization(HM(2,2,2,'a'))
+        sage: Ha = Ta.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: Prod(Ha, Ha.transpose(2), Ha.transpose()).list()
+        [(a000*a001*a100 - a010*a011*a110)^3*x5^3/(a001*a100*a101 - a011*a110*a111)^3 + (a000*a001*a100 - a010*a011*a110)^3*x7^3/(a001*a100*a101 - a011*a110*a111)^3,
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         x5^3 + x7^3]
+        
 
     AUTHORS:
     - Edinah K. Gnang
@@ -5737,61 +5761,22 @@ def Constrained_Third_order_orthogonalization(Ha):
     if Ha.is_cubical():
         # Initialization of the size parameter
         sz=Ha.n(0)
-
         # Initialization of the equation list. 
         Eq=[]
+        Ah=HM(sz,sz,sz,[var('x'+str(i*sz^2+j*sz+k)) for k in range(sz) for j in range(sz) for i in range(sz)])
         for i in range(sz):
             for j in range(sz):
                 for k in range(sz):
                     for l in range(sz):
-                        if (i+exp(I*1*2*pi/3)*j+exp(I*2*2*pi/3)*k).canonicalize_radical() != 0:
-                            Eq.append(var('x'+str(sz^2*i+sz*l+k))+var('x'+str(sz^2*j+sz*l+i))+var('x'+str(sz^2*k+sz*l+j))==Ha[i,l,k]*Ha[j,l,i]*Ha[k,l,j]-sz^(-1)*sum([Ha[i,t,k]*Ha[j,t,i]*Ha[k,t,j] for t in range(sz)]))
-        
+                        if not (i+exp(I*1*2*pi/3)*j+exp(I*2*2*pi/3)*k).is_zero():
+                            Eq.append(Ah[i,l,k]+Ah[j,l,i]+Ah[k,l,j]==Ha[i,l,k]*Ha[j,l,i]*Ha[k,l,j]-sz^(-1)*sum([Ha[i,t,k]*Ha[j,t,i]*Ha[k,t,j] for t in range(sz)]))
         # Formating the constraints into a linear equations and a righthand side.
         [A,b]=ConstraintFormatorII(Set(Eq).list(),[var('x'+str(i)) for i in range(sz^3)])
-        
         # Multiplicative Reduced Echelon form
         [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
         Mx=Matrix(SR,sz^3,1,[var('x'+str(i)) for i in range(sz^3)])
-        My=Matrix(SR,sz^3,1,[var('y'+str(i)) for i in range(sz^3)])
-        return multiplicative_linear_solver(Ap,bp,Mx,My)
-    else:
-        # return the error message if the input hypermatrix is cubic
-        raise ValueError, "The input hypermpatrix are of inapropriate sizes"
-
-def Constrained_Fourth_order_orthogonalization(Ha):
-    """
-    Implements the constrained matrix orthogonalization algorithm.
-
-    EXAMPLES:
-    ::
-        sage: Constrained_Fourth_order_orthogonalization(HM(2,2,2,2,'a'))
-        x6 == (a0010*a0011*a1000*a1001 - a0110*a0111*a1100*a1101)*y14*y15/((a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)*y12),
-        x7 == -1/2*(a0011*a1001*a1010*a1011 - a0111*a1101*a1110*a1111)/(y13*y14*y15)] 
- 
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    if Ha.is_cubical():
-        # Initialization of the size parameter
-        sz=Ha.n(0)
-
-        # Initialization of the equation list. 
-        Eq=[]
-        for i in range(sz):
-            for j in range(sz):
-                for k in range(sz):
-                    for l in range(sz):
-                        for m in range(sz):
-                            if (i+exp(I*1*2*pi/4)*j+exp(I*2*2*pi/4)*k+exp(I*3*2*pi/4)*l).canonicalize_radical() != 0:
-                                Eq.append(var('x'+str(sz^3*i+sz^2*m+sz*k+l))+var('x'+str(sz^3*j+sz^2*m+sz*l+i))+var('x'+str(sz^3*k+sz^2*m+sz*i+j))+var('x'+str(sz^3*l+sz^2*m+sz*j+k))==Ha[i,m,k,l]*Ha[j,m,l,i]*Ha[k,m,i,j]*Ha[l,m,j,k]-sz^(-1)*sum([Ha[i,t,k,l]*Ha[j,t,l,i]*Ha[k,t,i,j]*Ha[l,t,j,k] for t in range(sz)]))
-        # Formating the constraints into a linear equations and a righthand side.
-        [A,b]=ConstraintFormatorII(Set(Eq).list(),[var('x'+str(i)) for i in range(sz^4)])
-        # Multiplicative Reduced Echelon form
-        [Ap, bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
-        Mx=Matrix(SR,sz^4,1,[var('x'+str(i)) for i in range(sz^4)])
-        My=Matrix(SR,sz^4,1,[var('y'+str(i)) for i in range(sz^4)])
-        return multiplicative_linear_solver(Ap,bp,Mx,My)
+        Sln=multiplicative_linear_solver(Ap,bp,Mx,Mx)
+        return [Sln, Ah]
     else:
         # return the error message if the input hypermatrix is cubic
         raise ValueError, "The input hypermpatrix are of inapropriate sizes"
@@ -6175,3 +6160,118 @@ def RandomTriangulation(A,Ha,n,sz):
         j = RollLD([Ca(i)*Ca(n-i) for i in range(1,n+1)])
         return [Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in RandomTriangulation(A,Ha,j,sz) for g2 in RandomTriangulation(A,Ha,n-j,sz)]
 
+def SecondOrderDFT(m,n):
+    """
+    outputs second order uncorrelated pair of second order
+    hypermatrices classically associated with the Discrete
+    Fourier Transform.
+    
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Ha, Hb]=SecondOrderDFT(2,2)
+        sage: Ha
+        [[1, 1], [1, -1]]
+        sage: Hb
+        [[1, 1], [1, -1]]
+        sage: Prod(Ha,Hb).simplify()
+        [[2, 0], [0, 2]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the hypermatrices
+    Ha=HM(n,m,[exp( I*2*pi*u*t/m) for t in range(m) for u in range(n)])
+    Hb=HM(m,n,[exp(-I*2*pi*t*v/m) for v in range(n) for t in range(m)])
+    return [Ha, Hb]
+
+def ThirdOrderDFT(m,n):
+    """
+    outputs third order uncorrelated tuple of third order
+    hypermatrices generalizing the classical Discrete
+    Fourier Transform matrix. The input m is associated
+    with the order of the root of unity and the input n
+    correspond to the size of the matrix.
+    
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Ha, Hb, Hc]=ThirdOrderDFT(3,2)
+        sage: Ha
+        [[[1, 1], [1, e^(2/3*I*pi)], [1, e^(4/3*I*pi)]], [[1, 1], [e^(2/3*I*pi), 1], [e^(4/3*I*pi), 1]]]
+        sage: Hb
+        [[[1, 1, 1], [1, e^(2/3*I*pi), e^(4/3*I*pi)]], [[1, e^(2/3*I*pi), e^(4/3*I*pi)], [1, 1, 1]]]
+        sage: Hc
+        [[[1, 1], [1, 1]], [[1, e^(2/3*I*pi)], [e^(2/3*I*pi), 1]], [[1, e^(4/3*I*pi)], [e^(4/3*I*pi), 1]]]
+        sage: Prod(Ha,Hb,Hc)
+        [[[3, 0], [0, 0]], [[0, 0], [0, 3]]]
+        sage: Prod(Ha,Hb,Hc).simplify()
+        [[[5, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 5, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 5, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 5, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 5]]]
+        
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the hypermatrices
+    Ha=HM(n, m, n, [exp(I*2*pi*t*(u-w)^2/m) for w in range(n) for t in range(m) for u in range(n)])
+    Hb=HM(n, n, m, [exp(I*2*pi*t*(u-v)^2/m) for t in range(m) for v in range(n) for u in range(n)])
+    Hc=HM(m, n, n, [exp(I*2*pi*t*(v-w)^2/m) for w in range(n) for v in range(n) for t in range(m)])
+    return [Ha, Hb, Hc]
+
+def ThirdOrdercharpoly(A, c):
+    """
+    Outpts the solution associated with the linear dependence of powers.
+
+     EXAMPLES:
+    ::
+        sage: A=HM([[[1, 1], [-1, 2]], [[-1, 4], [1, 17]]])
+        sage: [Sln, s]=ThirdOrdercharpoly(A,'A')
+        sage: Tp=eval(s)
+        sage: Sln
+        [x0 == 186641252224723742786128720548/302131816499269505043899*x8,
+         x1 == -16334511509638140306907278508/302131816499269505043899*x8,
+         x2 == -39916709921235256189474933621/302131816499269505043899*x8,
+         x3 == 444869993198324697111572893/302131816499269505043899*x8,
+         x4 == -241741381030800897895387320/302131816499269505043899*x8,
+         x5 == -122250819499746431538540833/302131816499269505043899*x8,
+         x6 == 120487356897906588291809840/302131816499269505043899*x8,
+         x7 == 139067504458363202088911118/302131816499269505043899*x8]
+        sage: Tp.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of powers
+    L =[]; Ls=[]; i=0
+    while len(L) < 1+prod(A.dimensions()):
+        L=L+HypermatrixCayleyHamiltonList(A, 2*i+1)
+        Ls=Ls+HypermatrixCayleyHamiltonStringList(2*i+1, c)
+        i=i+1
+    # Initialization of the boolean variables which assert the status of the search.
+    Fnd=False
+    n=1+prod(A.dimensions())
+    while (not Fnd) and n>1:
+        # Initializing the index variables
+        Indx = Set(range(len(L))).subsets(n)
+        # Looping through all the subset of the appropriate size.
+        for index in Indx:
+            M=Matrix(SR, [L[i] for i in index]).transpose()
+            print 'Indexing set =', index
+            if M.rank()==n-1:
+                Fnd=True
+                break
+        # Initialization the result
+        if M.rank()==n-1:
+            b=Matrix(SR, M.nrows(), 1, HM(M.nrows(), 1, 'zero').list())
+            x=Matrix(SR, M.ncols(), 1, [var('x'+str(i)) for i in range(M.ncols())])
+            return [linear_solver(M, b, x, x) ," + ".join([str(x[i,0])+'*'+Ls[index[i]] for i in range(M.ncols())])]
+        n=n-1
+    if Fnd==False:
+        return []
+  
