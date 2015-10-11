@@ -22,7 +22,7 @@ sage: %runfile Hypermatrix_Algebra_Package_code.sage
 
 # Usage
 
-To create a symbolic hypermatrix instance of size say 2x3x4, use the instructions
+To create a symbolic hypermatrix instance of size say 2 by 3 by 4, use the instructions
 
 ```python
 sage: Ha=HM(2,3,4,'a')
@@ -94,7 +94,7 @@ sage: (HM(2,2,2,2,'a').transpose(4)-HM(2,2,2,2,'a')).is_zero()
 True
 ```
 
-The sum of hypermatrices can taken over a list of hypermatrices.
+The sum of hypermatrices can be taken over a list of hypermatrices.
 We illustrate this by constructing a symbolic symmetric hypermatrix as follows.
 
 ```python
@@ -116,18 +116,20 @@ sage: Hc.dimensions()
 [6, 6, 6]
 ```
 
-An additional basic hypermatrix operations implemented in the package are the inner-product and 
+Additional basic hypermatrix operations implemented in the package are the inner-product and 
 multilinear forms induced by hypermatrices of various order. We recall from matrix algebra that
-the innerproduct of a pairs column vectors X and Y each of size 3 by 1, is defined by the product
+the inner-product of a pairs column vectors X and Y each of size 3 by 1, results from products 
+of the following form
 
 ```python
 sage: X=HM(3, 1, HM(3,'x').list()); Y=HM(3, 1, HM(3,'y').list())
 sage: Prod(X.transpose(),Y)[0,0]
 x0*y0 + x1*y1 + x2*y2
 sage: apply(Prod, [X.transpose(i) for i in range(X.order()-1,-1,-1)])[0,0]
+x0^2 + x1^2 + x2^2
 ```
 
-Similarly for third order hypermatrices the innerproduct of a triplet of column vectors X, Y, Z
+Similarly for third order hypermatrices the inner-product of a triplet of column vectors X, Y, Z
 each of size 3 by 1 by 1, is defined by the product
 
 ```python
@@ -135,6 +137,7 @@ sage: X=HM(3,1,1,HM(3,'x').list()); Y=HM(3,1,1,HM(3,'y').list()); Z=HM(3,1,1,HM(
 sage: Prod(X.transpose(2), Y.transpose(), Z)[0,0,0]
 x0*y0*z0 + x1*y1*z1 + x2*y2*z2
 sage: apply(Prod, [X.transpose(i) for i in range(X.order()-1,-1,-1)])[0,0,0]
+x0^3 + x1^3 + x2^3
 ```
 
 and for fourth order hypermatrices the innerproduct of a quadruplet of column vectors W, X, Y, Z
@@ -148,6 +151,7 @@ sage: Z=HM(3,1,1,1,HM(3,'z').list())
 sage: Prod(W.transpose(3), X.transpose(2), Y.transpose(), Z)[0,0,0,0]
 w0*x0*y0*z0 + w1*x1*y1*z1 + w2*x2*y2*z2
 sage: apply(Prod, [X.transpose(i) for i in range(X.order()-1,-1,-1)])[0,0,0,0]
+x0^4 + x1^4 + x2^4
 ```
 
 Furthermore the bilinear form associated with a 2 by 2 matrix A is expressed as follows
@@ -164,19 +168,20 @@ Finally a trilinear form associated with a 2 by 2 by 2 hypermatrix A is expresse
 sage: X=HM(2,1,1,HM(2,'x').list()); Y=HM(2,1,1,HM(2,'y').list()); Z=HM(2,1,1,HM(2,'z').list())
 sage: A=HM(2,2,2,'a')
 sage: ProdB(X.transpose(2), Y.transpose(), Z, A)[0,0,0]
+a000*x0*y0*z0 + a100*x1*y0*z0 + a010*x0*y1*z0 + a110*x1*y1*z0 + a001*x0*y0*z1 + a101*x1*y0*z1 + a011*x0*y1*z1 + a111*x1*y1*z1
 ```
 
 
 # Symbolic parametrization of some special hypermatrices
 
-To emphasize that hypermatrices naturally extend the algebra of matrices, we describe instructions
-for obtaining symbolic parametrization of special families of hypermatrices which generalizes well
-known symbolic parametrization of special families of matrices .
+To emphasize that the algebra of hypermatrices naturally extend the algebra of matrices, we describe instructions
+for obtaining symbolic parametrization of special families of hypermatrices which generalizes well known symbolic
+parametrizations of special families of matrices such as the diagonal, orthogonal, unitary and inverse.
 
 ## Kronecker delta hypermatrices
 The [Kronecker delta](http://en.wikipedia.org/wiki/Kronecker_delta#Properties_of_generalized_Kronecker_delta)
-hypermatrices are generalization of the identity matrices in the sense that all of it's entries are zero 
-except for the entries on the main diagonal as illustated below 
+hypermatrices are generalizations of identity matrices in the sense that all entries are zero 
+except for the entries located on the main diagonal as illustated below 
 ```python
 sage: rng=range(2)
 sage: Dlt=HM(3,2,'kronecker')
@@ -188,7 +193,7 @@ sage: HM(2,2,2,[A[i,j,k]==Dlt[i,j,k] for k in rng for j in rng for i in rng])
 ## Orthogonal hypermatrices
 
 Orthogonal hypermatrices are analogous to orthogonal matrices in the fact that the product of the transposes 
-yields the Kronecker delta hypermatrix. A symbolic parametetrization of 2x2x2 orthogonal hypermatrices is 
+yields the Kronecker delta hypermatrix. A symbolic parametetrization of 2 by 2 by 2 orthogonal hypermatrices is 
 obtained via the following instructions
 
 ```python
@@ -197,7 +202,7 @@ sage: (apply(Prod,[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM
 True
 ```
 
-Similarly a symbolic parametrization of orthogonal hypermatrices of size 2x2x2x2 hypermatrices is obtained
+Similarly a symbolic parametrization of orthogonal hypermatrices of size 2 by 2 by 2 by 2 hypermatrices is obtained
 obtained by the command
 
 ```python
@@ -207,13 +212,13 @@ True
 ```
 
 The parameters which appear in the parametrization can be assigned arbitrary complex values. The hypermatrix 
-package also provides construction of cubic third order Hadamard hypermatrices, which are analogous to 
+package also provides constructions of cubic third order Hadamard hypermatrices, which are analogous to 
 Hadamard matrices in the fact that the product of the transposes is equal to the Kronecker delta scaled by
 the side length.
 It is easy to see that the classical Hadamard matrix [construction](http://en.wikipedia.org/wiki/Hadamard_matrix#Sylvester.27s_construction) first proposed by James Joseph Sylvester, and going back to 1867, extends to all
 hypermatrices of prime order (recall that the order refers to the number of indices associated with the 
 hypermatrix entries). Third order Hadamard hypermatrices whose side length are powers of 2 and in the 
-particular case of size 4x4x4 is obtained via the following instructions
+particular case of size 4 by 4 by 4 is obtained via the following instructions
 
 ```python
 sage: H=ThirdOrderHadamardBlockU(4); H
@@ -228,9 +233,9 @@ One can not help but wonder if the reach of Hadamard matrix conjecture extendeds
 
 The hypermatrix algebra package also implements a symbolic parametrization of even order unitary hypermatrices having 
 of sides length equal to 2. As suggested by the [Gowers norm](http://en.wikipedia.org/wiki/Gowers_norm), an even order
-hypermatrix is said to be unitary if the product of the conjugate transposes yield equals the Kronecker delta.
+hypermatrix is said to be unitary if the product of the conjugate transposes equals the Kronecker delta.
 Consequently, second order unitary hypermatrices correspond to unitary matrices and a symbolic parametrization
-of 2x2 unitary matrices is obtained from the hypermatrix package via the commands
+of 2 by 2 unitary matrices is obtained from the hypermatrix package via the commands
 
 ```python
 sage: [U,Uc]=GeneralUnitaryHypermatrix(2)
