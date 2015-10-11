@@ -741,7 +741,6 @@ def HypermatrixProductII(A, B, C, support):
         for i in range(len(q)):
             for j in range(len(q[i])):
                 for k in range(n_c_dpts):
-                    #(q[i][j]).append(sum([A[i][l][k]*B[i][j][l]*C[l][j][k] for l in range(n_a_cols)]))
                     (q[i][j]).append(sum([A[i][l][k]*B[i][j][l]*C[l][j][k] for l in support]))
         if typ=='list':
             return q
@@ -934,7 +933,7 @@ def HypermatrixDualProductB(A, B, C, D):
 
 
     AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
+    - Edinah K. Gnang
     """
     typ = 'list'
     if type(A)==type(HM(1,1,1,'one')) and type(B)==type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')) and type(D)==type(HM(1,1,1,'one')):
@@ -1046,7 +1045,7 @@ def HypermatrixKroneckerDelta(nr):
 
 def Vandermonde(l):
     """
-    Constructs a Vamdermonde matrix from the input list
+    Constructs a Vandermonde matrix from the input list
     assumed to be either numbers or symbolic variables
     nothing breaks however if one presents as input a list of
     hypermatrices.
@@ -1054,7 +1053,7 @@ def Vandermonde(l):
     EXAMPLES:
     ::
         sage: Vandermonde(HM(2,'x').list())
-        
+        [[1, 1], [x0, x1]]
 
 
     AUTHORS:
@@ -1238,7 +1237,7 @@ def HypermatrixCayleyHamiltonListII(A,n):
 
 def HypermatrixCayleyHamiltonListIII(A,n):
     """
-    Outpts a list of hypermatrices of all product
+    Outputs a list of hypermatrices of all product
     composition of degree n for hypermatrices of 
     order up to 8 tends to be slow because it uses
     the general hypermatrix product and it takes HM
@@ -1638,7 +1637,7 @@ def Sylvester_matrix(p,q,vrbl):
         sage: x=var('x')
         sage: p=2*x+3
         sage: q=7*x-5
-        sage: Resultant(p,q,x)
+        sage: Sylvester_matrix(p,q,x)
         [2   3]
         [7  -5]
 
@@ -1676,10 +1675,12 @@ def Gmatrix(p,q,vrbl):
     ::
         sage: x=var('x')
         sage: p=x^2+2*x+3
-        sage: q=7*x-5
+        sage: q=x^2+7*x-5
         sage: Gmatrix(p,q,x)
-        [-9/7   -3]
-        [   1  5/7]
+        [ 5 -3 -5  0]
+        [ 1  7  0 -5]
+        [-1  0 -2 -3]
+        [ 0 -1  1  0]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -1727,7 +1728,7 @@ def OuterHypermatrixInversePair(U, V):
     EXAMPLES:
     ::
         sage: Hu=HM(2,2,2,'u'); Hv=HM(2,2,2,'v')
-        sage: [Sln, Tx, Ty]=OuterHypermatrixInversePair(Hu, Hv)
+        sage: [Sln, Tx, Ty]=OuterHypermatrixInversePair(Hu, Hv)[0]
         sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]])) 
         sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]]))
         sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
@@ -1767,7 +1768,7 @@ def OuterHypermatrixInversePair(U, V):
         # Formating the constraints
         [A,b]=ConstraintFormatorII(Eq, X.list()+Y.list())
         Mx=Matrix(SR, A.ncols(), 1, X.list()+Y.list())
-        return [multiplicative_linear_solver(A,b,Mx,Mx), X, Y]
+        return [[multiplicative_linear_solver(A,b,Mx,Mx), X, Y], multiplicative_gauss_jordan_eliminationII(A,b)]
     else:
         raise ValueError, "The input hypermatrices must be cubical third order hypermatrices of the same sizes."
 
@@ -1778,7 +1779,7 @@ def InnerHypermatrixInversePair(X, Y):
     EXAMPLES:
     ::
         sage: Hx=HM(2,2,2,'x'); Hy=HM(2,2,2,'y')
-        sage: [Sln, Tu, Tv]=InnerHypermatrixInversePair(Hx, Hy)
+        sage: [Sln, Tu, Tv]=InnerHypermatrixInversePair(Hx, Hy)[0]
         sage: Hu=Tu.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]])) 
         sage: Hv=Tv.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]]))
         sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
@@ -1817,7 +1818,7 @@ def InnerHypermatrixInversePair(X, Y):
         # Formating the constraints
         [A,b]=ConstraintFormatorII(Eq, U.list()+V.list())
         Mx=Matrix(SR, A.ncols(), 1, U.list()+V.list())
-        return [multiplicative_linear_solver(A,b,Mx,Mx), U, V]
+        return [[multiplicative_linear_solver(A,b,Mx,Mx), U, V], multiplicative_gauss_jordan_eliminationII(A,b)]
     else:
         raise ValueError, "The input hypermatrices must be cubical third order hypermatrices of the same sizes."
 
@@ -3671,7 +3672,7 @@ def HypermatrixSliceKroneckerPower(U,n):
     """
     T = U.copy()
     for i in range(n-1):
-        T = T.slicekroneckerproduct(U)
+        T = T.tensor_product(U)
     return T
 
 def HypermatrixKroneckerSum(A,B):
@@ -4657,7 +4658,7 @@ def FifthOrderHadamardBlock(l):
 
 def RandomTransposition(n):
     """
-    outputs  the random transposition permutation of n elements.
+    Outputs  the random transposition permutation of n elements.
     The fucntion is used for randominzing the Hadamard block construction
     
 
@@ -4810,7 +4811,9 @@ def CanonicalThirdOrderHypermatrixFactors(A):
     EXAMPLES:
  
     ::  
-        sage: [Q,U,V] = CanonicalThirdOrderHypermatrixFactors(HM(2,2,2,'a')):
+        sage: [Q,U,V] = CanonicalThirdOrderHypermatrixFactors(HM(2,2,2,'a'))
+        sage: Prod(Q,U,V)-HM(2,2,2,'a')
+        [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]
         
 
     AUTHORS:
@@ -5131,7 +5134,7 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
     Outputs the row echelon form of the input matrix and the right hand side.
     The solver here differs from the one above in the fact that it assumes
     that the entries of the Cf matrix are not symbolic and checks during
-    the elimination steps whether or  we are indeed adding new branches.
+    the elimination steps whether or we are indeed adding new branches.
 
     EXAMPLES:
  
@@ -5197,7 +5200,7 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
     Outputs the reduced row echelon form of the input matrix and the right hand side.
     The solver here differs from the one above in the fact that it assumes
     that the entries of the Cf matrix are not symbolic and checks during
-    the elimination steps whether or  we are indeed adding new branches.
+    the elimination steps whether or we are indeed adding new branches.
 
     EXAMPLES:
  
@@ -5918,6 +5921,35 @@ def ThirdOrderDerivation(sz):
     # The result is therefore give by 
     return [(f-1).numerator() for f in bp[indx:,0].list()]
 
+def TriangulationCompositionStringList(n, c):
+    """
+    Outputs a composition list of strings associated with triangulations
+
+     EXAMPLES:
+    ::
+        sage: sz=4; A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+        sage: for i0 in range(1,sz):
+            :   for i1 in range(i0):
+            :       A[i0,i1]=0
+        sage: L = TriangulationCompositionStringList(sz-1,'A'); L
+        ['A.elementwise_product(Prod(A, A.elementwise_product(Prod(A, A))))',
+         'A.elementwise_product(Prod(A.elementwise_product(Prod(A, A)), A))'] 
+        sage: eval(L[0])
+        [[0, 0, 0, a01*a03*a12*a13*a23], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+        sage: eval(L[1])
+        [[0, 0, 0, a01*a02*a03*a12*a23], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if n == 1:
+        return [c]
+    else:
+        gu = []
+        for i in range(1,n):
+            gu = gu+[c+".elementwise_product(Prod("+g1+", "+g2+"))" for g1 in TriangulationCompositionStringList(i,c) for g2 in TriangulationCompositionStringList(n-i,c)]
+        return gu
+
 def Triangulations(A,Ha,n,sz):
     """
     Outputs a list of second order hypermatrices each of which have a single nonzero symbolic entry which
@@ -6274,4 +6306,95 @@ def ThirdOrdercharpoly(A, c):
         n=n-1
     if Fnd==False:
         return []
-  
+ 
+def llsa(Ha):
+    """
+    Outputs the rank 1 Logarithmic Least Square Approximation of 
+    the input Hypermatrix Ha
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Sln, U, V]=llsa(Prod(HM(2,1,'a'), HM(1,2,'b'))); Sln
+        [x0y00 == sqrt(a00^2*b00*b01*e^(2*I*pi*k0))/(sqrt(a00*a10*b00^2*e^(2*I*pi*k3)/(sqrt(a00^2*b00*b01*e^(2*I*pi*k0))*sqrt(a10^2*b00*b01*e^(2*I*pi*k1))))*x1y01),
+ x0y10 == sqrt(a10^2*b00*b01*e^(2*I*pi*k1))/(sqrt(a00*a10*b00^2*e^(2*I*pi*k2)/(sqrt(a00^2*b00*b01*e^(2*I*pi*k0))*sqrt(a10^2*b00*b01*e^(2*I*pi*k1))))*x1y01),
+ x1y00 == a00*a10*b00^2*x1y01/(sqrt(a00^2*b00*b01*e^(2*I*pi*k0))*sqrt(a10^2*b00*b01*e^(2*I*pi*k1))),
+ 1 == e^(-2*I*pi*k0 - 2*I*pi*k1)]
+        sage: Hu = U.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:3]]))
+        sage: Hv = V.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:3]]))
+        sage: Hr = Prod(Hu,Hv)
+        sage: [Hr[i,j].canonicalize_radical() for i in range(2) for j in range(2)]
+        [a00*b00*e^(1/2*I*pi*k0 - 1/2*I*pi*k1 - I*pi*k3),
+ a00*b01*e^(3/2*I*pi*k0 + 1/2*I*pi*k1 - I*pi*k3),
+ a10*b00*e^(-1/2*I*pi*k0 + 1/2*I*pi*k1 - I*pi*k2),
+ a10*b01*e^(1/2*I*pi*k0 + 3/2*I*pi*k1 - I*pi*k2)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the dimension list
+    dm = Ha.dimensions()
+    # Initialization of the list of Hypermatrices
+    L=[]
+    for i in range(Ha.order()):
+        dmt=copy(dm); dmt[Integer(mod(i+1, Ha.order()))]=1
+        L.append(HM(apply(HypermatrixGenerate, dmt+['x'+str(i)+'y'])))
+    # Initializing the constraints
+    Lh=apply(GeneralHypermatrixLogProduct, L).list(); Rh=Ha.list()
+    CnstrLst=[Lh[j]==Rh[j] for j in range(prod(Ha.dimensions()))]
+    # Initializing the list of variables
+    VrbLst=[]
+    for i in range(len(L)):
+        VrbLst=VrbLst+L[i].list()
+    # Formatting the constraints
+    [Atmp, btmp]=ConstraintFormatorII(CnstrLst, VrbLst)
+    # Initializing the least square constraints
+    A=Atmp.transpose()*Atmp; b=multiplicative_matrix_product(Atmp.transpose(),btmp)
+    # Solving the least square equations
+    Mx=Matrix(SR,A.ncols(),1,VrbLst)
+    Sln=multiplicative_linear_solver(A, b, Mx, Mx)
+    #return [Sln]+L 
+    return [[Sln]+L, multiplicative_gauss_jordan_eliminationII(A,b)] 
+
+def LogarithmicRankOneApproximation(Ha):
+    """
+    Outputs the logarithmic BM-rank one approximationassociated with
+    the input Hypermatrix Ha
+
+    EXAMPLES:
+ 
+    ::  
+        sage: [Sln, U, V]=LogarithmicRankOneApproximation(Prod(HM(2,1,'a'), HM(1,2,'b')))
+        sage: Hu=U.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:3]]))
+        sage: Hv=V.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:3]]))
+        sage: Prod(Hu,Hv)
+        [[a00*b00, a00*b01], [a10*b00, a10*b01]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the dimension list
+    dm = Ha.dimensions()
+    # Initialization of the list of Hypermatrices
+    L=[]
+    for i in range(Ha.order()):
+        dmt=copy(dm); dmt[Integer(mod(i+1, Ha.order()))]=1
+        L.append(HM(apply(HypermatrixGenerate, dmt+['x'+str(i)+'y'])))
+    # Initializing the constraints
+    Lh=apply(GeneralHypermatrixLogProduct, L).list(); Rh=Ha.list()
+    CnstrLst=[Lh[j]==Rh[j] for j in range(prod(Ha.dimensions()))]
+    # Initializing the list of variables
+    VrbLst=[]
+    for i in range(len(L)):
+        VrbLst=VrbLst+L[i].list()
+    # Formatting the constraints
+    [A, b]=ConstraintFormatorII(CnstrLst, VrbLst)
+    # Solving the least square equations
+    Mx=Matrix(SR,A.ncols(),1,VrbLst)
+    Sln=multiplicative_linear_solver(A, b, Mx, Mx)
+    return [[Sln]+L, multiplicative_gauss_jordan_eliminationII(A,b)] 
+
