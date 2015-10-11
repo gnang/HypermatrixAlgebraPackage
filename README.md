@@ -1,10 +1,11 @@
 =======
 # Hypermatrix Algebra Package
 
-We provide here a sagemath implementation of the Bhattacharya-Mesner(BM) algebra as well as the general BM algebra and it's dual.
+We provide here a sagemath implementation of the Bhattacharya-Mesner(BM) algebra as well as the general BM algebra and its
+dual.
 
-The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed to experimentally
-investigate structural and combinatorial properties of the algebra of hypermatrices.
+The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed to experimentally investigate structural and
+combinatorial properties of the algebra of hypermatrices.
 
 # Installation 
 
