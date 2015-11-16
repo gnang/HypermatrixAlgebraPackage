@@ -1,4 +1,4 @@
-#*************************************************************************#
+
 #       Copyright (C) 2015 Edinah K. Gnang <kgnang@gmail.com>,            #
 #                          Ori Parzanchevski                              #
 #                          Yuval Filmus                                   #
@@ -140,7 +140,7 @@ class HM:
         elif self.order()==7:
             return SeventhOrderSliceKroneckerProduct(self, V)
         else :
-            raise ValueError,"not supported for order %d hypermatrices" % len(dims)
+            raise ValueError,"not supported for order %d hypermatrices" % self.order()
     def block_sum(self, V):
         return GeneralHypermatrixKroneckerSum(self, V)
     def expand(self):
@@ -176,13 +176,16 @@ class HM:
         return len(self.hm[0])
     def ndpts(self):
         return len(self.hm[0][0])
-    def Print(self):
-        if self.order()==3:
+    def printHM(self):
+        if self.order()==2:
             L=self.listHM()
-            for m in L:
-                print '\n'+Matrix(m).str()
+            print '[:, :]=\n'+Matrix(SR,L).str()
+        elif self.order()==3:
+            L=self.listHM()
+            for dpth in range(self.n(2)):
+                print '[:, :, '+str(dpth)+']=\n'+Matrix(SR,self.n(0),self.n(1),[L[i][j][dpth] for i in range(self.n(0)) for j in range(self.n(1))]).str()+'\n'
         else:
-            raise ValueError, "not supported for order %d hypermatrices" % len(dims)
+            raise ValueError, "not supported for order %d hypermatrices" %self.order()
     def n(self,i):
         if i==0:
             return self.nrows()
@@ -1672,11 +1675,9 @@ def Companion_matrix(p,vrbl):
 
     ::
 
-        sage: x,y=var('x,y')
-        sage: p=x^2+2*x*y+1
-        sage: Companion_matrix(p,x)
-        [-2*y   -1]
-        [   1    0]
+        sage: x=var('x')
+        sage: A=Companion_matrix(sum(HM(5,'a').list()[k]*x^(k) for k in range(5)),x);A.characteristic_polynomial()
+        x^4 + a3/a4*x^3 + a2/a4*x^2 + a1/a4*x + a0/a4
 
     AUTHORS:
     - Edinah K. Gnang
@@ -1689,8 +1690,8 @@ def Companion_matrix(p,vrbl):
             # Filling up the matrix
             A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
             for i in range(1,dg):
-                A[0,dg-i-1]=-p.coefficient(vrbl^i)/p.coefficient(vrbl^dg)
-                A[i,Integer(mod(i+1,dg))]=1
+                A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
+                A[i,i-1]=1
             return A
         elif dg==1:
             return Matrix(SR,1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
@@ -1709,10 +1710,11 @@ def Sylvester_matrix(p,q,vrbl):
 
     ::
 
-        sage: x=var('x'); p=2*x+3; q=7*x-5; Sylvester_matrix(p,q,x)
-        [ 2  3]
-        [ 7 -5]
-
+        sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
+        sage: p=expand((x-a0)*(x-a1))
+        sage: q=expand((x-b0)*(x-b1))
+        sage: Sylvester_matrix(p, q, x).det().factor()
+        (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
     AUTHORS:
     - Edinah K. Gnang
@@ -1748,14 +1750,11 @@ def Gmatrix(p,q,vrbl):
 
     ::
 
-        sage: x=var('x')
-        sage: p=x^2+2*x+3
-        sage: q=x^2+7*x-5
-        sage: Gmatrix(p,q,x)
-        [ 5 -3 -5  0]
-        [ 1  7  0 -5]
-        [-1  0 -2 -3]
-        [ 0 -1  1  0]
+        sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
+        sage: p=expand((x-a0)*(x-a1))
+        sage: q=expand((x-b0)*(x-b1))
+        sage: Gmatrix(p,q,x).det().factor()
+        (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
     AUTHORS:
     - Edinah K. Gnang
@@ -6592,7 +6591,7 @@ def ThirdOrdercharpoly(A, c):
     - Edinah K. Gnang
     """
     # Initialization of the list of powers
-    L =[]; Ls=[]; i=0
+    L=[]; Ls=[]; i=0
     while len(L) < 1+prod(A.dimensions()):
         L=L+HypermatrixCayleyHamiltonList(A, 2*i+1)
         Ls=Ls+HypermatrixCayleyHamiltonStringList(2*i+1, c)
