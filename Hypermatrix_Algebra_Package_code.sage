@@ -1858,8 +1858,8 @@ def OuterHypermatrixInversePair(U, V):
 
         sage: Hu=HM(2,2,2,'u'); Hv=HM(2,2,2,'v')
         sage: [Sln, Tx, Ty]=OuterHypermatrixInversePair(Hu, Hv)[0]
-        sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]])) 
-        sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]]))
+        sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1])) 
+        sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
         sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
         [a000,
          a100,
@@ -6685,3 +6685,254 @@ def GeneralHypermatrixTransform(Hl, X):
         Ly.append((apply(ProdB,[X.transpose(i) for i in range(od-1,-1,-1)]+[apply(ProdB,[H for H in Hl]+[DltL[t]])])).list()[0]^(1/od))
     return apply(HM,[sz]+[1 for i in range(od-1)]+[Ly]) 
 
+def weighted_matrix_minor(A):
+    """
+    Outputs a list of second order minor hypermatrices
+    which add up to the original hypermatrices.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: L=weighted_matrix_minor(HM(3,3,'a')); L
+        [[[0, 0, 0], [0, 1/2*a11, a12], [0, a21, 1/2*a22]],
+         [[1/2*a00, 0, a02], [0, 0, 0], [a20, 0, 1/2*a22]],
+         [[1/2*a00, a01, 0], [a10, 1/2*a11, 0], [0, 0, 0]]]
+        sage: sum(L)
+        [[a00, a01, a02], [a10, a11, a12], [a20, a21, a22]] 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Checking that the matrix is square
+    if A.is_cubical() and A.order()==2 and A.n(0)>2:
+        # Initialization of the size parameter
+        sz=A.n(0)
+        # Initialization of the Kronecker delta hypermatrices
+        Id=HM(2,sz,'kronecker')
+        # Initialization of the list
+        L=[HM(sz,1,[Id[i,t] for i in range(sz)]) for t in range(sz)]
+        # Initialization of the list of matrices
+        MtrL=[]
+        for t in range(sz):
+            MtrL.append((sz-2)^(-1)*(Prod(sum([L[i] for i in range(sz) if i!=t]),sum([L[i] for i in range(sz) if i!=t]).transpose())-sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))+(sz-1)^(-1)*sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))
+        return [A.elementwise_product(MtrL[i]) for i in range(sz)]
+    else:
+        raise ValueError, "The input hypermpatrix must be cubic and order 2 of side length > 2"
+
+def SecondOrdeCharpolyI(A, U, mu, nu):
+    """
+    Outputs second order hypermatrix characterisitic polynomial.
+    Or generator of the first spectral elimination ideal.
+    The inputs are matrix A for which we want to compute
+    the spectral decompostion. The matrices U and V which are
+    associated with the e-vectors and the diagonal matrices
+    mu, nu.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: Ha=HM(2,2,'a'); Hu=HM(2,2,'u'); Hd0=HM(2,2,diagonal_matrix(HM(2,'x').list()).list()); Hd1=HM(2,2,diagonal_matrix(HM(2,'y').list()).list())
+        sage: SecondOrdeCharpolyI(Ha, Hu, Hd0, Hd1)[0].printHM()
+        [:, :]=
+        [u00*x0*y0*(1/u00 - u01*u10/(u00^2*(u01*u10/u00 - u11))) + u01*u10*x1*y1/(u00*(u01*u10/u00 - u11))                                     u01*x0*y0/(u01*u10/u00 - u11) - u01*x1*y1/(u01*u10/u00 - u11)]
+        [u10*x0*y0*(1/u00 - u01*u10/(u00^2*(u01*u10/u00 - u11))) + u10*u11*x1*y1/(u00*(u01*u10/u00 - u11))                           u01*u10*x0*y0/(u00*(u01*u10/u00 - u11)) - u11*x1*y1/(u01*u10/u00 - u11)] 
+        sage: x,y=var('x,y')
+        sage: Ha=HM(2,2,'a'); Hu=HM(2,2,'u'); Hd0=HM(2,2,diagonal_matrix([x,x]).list()); Hd1=HM(2,2,diagonal_matrix([y,y]).list())
+        sage: (SecondOrdeCharpolyI(Ha, Hu, Hd0, Hd1)[1]).factor()
+        x^2*y^2 - a00*x*y - a11*x*y - a01*a10 + a00*a11
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Checking that the matrix is square and that mu and nu are diagonal matrices
+    if A.is_cubical() and A.order()==2 and (mu.elementwise_exponent(2)-Prod(mu.transpose(),mu)).is_zero() and (nu.elementwise_exponent(2)-Prod(nu.transpose(),nu)).is_zero():
+        # Initialization of the hypermatrix V
+        V=U.inverse().transpose()
+        return [Prod(Prod(U,mu),Prod(V,nu).transpose()), (A-Prod(Prod(U,mu),Prod(V,nu).transpose())).det()]
+    else:
+        raise ValueError, "Not supported for the input hypermatrices."    
+
+def SecondOrdeCharpolyII(A, U, Dg):
+    """
+    Outputs second order hypermatrix characterisitic polynomial.
+    Or generator of the first spectral elimination ideal.
+    The inputs are matrix A for which we want to compute
+    the spectral decompostion. The matrices U and V which are
+    associated with the e-vectors and the diagonal matrices
+    mu, nu.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: A=HM(2,2,'a'); U=HM(2,2,'u'); Dg=HM(2,2,diagonal_matrix(HM(2,'x').list()).list())
+        sage: SecondOrdeCharpolyII(A, U, Dg)[2].numerator().factor()
+        (a10*u00^2 - a00*u00*u10 + a11*u00*u10 - a01*u10^2)*(a10*u01^2 - a00*u01*u11 + a11*u01*u11 - a01*u11^2)*(a01*a10 - a00*a11)
+        sage: SecondOrdeCharpolyII(A, U, Dg)[2].denominator().factor()
+        (a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Checking that the matrix is square and that mu and nu are diagonal matrices
+    if A.is_cubical() and A.order() == 2 and (Dg.elementwise_exponent(2)-Prod(Dg.transpose(),Dg)).is_zero():
+        # Initialization of the hypermatrix V
+        V=U.inverse().transpose()
+        # Initialization of the Kronecker delta list
+        L=GeneralHypermatrixKroneckerDeltaL(2,A.n(0))
+        # Initializing the equations
+        Eq=[(A-ProdB(U,Prod(Dg,V.transpose()),L[i])).det()==0 for i in range(A.n(0))]
+        # Initializing the list of equations
+        Sln=solve(Eq, [Dg[i,i] for i in range(Dg.n(0))])[0]
+        return [(A-ProdB(U,Prod(Dg,V.transpose()),L[i])).det() for i in range(A.n(0))]+[(A-Prod(U,Prod(Dg,V.transpose()))).det().subs(Sln)]
+    else:
+        raise ValueError, "Not supported for the input hypermatrices."    
+
+def GeneralUncorrelatedComposition(Lu, La, Lf): 
+    """
+    Implements the generic composition procedure to be used for the spectral
+    decomposition procedure. The hypermatrix inputs are three lists.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Lu=[HM(2,2,'u'), HM(2,2,'v')]
+        sage: Sln=GeneralUncorrelatedComposition(Lu, [HM(2,2,'a'),HM(2,2,'a').inverse()], [HM(2,2,'f'),HM(2,2,'f').inverse()])
+        sage: U=HM(2,2,'u').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: V=HM(2,2,'v').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: Prod(U,V)[1,0].is_zero()
+        True
+        sage: Prod(U,V)[0,1].is_zero()
+        True
+        sage: Hl1=[HM(2,2,'a'),HM(2,2,'b')]; Xl1=[HM(2,2,'s'),HM(2,2,'t')]
+        sage: Hl2=[HM(2,2,'f'),HM(2,2,'g')]; Xl2=[HM(2,2,'x'),HM(2,2,'y')]
+        sage: Sln1=GeneralHypermatrixConstrainedUncorrelatedTuples(Hl1,Xl1)
+        sage: Sln2=GeneralHypermatrixConstrainedUncorrelatedTuples(Hl2,Xl2)
+        sage: La=[Hx.subs(dict([(s.lhs(),s.rhs()) for s in Sln1 if s.lhs()!=1])) for Hx in Xl1]
+        sage: Tmp1=HM(2,2,'one')
+        sage: Tmp1[0,0]=1/Prod(La[0],La[1])[0,0];Tmp1[0,1]=1/Prod(La[0],La[1])[0,0]
+        sage: Tmp1[1,0]=1/Prod(La[0],La[1])[1,1];Tmp1[1,1]=1/Prod(La[0],La[1])[1,1]
+        sage: Lf=[Hx.subs(dict([(s.lhs(),s.rhs()) for s in Sln2 if s.lhs()!=1])) for Hx in Xl2]
+        sage: Tmp2=HM(2,2,'one')
+        sage: Tmp2[0,0]=1/Prod(Lf[0],Lf[1])[0,0];Tmp2[0,1]=1/Prod(Lf[0],Lf[1])[0,0]
+        sage: Tmp2[1,0]=1/Prod(Lf[0],Lf[1])[1,1];Tmp2[1,1]=1/Prod(Lf[0],Lf[1])[1,1]
+        sage: Lu=[HM(2,2,'u'), HM(2,2,'v')]
+        sage: Sln=GeneralUncorrelatedComposition(Lu, [La[0].elementwise_product(Tmp1),La[1]], [Lf[0].elementwise_product(Tmp2),Lf[1]])
+        sage: Prod(U,V)[1,0].is_zero()
+        True
+        sage: Prod(U,V)[0,1].is_zero()
+        True
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the order paramter
+    od=Lu[0].order()
+    # Initializing the size parameter
+    sz=Lu[0].n(0)
+    # Initializing the list of hypermatrices
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    # We seek to solve for Hu,Hv,Hw for input hypermatrices Ha,Hb,Hc, He,Hf,Hg
+    L1=[]; L2=[]
+    for i in range(sz): 
+        L1=L1+apply(ProdB,[Hu for Hu in Lu]+[DltL[i]]).list()
+        L2=L2+apply(ProdB,[Ha for Ha in La]+[apply(ProdB,[Hf for Hf in Lf]+[DltL[i]])]).list()
+    # Initialization of the equation
+    EqL=[L1[i]==L2[i] for i in range(len(L1))]
+    LstX=[]
+    for x in Lu:
+        LstX=LstX+x.list()
+    if len(Set(LstX).list())==len(LstX):
+        VrbL=LstX
+    else:
+        VrbL=Set(LstX).list()
+    # Formating the constraints
+    [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
+    # Initialization of the vector of variables
+    v=Matrix(SR, A.ncols(), 1, VrbL)
+    # returning the solutions to the system obtained via Gauss-Jordan elimination
+    return multiplicative_linear_solver(A, b, v, v)
+
+def ThirdOrdeCharpolyI(A, Mu, Mv, Mw):
+    """
+    Outputs the third order hypermatrix characterisitic polynomial.
+    Can alternatively generator of the first spectral elimination ideal.
+    Assumes that the hypermatrix U, V, W arises from a parametrization
+    of uncorrelated tuples but checks that the the inputs hypermatrices
+    Du, Dv, Dw are diagonal hypremartices.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: Mu=HM(2,2,'f','sym'); Mv=HM(2,2,'g','sym'); Mw=HM(2,2,'h','sym')
+        sage: ThirdOrdeCharpolyI(HM(2,2,2,'a'), Mu, Mv, Mw)
+        (f01^2*g01^2*h01^2 - a111)*a001*a010*a100 - (f00^2*g00^2*h00^2 - a000)*a011*a101*a110 
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Checking that the matrix is square and that mu and nu are diagonal matrices
+    if A.is_cubical() and A.order() == 3 and A.n(0)==2:
+        # Initializing the hypermatrix B
+        B=HM(A.n(0),A.n(1),A.n(2),'zero')
+        for i in range(A.n(0)):
+            for j in range(A.n(1)):
+                for k in range(A.n(2)):
+                    if i==j and j==k:
+                        B[i,j,k]=A[i,j,k]-(Mu[0,i]*Mv[0,i]*Mw[0,i])^2
+                    else:
+                        B[i,j,k]=A[i,j,k]
+        return B.det()
+    else:
+        raise ValueError, "Not supported for the input hypermatrices."    
+
+def ThirdOrdeCharpolyII(A, U, V, W, Du, Dv, Dw):
+    """
+    Outputs the third order hypermatrix characterisitic polynomial.
+    Can alternatively generator of the first spectral elimination ideal.
+    Assumes that the hypermatrix U, V, W arises from a parametrization
+    of uncorrelated tuples but checks that the the inputs hypermatrices
+    Du, Dv, Dw are diagonal hypremartices.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: Du=HM(Matrix(2,2,HM(2,2,'f','sym').listHM())); Dv=HM(Matrix(2,2,HM(2,2,'g','sym').listHM())); Dw=HM(Matrix(2,2,HM(2,2,'h','sym').listHM()))
+        sage: [Sln1, Sln2, Sln3]=UncorrelatedSideLength2Triple('u','v','w')
+        sage: Hu=HM(2,2,2,'u').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
+        sage: Hv=HM(2,2,2,'v').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
+        sage: Hw=HM(2,2,2,'w').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
+        sage: Hd=Prod(Hu,Hv,Hw).simplify()
+        sage: Uh=Hu.copy(); Vh=Hv.copy(); Wh=Hw.copy()
+        sage: Wh[0,0,0]=Wh[0,0,0]/Hd[0,0,0]; Wh[1,0,0]=Wh[1,0,0]/Hd[0,0,0]
+        sage: Wh[0,1,1]=Wh[0,1,1]/Hd[1,1,1]; Wh[1,1,1]=Wh[1,1,1]/Hd[1,1,1]
+        sage: ThirdOrdeCharpolyII(HM(2,2,2,'a'), Uh, Vh, Wh, Du, Dv, Dw)[0]
+        -(f01^2*g01^2*h01^2*u111*v111*w000*w011*w101*w110/(u111*v111*w000*w011*w101*w110 - u111*v111*w001*w010*w100*w111) - a111)*(f00*f01*g00*g01*h00^2*u110*v101*w001*w010*w100*w111/(u010*v001*w000*w011*w101*w110 - u010*v001*w001*w010*w100*w111) - a100)*(f00*f01*g00^2*h00*h01*u011*v001*w101 + a001)*(f00^2*g00*g01*h00*h01*u010*v011*w110 + a010) + (f00^2*g00^2*h00^2*u010*v001*w000*w011*w101*w110/(u010*v001*w000*w011*w101*w110 - u010*v001*w001*w010*w100*w111) - a000)*(f00*f01*g00*g01*h01^2*u011*v011*w001*w010*w100*w111/(u111*v111*w000*w011*w101*w110 - u111*v111*w001*w010*w100*w111) - a011)*(f01^2*g00*g01*h00*h01*u111*v101*w101 + a101)*(f00*f01*g01^2*h00*h01*u110*v111*w110 + a110)
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Checking that the matrix is square and that mu and nu are diagonal matrices
+    if A.order()==3 and A.n(0)==2 and (Prod(Du.transpose(),Du.transpose(2),Du)-Du.elementwise_exponent(3)).is_zero() and (Prod(Dv.transpose(),Dv.transpose(2),Dv)-Dv.elementwise_exponent(3)).is_zero() and (Prod(Dw.transpose(),Dw.transpose(2),Dw)-Dw.elementwise_exponent(3)).is_zero():
+        DltL=GeneralHypermatrixKroneckerDeltaL(A.order(),A.n(0))
+        return [(A-ProdB(Prod(U,Du,Du.transpose()), Prod(Dv,V,Dv.transpose(2)), Prod(Dw.transpose(),Dw.transpose(2),W), DltL[t])).det() for t in range(2)]
+    else:
+        raise ValueError, "Not supported for the input hypermatrices."    
+ 
