@@ -229,6 +229,11 @@ class HM:
         return lst
     def listHM(self):
         return self.hm
+    def matrix(self):
+        if self.order()<=2:
+            return Matrix(SR,self.listHM())
+        else:
+            raise ValueError, "not supported for order %d hypermatrices" %self.order()
     def order(self):
         cnt = 0
         H = self.listHM()
@@ -5089,56 +5094,6 @@ def CanonicalThirdOrderHypermatrixFactors(A):
                 cnt = cnt+1
     return [T0,T1,T2]
 
-def GeneralHypermatrixCompositionMatrix(*args):
-    """
-    Outputs the matrix constraints associated with the product 
-    this came up when I tried to use system of linear algebra
-    and resoltion of identity to express a composition rule.
-    This was not overall successfull.
-
-    EXAMPLES:
- 
-    ::
-
-        sage: [Eqnts,Mtr]=GeneralHypermatrixCompositionMatrix(HM(2,1,'a'),HM(1,2,'b'))
-        sage: Eqnts
-        [a00 + b00 == 0, a10 + b00 == 0, a00 + b01 == 0, a10 + b01 == 0]
-        sage: Mtr
-        [1 0 1 0]
-        [0 1 1 0]
-        [1 0 0 1]
-        [0 1 0 1]
-        
-
-    AUTHORS:
-
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Initialization of the list specifying the dimensions of the output
-    l = [(args[i]).n(i) for i in range(len(args))]
-    # Initializing the input for generating a symbolic hypermatrix
-    inpts = l+['zero']
-    # Initialization of the hypermatrix
-    Rh = []
-    # Main loop performing the assignement
-    for i in range(prod(l)):
-        # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
-        sm = Integer(mod(i,l[0]))
-        for k in range(len(l)-1):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
-            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        # computing the Hypermatrix product
-        if len(args)<2:
-            raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= 2:
-            Rh = Rh + [sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)] + [args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) == 0 for t in range((args[0]).n(1))]
-    # Initialization of the variables.
-    Vrbls = []
-    for i in range(len(args)):
-        Vrbls = Vrbls + (args[i]).list()
-    return [Rh, ConstraintFormatorII(Rh, Vrbls)[0]]
 
 def GeneralHypermatrixLogProductTermList(*args):
     """
@@ -5982,9 +5937,9 @@ def GeneralHypermatrixConstrainedOrthogonalization(H, X):
 
     ::
 
-        sage: Sln=GeneralHypermatrixConstrainedOrthogonalization(apply(HM,[2 for i in range(2)]+['h']), apply(HM,[2 for i in range(2)]+['x'])); Sln
+        sage: od=2; sz=2; Sln=GeneralHypermatrixConstrainedOrthogonalization(apply(HM,[sz for i in range(od)]+['h']), apply(HM,[sz for i in range(od)]+['x'])); Sln
         [x00 == 1/2*(h00*h10 - h01*h11)/x10, x01 == -1/2*(h00*h10 - h01*h11)/x11]
-        sage: od=2; sz=2; H=apply(HM,[sz for i in range(od)]+['x']).subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: H=apply(HM,[sz for i in range(od)]+['x']).subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
         sage: apply(Prod,[H.transpose(od-i) for i in range(od)])
         [[1/4*(h00*h10 - h01*h11)^2/x10^2 + 1/4*(h00*h10 - h01*h11)^2/x11^2, 0], [0, x10^2 + x11^2]]
 
@@ -6721,7 +6676,7 @@ def weighted_matrix_minor(A):
     else:
         raise ValueError, "The input hypermpatrix must be cubic and order 2 of side length > 2"
 
-def SecondOrdeCharpolyI(A, U, mu, nu):
+def SecondOrderCharpolyI(A, U, mu, nu):
     """
     Outputs second order hypermatrix characterisitic polynomial.
     Or generator of the first spectral elimination ideal.
@@ -6735,13 +6690,13 @@ def SecondOrdeCharpolyI(A, U, mu, nu):
     ::
 
         sage: Ha=HM(2,2,'a'); Hu=HM(2,2,'u'); Hd0=HM(2,2,diagonal_matrix(HM(2,'x').list()).list()); Hd1=HM(2,2,diagonal_matrix(HM(2,'y').list()).list())
-        sage: SecondOrdeCharpolyI(Ha, Hu, Hd0, Hd1)[0].printHM()
+        sage: SecondOrderCharpolyI(Ha, Hu, Hd0, Hd1)[0].printHM()
         [:, :]=
         [u00*x0*y0*(1/u00 - u01*u10/(u00^2*(u01*u10/u00 - u11))) + u01*u10*x1*y1/(u00*(u01*u10/u00 - u11))                                     u01*x0*y0/(u01*u10/u00 - u11) - u01*x1*y1/(u01*u10/u00 - u11)]
         [u10*x0*y0*(1/u00 - u01*u10/(u00^2*(u01*u10/u00 - u11))) + u10*u11*x1*y1/(u00*(u01*u10/u00 - u11))                           u01*u10*x0*y0/(u00*(u01*u10/u00 - u11)) - u11*x1*y1/(u01*u10/u00 - u11)] 
         sage: x,y=var('x,y')
         sage: Ha=HM(2,2,'a'); Hu=HM(2,2,'u'); Hd0=HM(2,2,diagonal_matrix([x,x]).list()); Hd1=HM(2,2,diagonal_matrix([y,y]).list())
-        sage: (SecondOrdeCharpolyI(Ha, Hu, Hd0, Hd1)[1]).factor()
+        sage: (SecondOrderCharpolyI(Ha, Hu, Hd0, Hd1)[1]).factor()
         x^2*y^2 - a00*x*y - a11*x*y - a01*a10 + a00*a11
 
     AUTHORS:
@@ -6756,7 +6711,7 @@ def SecondOrdeCharpolyI(A, U, mu, nu):
     else:
         raise ValueError, "Not supported for the input hypermatrices."    
 
-def SecondOrdeCharpolyII(A, U, Dg):
+def SecondOrderCharpolyII(A, U, Dg):
     """
     Outputs second order hypermatrix characterisitic polynomial.
     Or generator of the first spectral elimination ideal.
@@ -6770,9 +6725,9 @@ def SecondOrdeCharpolyII(A, U, Dg):
     ::
 
         sage: A=HM(2,2,'a'); U=HM(2,2,'u'); Dg=HM(2,2,diagonal_matrix(HM(2,'x').list()).list())
-        sage: SecondOrdeCharpolyII(A, U, Dg)[2].numerator().factor()
+        sage: SecondOrderCharpolyII(A, U, Dg)[2].numerator().factor()
         (a10*u00^2 - a00*u00*u10 + a11*u00*u10 - a01*u10^2)*(a10*u01^2 - a00*u01*u11 + a11*u01*u11 - a01*u11^2)*(a01*a10 - a00*a11)
-        sage: SecondOrdeCharpolyII(A, U, Dg)[2].denominator().factor()
+        sage: SecondOrderCharpolyII(A, U, Dg)[2].denominator().factor()
         (a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)
 
     AUTHORS:
@@ -6829,7 +6784,34 @@ def GeneralUncorrelatedComposition(Lu, La, Lf):
         True
         sage: Prod(U,V)[0,1].is_zero()
         True
-
+        sage: Lu=[HM(2,2,2,'u'), HM(2,2,2,'v'), HM(2,2,2,'w')]
+        sage: # Initialization of the first uncorrelated tuple
+        sage: [Sln1, Sln2, Sln3]=UncorrelatedSideLength2Triple('a','b','c')
+        sage: Ha=HM(2,2,2,'a').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
+        sage: Hb=HM(2,2,2,'b').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
+        sage: Hc=HM(2,2,2,'c').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
+        sage: Hd=Prod(Ha,Hb,Hc).simplify()
+        sage: Ah=Ha.copy(); Bh=Hb.copy(); Ch=Hc.copy()
+        sage: Ch[0,0,0]=Ch[0,0,0]/Hd[0,0,0]; Ch[1,0,0]=Ch[1,0,0]/Hd[0,0,0]
+        sage: Ch[0,1,1]=Ch[0,1,1]/Hd[1,1,1]; Ch[1,1,1]=Ch[1,1,1]/Hd[1,1,1]
+        sage: La=[Ah, Bh, Ch]
+        sage: # Initialization of the second uncorrelated tuple
+        sage: [Tln1, Tln2, Tln3]=UncorrelatedSideLength2Triple('f','g','h')
+        sage: Hf=HM(2,2,2,'f').subs(dict([(s.lhs(),s.rhs()) for s in Tln1]))
+        sage: Hg=HM(2,2,2,'g').subs(dict([(s.lhs(),s.rhs()) for s in Tln1]))
+        sage: Hh=HM(2,2,2,'h').subs(dict([(s.lhs(),s.rhs()) for s in Tln1]))
+        sage: He=Prod(Hf,Hg,Hh).simplify()
+        sage: Fh=Hf.copy(); Gh=Hg.copy(); Hh=Hh.copy()
+        sage: Hh[0,0,0]=Hh[0,0,0]/He[0,0,0]; Hh[1,0,0]=Hh[1,0,0]/He[0,0,0]
+        sage: Hh[0,1,1]=Hh[0,1,1]/He[1,1,1]; Hh[1,1,1]=Hh[1,1,1]/He[1,1,1]
+        sage: Lf=[Fh, Gh, Hh]
+        sage: # Performing the composition
+        sage: Sln=GeneralUncorrelatedComposition(Lu, La, Lf)
+        sage: U=HM(2,2,2,'u').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: V=HM(2,2,2,'v').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: W=HM(2,2,2,'w').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: Prod(U,V,W)[0,0,1].is_zero()
+        True
 
 
     AUTHORS:
