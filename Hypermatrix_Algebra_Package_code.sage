@@ -52,6 +52,8 @@ class HM:
             self.hm = apply(HypermatrixGenerateAllOne, dims)
         elif s == 'zero':
             self.hm = apply(HypermatrixGenerateAllZero, dims)
+        elif s == 'shift':
+            self.hm = apply(HypermatrixGenerateII, dims)
         elif s == 'ortho':
             if len(dims) == 1:
                 self.hm=Orthogonal2x2x2Hypermatrix(dims[0])
@@ -274,26 +276,15 @@ class HM:
         X.save(filename)
     def copy(self):
         return GeneralHypermatrixCopy(self)
+    def append_index(self,indx):
+        return GeneralHypermatrixAppendIndex(self,indx)
     def norm(self,p=2):
         return sum([abs(i)^p for i in self.list()])
-    def per(self):
-        if self.order()==2:
-            return Per(Matrix(SR,self.listHM()))
-        elif self.order()==3:
-            return ThirdOrderPermanent(self)
-        elif self.order()==4:
-            return FourthOrderPermanent(self)
-        elif self.order()==5:
-            return FifthOrderPermanent(self)
-        elif self.order()==6:
-            return SixthOrderPermanent(self)
-        else:
-            raise ValueError, "The permanent is not implemented for order "+str(self.order())+"."
     def det(self):
         if self.order()==2:
             return Deter(Matrix(SR,self.listHM()))
         elif self.order()==3:
-            return ThirdOrderHyperdeterminant(self)
+            return ThirdOrderDeter(self)
         elif self.order()==4:
             return FourthOrderHyperdeterminant(self)
         elif self.order()==5:
@@ -301,7 +292,7 @@ class HM:
         elif self.order()==6:
             return SixthOrderHyperdeterminant(self)
         else:
-            raise ValueError, "The hyperdeterminant is not implemented for order "+str(self.order())+"."
+            return GeneralHyperdeterminant(self) 
     def is_zero(self):
         if Set(self.list()).list()==[0]:
             return True
@@ -394,6 +385,31 @@ def HypermatrixGenerate(*args):
     if len(args) == 1:
         return var(args[0])
     return [apply(HypermatrixGenerate, args[1:-1]+(args[-1]+str(i),)) for i in range(args[0])]
+
+def HypermatrixGenerateII(*args):
+    """
+    Generates a list of lists associated with a symbolic arbitrary
+    order hypematrix of size specified by the input using and the
+    entries are determined by the last input character. The difference
+    between this function and the previous one is the fact that the index
+    start from 1 as apposed to starting from zero. This was motivated by
+    general determinant implementation.
+
+    EXAMPLES:
+
+    ::
+
+        sage: M = HypermatrixGenerateII(2, 2, 2, 'm'); M
+        [[[m111, m112], [m121, m122]], [[m211, m212], [m221, m222]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
+    """
+    if len(args) == 1:
+        return var(args[0])
+    return [apply(HypermatrixGenerateII, args[1:-1]+(args[-1]+str(i),)) for i in range(1,1+args[0])]
+
 
 def HypermatrixGenerateAllOne(*args):
     """
@@ -2650,6 +2666,39 @@ def GeneralHypermatrixCopy(A):
         Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
+def GeneralHypermatrixAppendIndex(A,indx):
+    """
+    Procedure for computing Hypermatrix Hadamard addition.
+
+    EXAMPLES:
+
+    ::
+
+        sage: GeneralHypermatrixAppendIndex(HM(2,2,'a','shift'),1)
+        [[a111, a121], [a211, a221]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=var(str(A[tuple(entry)])+str(indx))
+    return Rh
+
+
+
 def List2Hypermatrix(*args):
     """
     Procedure for Initializing a Hypermatrix from a size specifications and a list
@@ -3253,7 +3302,7 @@ def Deter(A):
 
     ::
 
-        sage: M = Matrix(SR, MatrixGenerate(2, 2, 'm')); Deter(M)
+        sage: Deter(HM(2,2,'m'))
         -m01*m10 + m00*m11
 
     AUTHORS:
@@ -3261,7 +3310,43 @@ def Deter(A):
     """
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
-    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([A[k][p[k]] for k in range(A.nrows())]) for p in P])
+    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([A[k,p[k]] for k in range(A.nrows())]) for p in P])
+
+def ThirdOrderDeter(H):
+    """
+    computes third order hypermatrix determinant using the recursive determinant construction.
+    Where the base case is the matrix case. The third order hyperdeterminant are only defined
+    for cubic third order hypermatrices.
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: ThirdOrderDeter(HM(2,2,2,'a'))
+        a000*a011*a101*a110 - a001*a010*a100*a111
+        
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    - To Do: Implement a faster and more generic version.
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if len(Set(H.dimensions()).list())==1 and H.order()==3:
+        # Initializing the matrix for the mnemonic construction
+        A=HM(H.n(0),H.n(0),[var('x'+str(i)+str(j)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
+        # Computing the mnemonique polynomial
+        P=Permutations(range(A.nrows()))
+        L=expand(Deter(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in Deter(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        # Computing the polynomial
+        f=sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
+        # Loop performing the umbral expression
+        for k in range(H.n(0),0,-1):
+            f=fast_reduce(f,[var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-1,j-1,k-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
+    else :
+        # Print an error message indicating that the matrix must be a cube.
+        raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
  
 def Per(A):
     """
@@ -3272,15 +3357,15 @@ def Per(A):
 
     ::
 
-        sage: M = Matrix(SR, MatrixGenerate(2, 2, 'm')); Deter(M)
-        -m01*m10 + m00*m11
+        sage: M = HM(2, 2, 'm'); Per(M)
+        m01*m10 + m00*m11
 
     AUTHORS:
     - Edinah K. Gnang
     """
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
-    return sum([prod([A[k][p[k]] for k in range(A.nrows())]) for p in P])
+    return sum([prod([A[k,p[k]] for k in range(A.nrows())]) for p in P])
  
 def MeanApproximation(T):
     """
@@ -4207,7 +4292,10 @@ def fast_reduce(f, monom, subst):
 
 def SecondOrderHyperdeterminant(H):
     """
-    computes second order matrix determinant
+    computes second order i.e. matrix determinant using the Cauchy umbral mnemonic device
+    The algorithm used here is worst then sum over signed permutation monomials because it
+    constructs 2^binomial(n,2) monomials in the expanded form. There is however a massive
+    amount of cancelation which will leaves out only factorial(n) terms.
     
     EXAMPLES:
  
@@ -4225,8 +4313,8 @@ def SecondOrderHyperdeterminant(H):
     # Testing to see that the hypermatrix is indeed a cube
     if len(Set(H.dimensions()).list())==1 and H.order()==2:
         # Initializing the matrix for the mnemonic construction
-        A=Matrix(SR,H.n(0),1,[var('x'+str(i)) for i in range(1,1+H.n(0))])
-        L=expand(prod([A[u][0]-A[v][0] for u in range(1,A.nrows()) for v in range(u)])*prod([A[i][0] for i in range(A.nrows())])).operands()
+        A=HM(H.n(0),1,[var('x'+str(i)) for i in range(1,1+H.n(0))])
+        L=expand(prod([A[u,0]-A[v,0] for u in range(1,A.nrows()) for v in range(u)])*prod([A[i,0] for i in range(A.nrows())])).operands()
         # Computing the polynomial
         f=sum(L)
         # Loop performing the umbral expression
@@ -4239,7 +4327,9 @@ def SecondOrderHyperdeterminant(H):
 
 def ThirdOrderHyperdeterminant(H):
     """
-    computes third order hypermatrix determinant
+    computes third order hypermatrix determinant using the recursive determinant construction.
+    Where the base case is the matrix case. The third order hyperdeterminant are only defined
+    for cubic third order hypermatrices.
     
     EXAMPLES:
  
@@ -4252,15 +4342,14 @@ def ThirdOrderHyperdeterminant(H):
     AUTHORS:
 
     - Edinah K. Gnang
-    - To Do: 
+    - To Do: Implement a faster and more generic version.
     """
     # Testing to see that the hypermatrix is indeed a cube
     if len(Set(H.dimensions()).list())==1 and H.order()==3:
         # Initializing the matrix for the mnemonic construction
-        A=Matrix(SR,H.n(0),H.n(0),[var('x'+str(i)+str(j)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        A=HM(H.n(0),H.n(0),[var('x'+str(i)+str(j)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the mnemonique polynomial
-        P=Permutations(range(A.nrows()))
-        L=expand(sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([(A[k][p[k]]) for k in range(A.nrows())]) for p in P])*prod([sum([prod([(A[k][p[k]])^j for k in range(A.nrows())]) for p in P]) for j in range(2,H.n(0)+1)])).operands()
+        L=expand(SecondOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in SecondOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         # Computing the polynomial
         f=sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
         # Loop performing the umbral expression
@@ -4270,92 +4359,11 @@ def ThirdOrderHyperdeterminant(H):
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
-
-def ThirdOrderPermanent(H):
-    """
-    computes third order hypermatrix determinant
-    
-    EXAMPLES:
- 
-    ::
-
-        sage: ThirdOrderPermanent(HM(2,2,2,'a'))
-        a000*a011*a101*a110 + a001*a010*a100*a111
-        
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==1 and H.order()==3:
-        # Initializing the matrix for the mnemonic construction
-        A=Matrix(SR,H.n(0),H.n(0),[var('x'+str(i)+str(j)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
-        # Computing the mnemonique polynomial
-        P=Permutations(range(A.nrows()))
-        L=expand(sum([prod([(A[k][p[k]]) for k in range(A.nrows())]) for p in P])*prod([sum([prod([(A[k][p[k]])^j for k in range(A.nrows())]) for p in P]) for j in range(2,H.n(0)+1)])).operands()
-        # Computing the polynomial
-        f=sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
-        # Loop performing the umbral expression
-        for k in range(H.n(0),0,-1):
-            f=fast_reduce(f,[var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-1,j-1,k-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
-    else :
-        # Print an error message indicating that the matrix must be a cube.
-        raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
-
-
-def ThirdOrderHyperdeterminantII(A):
-    """
-    computes third order hypermatrix determinant
-    
-    EXAMPLES:
- 
-    ::
-
-        sage: ThirdOrderHyperdeterminantII(HM(2,2,2,'a'))
-        a000*a011*a101*a110 - a001*a010*a100*a111
-
-    AUTHORS:
-
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    if A.is_cubical() and A.n(0)==2:
-        return ThirdOrderHyperdeterminant(A)
-    elif A.is_cubical() and A.n(0)>2:
-        # Initializing of the size parameter.
-        sz=A.n(0)
-        # Initialization of the hypermatrix X
-        X=HM(sz,sz,sz,[var('x'+str(i)+str(j)) for k in range(sz) for j in range(sz) for i in range(sz)])
-        Y=HM(sz,sz,sz,[var('r'+str(i)+str(j)) for k in range(sz) for j in range(sz) for i in range(sz)])
-        # Performing the Hadamard product of the two hypermatrices.
-        B=A.elementwise_product(X)
-        # Initializing the list of polynomials.
-        Lst=[]
-        for t in range(sz):
-            Lst.append(expand(Matrix(SR,sz,sz,[B[i,j,t] for i in range(sz) for j in range(sz)]).det()))
-        # Initialization of the permutation .
-        P=Permutations(range(sz))
-        # Initialization of the variable list.
-        Vrbls=[prod([X[k,p[k],0] for k in range(sz)]) for p in P]
-        Wrbls=[prod([Y[k,p[k],0] for k in range(sz)]) for p in P]
-        # Formating the constraints and obtaining the determinant.
-        [Mtr, b]=ConstraintFormatorIV(Lst, Vrbls)
-        # Writing down the solution.
-        TmpSln=linear_solver(Mtr,b,Matrix(SR,len(Vrbls),1,Vrbls),Matrix(SR,len(Wrbls),1,Wrbls))
-        #print TmpSln
-        Eq=[sum(eq.lhs().operands())==eq.rhs() for eq in TmpSln]
-        #print Eq
-        # Formating the constraints
-        [Mtr2,b2]=ConstraintFormatorII(Eq, HM(sz,sz,'x').list())
-        return multiplicative_gauss_jordan_eliminationII(Mtr2,b2)
-    else :
-        raise ValueError, "The input hypermpatrix must be cubic"
 
 def FourthOrderHyperdeterminant(H):
     """
-    computes third order hypermatrix determinant
+    computes fourth order hyperdeterminant using the recusive construction.
+    The base case of the recusrion is the matrix determinant.
     
     EXAMPLES:
  
@@ -4385,40 +4393,10 @@ def FourthOrderHyperdeterminant(H):
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a fourth order hypercube hypermatrix."
 
-def FourthOrderPermanent(H):
-    """
-    computes third order hypermatrix determinant
-    
-    EXAMPLES:
- 
-    ::
-
-        sage: FourthOrderPermanent(HM(2,2,2,2,'a'))
-        a0001*a0010*a0100*a0111*a1000*a1011*a1101*a1110 + a0000*a0011*a0101*a0110*a1001*a1010*a1100*a1111
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==1 and H.order()==4:
-        # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(0),H.n(0),H.n(0), [var('x'+str(i)+str(j)+str(k)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
-        # Computing the polynomial
-        L=expand(ThirdOrderPermanent(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in ThirdOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
-        # Computing the polynomial
-        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^3])
-        # Loop performing the umbral expression
-        for l in range(H.n(0),0,-1):
-            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k))^l for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)),H[i-1,j-1,k-1,l-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))]))
-    else :
-        # Print an error message indicating that the matrix must be a cube.
-        raise ValueError, "The hypermatrix must be a fourth order hypercube hypermatrix."
-
 def FifthOrderHyperdeterminant(H):
     """
-    computes third order hypermatrix determinant
+    computes the fifth order hyperderterminant using the recusrive construction using the matrix determinant as
+    the base case.
     
     EXAMPLES:
  
@@ -4446,41 +4424,10 @@ def FifthOrderHyperdeterminant(H):
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a fifth order hypercube hypermatrix."
 
-def FifthOrderPermanent(H):
-    """
-    computes fifth order hypermatrix determinant
-    
-    EXAMPLES:
- 
-    ::
-
-        sage: FifthOrderHyperdeterminant(HM(2,2,2,2,2,'a'))
-        a00000*a00011*a00101*a00110*a01001*a01010*a01100*a01111*a10001*a10010*a10100*a10111*a11000*a11011*a11101*a11110 - a00001*a00010*a00100*a00111*a01000*a01011*a01101*a01110*a10000*a10011*a10101*a10110*a11001*a11010*a11100*a11111
-
-
-    AUTHORS:
-
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==1 and H.order()==5:
-        # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
-        # Computing the polynomial
-        L = expand(FourthOrderPermanent(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FourthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
-        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^4])
-        # Loop performing the umbral expression
-        for m in range(H.n(0),0,-1):
-            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l))^m for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)),H[i-1,j-1,k-1,l-1,m-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))]))
-    else :
-        # Print an error message indicating that the matrix must be a cube.
-        raise ValueError, "The hypermatrix must be a fifth order hypercube hypermatrix."
-
 def SixthOrderHyperdeterminant(H):
     """
-    computes third order hypermatrix determinant
+    computes the sixth order hypermatrix determinant using the recursive construction.
+    The base case of the recursion being the matrix determinant formula
     
     EXAMPLES:
  
@@ -4500,37 +4447,6 @@ def SixthOrderHyperdeterminant(H):
         A=HM(H.n(0),H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
         L = expand(FifthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
-        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^5])
-        # Loop performing the umbral expression
-        for p in range(H.n(0),0,-1):
-            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l)+str(m))^p for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)),H[i-1,j-1,k-1,l-1,m-1,p-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0)) for p in range(1,1+H.n(0))]))
-    else :
-        # Print an error message indicating that the matrix must be a cube.
-        raise ValueError, "The hypermatrix must be a sixth order hypercube hypermatrix."
-
-def SixthOrderPermanent(H):
-    """
-    computes third order hypermatrix determinant
-    
-    EXAMPLES:
- 
-    ::
-
-        sage: SixthOrderHyperdeterminant(HM(2,2,2,2,2,2,'a'))
-        -a000001*a000010*a000100*a000111*a001000*a001011*a001101*a001110*a010000*a010011*a010101*a010110*a011001*a011010*a011100*a011111*a100000*a100011*a100101*a100110*a101001*a101010*a101100*a101111*a110001*a110010*a110100*a110111*a111000*a111011*a111101*a111110 + a000000*a000011*a000101*a000110*a001001*a001010*a001100*a001111*a010001*a010010*a010100*a010111*a011000*a011011*a011101*a011110*a100001*a100010*a100100*a100111*a101000*a101011*a101101*a101110*a110000*a110011*a110101*a110110*a111001*a111010*a111100*a111111
-
-    AUTHORS:
-
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==1 and H.order()==6:
-        # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
-        # Computing the polynomial
-        L = expand(FifthOrderPermanent(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         f = sum([l for l in L if len((l^2).operands())==(H.n(0))^5])
         # Loop performing the umbral expression
         for p in range(H.n(0),0,-1):
@@ -4677,6 +4593,103 @@ def DodgsonCondensation(A):
         return (Temp.list())[0]
     else:
         raise ValueError, "The input hypermatrix must be hypercubic of size 2"
+
+def GeneralHyperdeterminantExpression(od,sz):
+    """
+    computes the general hyperdeterminant expression using the recursive determinant
+    construction. Where the base case is the matrix determinant.
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: GeneralHyperdeterminantExpression(3,2)
+        x111*x122*x212*x221 - x112*x121*x211*x222
+        
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    - To Do: Implement a faster and more generic version.
+    """
+    # Testing to see that the hypermatrix is indeed a cube
+    if od==2:
+        return HM(sz,sz,'x','shift').det()
+    elif od>2:
+        # Initializing the base case of the recursion
+        A=HM(sz,sz,'x','shift').copy()
+        # Computing the matrix determinant and permanent pair
+        Ldtm=[Deter(A)]+[Per(A.elementwise_exponent(j)) for j in range(2,1+sz)]
+        # Main loop performing the recursion computation
+        for o in range(2,od):
+            # ReInitialization of the Hypermatrix A
+            A=apply(HM,[sz for i in range(o)]+['x']+['shift']).copy()
+            # Computing the mnemonique polynomial
+            L=expand(prod(Ldtm)).operands()
+            # Computing the polynomial
+            f=sum([l for l in L if len((l^2).operands())==prod(A.dimensions())])
+            # Loop performing the umbral transformation
+            for k in range(sz,0,-1):
+                f=fast_reduce(f,A.elementwise_exponent(k).list(), apply(HM,[sz for i in range(o)]+['a']+['shift']).append_index(k).list())
+            B=apply(HM,[sz for i in range(o+1)]+['x']+['shift']).copy()
+            L1=apply(HM,[sz for i in range(o+1)]+['x']+['shift']).list();L2=apply(HM,[sz for i in range(o+1)]+['a']+['shift']).list()
+            f=f.subs(dict([(L2[i],L1[i]) for i in range(len(L1))]))
+            Ldtm=[f]+[sum([sqrt(g^2).canonicalize_radical() for g in f.operands()]).subs(dict([(B.list()[i],B.elementwise_exponent(j).list()[i]) for i in range(prod(B.dimensions()))])) for j in range(2,1+sz)]
+        return f
+
+def GeneralHyperdeterminant(H):
+    """
+    computes the general hyperdeterminant using the recursive determinant construction.
+    Where the base case is the matrix determinant.
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: GeneralHyperdeterminant(HM(2,2,2,'a','shift'))
+        a111*a122*a212*a221 - a112*a121*a211*a222
+        
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    - To Do: Implement a faster and more generic version.
+    """
+    if H.is_cubical(): 
+        f=GeneralHyperdeterminantExpression(H.order(),H.n(0))
+        Lh=H.list()
+        Lx=apply(HM,[H.n(0) for i in range(H.order())]+['x']+['shift']).list()
+        return f.subs(dict([(Lx[i],Lh[i]) for i in range(len(Lh))]))
+    else:
+        raise ValueError, "The hypermatrix must be cubical."
+
+def LatinHypermatrixList(od,sz):
+    """
+    computes list of latin hypercubes of order od and side length sz.
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: LatinHypermatrixList(2,2)
+        [[[0, x01], [x10, 0]], [[x00, 0], [0, x11]]]
+        
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the hyperdeterminant expression.
+    Dt=GeneralHyperdeterminant(apply(HM,[sz for i in range(od)]+['x']))
+    Lt = [sqrt(tm^2).canonicalize_radical() for tm in Dt.operands()]
+    Sa = Set(apply(HM,[sz for i in range(od)]+['x']).list())
+    L = []
+    for f in Lt:
+        Tmp=apply(HM,[sz for i in range(od)]+['x'])
+        Lsf=Sa.difference(Set(f.operands()))
+        L.append(Tmp.subs(dict([(g,0) for g in Lsf])))
+    return L
 
 def GeneralHypermatrixRank1Parametrization(sz,od):
     """
@@ -6033,9 +6046,9 @@ def GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, c):
          x10 == 1/2*(2*u10*(1/u00 - u01*u10/(u00^2*(u01*u10/u00 - u11))) + a10)/y00,
          x01 == 1/2*(a01 - 2*u01/(u01*u10/u00 - u11))/y11,
          x11 == 1/2*(a10 + 2*u10*u11/(u00*(u01*u10/u00 - u11)))/y10] 
-        sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))[0,1].numerator()
+        sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))[0,1].simplify_rational()
         a01 
-        sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))[1,0].numerator()
+        sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))[1,0].simplify_rational()
         a10 
         
 
@@ -6640,7 +6653,7 @@ def GeneralHypermatrixTransform(Hl, X):
         Ly.append((apply(ProdB,[X.transpose(i) for i in range(od-1,-1,-1)]+[apply(ProdB,[H for H in Hl]+[DltL[t]])])).list()[0]^(1/od))
     return apply(HM,[sz]+[1 for i in range(od-1)]+[Ly]) 
 
-def weighted_matrix_minor(A):
+def weighted_hypermatrix_minor(A):
     """
     Outputs a list of second order minor hypermatrices
     which add up to the original hypermatrices.
@@ -6649,7 +6662,7 @@ def weighted_matrix_minor(A):
  
     ::
 
-        sage: L=weighted_matrix_minor(HM(3,3,'a')); L
+        sage: L=weighted_hypermatrix_minor(HM(3,3,'a')); L
         [[[0, 0, 0], [0, 1/2*a11, a12], [0, a21, 1/2*a22]],
          [[1/2*a00, 0, a02], [0, 0, 0], [a20, 0, 1/2*a22]],
          [[1/2*a00, a01, 0], [a10, 1/2*a11, 0], [0, 0, 0]]]
@@ -6673,8 +6686,28 @@ def weighted_matrix_minor(A):
         for t in range(sz):
             MtrL.append((sz-2)^(-1)*(Prod(sum([L[i] for i in range(sz) if i!=t]),sum([L[i] for i in range(sz) if i!=t]).transpose())-sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))+(sz-1)^(-1)*sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))
         return [A.elementwise_product(MtrL[i]) for i in range(sz)]
+    elif A.is_cubical() and A.order()==3 and A.n(0)>3:
+        # Initialization of the size parameter
+        sz=A.n(0)
+        # Initialization of the list
+        L=[]
+        for t in range(sz):
+            # Initialization of a temporary HM
+            Tp=HM(sz,sz,sz,'zero')
+            for i in range(sz):
+                for j in range(sz):
+                    for k in range(sz):
+                        if i!=t and j!=t and k!=t:
+                            if i==j and j==k:
+                                Tp[i,j,k]=A[i,j,k]/(sz-1)
+                            if (i==j and j!=k) or (i==k and i!=j) or (j==k and i!=k):
+                                Tp[i,j,k]=A[i,j,k]/(sz-2)
+                            elif i!=j and i!=k and j!=k:
+                                Tp[i,j,k]=A[i,j,k]/(sz-3)
+            L.append(Tp.copy())
+        return L
     else:
-        raise ValueError, "The input hypermpatrix must be cubic and order 2 of side length > 2"
+        raise ValueError, "The input hypermpatrix must be cubic and order 3  and lower."
 
 def SecondOrderCharpolyI(A, U, mu, nu):
     """
