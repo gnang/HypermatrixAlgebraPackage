@@ -153,6 +153,8 @@ class HM:
         return GeneralHypermatrixSimplify(self)
     def canonicalize_radical(self):
         return GeneralHypermatrixCanonicalizeRadical(self)
+    def numerical(self):
+        return GeneralHypermatrixNumerical(self)
     def subs(self,Dct):
         return GeneralHypermatrixSubstitute(self, Dct)
     def subsn(self,Dct):
@@ -2562,6 +2564,42 @@ def GeneralHypermatrixCanonicalizeRadical(A):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=(A[tuple(entry)]).canonicalize_radical()
+    return Rh
+
+def GeneralHypermatrixNumerical(A):
+    """
+    Performs the symbolic simplification of the expressions
+    associated with the hypermatrix entries. 
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(3,3,[exp(I*2*pi*u*v/3) for v in range(3) for u in range(3)]) 
+        sage: GeneralHypermatrixNumerical(Ha)
+        [[1.00000000000000, 1.00000000000000, 1.00000000000000], [1.00000000000000, -0.500000000000000 + 0.866025403784439*I, -0.500000000000000 - 0.866025403784438*I], [1.00000000000000, -0.500000000000000 - 0.866025403784438*I, -0.499999999999999 + 0.866025403784439*I]]
+        
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=N(A[tuple(entry)])
     return Rh
 
 def GeneralHypermatrixSubstitute(A, Dct):
@@ -6369,6 +6407,38 @@ def SecondOrderDFT(m,n):
     Hb=HM(m,n,[exp(-I*2*pi*t*v/m) for v in range(n) for t in range(m)])
     return [Ha, Hb]
 
+def SecondOrderDFT2(n):
+    """
+    outputs second order uncorrelated pair of second order
+    hypermatrices classically associated with the Discrete
+    Fourier Transform.
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [Ha, Hb]=SecondOrderDFT2(2)
+        sage: Prod(Ha,Hb).printHM()
+        [:, :]=
+        [[2] [0]]
+        [[0] [2]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if n==2:
+        # Initialization of the hypermatrices
+        Ha=HM(n,n,[Matrix(SR,1,1,exp(I*2*pi*u*t/n)) for t in range(n) for u in range(n)])
+        Hb=HM(n,n,[Matrix(SR,1,1,exp(I*2*pi*u*t/n)) for t in range(n) for u in range(n)])
+    elif n>2:
+        # Initialization of the hypermatrices
+        Ha=HM(n,n,[Matrix(SR,[[cos(2*pi*u*t/n),-sin(2*pi*u*t/n)],[ sin(2*pi*u*t/n),cos(2*pi*u*t/n)]]) for t in range(n) for u in range(n)])
+        Hb=HM(n,n,[Matrix(SR,[[cos(2*pi*u*t/n), sin(2*pi*u*t/n)],[-sin(2*pi*u*t/n),cos(2*pi*u*t/n)]]) for t in range(n) for u in range(n)])
+    return [Ha, Hb]
+
 def ThirdOrderDFT(m,n):
     """
     outputs third order uncorrelated tuple of third order
@@ -6403,6 +6473,73 @@ def ThirdOrderDFT(m,n):
     Ha=HM(n, m, n, [exp(I*2*pi*t*(u-w)^2/m) for w in range(n) for t in range(m) for u in range(n)])
     Hb=HM(n, n, m, [exp(I*2*pi*t*(u-v)^2/m) for t in range(m) for v in range(n) for u in range(n)])
     Hc=HM(m, n, n, [exp(I*2*pi*t*(v-w)^2/m) for w in range(n) for v in range(n) for t in range(m)])
+    return [Ha, Hb, Hc]
+
+def ThirdOrderDFT2(n):
+    """
+    outputs third order uncorrelated tuple of third order
+    hypermatrices generalizing the classical Discrete
+    Fourier Transform matrix. The input m is associated
+    with the order of the root of unity and the input n
+    correspond to the size of the matrix.
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [Ha, Hb, Hc]=ThirdOrderDFT2(5)
+        sage: Prod(Ha,Hb,Hc).expand().list()
+        [
+        [5 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 5], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [5 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 5], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [5 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 5], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [5 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 5], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]  [0 0]
+        [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0], [0 0],
+        <BLANKLINE>
+        [0 0]  [0 0]  [0 0]  [0 0]  [5 0]
+        [0 0], [0 0], [0 0], [0 0], [0 5]
+        ]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the hypermatrices
+    Ha=HM(n,n,n,[Matrix(SR,[[cos(2*pi*t*(u-w)^2/n), -sin(2*pi*t*(u-w)^2/n)], [sin(2*pi*t*(u-w)^2/n), cos(2*pi*t*(u-w)^2/n)]]) for w in range(n) for t in range(n) for u in range(n)])
+    Hb=HM(n,n,n,[Matrix(SR,[[cos(2*pi*t*(u-v)^2/n), -sin(2*pi*t*(u-v)^2/n)], [sin(2*pi*t*(u-v)^2/n), cos(2*pi*t*(u-v)^2/n)]]) for t in range(n) for v in range(n) for u in range(n)])
+    Hc=HM(n,n,n,[Matrix(SR,[[cos(2*pi*t*(v-w)^2/n), -sin(2*pi*t*(v-w)^2/n)], [sin(2*pi*t*(v-w)^2/n), cos(2*pi*t*(v-w)^2/n)]]) for w in range(n) for v in range(n) for t in range(n)])
     return [Ha, Hb, Hc]
 
 def ThirdOrdercharpoly(A, c):
