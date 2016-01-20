@@ -90,11 +90,10 @@ class HM:
         return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-1))
     def __mul__(self, other):
         if other.__class__.__name__=='HM':
-            return HM(GeneralHypermatrixHadamardProduct(self,other))
+            return Prod(self,other)
         elif other.__class__.__name__=='tuple':
-            # This function takes a list as intput
-            l = other
-            return GeneralHypermatrixProduct(self,*l)
+            l=other
+            return Prod(self,*l)
         else: 
             return GeneralHypermatrixScale(self,other)
     def __rmul__(self, a):
@@ -113,13 +112,7 @@ class HM:
                 i = i[1:]
             tmp[i[0]] = v
     def __call__(self, *inpts):
-        # This function takes a a list as intput
         return GeneralHypermatrixProduct(self, *inpts)
-    def hprod(self,*inpts):
-        # This function takes a a list as intput
-        return GeneralHypermatrixProduct(self,*inpts)
-    def hprod3b(self, b, c, t):
-        return HM(HypermatrixProductB(self.hm, b.hm, c.hm, t.hm))
     def elementwise_product(self,B):
         return GeneralHypermatrixHadamardProduct(self, B)
     def elementwise_exponent(self,s):
@@ -412,7 +405,6 @@ def HypermatrixGenerateII(*args):
         return var(args[0])
     return [apply(HypermatrixGenerateII, args[1:-1]+(args[-1]+str(i),)) for i in range(1,1+args[0])]
 
-
 def HypermatrixGenerateAllOne(*args):
     """
     Generates a list of lists associated with a symbolic arbitrary
@@ -497,7 +489,6 @@ def SymHypermatrixGenerate(nr, c):
                         else:
                             (q[i][j]).append(var(c+str(i+j+k-min(i,j,k)-max(i,j,k))+str(min(i,j,k))+str(max(i,j,k))))
         return q
-
     else :
         raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integer."
 
@@ -2734,8 +2725,6 @@ def GeneralHypermatrixAppendIndex(A,indx):
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=var(str(A[tuple(entry)])+str(indx))
     return Rh
-
-
 
 def List2Hypermatrix(*args):
     """
@@ -5520,8 +5509,9 @@ def multiplicative_matrix_product(A,B):
 def linear_solver(A,b,x,v):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
-    where A denote the input matrix, b denotes the right-hand side vector and v
-    denote the variable vector.
+    where A denotes the input matrix, b denotes the right-hand side vector, x denotes
+    the variable vector coming from the original system of equations, and v denotes 
+    the free variable vector.
 
     EXAMPLES:
  
@@ -5538,7 +5528,7 @@ def linear_solver(A,b,x,v):
          0  == -a00 + a01 + a10 - a11]
 
     AUTHORS:
-    - Edinah K. Gnang
+    - Initial implementation by Edinah K. Gnang updates to the doc string by Jeanine S. Gnang
     - To Do: 
     """
     # Initialization of the reduced echelon form.
