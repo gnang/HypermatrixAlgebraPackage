@@ -5508,7 +5508,7 @@ def multiplicative_matrix_product(A,B):
 
 def linear_solver(A,b,x,v):
     """
-    Outputs the reduced row echelon form of the input matrix and the right hand side.
+    Outputs the Reduced Row Echelon Form of the input matrix and the right hand side.
     where A denotes the input matrix, b denotes the right-hand side vector, x denotes
     the variable vector coming from the original system of equations, and v denotes 
     the free variable vector.
