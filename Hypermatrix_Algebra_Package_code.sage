@@ -134,6 +134,8 @@ class HM:
             return SixthOrderSliceKroneckerProduct(self, V)
         elif self.order()==7:
             return SeventhOrderSliceKroneckerProduct(self, V)
+        elif self.order()>7:
+            return GeneralHypermatrixKroneckerProduct(self, V)
         else :
             raise ValueError,"not supported for order %d hypermatrices" % self.order()
     def block_sum(self, V):
@@ -1236,7 +1238,21 @@ def Orthogonal3x3x3Hypermatrix(t1,t2):
 
         sage: t1, t2=var('t1, t2')
         sage: Orthogonal3x3x3Hypermatrix(t1,t2)
-        [[[cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3), 0], [cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3), 0], [sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)*e^(-2/3*I*pi), 0]], [[sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3), cos(t2)^(2/3)*e^(-2/3*I*pi)*sin(t1)^(2/3)], [cos(t1)^(2/3)*e^(2/3*I*pi), cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3)], [cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)]], [[0, sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)], [0, cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3)], [0, cos(t2)^(2/3)*e^(2/3*I*pi)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3)]]]
+        [[[cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3), 0],
+          [cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3), 0],
+          [sin(t1)^(2/3)*sin(t2)^(2/3), -1/2*(I*sqrt(3) + 1)*cos(t1)^(2/3), 0]],
+         [[sin(t1)^(2/3)*sin(t2)^(2/3),
+           cos(t1)^(2/3),
+           -1/2*(I*sqrt(3) + 1)*cos(t2)^(2/3)*sin(t1)^(2/3)],
+          [-1/2*(-I*sqrt(3) + 1)*cos(t1)^(2/3),
+           cos(t2)^(2/3)*sin(t1)^(2/3),
+           sin(t1)^(2/3)*sin(t2)^(2/3)],
+          [cos(t2)^(2/3)*sin(t1)^(2/3), sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)]],
+         [[0, sin(t1)^(2/3)*sin(t2)^(2/3), cos(t1)^(2/3)],
+          [0, cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3)],
+          [0,
+           -1/2*(-I*sqrt(3) + 1)*cos(t2)^(2/3)*sin(t1)^(2/3),
+           sin(t1)^(2/3)*sin(t2)^(2/3)]]]        
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -2568,8 +2584,8 @@ def GeneralHypermatrixNumerical(A):
 
         sage: Ha=HM(3,3,[exp(I*2*pi*u*v/3) for v in range(3) for u in range(3)]) 
         sage: GeneralHypermatrixNumerical(Ha)
-        [[1.00000000000000, 1.00000000000000, 1.00000000000000], [1.00000000000000, -0.500000000000000 + 0.866025403784439*I, -0.500000000000000 - 0.866025403784438*I], [1.00000000000000, -0.500000000000000 - 0.866025403784438*I, -0.499999999999999 + 0.866025403784439*I]]
-        
+        [[1.00000000000000, 1.00000000000000, 1.00000000000000], [1.00000000000000, -0.500000000000000 + 0.866025403784439*I, -0.500000000000000 - 0.866025403784439*I], [1.00000000000000, -0.500000000000000 - 0.866025403784439*I, -0.500000000000000 + 0.866025403784439*I]] 
+         
 
     AUTHORS:
 
@@ -4068,31 +4084,72 @@ def GeneralHypermatrixKroneckerSum(A,B):
         # Initialization of the output hypermatrix
         T=apply(HM,[A.n(i)+B.n(i) for i in range(A.order())]+['zero'])
         # Initialization of the list specifying the dimensions of A
-        l = [A.n(i) for i in range(A.order())]
+        la = [A.n(i) for i in range(A.order())]
         # Main loop performing the transposition of the entries
-        for i in range(prod(l)):
+        for i in range(prod(la)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
-            sm = Integer(mod(i,l[0]))
-            for k in range(len(l)-1):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
-                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            entry = [mod(i,la[0])]
+            sm = Integer(mod(i,la[0]))
+            for k in range(len(la)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(la[0:k+1])),la[k+1])))
+                sm = sm+prod(la[0:k+1])*entry[len(entry)-1]
             T[tuple(entry)]=A[tuple(entry)]
         # Initialization of the list specifying the dimensions of B
-        l = [B.n(i) for i in range(A.order())]
+        lb = [B.n(j) for j in range(A.order())]
         # Main loop performing the transposition of the entries
-        for i in range(prod(l)):
+        for j in range(prod(lb)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
-            sm = Integer(mod(i,l[0]))
-            for k in range(len(l)-1):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
-                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            entry = [mod(j,lb[0])]
+            sm = Integer(mod(j,lb[0]))
+            for k in range(len(lb)-1):
+                entry.append(Integer(mod(Integer((j-sm)/prod(lb[0:k+1])),lb[k+1])))
+                sm = sm+prod(lb[0:k+1])*entry[len(entry)-1]
             T[tuple((Matrix(ZZ,entry)+Matrix(ZZ,A.dimensions())).list())]=B[tuple(entry)]
         return T
     else:
         raise ValueError, "The order of the input hypermatrices must match."
- 
+
+def GeneralHypermatrixKroneckerProduct(A,B):
+    """
+    Computes the  Kronecker sum for arbitrary order hypermatrix.
+
+    EXAMPLES:
+
+    ::
+
+        sage: GeneralHypermatrixKroneckerProduct(HM(2,2,'a'), HM(2,2,'b'))
+        [[a00*b00, a00*b01, a01*b00, a01*b01], [a00*b10, a00*b11, a01*b10, a01*b11], [a10*b00, a10*b01, a11*b00, a11*b01], [a10*b10, a10*b11, a11*b10, a11*b11]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.order()==B.order():
+        # Initialization of the output hypermatrix
+        T=apply(HM,[A.n(i)*B.n(i) for i in range(A.order())]+['zero'])
+        # Initialization of the list specifying the dimensions of A and B
+        la = [A.n(i) for i in range(A.order())]; lb = [B.n(j) for j in range(B.order())]
+        # Main loop performing the transposition of the entries
+        for i in range(prod(la)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entrya = [mod(i,la[0])]
+            sma = Integer(mod(i,la[0]))
+            for ka in range(len(la)-1):
+                entrya.append(Integer(mod(Integer((i-sma)/prod(la[0:ka+1])),la[ka+1])))
+                sma = sma+prod(la[0:ka+1])*entrya[len(entrya)-1]
+            # Main loop performing the transposition of the entries
+            for j in range(prod(lb)):
+                # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                entryb = [mod(j,lb[0])]
+                smb = Integer(mod(j,lb[0]))
+                for kb in range(len(lb)-1):
+                    entryb.append(Integer(mod(Integer((j-smb)/prod(lb[0:kb+1])),lb[kb+1])))
+                    smb = smb+prod(lb[0:kb+1])*entryb[len(entryb)-1]
+                T[tuple([lb[z]*Integer(entrya[z])+Integer(entryb[z]) for z in range(A.order())])]=A[tuple(entrya)]*B[tuple(entryb)]
+        return T
+    else:
+        raise ValueError, "The order of the input hypermatrices must match."
+
 @cached_function
 def Ca(n):
     """
@@ -6444,11 +6501,11 @@ def ThirdOrderDFT(m,n):
 
         sage: [Ha, Hb, Hc]=ThirdOrderDFT(3,2)
         sage: Ha
-        [[[1, 1], [1, e^(2/3*I*pi)], [1, e^(4/3*I*pi)]], [[1, 1], [e^(2/3*I*pi), 1], [e^(4/3*I*pi), 1]]]
+        [[[1, 1], [1, 1/2*I*sqrt(3) - 1/2], [1, -1/2*I*sqrt(3) - 1/2]], [[1, 1], [1/2*I*sqrt(3) - 1/2, 1], [-1/2*I*sqrt(3) - 1/2, 1]]]
         sage: Hb
-        [[[1, 1, 1], [1, e^(2/3*I*pi), e^(4/3*I*pi)]], [[1, e^(2/3*I*pi), e^(4/3*I*pi)], [1, 1, 1]]]
+        [[[1, 1, 1], [1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2]], [[1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2], [1, 1, 1]]]
         sage: Hc
-        [[[1, 1], [1, 1]], [[1, e^(2/3*I*pi)], [e^(2/3*I*pi), 1]], [[1, e^(4/3*I*pi)], [e^(4/3*I*pi), 1]]]
+        [[[1, 1], [1, 1]], [[1, 1/2*I*sqrt(3) - 1/2], [1/2*I*sqrt(3) - 1/2, 1]], [[1, -1/2*I*sqrt(3) - 1/2], [-1/2*I*sqrt(3) - 1/2, 1]]]
         sage: Prod(Ha,Hb,Hc).simplify()
         [[[3, 0], [0, 0]], [[0, 0], [0, 3]]]
         sage: [Ha, Hb, Hc]=ThirdOrderDFT(5,5)
@@ -6886,9 +6943,9 @@ def SecondOrderCharpolyII(A, U, Dg):
 
         sage: A=HM(2,2,'a'); U=HM(2,2,'u'); Dg=HM(2,2,diagonal_matrix(HM(2,'x').list()).list())
         sage: SecondOrderCharpolyII(A, U, Dg)[2].numerator().factor()
-        (a10*u00^2 - a00*u00*u10 + a11*u00*u10 - a01*u10^2)*(a10*u01^2 - a00*u01*u11 + a11*u01*u11 - a01*u11^2)*(a01*a10 - a00*a11)
+        (a10*u00^2 - a00*u00*u10 + a11*u00*u10 - a01*u10^2)*(a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)*(a10*u01^2 - a00*u01*u11 + a11*u01*u11 - a01*u11^2)*(a01*a10 - a00*a11)*(u01*u10 - u00*u11)^2*u00^3
         sage: SecondOrderCharpolyII(A, U, Dg)[2].denominator().factor()
-        (a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)
+        (a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)^2*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)^2*(u01*u10 - u00*u11)^2*u00^3
 
     AUTHORS:
     - Edinah K. Gnang
