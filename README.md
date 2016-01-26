@@ -10,7 +10,7 @@ combinatorial properties of the algebra of hypermatrices.
 # Installation 
 
 A properly working install of [sage](http://sagemath.org/) is the only prerequisite to using the 
-hypermatrix package. The hypermatrix algebra package has been tested on SageMath Version 6.9.
+hypermatrix package. The hypermatrix algebra package has been tested on SageMath Version 7.0.
 To get started with SageMath, the authors of the hypermatrix algebra package highly recommend reading 
 [Calcul mathématique avec Sage] (http://sagebook.gforge.inria.fr/)
 
