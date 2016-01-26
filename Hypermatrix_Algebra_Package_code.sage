@@ -4111,7 +4111,7 @@ def GeneralHypermatrixKroneckerSum(A,B):
 
 def GeneralHypermatrixKroneckerProduct(A,B):
     """
-    Computes the  Kronecker sum for arbitrary order hypermatrix.
+    Computes the  Kronecker product of arbitrary hypermatrices A, B of the same order.
 
     EXAMPLES:
 
