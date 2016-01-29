@@ -1206,7 +1206,8 @@ def DiagonalHypermatrix(Mtrx):
         for j in range(n_d_cols):
             for k in range(n_d_dpts):
                 if D[i][j][k] != 0:
-                    D[i][j][k] = Mtrx[min(i,k),max(i,k)]
+                    #D[i][j][k] = Mtrx[min(i,k),max(i,k)]
+                    D[i][j][k] = Mtrx[i,k]
     return D
 
 def Orthogonal2x2x2Hypermatrix(t):
