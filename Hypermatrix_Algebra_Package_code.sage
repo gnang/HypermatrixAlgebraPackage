@@ -79,13 +79,19 @@ class HM:
     def __repr__(self):
         return `self.hm`
     def __pow__(self, other):
-        return GeneralHypermatrixHadamardExponent(self,other)
+        if self.order()==2 and other==-1:
+            return self.inverse()
+        else:
+            return GeneralHypermatrixHadamardExponent(self,other)
     def __add__(self, other):
         return GeneralHypermatrixAdd(self,other)
+    def __div__(other,self):
+        if self.order()==2:
+            return other*self.inverse()
     def __radd__(self, other):
         return GeneralHypermatrixAdd(self,other)
     def __neg__(self):
-        return GeneralHypermatrixScale(self.hm,-1)
+        return GeneralHypermatrixScale(self,-1)
     def __sub__(self, other):
         return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-1))
     def __mul__(self, other):
@@ -291,7 +297,7 @@ class HM:
         else:
             return GeneralHyperdeterminant(self) 
     def is_zero(self):
-        if Set(self.list()).list()==[0]:
+        if Set([f.is_zero() for f in self.list()])==Set([True]):
             return True
         else:
             return False
@@ -5241,7 +5247,7 @@ def gaussian_elimination(Cf, rs):
  
     ::
 
-        sage: [RefA, c] = gaussian_elimination(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [RefA, c] = gaussian_elimination(HM(2,2,'a').matrix(), HM(2,1,'b').matrix())
         sage: RefA
         [      1 a01/a00]
         [      0       1]
@@ -5282,7 +5288,155 @@ def gaussian_elimination(Cf, rs):
                     A[r,:]=-A[r,j]*A[i,:]+A[r,:]
         # Incrementing the row and column index.
         i=i+1; j=j+1
-    return [A, b]
+    return [A,b]
+
+def gaussian_eliminationHM(Cf, rs):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [A,b] = gaussian_eliminationHM(HM(2,2,'a'), HM(2,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [      1 a01/a00]
+        [      0       1]
+        sage: b.printHM()
+        [:, :]=
+        [                                b00/a00]
+        [(a10*b00/a00 - b10)/(a01*a10/a00 - a11)]
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,'b') # Initialization of the factors.
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,2,'kronecker'), Tb[1,0]*HM(2,2,'kronecker')])
+        sage: [A,b]=gaussian_eliminationHM(Ha,Hb) # performing the gaussian elimination where entries are hypermatrices.
+        sage: A
+        [[[[1, 0], [0, 1]], [[a01/a00, 0], [0, a01/a00]]], [[[0, 0], [0, 0]], [[1, 0], [0, 1]]]]
+        sage: b
+        [[[[b00/a00, 0], [0, b00/a00]]], [[[(a10*b00/a00 - b10)/(a01*a10/a00 - a11), 0], [0, (a10*b00/a00 - b10)/(a01*a10/a00 - a11)]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy(); b=rs.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        #while (A[i:,j]).is_zero() and j < A.ncols()-1:
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        #if (A[i:,:].is_zero())==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                #Ta=A[i:,:]
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                #Tb=b[i:,:]
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                #Id=identity_matrix(Ta.nrows())
+                Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; Tb=P*Tb
+                #A[i:,:]=Ta
+                for i0 in range(i,Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i0,j0]=Ta[i0,j0]
+                #b[i:,:]=Tb
+                for i0 in range(i,Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i0,j0]=Tb[i0,j0]
+            # Performing the row operations.
+            cf=A[i,j]
+            #b[i,:]=(1/A[i,j])*b[i,:]
+            for j0 in range(b.n(1)):
+                b[i,j0]=(cf^(-1))*b[i,j0]
+            #A[i,:]=(1/A[i,j])*A[i,:]
+            for j0 in range(A.n(1)):
+                A[i,j0]=(cf^(-1))*A[i,j0]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf=A[r,j]
+                    #b[r,:]=-A[r,j]*b[i,:]+b[r,:]
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=-cf*b[i,j0]+b[r,j0]
+                    #A[r,:]=-A[r,j]*A[i,:]+A[r,:]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=-cf*A[i,j0]+A[r,j0]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A,b]
+
+def gaussian_eliminationHMII(Cf, rs):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [A,b]=gaussian_eliminationHMII(HM(2,2,'a'), HM(2,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [              a00               a01]
+        [                0 a01*a10 - a00*a11]
+        sage: b.printHM()
+        [:, :]=
+        [              b00]
+        [a10*b00 - a00*b10]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy(); b=rs.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; Tb=P*Tb
+                for i0 in range(i,Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i0,j0]=Ta[i0,j0]
+                for i0 in range(i,Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i0,j0]=Tb[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A,b]
 
 def gauss_jordan_elimination(Cf,rs):
     """
