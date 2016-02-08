@@ -152,12 +152,14 @@ class HM:
         return GeneralHypermatrixFactor(self)
     def simplify(self):
         return GeneralHypermatrixSimplify(self)
+    def simplify_full(self):
+        return GeneralHypermatrixSimplifyFull(self)
     def canonicalize_radical(self):
         return GeneralHypermatrixCanonicalizeRadical(self)
     def numerical(self):
         return GeneralHypermatrixNumerical(self)
-    def subs(self,Dct):
-        return GeneralHypermatrixSubstitute(self, Dct)
+    def subs(self, *args, **kwds):
+        return GeneralHypermatrixSubstituteII(self, *args, **kwds)
     def subsn(self,Dct):
         return GeneralHypermatrixSubstituteN(self, Dct)
     def transpose(self, i=1):
@@ -1233,6 +1235,24 @@ def Orthogonal2x2x2Hypermatrix(t):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     return [[[cos(t)^(2/3),sin(t)^(2/3)],[sin(t)^(2/3), cos(t)^(2/3)]], [[-sin(t)^(2/3),cos(t)^(2/3)],[sin(t)^(2/3),sin(t)^(2/3)]]]
+
+def Orthogonal2x2x2HypermatrixII(t,x,y):
+    """
+    Outputs a symbolic parametrization of third order orthogonal hypermatrix
+    of size 2x2x2.
+
+     EXAMPLES:
+
+    ::
+
+        sage: t,x,y=var('t,x,y')
+        sage: Orthogonal2x2x2HypermatrixII(t,x,y)
+        [[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    return [[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]
 
 def Orthogonal3x3x3Hypermatrix(t1,t2):
     """
@@ -2509,8 +2529,7 @@ def GeneralHypermatrixFactor(A):
         Rh[tuple(entry)]=(A[tuple(entry)]).factor()
     return Rh
 
-
-def GeneralHypermatrixSimplify(A):
+def GeneralHypermatrixSimplifyFull(A):
     """
     Performs the symbolic simplification of the expressions
     associated with the hypermatrix entries. 
@@ -2519,7 +2538,7 @@ def GeneralHypermatrixSimplify(A):
 
     ::
 
-        sage: x,y=var('x,y'); ((x+y)^2*HM(2,2,2,'one')).simplify()
+        sage: x,y=var('x,y'); ((x+y)^2*HM(2,2,2,'one')).simplify_full()
         [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
  
 
@@ -2545,6 +2564,41 @@ def GeneralHypermatrixSimplify(A):
         Rh[tuple(entry)]=(A[tuple(entry)]).simplify_full()
     return Rh
 
+def GeneralHypermatrixSimplify(A):
+    """
+    Performs the symbolic simplification of the expressions
+    associated with the hypermatrix entries. 
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y=var('x,y'); ((x+y)^2*HM(2,2,2,'one')).simplify_full()
+        [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
+ 
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=(A[tuple(entry)]).simplify()
+    return Rh
+
 def GeneralHypermatrixCanonicalizeRadical(A):
     """
     Performs the symbolic simplification of the expressions
@@ -2555,7 +2609,7 @@ def GeneralHypermatrixCanonicalizeRadical(A):
     ::
 
         sage: x,y = var('x,y') 
-        sage: ((x+y)^2*HM(2,2,2,'one')).simplify() 
+        sage: ((x+y)^2*HM(2,2,2,'one')).simplify_full() 
         [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
 
     AUTHORS:
@@ -2685,6 +2739,46 @@ def GeneralHypermatrixSubstituteN(A, Dct):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=N((A[tuple(entry)]).subs(Dct))
+    return Rh
+
+def GeneralHypermatrixSubstituteII(A, *args, **kwds):
+    """
+    Procedure for computes the substitution in the Hypermatrix entries
+    the inputs are the corresponding Hypermatric and a dictionary 
+    datastructure.
+
+    EXAMPLES:
+
+    ::
+
+        sage: a,b,d,e=var('a,b,d,e'); M=HM([[a,b],[d,e]])
+        sage: GeneralHypermatrixSubstituteII(M,a=1)
+        [[1, b], [d, e]]
+        sage: GeneralHypermatrixSubstituteII(M, a=b, b=d)
+        [[b, d], [d, e]]
+        sage: GeneralHypermatrixSubstituteII(M, {a: 3, b:2, d:1, e:-1})
+        [[3, 2], [1, -1]]
+        
+
+    AUTHORS:
+
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=(A[tuple(entry)]).subs(*args, **kwds)
     return Rh
 
 def GeneralHypermatrixCopy(A):
@@ -3028,7 +3122,7 @@ def GeneralUncorrelatedHypermatrixTuple(od):
 
     ::
 
-        sage: [A,B]=GeneralUncorrelatedHypermatrixTuple(2); Prod(A,B).simplify()
+        sage: [A,B]=GeneralUncorrelatedHypermatrixTuple(2); Prod(A,B).simplify_full()
         [[1, 0], [0, 1]]
 
 
@@ -3113,7 +3207,7 @@ def GeneralOrthogonalHypermatrix(od):
 
     ::
 
-        sage: Q=GeneralOrthogonalHypermatrix(3); Prod(Q,Q.transpose(2),Q.transpose()).simplify()
+        sage: Q=GeneralOrthogonalHypermatrix(3); Prod(Q,Q.transpose(2),Q.transpose()).simplify_full()
         [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
 
 
@@ -3239,7 +3333,7 @@ def GeneralUnitaryHypermatrix(od):
     ::
 
         sage: [A, Ac]=GeneralUnitaryHypermatrix(4)
-        sage: (Prod(A, Ac.transpose(3),A.transpose(2), Ac.transpose())).simplify()
+        sage: (Prod(A, Ac.transpose(3), A.transpose(2), Ac.transpose())).simplify_full()
         [[[[1, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[0, 0], [0, 1]]]]
 
     AUTHORS:
@@ -3476,6 +3570,38 @@ def ZeroPadding(A):
             for d in range(A.n(2)):
                 T[r,c,d]=A[r,c,d]
     return T
+
+def GeneralHypermatrixZeroPadding(A):
+    """
+    outputs the zero padding into a cube of the cuboid third order hypermatrix.
+
+    EXAMPLES:
+
+    ::
+
+        sage: GeneralHypermatrixZeroPadding(HM(1,1,2,'a'))
+        [[[a000, a001], [0, 0]], [[0, 0], [0, 0]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = [max(A.dimensions()) for i in range(A.order())]+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=A[tuple(entry)]
+    return Rh
 
 def GenerateUnitLpNormVector(n,p = 2,indx=0):
     """
@@ -5064,7 +5190,7 @@ def ThirdOrderHypermatrixResolutionPartition(U, V, W, Ha, Hb, Hc, NbPrts=2):
         sage: L=ThirdOrderHypermatrixResolutionPartition(U,V,W,HM(2,2,2,'a'),HM(2,2,2,'b'),HM(2,2,2,'c'))
         sage: len(L)
         2
-        sage: sum(L).simplify()
+        sage: sum(L).simplify_full()
         [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111]]]
 
     AUTHORS:
@@ -5110,7 +5236,7 @@ def FourthOrderHypermatrixResolutionPartition(Q, U, V, W, Ha, Hb, Hc, Hd):
         sage: L = FourthOrderHypermatrixResolutionPartition(Q,U,V,W,HM(2,2,2,2,'a'),HM(2,2,2,2,'b'),HM(2,2,2,2,'c'), HM(2,2,2,2,'d'))
         sage: len(L)
         2
-        sage: sum(L).simplify()
+        sage: sum(L).simplify_full()
         [[[[a0000*b0000*c0000*d0000 + a0100*b0010*c0001*d1000, a0001*b0001*c0000*d0001 + a0101*b0011*c0001*d1001], [a0010*b0000*c0010*d0010 + a0110*b0010*c0011*d1010, a0011*b0001*c0010*d0011 + a0111*b0011*c0011*d1011]], [[a0000*b0100*c0100*d0100 + a0100*b0110*c0101*d1100, a0001*b0101*c0100*d0101 + a0101*b0111*c0101*d1101], [a0010*b0100*c0110*d0110 + a0110*b0110*c0111*d1110, a0011*b0101*c0110*d0111 + a0111*b0111*c0111*d1111]]], [[[a1000*b1000*c1000*d0000 + a1100*b1010*c1001*d1000, a1001*b1001*c1000*d0001 + a1101*b1011*c1001*d1001], [a1010*b1000*c1010*d0010 + a1110*b1010*c1011*d1010, a1011*b1001*c1010*d0011 + a1111*b1011*c1011*d1011]], [[a1000*b1100*c1100*d0100 + a1100*b1110*c1101*d1100, a1001*b1101*c1100*d0101 + a1101*b1111*c1101*d1101], [a1010*b1100*c1110*d0110 + a1110*b1110*c1111*d1110, a1011*b1101*c1110*d0111 + a1111*b1111*c1111*d1111]]]]
         
 
@@ -5379,6 +5505,7 @@ def gaussian_eliminationHM(Cf, rs):
 def gaussian_eliminationHMII(Cf, rs):
     """
     Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
 
     EXAMPLES:
  
@@ -5846,7 +5973,7 @@ def SecondOrderHadamardFactorization(A,B):
     ::
 
         sage: [U,V]=SecondOrderHadamardFactorization(HM(2,2,'a'),HM(2,2,'b'))
-        sage: Prod(U,V).simplify()
+        sage: Prod(U,V).simplify_full()
         [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
 
 
@@ -5908,7 +6035,7 @@ def ThirdOrderHadamardFactorization(Ha, Hb, Hc):
     ::
 
         sage: [U,V,W]=ThirdOrderHadamardFactorization(HM(4,2,4,'a'),HM(4,4,2,'b'), HM(2,4,4,'c'))
-        sage: Prod(U, V, W).simplify()
+        sage: Prod(U, V, W).simplify_full()
         [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101, a002*b000*c002 + a012*b001*c102, a003*b000*c003 + a013*b001*c103], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111, a002*b010*c012 + a012*b011*c112, a003*b010*c013 + a013*b011*c113], [a000*b020*c020 + a010*b021*c120, a001*b020*c021 + a011*b021*c121, a002*b020*c022 + a012*b021*c122, a003*b020*c023 + a013*b021*c123], [a000*b030*c030 + a010*b031*c130, a001*b030*c031 + a011*b031*c131, a002*b030*c032 + a012*b031*c132, a003*b030*c033 + a013*b031*c133]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101, a102*b100*c002 + a112*b101*c102, a103*b100*c003 + a113*b101*c103], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111, a102*b110*c012 + a112*b111*c112, a103*b110*c013 + a113*b111*c113], [a100*b120*c020 + a110*b121*c120, a101*b120*c021 + a111*b121*c121, a102*b120*c022 + a112*b121*c122, a103*b120*c023 + a113*b121*c123], [a100*b130*c030 + a110*b131*c130, a101*b130*c031 + a111*b131*c131, a102*b130*c032 + a112*b131*c132, a103*b130*c033 + a113*b131*c133]], [[a200*b200*c000 + a210*b201*c100, a201*b200*c001 + a211*b201*c101, a202*b200*c002 + a212*b201*c102, a203*b200*c003 + a213*b201*c103], [a200*b210*c010 + a210*b211*c110, a201*b210*c011 + a211*b211*c111, a202*b210*c012 + a212*b211*c112, a203*b210*c013 + a213*b211*c113], [a200*b220*c020 + a210*b221*c120, a201*b220*c021 + a211*b221*c121, a202*b220*c022 + a212*b221*c122, a203*b220*c023 + a213*b221*c123], [a200*b230*c030 + a210*b231*c130, a201*b230*c031 + a211*b231*c131, a202*b230*c032 + a212*b231*c132, a203*b230*c033 + a213*b231*c133]], [[a300*b300*c000 + a310*b301*c100, a301*b300*c001 + a311*b301*c101, a302*b300*c002 + a312*b301*c102, a303*b300*c003 + a313*b301*c103], [a300*b310*c010 + a310*b311*c110, a301*b310*c011 + a311*b311*c111, a302*b310*c012 + a312*b311*c112, a303*b310*c013 + a313*b311*c113], [a300*b320*c020 + a310*b321*c120, a301*b320*c021 + a311*b321*c121, a302*b320*c022 + a312*b321*c122, a303*b320*c023 + a313*b321*c123], [a300*b330*c030 + a310*b331*c130, a301*b330*c031 + a311*b331*c131, a302*b330*c032 + a312*b331*c132, a303*b330*c033 + a313*b331*c133]]]
 
     AUTHORS:
@@ -6186,6 +6313,7 @@ def GeneralHypermatrixConstrainedOrthogonalization(H, X):
     """
     Implements the general hypermatrix constrained orthogonalization algorithm.
 
+
     EXAMPLES:
 
     ::
@@ -6196,20 +6324,21 @@ def GeneralHypermatrixConstrainedOrthogonalization(H, X):
         sage: apply(Prod,[H.transpose(od-i) for i in range(od)])
         [[1/4*(h00*h10 - h01*h11)^2/x10^2 + 1/4*(h00*h10 - h01*h11)^2/x11^2, 0], [0, x10^2 + x11^2]]
 
+
     AUTHORS:
     - Edinah K. Gnang
     """
-    if H.is_cubical():
+    if H.order() > 1:
         # Initializing the order and the size
-        od = H.order(); sz = H.n(0)
+        od = H.order(); szL = H.dimensions()
         # Constrained Orthogonalization procedure.
-        DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+        DltL=GeneralHypermatrixKroneckerDeltaL(od,szL[0])
         Dlt=sum(DltL)
         # Loop initializing the hypermartrix enrtry list 
         Lx=[]; Lh=[]
-        for t in range(sz):
-            Lx=Lx+((apply(HM,[sz for i in range(od)]+['one'])-Dlt).elementwise_product(apply(ProdB,[X.transpose(od-j) for j in range(od)]+[DltL[t]]))).list()
-            Lh=Lh+((apply(HM,[sz for i in range(od)]+['one'])-Dlt).elementwise_product(apply(ProdB,[H.transpose(od-j) for j in range(od)]+[DltL[t]])-(1/sz)*apply(Prod,[H.transpose(od-j) for j in range(od)]))).list()
+        for t in range(H.n(1)):
+            Lx=Lx+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[X.transpose(od-j) for j in range(od)]+[DltL[t]]))).list()
+            Lh=Lh+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[H.transpose(od-j) for j in range(od)]+[DltL[t]])-(1/H.n(1))*apply(Prod,[H.transpose(od-j) for j in range(od)]))).list()
         # Initialization of the equation
         EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not Lx[i].is_zero()]).list()
         # Formating the constraints
@@ -6223,11 +6352,64 @@ def GeneralHypermatrixConstrainedOrthogonalization(H, X):
         # returning the solutions to the system obtained via Gauss-Jordan elimination
         return multiplicative_linear_solver(A, b, v, v)
     else :
-        raise ValueError, "The input hypermatrix must be cubical"
+        raise ValueError, "The input hypermatrix must be order greater then 1"
+
+def GeneralHypermatrixConstrainedOrthogonalizationII(H, X, sz):
+    """
+    Implements the general hypermatrix constrained orthogonalization algorithm.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: od=2; sz=2; Sln=GeneralHypermatrixConstrainedOrthogonalizationII(apply(HM,[sz for i in range(od)]+['h']), apply(HM,[sz for i in range(od)]+['x']), 2); Sln
+        [x00 == 1/2*(h00*h10 - h01*h11)/x10, x01 == -1/2*(h00*h10 - h01*h11)/x11]
+        sage: H=apply(HM,[sz for i in range(od)]+['x']).subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
+        sage: apply(Prod,[H.transpose(od-i) for i in range(od)])
+        [[1/4*(h00*h10 - h01*h11)^2/x10^2 + 1/4*(h00*h10 - h01*h11)^2/x11^2, 0], [0, x10^2 + x11^2]]
+        sage: Ha=HM(3,2,'a'); A=GeneralHypermatrixZeroPadding(Ha)
+        sage: Hx=HM(3,2,'x'); X=GeneralHypermatrixZeroPadding(Hx)
+        sage: k0,k1=var('k0,k1')
+        sage: Sln=GeneralHypermatrixConstrainedOrthogonalizationII(A, X, 2)
+        sage: H=Hx.subs(dict([(s.lhs(),s.rhs()) for s in Sln])).subs(dict([(k0,0), (k1,0)]))
+        sage: Prod(H,H.transpose())
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if H.order() > 1:
+        # Initializing the order and the size
+        od = H.order(); szL = H.dimensions()
+        # Constrained Orthogonalization procedure.
+        DltL=GeneralHypermatrixKroneckerDeltaL(od,szL[0])
+        Dlt=sum(DltL)
+        # Loop initializing the hypermartrix enrtry list 
+        Lx=[]; Lh=[]
+        for t in range(H.n(1)):
+            Lx=Lx+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[X.transpose(od-j) for j in range(od)]+[DltL[t]]))).list()
+            Lh=Lh+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[H.transpose(od-j) for j in range(od)]+[DltL[t]])-(1/sz)*apply(Prod,[H.transpose(od-j) for j in range(od)]))).list()
+        # Initialization of the equation
+        EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not (Lx[i].is_zero() and Lh[i].is_zero())]).list()
+        # Formating the constraints
+        if len(X.list())==len(Set(X.list()).list()):
+            VrbL=X.list()
+        else:
+            VrbL=Set(X.list()).list()
+        [A, b]=multiplicativeConstraintFormator(EqL, VrbL)
+        # Initialization of the vector of variables
+        v=Matrix(SR, A.ncols(), 1, VrbL)
+        # returning the solutions to the system obtained via Gauss-Jordan elimination
+        return multiplicative_linear_solver(A, b, v, v)
+    else :
+        raise ValueError, "The input hypermatrix must be order greater then 1"
 
 def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
     """
-    Implements the general hypermatrix constrained uncorrelated tuple  algorithm.
+    Implements the general hypermatrix constrained uncorrelated tuple  algorithm. 
+
 
     EXAMPLES:
 
@@ -6247,15 +6429,15 @@ def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
     - Edinah K. Gnang
     """
     # Initializing the order and the size
-    od = Hl[0].order(); sz = Hl[0].n(0)
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
     # Constrained Orthogonalization procedure.
-    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    DltL=GeneralHypermatrixKroneckerDeltaL(od, Hl[0].n(1))
     Dlt=sum(DltL)
     # Loop initializing the hypermartrix enrtry list 
     Lx=[]; Lh=[]
-    for t in range(sz):
-        Lx=Lx+((apply(HM,[sz for i in range(od)]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lh=Lh+((apply(HM,[sz for i in range(od)]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(1/sz)*apply(Prod,[H for H in Hl]))).list()
+    for t in range(Hl[0].n(1)):
+        Lx=Lx+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
+        Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(1/Hl[0].n(1))*apply(Prod,[H for H in Hl]))).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not Lx[i].is_zero()]).list()
     # Formating the constraints
@@ -6272,16 +6454,65 @@ def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
     # returning the solutions to the system obtained via Gauss-Jordan elimination
     return multiplicative_linear_solver(A, b, v, v)
 
-def GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, c):
+def GeneralHypermatrixConstrainedUncorrelatedTuplesII(Hl, Xl, sz):
     """
-    Implements the general hypermatrix perturbation algorithm.
+    Implements the general hypermatrix constrained uncorrelated tuple  algorithm. 
+
 
     EXAMPLES:
 
     ::
 
-        sage: Hl=[HM(2,2,'u'),HM(2,2,'u').inverse()]; Xl=[HM(2,2,'x'),HM(2,2,'y')] 
-        sage: Sln=GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, 'a'); Sln
+        sage: Hl=[HM(2,2,'u'),HM(2,2,'v')]; Xl=[HM(2,2,'x'),HM(2,2,'y')] 
+        sage: Sln=GeneralHypermatrixConstrainedUncorrelatedTuplesII(Hl, Xl, 2); Sln
+        [x00 == 1/2*(u00*v01 - u01*v11)/y01,
+         x10 == 1/2*(u10*v00 - u11*v10)/y00,
+         x01 == -1/2*(u00*v01 - u01*v11)/y11,
+         x11 == -1/2*(u10*v00 - u11*v10)/y10]
+        sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))
+        [[1/2*(u00*v01 - u01*v11)*y00/y01 - 1/2*(u00*v01 - u01*v11)*y10/y11, 0], [0, 1/2*(u10*v00 - u11*v10)*y01/y00 - 1/2*(u10*v00 - u11*v10)*y11/y10]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the order and the size
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
+    # Constrained Orthogonalization procedure.
+    DltL=GeneralHypermatrixKroneckerDeltaL(od, Hl[0].n(1))
+    Dlt=sum(DltL)
+    # Loop initializing the hypermartrix enrtry list 
+    Lx=[]; Lh=[]
+    for t in range(Hl[0].n(1)):
+        Lx=Lx+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
+        Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(1/sz)*apply(Prod,[H for H in Hl]))).list()
+    # Initialization of the equation
+    EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not (Lx[i].is_zero() and Lh[i].is_zero())]).list()
+    # Formating the constraints
+    LstX=[]
+    for x in Xl:
+        LstX=LstX+x.list()
+    if len(Set(LstX).list())==len(LstX):
+        VrbL=LstX
+    else:
+        VrbL=Set(LstX).list()
+    [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
+    # Initialization of the vector of variables
+    v=Matrix(SR, A.ncols(), 1, VrbL)
+    # returning the solutions to the system obtained via Gauss-Jordan elimination
+    return multiplicative_linear_solver(A, b, v, v)
+
+def GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, A):
+    """
+    Implements the general hypermatrix perturbation algorithm.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Hl=[HM(2,2,'u'), HM(2,2,'u').inverse()]; Xl=[HM(2,2,'x'), HM(2,2,'y')] 
+        sage: Sln=GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, HM(2,2,'a')); Sln
         [x00 == 1/2*(a01 + 2*u01/(u01*u10/u00 - u11))/y01,
          x10 == 1/2*(2*u10*(1/u00 - u01*u10/(u00^2*(u01*u10/u00 - u11))) + a10)/y00,
          x01 == 1/2*(a01 - 2*u01/(u01*u10/u00 - u11))/y11,
@@ -6296,15 +6527,15 @@ def GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, c):
     - Edinah K. Gnang
     """
     # Initializing the order and the size
-    od = Hl[0].order(); sz = Hl[0].n(0)
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
     # Constrained Orthogonalization procedure.
-    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,Hl[0].n(1))
     Dlt=sum(DltL)
     # Loop initializing the hypermartrix enrtry list 
     Lx=[]; Lh=[]
-    for t in range(sz):
-        Lx=Lx+((apply(HM,[sz for i in range(od)]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lh=Lh+((apply(HM,[sz for i in range(od)]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])+(1/sz)*apply(HM,[sz for i in range(od)]+[c]))).list()
+    for t in range(Hl[0].n(1)):
+        Lx=Lx+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
+        Lh=Lh+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])+(1/Hl[0].n(1))*A)).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not Lx[i].is_zero()]).list()
     # Formating the constraints
@@ -6320,7 +6551,57 @@ def GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, c):
     v=Matrix(SR, A.ncols(), 1, VrbL)
     # returning the solutions to the system obtained via Gauss-Jordan elimination
     return multiplicative_linear_solver(A, b, v, v)
-  
+
+def GeneralHypermatrixPerturbedUncorrelatedTuplesII(Hl, Xl, A, sz):
+    """
+    Implements the general hypermatrix perturbation algorithm.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Hl=[HM(2,2,'u'), HM(2,2,'u').inverse()]; Xl=[HM(2,2,'x'), HM(2,2,'y')] 
+        sage: Sln=GeneralHypermatrixPerturbedUncorrelatedTuplesII(Hl, Xl, HM(2,2,'a'), 2); Sln
+        [x00 == 1/2*(a01 + 2*u01/(u01*u10/u00 - u11))/y01,
+         x10 == 1/2*(2*u10*(1/u00 - u01*u10/(u00^2*(u01*u10/u00 - u11))) + a10)/y00,
+         x01 == 1/2*(a01 - 2*u01/(u01*u10/u00 - u11))/y11,
+         x11 == 1/2*(a10 + 2*u10*u11/(u00*(u01*u10/u00 - u11)))/y10] 
+        sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))[0,1].simplify_rational()
+        a01 
+        sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))[1,0].simplify_rational()
+        a10 
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the order and the size
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
+    # Constrained Orthogonalization procedure.
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,Hl[0].n(1))
+    Dlt=sum(DltL)
+    # Loop initializing the hypermartrix enrtry list 
+    Lx=[]; Lh=[]
+    for t in range(Hl[0].n(1)):
+        Lx=Lx+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
+        Lh=Lh+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])+(1/sz)*A)).list()
+    # Initialization of the equation
+    EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not (Lx[i].is_zero() and Lh[i].is_zero())]).list()
+    # Formating the constraints
+    LstX=[]
+    for x in Xl:
+        LstX=LstX+x.list()
+    if len(Set(LstX).list())==len(LstX):
+        VrbL=LstX
+    else:
+        VrbL=Set(LstX).list()
+    [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
+    # Initialization of the vector of variables
+    v=Matrix(SR, A.ncols(), 1, VrbL)
+    # returning the solutions to the system obtained via Gauss-Jordan elimination
+    return multiplicative_linear_solver(A, b, v, v) 
+
 def TriangulationCompositionStringList(n, c):
     """
     Outputs a composition list of strings associated with triangulations
@@ -6661,10 +6942,10 @@ def ThirdOrderDFT(m,n):
         [[[1, 1, 1], [1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2]], [[1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2], [1, 1, 1]]]
         sage: Hc
         [[[1, 1], [1, 1]], [[1, 1/2*I*sqrt(3) - 1/2], [1/2*I*sqrt(3) - 1/2, 1]], [[1, -1/2*I*sqrt(3) - 1/2], [-1/2*I*sqrt(3) - 1/2, 1]]]
-        sage: Prod(Ha,Hb,Hc).simplify()
+        sage: Prod(Ha,Hb,Hc).simplify_full()
         [[[3, 0], [0, 0]], [[0, 0], [0, 3]]]
         sage: [Ha, Hb, Hc]=ThirdOrderDFT(5,5)
-        sage: Prod(Ha,Hb,Hc).simplify()
+        sage: Prod(Ha,Hb,Hc).simplify_full()
         [[[5, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 5, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 5, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 5, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 5]]]
         
     AUTHORS:
@@ -6903,27 +7184,27 @@ def UncorrelatedSideLength2Triple(c1,c2,c3):
         sage: Ha=HM(2,2,2,'a').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
         sage: Hb=HM(2,2,2,'b').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
         sage: Hc=HM(2,2,2,'c').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
-        sage: Hd=Prod(Ha,Hb,Hc).simplify(); Hd
+        sage: Hd=Prod(Ha,Hb,Hc).simplify_full(); Hd
         [[[-(a010*b001*c000*c011*c101*c110 - a010*b001*c001*c010*c100*c111)/(c001*c010*c111), 0], [0, 0]], [[0, 0], [0, -(a111*b111*c000*c011*c101*c110 - a111*b111*c001*c010*c100*c111)/(c001*c010*c100)]]]
         sage: Ah=Ha.copy(); Bh=Hb.copy(); Ch=Hc.copy()
         sage: Ch[0,0,0]=Ch[0,0,0]/Hd[0,0,0]; Ch[1,0,0]=Ch[1,0,0]/Hd[0,0,0]
         sage: Ch[0,1,1]=Ch[0,1,1]/Hd[1,1,1]; Ch[1,1,1]=Ch[1,1,1]/Hd[1,1,1]
-        sage: Prod(Ah,Bh,Ch).simplify()
+        sage: Prod(Ah,Bh,Ch).simplify_full()
         [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
         sage: Ha=HM(2,2,2,'a').subs(dict([(s.lhs(),s.rhs()) for s in Sln2]))
         sage: Hb=HM(2,2,2,'b').subs(dict([(s.lhs(),s.rhs()) for s in Sln2]))
         sage: Hc=HM(2,2,2,'c').subs(dict([(s.lhs(),s.rhs()) for s in Sln2]))
-        sage: Hd=Prod(Ha,Hb,Hc).simplify(); Hd
+        sage: Hd=Prod(Ha,Hb,Hc).simplify_full(); Hd
         [[[-(a010*b001*c000*c011*c101*c110 - a010*b001*c001*c010*c100*c111)/(c001*c010*c111), 0], [0, 0]], [[0, 0], [0, -(a111*b111*c000*c011*c101*c110 - a111*b111*c001*c010*c100*c111)/(c001*c010*c100)]]]
         sage: Ah=Ha.copy(); Bh=Hb.copy(); Ch=Hc.copy()
         sage: Ch[0,0,0]=Ch[0,0,0]/Hd[0,0,0]; Ch[1,0,0]=Ch[1,0,0]/Hd[0,0,0]
         sage: Ch[0,1,1]=Ch[0,1,1]/Hd[1,1,1]; Ch[1,1,1]=Ch[1,1,1]/Hd[1,1,1]
-        sage: Prod(Ah,Bh,Ch).simplify()
+        sage: Prod(Ah,Bh,Ch).simplify_full()
         [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
         sage: Ha=HM(2,2,2,'a').subs(dict([(s.lhs(),s.rhs()) for s in Sln3]))
         sage: Hb=HM(2,2,2,'b').subs(dict([(s.lhs(),s.rhs()) for s in Sln3]))
         sage: Hc=HM(2,2,2,'c').subs(dict([(s.lhs(),s.rhs()) for s in Sln3]))
-        sage: Hd=Prod(Ha,Hb,Hc).simplify(); Hd
+        sage: Hd=Prod(Ha,Hb,Hc).simplify_full(); Hd
         [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
 
 
@@ -7271,7 +7552,7 @@ def ThirdOrdeCharpolyII(A, U, V, W, Du, Dv, Dw):
         sage: Hu=HM(2,2,2,'u').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
         sage: Hv=HM(2,2,2,'v').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
         sage: Hw=HM(2,2,2,'w').subs(dict([(s.lhs(),s.rhs()) for s in Sln1]))
-        sage: Hd=Prod(Hu,Hv,Hw).simplify()
+        sage: Hd=Prod(Hu,Hv,Hw).simplify_full()
         sage: Uh=Hu.copy(); Vh=Hv.copy(); Wh=Hw.copy()
         sage: Wh[0,0,0]=Wh[0,0,0]/Hd[0,0,0]; Wh[1,0,0]=Wh[1,0,0]/Hd[0,0,0]
         sage: Wh[0,1,1]=Wh[0,1,1]/Hd[1,1,1]; Wh[1,1,1]=Wh[1,1,1]/Hd[1,1,1]
