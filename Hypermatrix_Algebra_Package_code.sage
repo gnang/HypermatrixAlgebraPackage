@@ -1,8 +1,8 @@
 #*************************************************************************#
-#       Copyright (C) 2015 Edinah K. Gnang <kgnang@gmail.com>,            #
-#                          Ori Parzanchevski                              #
-#                          Yuval Filmus                                   #
-#                          Doron Zeilberger                               #
+#       Copyright (C) 2015, 2016 Edinah K. Gnang <kgnang@gmail.com>,      #
+#                          Ori Parzanchevski,                             #
+#                          Yuval Filmus,                                  #
+#                          Doron Zeilberger,                              #
 #                                                                         #
 #  Distributed under the terms of the GNU General Public License (GPL)    #
 #                                                                         #
@@ -3033,7 +3033,6 @@ def GeneralHypermatrixKroneckerDelta(od, sz):
             Rh[tuple(entry)] = 1
     return Rh
 
-
 def GeneralHypermatrixKroneckerDeltaL(od, sz):
     """
     Outputs a list of lists associated with the general
@@ -5364,6 +5363,40 @@ def GeneralHypermatrixLogProductTermList(*args):
         elif len(args) >= 2:
             Rh = Rh + [sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)] + [args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))]
     return Rh
+
+def BlockSweep(A,k):
+    """
+    Outputs the result of the sweep operator a  block partion second order hypermatrix
+
+    EXAMPLES:
+
+    ::
+
+        sage: cL=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']; sz=3; sz0=2; sz1=1 
+        sage: A=HM(sz,sz,[HM(sz0,sz0,cL[0]),HM(sz1,sz0,cL[1]),HM(sz1,sz0,cL[2]), HM(sz0,sz1,cL[3]),HM(sz1,sz1,cL[4]),HM(sz1,sz1,cL[5]), HM(sz0,sz1,cL[6]),HM(sz1,sz1,cL[7]),HM(sz1,sz1,cL[8])])
+        sage: B=A.copy()
+        sage: for k in range(B.n(0)):
+        ....:     B=BlockSweep(B,k)
+        ....:
+        sage: (A*B).simplify_full()
+        [[[[-1, 0], [0, -1]], [[0], [0]], [[0], [0]]], [[[0, 0]], [[-1]], [[0]]], [[[0, 0]], [[0]], [[-1]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Jeanine Gnang
+    """
+    # Initialization of the hypermatrix B
+    B=HM(A.n(0),A.n(1), [apply(HM,H.dimensions()+['zero']) for H in A.list()])
+    B[k,k] = -A[k,k].inverse()
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            if i != k:
+                B[i,k]= A[i,k]*A[k,k].inverse()
+            if j != k:
+                B[k,j]= A[k,k].inverse()*A[k,j]
+            if i != k and j!= k:
+                B[i,j] = A[i,j]-(A[i,k]*A[k,k].inverse()*A[k,j])
+    return B.copy()
 
 def gaussian_elimination(Cf, rs):
     """
