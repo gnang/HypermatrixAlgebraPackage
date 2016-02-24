@@ -307,7 +307,11 @@ class HM:
         return (self-self.transpose()).is_zero()
     def is_cubical(self):
         return len(Set(self.dimensions()).list())==1
-
+    def ref(self):
+        if self.order()==2:
+            return gaussian_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
+        else:
+            raise ValueError, "Expected a second order hypermatrix"
 def MatrixGenerate(nr, nc, c):
     """
     Generates a list of lists associated with a symbolic nr x nc
