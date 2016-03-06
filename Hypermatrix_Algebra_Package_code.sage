@@ -287,7 +287,7 @@ class HM:
         return sum([abs(i)^p for i in self.list()])
     def det(self):
         if self.order()==2:
-            return Deter(Matrix(SR,self.listHM()))
+            return Deter(self)
         elif self.order()==3:
             return ThirdOrderDeter(self)
         elif self.order()==4:
@@ -1256,7 +1256,7 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    return [[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]
+    return HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]])
 
 def Orthogonal3x3x3Hypermatrix(t1,t2):
     """
@@ -1811,6 +1811,41 @@ def Companion_matrix(p,vrbl):
     else:
         raise ValueError, "Must be a polynomial in the input variable."
 
+def CompanionHM(p,vrbl):
+    """
+    Takes as input a polynomial and a variable
+    and outputs the companion second order hypermatrix
+    associated with the polynomial in the specified variables.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x=var('x')
+        sage: A=CompanionHM(sum(HM(5,'a').list()[k]*x^(k) for k in range(5)),x);A.matrix().characteristic_polynomial()
+        x^4 + a3/a4*x^3 + a2/a4*x^2 + a1/a4*x + a0/a4
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if p.is_polynomial(vrbl):
+        dg=p.degree(vrbl)
+        if dg>1:
+            # Initialization of the matrix
+            A=HM(dg,dg,'zero')
+            # Filling up the matrix
+            A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
+            for i in range(1,dg):
+                A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
+                A[i,i-1]=1
+            return A
+        elif dg==1:
+            return HM(1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
+        else:
+            raise ValueError, "Must be of degree at least 1."
+    else:
+        raise ValueError, "Must be a polynomial in the input variable."
+
 def Sylvester_matrix(p,q,vrbl):
     """
     Takes as input two polynomials and a variable
@@ -1851,6 +1886,47 @@ def Sylvester_matrix(p,q,vrbl):
     else:
         raise ValueError, "The inputs must both be polynomials in the input variable."
 
+def SylvesterHM(p,q,vrbl):
+    """
+    Takes as input two polynomials and a variable
+    and outputs the Sylvester second order 
+    hypermatrix associated with the polynomials
+    in the specified variables.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
+        sage: p=expand((x-a0)*(x-a1))
+        sage: q=expand((x-b0)*(x-b1))
+        sage: SylvesterHM(p, q, x).ref()[3,3].factor()
+        -(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
+        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        # Initialization of the second order hypermatrix
+        A=HM(dp+dq,dp+dq,'zero')
+        # Filling up the matrix
+        cp=0
+        for i in range(dq):
+            for j in range(dp):
+                A[i,cp+j]=p.coefficient(vrbl^(dp-j))
+            A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
+            cp=cp+1
+        cq=0
+        for i in range(dp):
+            for j in range(dq):
+                A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
+            A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
+            cq=cq+1
+        return A
+    else:
+        raise ValueError, "The inputs must both be polynomials in the input variable."
+
 def Gmatrix(p,q,vrbl):
     """
     Takes as input two polynomials and a variable
@@ -1874,6 +1950,34 @@ def Gmatrix(p,q,vrbl):
         dp=p.degree(vrbl); dq=q.degree(vrbl)
         if dp >= 1 and dq >= 1:
             return identity_matrix(dq).tensor_product(Companion_matrix(p,vrbl))-(Companion_matrix(q,vrbl)).tensor_product(identity_matrix(dp))
+        else:
+            raise ValueError, "Both inputs must be of degree at least 2."
+    else:
+        raise ValueError, "Both inputs must be polynomials in the input variable."
+
+def GmatrixHM(p,q,vrbl):
+    """
+    Takes as input two polynomials and a variable
+    and outputs the G matrix associated with the 
+    polynomial in the specified variables.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
+        sage: p=expand((x-a0)*(x-a1))
+        sage: q=expand((x-b0)*(x-b1))
+        sage: GmatrixHM(p,q,x).ref()[3,3].factor()
+        (a0 + a1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
+        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        if dp >= 1 and dq >= 1:
+            return HM(2,dq,'kronecker').tensor_product(CompanionHM(p,vrbl))-(CompanionHM(q,vrbl)).tensor_product(HM(2,dp,'kronecker'))
         else:
             raise ValueError, "Both inputs must be of degree at least 2."
     else:
@@ -5401,6 +5505,115 @@ def BlockSweep(A,k):
             if i != k and j!= k:
                 B[i,j] = A[i,j]-(A[i,k]*A[k,k].inverse()*A[k,j])
     return B.copy()
+
+def SweepHM(A,k):
+    """
+    Outputs the result of the sweep operator on a block partition 
+    second order hypermatrix. This version implements the BM
+    product take on the sweep operator.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); Hc=HM(2,2,'c'); Hd=HM(2,2,'d')
+        sage: A=HM([[Ha,Hb],[Hc,Hd]]); B=A.copy()
+        sage: for k in range(B.n(0)):
+        ....:     B=SweepHM(B,k)[3]
+        ....:
+        sage: (A*B).simplify_full()
+        [[[[-1, 0], [0, -1]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[-1, 0], [0, -1]]]]
+        sage: Ha=HM(2, 2, 'a'); A=HM(2, 2, [HM(1,1,[f]) for f in Ha.list()])
+        sage: B=A.copy()
+        sage: for k in range(B.n(0)):
+        ....:     B=SweepHM(B,k)[3]
+        ....:
+        sage: (A*B).simplify_full()
+        [[[[-1]], [[0]]], [[[0]], [[-1]]]]
+        sage: sz=3; indx=1 # Initialization of the size  sweep index parameter
+        sage: Ha=HM(sz, sz, 'a'); A=HM(sz, sz, [HM(1, 1, [f]) for f in Ha.list()]); B=A.copy()
+        sage: [U, V, W, Rt]=SweepHM(A, indx) # Performing the sweep
+        sage: Hu=HM(sz, 2, 1, [U[i,j,0][0,0] for j in range(2) for i in range(sz)]); Hu.printHM()
+        [:, :, 0]=
+        [  1 a01]
+        [  0   1]
+        [  1 a21]
+        sage: Hv=HM(sz, sz, 2, [V[i,j,k][0,0] for k in range(2) for j in range(sz) for i in range(sz)]); Hv.printHM()
+        [:, :, 0]=
+        [a00 a01 a02]
+        [a10 a11 a12]
+        [a20 a21 a22]
+        <BLANKLINE>
+        [:, :, 1]=
+        [-1/a11  1/a11 -1/a11]
+        [ 1/a11 -1/a11  1/a11]
+        [-1/a11  1/a11 -1/a11]
+        <BLANKLINE>
+        sage: Hw=HM(2, sz, 1, [W[i,j,0][0,0] for j in range(sz) for i in range(2)]);Hw.printHM()
+        [:, :, 0]=
+        [  1   0   1]
+        [a10   1 a12]
+        sage: Prod(Hu,Hv,Hw).printHM()
+        [:, :, 0]=
+        [ a00 - a01*a10/a11            a01/a11  a02 - a01*a12/a11]
+        [           a10/a11             -1/a11            a12/a11]
+        [ a20 - a10*a21/a11            a21/a11 -a12*a21/a11 + a22]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Checking that the input hypermatrix is of order 2
+    if A.is_cubical() and A[k,k].is_cubical() and A.order()==2:
+        # Initializing the hypermatrices U and W.
+        U=HM(A.n(0),2,1,[HM(A[k,k].n(0),A[k,k].n(1),'zero') for l in range(A.n(0)*2)])
+        U[k,1,0]=HM(2,A[k,k].n(0),'kronecker')
+        for i in range(A.n(0)):
+            if i!=k:
+                U[i,0,0]=HM(2,A[k,k].n(0),'kronecker')
+                U[i,1,0]=A[i,k]
+        W=HM(2,A.n(1),1,[HM(A[k,k].n(0),A[k,k].n(1),'zero') for l in range(2*A.n(0))])
+        W[1,k,0]=HM(2,A[k,k].n(0),'kronecker')
+        for j in range(A.n(1)):
+            if j!=k:
+                W[0,j,0]=HM(2,A[k,k].n(0),'kronecker')
+                W[1,j,0]=A[k,j]
+        # Computing the inverse of the entry A[k,k]
+        if A[k,k].dimensions()==[1,1]:
+            AkkI=A[k,k].inverse()
+        else:
+            # Part of the code responsible for computing the inverse by sweeping
+            AkkI=A[k,k].copy()
+            Tmp=HM(AkkI.n(0),AkkI.n(1),'zero')
+            for t in range(AkkI.n(0)):
+                Tmp[t,t]=-(AkkI[t,t])^(-1)
+                for u in range(Tmp.n(0)):
+                    for v in range(Tmp.n(1)):
+                        if u!=t:
+                            Tmp[u,t]=AkkI[u,t]*(AkkI[t,t]^(-1))
+                        if v!=t:
+                            Tmp[t,v]=(AkkI[t,t]^(-1))*AkkI[t,v]
+                        if u!=t and t!=v:
+                            Tmp[u,v]=AkkI[u,v]-AkkI[u,t]*(AkkI[t,t]^(-1))*AkkI[t,v]
+                AkkI=Tmp.copy()
+            AkkI=-AkkI.copy()
+        # Initialization of the hypermatrix V
+        V=HM(A.n(0),A.n(1),2,[HM(A[k,k].n(0),A[k,k].n(1),'zero') for l in range(A.n(0)*A.n(1)*2)])
+        for i in range(V.n(0)):
+            for j in range(V.n(1)):
+                V[i,j,0]=A[i,j]
+                if i==k and j==k:
+                    V[i,j,1]=-AkkI
+                if i==k and j!=k:
+                    V[i,j,1]=AkkI
+                if i!=k and j==k:
+                    V[i,j,1]=AkkI
+                if i!=k and j!=k:
+                    V[i,j,1]=-AkkI
+        # Returning the BM product.
+        return [U,V,W,HM(A.n(0),A.n(1),Prod(U,V,W).list())]
+    else:
+        raise ValueError, "Expected a square second order hypermatrix with square diagonal blocks"
 
 def gaussian_elimination(Cf, rs):
     """
