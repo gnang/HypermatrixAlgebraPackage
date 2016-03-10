@@ -1218,7 +1218,6 @@ def DiagonalHypermatrix(Mtrx):
         for j in range(n_d_cols):
             for k in range(n_d_dpts):
                 if D[i][j][k] != 0:
-                    #D[i][j][k] = Mtrx[min(i,k),max(i,k)]
                     D[i][j][k] = Mtrx[i,k]
     return D
 
@@ -1251,12 +1250,32 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
 
         sage: t,x,y=var('t,x,y')
         sage: Orthogonal2x2x2HypermatrixII(t,x,y)
-        [[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]
+        [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    return HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]])
+    return HM([[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]])
+
+def Orthogonal2x2x2HypermatrixIII(t,x,y):
+    """
+    Outputs a symbolic parametrization of third order orthogonal hypermatrix
+    of size 2x2x2.
+
+     EXAMPLES:
+
+    ::
+
+        sage: t,x,y=var('t,x,y')
+        sage: Orthogonal2x2x2HypermatrixIII(t,x,y)
+        [[[sin(t)^(2/3), y*cos(t)^(2/3)], [cos(t)^(2/3), -x*sin(t)^(2/3)]], [[1/y, sin(t)^(2/3)], [1/x, cos(t)^(2/3)]]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the Permutation hypermatrix
+    P=HM([1,0],'perm')
+    return Prod(HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]), P, P.transpose())
 
 def Orthogonal3x3x3Hypermatrix(t1,t2):
     """
@@ -5042,9 +5061,10 @@ def GeneralHypermatrixRank1Parametrization(sz,od):
     VrbLst=[]
     for Q in L:
         VrbLst = VrbLst+Q.list()
-    Eq=apply(GeneralHypermatrixLogProduct, [Q for Q in L])
-    CnstrLst=[eq==0 for eq in Eq.list()]
-    return ConstraintFormatorII(CnstrLst, VrbLst)[0]
+    Eq=apply(Prod, [Q for Q in L])
+    CnstrLst=[eq==1 for eq in Eq.list()]
+    [A,b]=multiplicativeConstraintFormator(CnstrLst, VrbLst)
+    return A
 
 def SecondOrderHadamardBlockU(l):
     """
@@ -5565,19 +5585,24 @@ def SweepHM(A,k):
     """
     # Checking that the input hypermatrix is of order 2
     if A.is_cubical() and A[k,k].is_cubical() and A.order()==2:
-        # Initializing the hypermatrices U and W.
-        U=HM(A.n(0),2,1,[HM(A[k,k].n(0),A[k,k].n(1),'zero') for l in range(A.n(0)*2)])
-        U[k,1,0]=HM(2,A[k,k].n(0),'kronecker')
+        # Initializing the hypermatrix U
+        U=HM(A.n(0),2,1,[HM(A[i,j].n(0),A[i,j].n(1),'zero') for z in range(1) for j in range(2) for i in range(A.n(0))])
         for i in range(A.n(0)):
             if i!=k:
-                U[i,0,0]=HM(2,A[k,k].n(0),'kronecker')
+                U[i,0,0]=HM(2,A[i,k].n(0),'kronecker')
                 U[i,1,0]=A[i,k]
-        W=HM(2,A.n(1),1,[HM(A[k,k].n(0),A[k,k].n(1),'zero') for l in range(2*A.n(0))])
-        W[1,k,0]=HM(2,A[k,k].n(0),'kronecker')
+            if i==k:
+                U[i,0,0]=HM(A[k,k].n(1),A[k,k].n(0),'zero')
+                U[i,1,0]=HM(2,A[k,k].n(0),'kronecker')
+        # Initializing the hypermatrix W        
+        W=HM(2,A.n(1),1,[HM(A[i,j].n(1),A[i,j].n(0),'zero') for z in range(1) for j in range(A.n(1)) for i in range(2)])
         for j in range(A.n(1)):
             if j!=k:
-                W[0,j,0]=HM(2,A[k,k].n(0),'kronecker')
+                W[0,j,0]=HM(2,A[k,j].n(1),'kronecker')
                 W[1,j,0]=A[k,j]
+            if j==k:
+                W[0,j,0]=HM(A[k,k].n(1),A[k,k].n(0),'zero')
+                W[1,j,0]=HM(2,A[k,k].n(0),'kronecker')
         # Computing the inverse of the entry A[k,k]
         if A[k,k].dimensions()==[1,1]:
             AkkI=A[k,k].inverse()
@@ -5598,7 +5623,7 @@ def SweepHM(A,k):
                 AkkI=Tmp.copy()
             AkkI=-AkkI.copy()
         # Initialization of the hypermatrix V
-        V=HM(A.n(0),A.n(1),2,[HM(A[k,k].n(0),A[k,k].n(1),'zero') for l in range(A.n(0)*A.n(1)*2)])
+        V=HM(A.n(0),A.n(1),2,[HM(A[i,j].n(0),A[i,j].n(1),'zero') for k in range(2) for j in range(A.n(1)) for i in range(A.n(0))])
         for i in range(V.n(0)):
             for j in range(V.n(1)):
                 V[i,j,0]=A[i,j]
@@ -5613,7 +5638,7 @@ def SweepHM(A,k):
         # Returning the BM product.
         return [U,V,W,HM(A.n(0),A.n(1),Prod(U,V,W).list())]
     else:
-        raise ValueError, "Expected a square second order hypermatrix with square diagonal blocks"
+        raise ValueError, "Expected square second order hypermatrix with square diagonal blocks"
 
 def gaussian_elimination(Cf, rs):
     """
@@ -7820,4 +7845,46 @@ def ThirdOrdeCharpolyII(A, U, V, W, Du, Dv, Dw):
         return [(A-ProdB(Prod(U,Du,Du.transpose()), Prod(Dv,V,Dv.transpose(2)), Prod(Dw.transpose(),Dw.transpose(2),W), DltL[t])).det() for t in range(2)]
     else:
         raise ValueError, "Not supported for the input hypermatrices."    
+
+def Additive_Determinant_Matrix(f, g, t):
+    """
+    Outputs a symbolic second order hypermatrix whose determinant is the sum of
+    the two polynomials.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x=var('x'); f=x^2+sum(HM(2,'a').list()[i]*x^i for i in range(2)); g=x^3+sum(HM(3,'b').list()[i]*x^i for i in range(3))
+        sage: Ha=Additive_Determinant_Matrix(f, g, x); Hb=Ha.copy()
+        sage: for k in range(Hb.n(0)):
+        ....:     Hb=BlockSweep(Hb,k)
+        ....:
+        sage: Hb[0,0][0,0].canonicalize_radical()
+        -(a1*x + x^2 + a0)/((b2 + 1)*x^2 + x^3 + (a1 + b1)*x + a0 + b0)
+        sage: (Ha*Hb).simplify_full()
+        [[[[-1]], [[0, 0]], [[0, 0, 0]]], [[[0], [0]], [[-1, 0], [0, -1]], [[0, 0, 0], [0, 0, 0]]], [[[0], [0], [0]], [[0, 0], [0, 0], [0, 0]], [[-1, 0, 0], [0, -1, 0], [0, 0, -1]]]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz0=f.degree(t); sz1=g.degree(t)
+    # Initialization of the companion matrices
+    A=CompanionHM(f,t)-t*HM(2,sz0,'kronecker')
+    B=CompanionHM(g,t)-t*HM(2,sz1,'kronecker')
+    Tp=HM(sz1,sz0,'zero');Tp[0,sz0-1]=1
+    # Initialization of the first row
+    M00=HM(1,1,'one'); M01=HM(1,sz0,'zero'); M02=HM(1,sz1,[B[0,j] for j in range(B.n(1))])
+    # Performing the row substitution
+    for j in range(B.n(1)):
+        B[0,j]=HM(2,sz1,'kronecker')[sz1-1,j]
+    # Initialization of the  second row
+    M10=HM(sz0,1,[HM(2,sz0,'kronecker')[i,0] for i in range(sz0)]); M11=A; M12=HM(sz0,sz1,'zero')
+    # Initialization of the last row
+    M20=HM(sz1,1,'zero'); M21=Tp.copy(); M22=B
+    # Initialization of the hypermatrix
+    return HM([[M00,M01,M02],[M10,M11,M12],[M20,M21,M22]])
  
