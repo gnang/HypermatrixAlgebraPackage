@@ -7887,4 +7887,124 @@ def Additive_Determinant_Matrix(f, g, t):
     M20=HM(sz1,1,'zero'); M21=Tp.copy(); M22=B
     # Initialization of the hypermatrix
     return HM([[M00,M01,M02],[M10,M11,M12],[M20,M21,M22]])
+
+def sylvesterian_elimination(EqL, VrbL, c):
+    """
+    Outputs the row echelon form of the list of polynomials
+    using thr sylvester resultant.
+
+    EXAMPLES:
  
+    ::
+
+        sage: EqL=[x^2+sum(HM(2,'a').list()[i]*x^i for i in range(2)), x^3+sum(HM(3,'b').list()[i]*x^i for i in range(3))]
+        sage: VrbL=[x]+HM(2,'a').list()+HM(2,'b').list()
+        sage: [A,b]=sylvesterian_elimination(EqL, VrbL, 'z')
+        sage: b
+        [[a1*x + x^2 + a0], [-((a1 - b2)*a1 - a0 + b1)^2*a0 - (a0*(a1 - b2) - ((a1 - b2)*a1 - a0 + b1)*a1 + b0)*(a0*(a1 - b2) + b0)]]
+        sage: A
+        [[z00, z01, z02, 0, 0], [0, z01*z10, z02*z10, -z00*z13, -z00*z14]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    #Initializing the indicator matrix
+    A=HM(len(EqL),len(VrbL),'zero')
+    for i in range(len(EqL)):
+        for j in range(len(VrbL)):
+            if EqL[i].degree(VrbL[j])>0:
+                A[i,j]=var(c+str(i)+str(j))
+    # Initializing a copy of the input second order hypermatrices.
+    b=HM(len(EqL),1,EqL)
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; Tb=P*Tb
+                for i0 in range(i,Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i0,j0]=Ta[i0,j0]
+                for i0 in range(i,Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i0,j0]=Tb[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    for j0 in range(b.n(1)):
+                        #b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
+                        TmpG=SylvesterHM(b[i,j0], b[r,j0], VrbL[j0])
+                        b[r,j0]=gaussian_eliminationHMII(TmpG, HM(TmpG.n(0),1,'zero'))[0][TmpG.n(0)-1,TmpG.n(1)-1]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A,b]
+
+def GeneralHypermatrixRankOnePartition(B, Hl, Xl):
+    """
+    Returns constraints in the their reduced echelon form associated with linearizations
+    of the rankd one decomposition constraints. The function takes as inputs a hypermatrix
+    and two lists. The input Xl is the list of hypermatrices associated with the variables.
+    The input Hl is the list of hypermatrix associated with the decompositions. The first 
+    list element of Hl is the Hypermatrix to be deocomposed the other elements correspond 
+    to the parameters of the decomposition. 
+
+    EXAMPLES:
+
+    ::
+
+        sage: B=HM(2,2,'b'); Hl=[HM(2,2,'c')]; Xl=[HM(2,2,'x'), HM(2,2,'y')] 
+        sage: Sln=GeneralHypermatrixRankOnePartition(B, Hl, Xl); Sln
+        [-(b01 - c01)*(b10 - c10) + (b00 - c00)*(b11 - c11),
+         -(b01 + c01)*(b10 + c10) + (b00 + c00)*(b11 + c11)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the primitive root of unity
+    w=exp(I*2*pi/Xl[0].n(1))
+    # Initializing the order
+    od=Xl[0].order()
+    # Initialization the Kronecker slice selectors
+    DltL=GeneralHypermatrixKroneckerDeltaL(od, Xl[0].n(1))
+    # Loop initializing the hypermartrix enrtry lists associaed with constraints 
+    Lx=[]; Lh=[]
+    for t in range(Xl[0].n(1)):
+        Lx=Lx+apply(ProdB,[X for X in Xl]+[DltL[t]]).list()
+        Lh=Lh+((1/Xl[0].n(1))*sum([B]+[Hl[j]*w^(t*(j+1)) for j in range(len(Hl))])).list()
+    # Initialization of the equation
+    EqL=[Lx[i]==Lh[i] for i in range(len(Lx))]
+    # Formating the constraints
+    LstX=[]
+    for x in Xl:
+        LstX=LstX+x.list()
+    if len(Set(LstX).list())==len(LstX):
+        VrbL=LstX
+    else:
+        VrbL=Set(LstX).list()
+    [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
+    # Initialization of the vector of variables
+    v=Matrix(SR, A.ncols(), 1, VrbL)
+    # computing the solutions to the system obtained via Gauss-Jordan elimination
+    Sln=multiplicative_linear_solver(A, b, v, v)
+    # returning the polynomial conditions eliminating the variables
+    return [f.rhs().numerator()-f.rhs().denominator() for f in Sln if f.lhs()==1]
+
