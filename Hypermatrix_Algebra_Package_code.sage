@@ -284,7 +284,16 @@ class HM:
     def append_index(self,indx):
         return GeneralHypermatrixAppendIndex(self,indx)
     def norm(self,p=2):
-        return sum([abs(i)^p for i in self.list()])
+        if p==Infinity:
+            return max([abs(i) for i in self.list() if not i.is_zero()])
+        elif p==0:
+            return sum([1 for i in self.list() if not i.is_zero()])
+        elif p==1:
+            return sum([abs(i) for i in self.list() if not i.is_zero()])
+        elif p>1:
+            return sum([abs(i)^p for i in self.list()])^(1/p)
+        else:
+            raise ValueError, "Expect a real number greater or equal to 0 or Infinity"
     def det(self):
         if self.order()==2:
             return Deter(self)
@@ -4020,6 +4029,39 @@ def GenerateRandomIntegerHypermatrix(*l):
         return Rh
     else :
         raise ValueError, "The Dimensions must all be non-zero."
+
+def GenerateRandomBinaryHypermatrix(*l):
+    """
+     Outputs a random hypermatrix
+
+    EXAMPLES:
+
+    ::
+
+        sage: A=GenerateRandomBinaryHypermatrix(3,3,3); A.dimensions()
+        [3, 3, 3]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if prod(list(l)) != 0:
+        # Initializing the input for generating a symbolic hypermatrix
+        inpts = list(l)+['zero']
+        # Initialization of the hypermatrix
+        Rh = HM(*inpts)
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [mod(i,l[0])]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)]=Integer(mod(ZZ.random_element(),2))
+        return Rh
+    else :
+        raise ValueError, "The Dimensions must all be non-zero."
+
 
 
 def GeneralStochasticHypermatrix(t, od):
@@ -7959,12 +8001,12 @@ def sylvesterian_elimination(EqL, VrbL, c):
 
 def GeneralHypermatrixRankOnePartition(B, Hl, Xl):
     """
-    Returns constraints in the their reduced echelon form associated with linearizations
-    of the rankd one decomposition constraints. The function takes as inputs a hypermatrix
-    and two lists. The input Xl is the list of hypermatrices associated with the variables.
-    The input Hl is the list of hypermatrix associated with the decompositions. The first 
-    list element of Hl is the Hypermatrix to be deocomposed the other elements correspond 
-    to the parameters of the decomposition. 
+    Returns the constraints associated with linearizations of the rank one decomposition
+    constraints.The polynomial returned come from zero rows. The function takes as inputs
+    a hypermatrix and two lists. The input Xl is the list of hypermatrices associated with
+    the variables. The input Hl is the list of hypermatrix associated with the decompositions.
+    The first list element of Hl is the Hypermatrix to be deocomposed the other elements 
+    correspond to the parameters of the decomposition. 
 
     EXAMPLES:
 
