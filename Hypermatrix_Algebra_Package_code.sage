@@ -294,6 +294,11 @@ class HM:
             return sum([abs(i)^p for i in self.list()])^(1/p)
         else:
             raise ValueError, "Expect a real number greater or equal to 0 or Infinity"
+    def trace(self):
+        if self.order()==2:
+            return sum(self[i,i] for i in range(min(self.n(0),self.n(1))))
+        else:
+            raise ValueError, "Expects a second order hypermatrix"
     def det(self):
         if self.order()==2:
             return Deter(self)
@@ -321,6 +326,25 @@ class HM:
             return gaussian_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
         else:
             raise ValueError, "Expected a second order hypermatrix"
+    def rref(self):
+        if self.order()==2:
+            return gauss_jordan_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
+        elif self.order()==3 and self.is_cubical():
+            # Initializing the size parameter
+            sz=self.n(0)
+            # initializing the list second order slices
+            TmpL=[HM(sz, sz, [self[i,j,k] for j in range(sz) for i in range(sz)]).rref() for k in range(sz)]
+            # Initilizing the final second order hypermatrix
+            M=HM(sz, sz, [TmpL[k][i,i] for i in range(sz) for k in range(sz)]).rref()
+            # Initializing and filling up the resulting hypermatrix
+            Rslt=HM(sz,sz,sz,'zero')
+            for i in range(sz):
+                for k in range(sz):
+                    Rslt[i,i,k]=M[k,i]
+            return Rslt
+        else:
+            raise ValueError, "Expected a second order hypermatrix or a cubic third order hypermatrix"
+
 def MatrixGenerate(nr, nc, c):
     """
     Generates a list of lists associated with a symbolic nr x nc
@@ -1668,6 +1692,43 @@ def ConstraintFormatorII(CnstrLst, VrbLst):
             A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
     return [A,b]
 
+def ConstraintFormatorHM(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs an HM 
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y = var('x,y')
+        sage: CnstrLst = [x+y==1, x-y==2]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = ConstraintFormatorHM(CnstrLst, VrbLst)
+        sage: A.printHM()
+        [:, :]=
+        [ 1  1]
+        [ 1 -1]
+        sage: b.printHM()
+        [:, :]=
+        [1]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=HM(len(CnstrLst),len(VrbLst),'zero')
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
+    return [A,b]
+
 def multiplicativeConstraintFormator(CnstrLst, VrbLst):
     """
     Takes as input a List of linear constraints
@@ -1698,6 +1759,43 @@ def multiplicativeConstraintFormator(CnstrLst, VrbLst):
     # Initializing the Matrix
     A=Matrix(SR,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst)))
     b=vector(SR, [eq.rhs() for eq in CnstrLst]).column()
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            A[r,c]=(CnstrLst[r]).lhs().degree(VrbLst[c])
+    return [A,b]
+
+def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs HM
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y')
+        sage: CnstrLst = [x*y^2==1, x/y==2]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = multiplicativeConstraintFormatorHM(CnstrLst, VrbLst)
+        sage: A.printHM()
+        [:, :]=
+        [ 1  2]
+        [ 1 -1]
+        sage: b.printHM()
+        [:, :]=
+        [1]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=HM(len(CnstrLst),len(VrbLst),'zero')
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
             A[r,c]=(CnstrLst[r]).lhs().degree(VrbLst[c])
@@ -5921,6 +6019,105 @@ def gauss_jordan_elimination(Cf,rs):
             i=i-1; j=0
     return [A,b]
 
+def gauss_jordan_eliminationHM(Cf,rs):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [RefA, c] = gauss_jordan_eliminationHM(HM(2,2,'a'), HM(2,1,'b'))
+        sage: RefA.printHM()
+        [:, :]=
+        [1 0]
+        [0 1]
+        sage: c.printHM()
+        [:, :]=
+        [-a01*(a10*b00/a00 - b10)/(a00*(a01*a10/a00 - a11)) + b00/a00]
+        [                     (a10*b00/a00 - b10)/(a01*a10/a00 - a11)]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b] = gaussian_eliminationHM(Cf,rs)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1,-1,-1):
+                #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                Tb0=HM(1, b.n(1), [b[i,j0] for j0 in range(b.n(1))])
+                Tb1=HM(1, b.n(1), [b[r,j0] for j0 in range(b.n(1))])
+                Trb=-A[r,j]*Tb0+Tb1
+                for j0 in range(b.n(1)):
+                    b[r,j0]=Trb[0,j0]
+                #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+                Ta0=HM(1, A.n(1), [A[i,j0] for j0 in range(A.n(1))])
+                Ta1=HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))])
+                Tra=-A[r,j]*Ta0+Ta1
+                for j0 in range(A.n(1)):
+                    A[r,j0]=Tra[0,j0]
+            i=i-1; j=0
+    return [A,b]
+
+def gauss_jordan_eliminationHMII(Cf,rs):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [RefA, c] = gauss_jordan_eliminationHMII(HM(2,2,'a'), HM(2,1,'b'))
+        sage: RefA.printHM()
+        [:, :]=
+        [-(a01*a10 - a00*a11)*a00                        0]
+        [                       0        a01*a10 - a00*a11]
+        sage: c.printHM()
+        [:, :]=
+        [(a10*b00 - a00*b10)*a01 - (a01*a10 - a00*a11)*b00]
+        [                                a10*b00 - a00*b10] 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b] = gaussian_eliminationHMII(Cf,rs)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            cf1=A[i,j]
+            for r in range(i-1,-1,-1):
+                #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                cf2=A[r,j]
+                for j0 in range(b.n(1)):
+                    b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
+                #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+                for j0 in range(A.n(1)):
+                    A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
+            i=i-1; j=0
+    return [A,b]
+
 def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     """
     Outputs the row echelon form of the input matrix and the right hand side.
@@ -7777,11 +7974,15 @@ def GeneralUncorrelatedComposition(Lu, La, Lf):
         sage: Lf=[Fh, Gh, Hh]
         sage: # Performing the composition
         sage: Sln=GeneralUncorrelatedComposition(Lu, La, Lf)
-        sage: U=HM(2,2,2,'u').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
-        sage: V=HM(2,2,2,'v').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
-        sage: W=HM(2,2,2,'w').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
-        sage: Prod(U,V,W)[0,0,1].is_zero()
-        True
+        sage: Hu=HM(2,2,2,'u').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: Hv=HM(2,2,2,'v').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: Hw=HM(2,2,2,'w').subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
+        sage: Hx=Prod(Hu,Hv,Hw).simplify()
+        sage: Uh=Hu.copy(); Vh=Hv.copy(); Wh=Hw.copy()
+        sage: Wh[0,0,0]=Wh[0,0,0]/Hx[0,0,0]; Wh[1,0,0]=Wh[1,0,0]/Hx[0,0,0]
+        sage: Wh[0,1,1]=Wh[0,1,1]/Hx[1,1,1]; Wh[1,1,1]=Wh[1,1,1]/Hx[1,1,1]
+        sage: Prod(Uh,Vh,Wh).simplify_full()
+        [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
 
 
     AUTHORS:
