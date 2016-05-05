@@ -65,6 +65,8 @@ class HM:
             self.hm=HypermatrixPermutation(dims[0])
         elif s == 'kronecker':
             self.hm=apply(GeneralHypermatrixKroneckerDelta, args[:-1]).listHM()
+        elif s == 'diag':
+            self.hm=apply(GeneralHypermatrixMainDiag, args[:-1]).listHM()
         elif s == 'sym':
             if (len(dims) == 3) and (dims[0]==2):
                 self.hm=SymMatrixGenerate(dims[1],dims[2])
@@ -1779,12 +1781,12 @@ def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
         sage: x, y = var('x, y')
         sage: CnstrLst = [x*y^2==1, x/y==2]
         sage: VrbLst = [x, y]
-        sage: [A,b] = multiplicativeConstraintFormatorHM(CnstrLst, VrbLst)
-        sage: A.printHM()
+        sage: [Ha,hb] = multiplicativeConstraintFormatorHM(CnstrLst, VrbLst)
+        sage: Ha.printHM()
         [:, :]=
         [ 1  2]
         [ 1 -1]
-        sage: b.printHM()
+        sage: hb.printHM()
         [:, :]=
         [1]
         [2]
@@ -3265,6 +3267,47 @@ def GeneralHypermatrixKroneckerDelta(od, sz):
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         if len(Set(entry)) == 1:
             Rh[tuple(entry)] = 1
+    return Rh
+
+def GeneralHypermatrixMainDiag(od, Lv):
+    """
+    Outputs a list of lists associated with the general
+    Kronecter delta type hypermatrix using the entries of
+    list Lv as elements to be placed on the main diagonal
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Dlt = GeneralHypermatrixMainDiag(2, HM(2,'x').list()); Dlt
+        [[x0, 0], [0, x1]] 
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the size parameter
+    sz=len(Lv)
+    # Initialization of the list specifying the dimensions of the output
+    l = [sz for i in range(od)] 
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Initializing the index
+    Indx=0
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if len(Set(entry)) == 1:
+            Rh[tuple(entry)] = Lv[Indx]
+            Indx=Indx+1
     return Rh
 
 def GeneralHypermatrixKroneckerDeltaL(od, sz):
@@ -5885,34 +5928,34 @@ def gaussian_eliminationHM(Cf, rs):
                 P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
                 #A[i:,:]=Ta
-                for i0 in range(i,Ta.n(0)):
+                for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
-                        A[i0,j0]=Ta[i0,j0]
+                        A[i+i0,j0]=Ta[i0,j0]
                 #b[i:,:]=Tb
-                for i0 in range(i,Tb.n(0)):
+                for i0 in range(Tb.n(0)):
                     for j0 in range(Tb.n(1)):
-                        b[i0,j0]=Tb[i0,j0]
+                        b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
-            cf=A[i,j]
+            cf1=A[i,j]
             #b[i,:]=(1/A[i,j])*b[i,:]
             for j0 in range(b.n(1)):
-                b[i,j0]=(cf^(-1))*b[i,j0]
+                b[i,j0]=(cf1^(-1))*b[i,j0]
             #A[i,:]=(1/A[i,j])*A[i,:]
             for j0 in range(A.n(1)):
-                A[i,j0]=(cf^(-1))*A[i,j0]
+                A[i,j0]=(cf1^(-1))*A[i,j0]
             for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
                 if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
                     r=r+1
                 else:
                     # Initialization of the coefficient
-                    cf=A[r,j]
+                    cf2=A[r,j]
                     #b[r,:]=-A[r,j]*b[i,:]+b[r,:]
                     for j0 in range(b.n(1)):
-                        b[r,j0]=-cf*b[i,j0]+b[r,j0]
+                        b[r,j0]=-cf2*b[i,j0]+b[r,j0]
                     #A[r,:]=-A[r,j]*A[i,:]+A[r,:]
                     for j0 in range(A.n(1)):
-                        A[r,j0]=-cf*A[i,j0]+A[r,j0]
+                        A[r,j0]=-cf2*A[i,j0]+A[r,j0]
         # Incrementing the row and column index.
         i=i+1; j=j+1
     return [A,b]
@@ -6358,7 +6401,6 @@ def multiplicative_matrix_product(A,B):
             Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
     return Rslt
 
-
 def linear_solver(A,b,x,v):
     """
     Outputs the Reduced Row Echelon Form of the input matrix and the right hand side.
@@ -6400,6 +6442,47 @@ def linear_solver(A,b,x,v):
     tp1=Pm*x; tp2=bp-(Ap-Pm)*v
     return [tp1[i,0]==tp2[i,0] for i in range(tp1.nrows())]
 
+def linear_solverHM(A,b,x,v):
+    """
+    Outputs the Reduced Row Echelon Form of the input matrix and the right hand side.
+    where A denotes the input matrix, b denotes the right-hand side vector, x denotes
+    the variable vector coming from the original system of equations, and v denotes 
+    the free variable vector.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: [A,b]=ConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
+        sage: Mx=HM(A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
+        sage: Mv=HM(A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
+        sage: linear_solverHM(A,b,Mx,Mv)
+        [x0 == a00 - a10 + a11 - t3,
+         x1 == a11 - t3,
+         x2 == a10 - a11 + t3,
+         0  == -a00 + a01 + a10 - a11]
+
+    AUTHORS:
+    - Initial implementation by Edinah K. Gnang updates to the doc string by Jeanine S. Gnang
+    - To Do: 
+    """
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=gauss_jordan_eliminationHM(A,b)
+    Id1 = HM(2, Ap.n(0), 'kronecker')
+    Id2 = HM(2, Ap.n(1), 'kronecker')
+    # Obtainin the list of pivot variables.
+    Pm=HM(Ap.n(0), Ap.n(1), 'zero')
+    for i in range(Ap.n(0)):
+        if not HM(1, Ap.n(1), [SR(Ap[i,u]) for u in range(Ap.n(1))]).is_zero():
+            for j in range(Ap.n(1)):
+                if Ap[i,j]==1:
+                    break
+            Pm=Pm+HM(Id1.n(0), 1, [SR(Id1[s,i]) for s in range(Id1.n(0))])*HM(1,Id2.n(1),[SR(Id2[j,t]) for t in range(Id2.n(1))])
+    # Expressing the solutions
+    tp1=Pm*x; tp2=bp-(Ap-Pm)*v
+    return [tp1[i,0]==tp2[i,0] for i in range(tp1.n(0))]
+
 def multiplicative_linear_solver(A,b,x,v):
     """
     Outputs the solution to a multiplicative linear system of equations.
@@ -6408,8 +6491,8 @@ def multiplicative_linear_solver(A,b,x,v):
  
     ::
 
-        sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
-        sage: [A,b]=ConstraintFormatorII(Eq,[var('x'+str(i)) for i in range(2*sz)])
+        sage: sz=2; Eq=[var('x'+str(i))*var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: [A,b]=multiplicativeConstraintFormator(Eq,[var('x'+str(i)) for i in range(2*sz)])
         sage: Mx=Matrix(SR,A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
         sage: Mv=Matrix(SR,A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
         sage: multiplicative_linear_solver(A,b,Mx,Mv)
