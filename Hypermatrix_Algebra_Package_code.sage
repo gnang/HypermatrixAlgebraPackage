@@ -121,6 +121,10 @@ class HM:
             tmp[i[0]] = v
     def __call__(self, *inpts):
         return GeneralHypermatrixProduct(self, *inpts)
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and self.list() == other.list())
+    def __ne__(self, other):
+        return not self.__eq__(other)
     def elementwise_product(self,B):
         return GeneralHypermatrixHadamardProduct(self, B)
     def elementwise_exponent(self,s):
