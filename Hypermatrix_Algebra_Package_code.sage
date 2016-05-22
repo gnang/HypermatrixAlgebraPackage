@@ -1732,7 +1732,7 @@ def ConstraintFormatorHM(CnstrLst, VrbLst):
     b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
-            A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
+            A[r,c]=SR((CnstrLst[r]).lhs().coefficient(VrbLst[c]))
     return [A,b]
 
 def multiplicativeConstraintFormator(CnstrLst, VrbLst):
@@ -1804,7 +1804,7 @@ def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
     b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
-            A[r,c]=(CnstrLst[r]).lhs().degree(VrbLst[c])
+            A[r,c]=SR((CnstrLst[r]).lhs().degree(VrbLst[c]))
     return [A,b]
 
 def ConstraintFormatorIII(CnstrLst, VrbLst):
@@ -1873,40 +1873,6 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
         for c in range(len(VrbLst)):
             A[r,c]=CnstrLst[r].coefficient(VrbLst[c])
     return [A,A*Matrix(SR,len(VrbLst),1,VrbLst)-Matrix(SR,len(CnstrLst),1,CnstrLst)]
-
-def MulitplicativeConstraintFormator(CnstrLst, VrbLst):
-    """
-    Takes as input a List of linear constraints
-    and a list of variables and outputs matrix
-    and the right hand side vector associate
-    with the matrix formulation of the constraints.
-
-    EXAMPLES:
-
-    ::
-
-        sage: x,y = var('x,y')
-        sage: CnstrLst = [x+y==1, x-y==2]
-        sage: VrbLst = [x, y]
-        sage: [A,b] = ConstraintFormatorII(CnstrLst, VrbLst)
-        sage: A
-        [ 1  1]
-        [ 1 -1]
-        sage: b
-        [1]
-        [2]
-
-
-    AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
-    """
-    # Initializing the Matrix
-    A=Matrix(SR,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst)))
-    b=vector(SR, [eq.rhs() for eq in CnstrLst]).column()
-    for r in range(len(CnstrLst)):
-        for c in range(len(VrbLst)):
-            A[r,c]=(CnstrLst[r]).lhs().coefficient(VrbLst[c])
-    return [A,b]
 
 def Companion_matrix(p,vrbl):
     """
@@ -6405,6 +6371,31 @@ def multiplicative_matrix_product(A,B):
             Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
     return Rslt
 
+def multiplicative_matrix_productHM(A,B):
+    """
+    Outputs the result of the multiplicative product of the
+    two input matrices.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: multiplicative_matrix_productHM(HM(2,2,'a'), HM(2,2,'b')).printHM()
+        [:, :]=
+        [b00^a00*b10^a01 b01^a00*b11^a01]
+        [b00^a10*b10^a11 b01^a10*b11^a11]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    Rslt=HM(A.nrows(), B.ncols(), 'zero')
+    for i in range(A.nrows()):
+        for k in range(B.ncols()):
+            Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
+    return Rslt
+
 def linear_solver(A,b,x,v):
     """
     Outputs the Reduced Row Echelon Form of the input matrix and the right hand side.
@@ -6526,6 +6517,45 @@ def multiplicative_linear_solver(A,b,x,v):
     tp2=multiplicative_matrix_product((Ap-Pm),v)
     return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
+def multiplicative_linear_solverHM(A,b,x,v):
+    """
+    Outputs the solution to a multiplicative linear system of equations.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; Eq=[var('x'+str(i))*var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: [A,b]=multiplicativeConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
+        sage: Mx=HM(A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
+        sage: Mv=HM(A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
+        sage: multiplicative_linear_solverHM(A,b,Mx,Mv)
+        [x0 == a00*a11/(a10*t3),
+         x1 == a11/t3,
+         x2 == a10*t3/a11,
+         1 == a01*a10/(a00*a11)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:2]
+    Id1=identity_matrix(Ap.nrows())
+    Id2=identity_matrix(Ap.ncols())
+    # Obtainin the list of pivot variables.
+    Pm=Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
+    for i in range(Ap.nrows()):
+        if not Ap[i,:].is_zero():
+            for j in range(Ap.ncols()):
+                if Ap[i,j]==1:
+                    break
+            Pm=Pm+Id1[:,i]*Id2[j,:]
+    # Expressing the solutions
+    tp1=multiplicative_matrix_product(Pm,x)
+    tp2=multiplicative_matrix_product((Ap-Pm),v)
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
+
 def multiplicative_least_square_linear_solver(A,b,x,v):
     """
     Outputs the solution to the multiplicative least square problem
@@ -6564,6 +6594,46 @@ def multiplicative_least_square_linear_solver(A,b,x,v):
     tp1=multiplicative_matrix_product(Pm,x)
     tp2=multiplicative_matrix_product((Ap-Pm),v)
     return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
+
+def multiplicative_least_square_linear_solverHM(A,b,x,v):
+    """
+    Outputs the solution to the multiplicative least square problem
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; Eq=[var('x'+str(i))*var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: [A,b]=multiplicativeConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
+        sage: Mx=HM(A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
+        sage: Mv=HM(A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
+        sage: multiplicative_least_square_linear_solverHM(A,b,Mx,Mv)
+        [x0 == sqrt(a00*a01*e^(2*I*pi*k0))/(sqrt(a00*a10*e^(2*I*pi*k3)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
+         x1 == sqrt(a10*a11*e^(2*I*pi*k1))/(sqrt(a00*a10*e^(2*I*pi*k2)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
+         x2 == a00*a10*t3/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))),
+         1 == e^(-2*I*pi*k0 - 2*I*pi*k1)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII((A.transpose()*A).matrix(), multiplicative_matrix_productHM(A.transpose(),b).matrix())[:2]
+    Id1=identity_matrix(Ap.nrows())
+    Id2=identity_matrix(Ap.ncols())
+    # Obtainin the list of pivot variables.
+    Pm=Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
+    for i in range(Ap.nrows()):
+        if not Ap[i,:].is_zero():
+            for j in range(Ap.ncols()):
+                if Ap[i,j]==1:
+                    break
+            Pm=Pm+Id1[:,i]*Id2[j,:]
+    # Expressing the solutions
+    tp1=multiplicative_matrix_product(Pm,x)
+    tp2=multiplicative_matrix_product((Ap-Pm),v)
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
+
 
 def SecondOrderHadamardFactorization(A,B):
     """
