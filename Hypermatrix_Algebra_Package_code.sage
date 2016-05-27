@@ -8408,3 +8408,42 @@ def GeneralHypermatrixRankOnePartition(B, Hl, Xl):
     # returning the polynomial conditions eliminating the variables
     return [f.rhs().numerator()-f.rhs().denominator() for f in Sln if f.lhs()==1]
 
+def Form2Hypermatrix(f, od, Vrbls):
+    """
+    Procedure for extracting a Hypermatrix from a multivariate
+    homogeneous from the the order corresponds to the degree
+    of the homogeneous form and the side length is determined
+     by the number of variables
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; od=2; X=HM(sz,sz,HM(sz^2,'x').list()); f=X.det()
+        sage: H=Form2Hypermatrix(f, 2, X.list()); H.printHM()
+        [:, :]=
+        [   0    0    0  1/2]
+        [   0    0 -1/2    0]
+        [   0 -1/2    0    0]
+        [ 1/2    0    0    0]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the list 
+    l=[len(Vrbls) for i in range(od)]
+    # Initialization of the hypermatrix 
+    inpts=l+['zero']; Rh=HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry=[Integer(mod(i,l[0]))]
+        sm=Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=f.diff([Vrbls[v] for v in entry])/factorial(od)
+    return Rh
+ 
