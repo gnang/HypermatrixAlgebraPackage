@@ -332,6 +332,11 @@ class HM:
             return gaussian_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
         else:
             raise ValueError, "Expected a second order hypermatrix"
+    def refII(self):
+        if self.order()==2:
+            return gaussian_eliminationHMIII(self, HM(self.n(0),1,'zero'))[0]
+        else:
+            raise ValueError, "Expected a second order hypermatrix"
     def rref(self):
         if self.order()==2:
             return gauss_jordan_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
@@ -2448,6 +2453,52 @@ def GeneralHypermatrixLogProduct(*args):
             raise ValueError, "The number of operands must be >= 2"
         elif len(args) >= 2:
             Rh[tuple(entry)]=sum([sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
+    return Rh
+
+def GeneralHypermatrixBlockProduct(*args):
+    """  
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner block product of the input hypermatrices.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::   
+
+        sage: Ha=HM(2,2,2,'a');Hb=HM(2,2,2,'b');Hc=HM(2,2,2,'c');Hd=HM(2,2,2,'d');Hf=HM(2,2,2,'f');Hg=HM(2,2,2,'g')
+        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
+        sage: Rslt=GeneralHypermatrixBlockProduct(A, B, C); Rslt[0,0,0].printHM()
+        [:, :, 0]=
+        [a000*c000*f000 + a010*c001*f100 + b000*d000*g000 + b010*d001*g100 a000*c010*f010 + a010*c011*f110 + b000*d010*g010 + b010*d011*g110]
+        [a100*c100*f000 + a110*c101*f100 + b100*d100*g000 + b110*d101*g100 a100*c110*f010 + a110*c111*f110 + b100*d110*g010 + b110*d111*g110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*c000*f001 + a011*c001*f101 + b001*d000*g001 + b011*d001*g101 a001*c010*f011 + a011*c011*f111 + b001*d010*g011 + b011*d011*g111]
+        [a101*c100*f001 + a111*c101*f101 + b101*d100*g001 + b111*d101*g101 a101*c110*f011 + a111*c111*f111 + b101*d110*g011 + b111*d111*g111]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """  
+    # Initialization of the list specifying the dimensions of the output
+    l = [(args[i]).n(i) for i in range(len(args))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the assignement
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(args)<2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(args) >= 2:
+            Rh[tuple(entry)]=sum([apply(Prod,[args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
 
 def GeneralHypermatrixCyclicPermute(A):
@@ -5993,6 +6044,71 @@ def gaussian_eliminationHMII(Cf, rs):
         i=i+1; j=j+1
     return [A,b]
 
+def gaussian_eliminationHMIII(Cf, rs):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
+    The difference with the previous implementation is the fact that the row linear combination
+    operations are performed in such a way as to not change the determinant. 
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [A,b]=gaussian_eliminationHMIII(HM(2,2,'a'), HM(2,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [               a00                a01]
+        [                 0 -a01*a10/a00 + a11]
+        sage: b.printHM()
+        [:, :]=
+        [               b00]
+        [-a10*b00/a00 + b10]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy(); b=rs.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; Tb=P*Tb
+                for i0 in range(i,Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i0,j0]=Ta[i0,j0]
+                for i0 in range(i,Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i0,j0]=Tb[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=-(cf2/cf1)*b[i,j0]+b[r,j0]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=-(cf2/cf1)*A[i,j0]+A[r,j0]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A,b]
+
 def gauss_jordan_elimination(Cf,rs):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
@@ -7405,8 +7521,7 @@ def TriangulationGraphsTriangleList(sz):
     """
     Takes as input the size paramater which corresponds to the number of vertices of the graph
     and outputs list of triangulation of the convex regular polygon. Each graph in the list
-    is describe by as a list of triangle specified by their edges with exponential variables
-    associated with edge colorings.
+    is describe by as a list of triangle specified by their edges.
     
      EXAMPLES:
 
@@ -7441,9 +7556,8 @@ def TriangulationGraphsTriangleList(sz):
 def TriangulationGraphsDualAdjacencyMatrixList(sz):
     """
     Takes as input the size paramater which corresponds to the number of vertices of the graph
-    and outputs list of triangulation of the convex regular polygon. Each graph in the list
-    is describe by as a list of triangle specified by their edges with exponential variables
-    associated with edge colorings.
+    and outputs list of descriptions of triangulation of the convex regular polygon. Each list
+    is made up of a dual adjancency matrix followed by list of triangle specified by their edges.
     
      EXAMPLES:
 
