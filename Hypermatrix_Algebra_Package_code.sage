@@ -18,7 +18,38 @@
 
 # Definition of the hypermatrix class HM.
 class HM:
-    """Hypermatrix class"""
+    """
+    Describes the Hypermatrix constructors
+    
+    INPUT:
+
+    -  ``nrows`` - int, the number of rows
+    -  ``ncols`` - int, the number of columns
+    -  ``ndpts`` - int, the number of depths
+
+    EXAMPLES::
+    
+        sage: HM(2,2,2,'a')
+        [[[a000, a001], [a010, a011]], [[a100, a101], [a110, a111]]]
+        sage: od=2; sz=2; HM(od,sz,'kronecker')
+        [[1, 0], [0, 1]]
+        sage: od=2; HM(od,[0,1,2],'perm')
+        [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        sage: od=2; sz=2; HM(od,sz,'a','sym')
+        [[a00, a01], [a01, a11]]
+        sage: sz=2; HM(sz,sz,sz,'a','shift')
+        [[[a111, a112], [a121, a122]], [[a211, a212], [a221, a222]]]
+        sage: HM(2,2,'one')
+        [[1, 1], [1, 1]]
+        sage: HM(2,2,'zero')
+        [[0, 0], [0, 0]]
+        sage: HM(HM(2,2,'a').matrix()) # Creating a scaling hypermatrix
+        [[[a00, 0], [0, a01]], [[a10, 0], [0, a11]]]
+        sage: od=2; sz=2; HM(od,HM(sz,'a').list(),'diag')
+        [[a0, 0], [0, a1]]
+        sage: HM(3,'x').list() # creatling a list of variables
+        [x0, x1, x2]
+    """
     def __init__(self,*args):
         if len(args) == 1:
             inp = args[0]
@@ -54,15 +85,16 @@ class HM:
             self.hm = apply(HypermatrixGenerateAllZero, dims)
         elif s == 'shift':
             self.hm = apply(HypermatrixGenerateII, dims)
-        elif s == 'ortho':
-            if len(dims) == 1:
-                self.hm=Orthogonal2x2x2Hypermatrix(dims[0])
-            elif len(dims) == 2:
-                self.hm=Orthogonal3x3x3Hypermatrix(dims[0],dims[1])
-            else:
-                raise ValueError, "ortho not supported for order %d hypermatrices" % len(dims)
         elif s == 'perm':
-            self.hm=HypermatrixPermutation(dims[0])
+            if dims[0]==2:
+                # Initialization of the size parameter
+                sz=len(dims[1])
+                Id=HM(2,sz,'kronecker')
+                self.hm=sum(HM(sz,1,[Id[i,dims[1][k]] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz)).listHM()
+            elif dims[0]==3:
+                self.hm=HypermatrixPermutation(dims[1])
+            else:
+                raise ValueError, "not supported for order %d hypermatrices" % len(dims)
         elif s == 'kronecker':
             self.hm=apply(GeneralHypermatrixKroneckerDelta, args[:-1]).listHM()
         elif s == 'diag':
@@ -126,14 +158,110 @@ class HM:
     def __ne__(self, other):
         return not self.__eq__(other)
     def elementwise_product(self,B):
+        """
+        Returns the elementwise product of two 
+        hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,2,'a'); B=HM(2,2,2,'b')
+            sage: A.elementwise_product(B)
+            [[[a000*b000, a001*b001], [a010*b010, a011*b011]], [[a100*b100, a101*b101], [a110*b110, a111*b111]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixHadamardProduct(self, B)
     def elementwise_exponent(self,s):
+        """
+        Returns the elementwise exponent of the entries
+        ``self`` and ``B`` are both hypermatrices, with
+        identical sizes. It is "unsafe" in the sense that
+        these conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,2,'a')
+            sage: A.elementwise_exponent(3)
+            [[[a000^3, a001^3], [a010^3, a011^3]], [[a100^3, a101^3], [a110^3, a111^3]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixExponent(self, s)
     def elementwise_base_exponent(self, s):
+        """
+        Returns a hypermatrix whose entries are all
+        raised by s.
+        This routine assumes that we are not dividing
+        by zero. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,2,'a')
+            sage: A.elementwise_base_exponent(3)
+            [[[3^a000, 3^a001], [3^a010, 3^a011]], [[3^a100, 3^a101], [3^a110, 3^a111]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixBaseExponent(self, s)
     def elementwise_base_logarithm(self, s):
+        """
+        Outputs a list of lists associated with the general
+        whose entries are logarithms to the base s of the 
+        original hypermatrix.
+        The code only handles the Hypermatrix HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,2,2,'a')
+            sage: Ha.elementwise_base_logarithm(3)
+            [[[log(a000)/log(3), log(a001)/log(3)], [log(a010)/log(3), log(a011)/log(3)]], [[log(a100)/log(3), log(a101)/log(3)], [log(a110)/log(3), log(a111)/log(3)]]]
+
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixLogarithm(self, s)
     def tensor_product(self, V):
+        """
+        Computes the  Kronecker product of arbitrary hypermatrices A, B of the same order.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,'a'); B=HM(2,2,'b')
+            sage: A.tensor_product(B)
+            [[a00*b00, a00*b01, a01*b00, a01*b01], [a00*b10, a00*b11, a01*b10, a01*b11], [a10*b00, a10*b01, a11*b00, a11*b01], [a10*b10, a10*b11, a11*b10, a11*b11]]
+        
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
         if  self.order()==2:
             return SecondOrderSliceKroneckerProduct(self, V)
         elif self.order()==3:
@@ -151,30 +279,225 @@ class HM:
         else :
             raise ValueError,"not supported for order %d hypermatrices" % self.order()
     def block_sum(self, V):
+        """
+        Returns the block sum of two hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: HM(2,2,'a').block_sum(HM(2,2,'b'))
+            [[a00, a01, 0, 0], [a10, a11, 0, 0], [0, 0, b00, b01], [0, 0, b10, b11]]
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixKroneckerSum(self, V)
     def expand(self):
+        """
+        Outputs a list of lists associated with the general
+        hypermatrix with expressions in the entries in their
+        expanded form.
+        The code only handles the Hypermatrix HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,2,2,[(var('x')+var('y'))^(i+j+k) for i in range(2) for j in range(2) for k in range(2)])
+            sage: Ha.expand()
+            [[[1, x + y], [x + y, x^2 + 2*x*y + y^2]], [[x + y, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^3 + 3*x^2*y + 3*x*y^2 + y^3]]]
+        
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixExpand(self)
     def factor(self):
+        """
+        Outputs a list of lists associated with the general
+        hypermatrix with expressions in the entries in their
+        factored form.
+        The code only handles the Hypermatrix HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: sz=2; vx=HM(sz,'x').list(); vy=HM(sz,'y').list(); vz=HM(sz,'z').list()
+            sage: X=HM(sz, 1, sz, [vx[u] for v in range(sz) for t in range(1) for u in range(sz)])
+            sage: Y=HM(sz, 1, sz, [vy[u] for v in range(sz) for t in range(1) for u in range(sz)])
+            sage: Z=HM(sz, 1, sz, [vz[u] for v in range(sz) for t in range(1) for u in range(sz)])
+            sage: A=Prod(X, Y.transpose(2), Z.transpose())
+            sage: Prod(A,A,A).factor()
+            [[[(x0*y0*z0 + x1*y1*z1)*x0^2*y0^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x0^2*y0^2*z1^2], [(x0*y0*z0 + x1*y1*z1)*x0^2*y1^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x0^2*y1^2*z1^2]], [[(x0*y0*z0 + x1*y1*z1)*x1^2*y0^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x1^2*y0^2*z1^2], [(x0*y0*z0 + x1*y1*z1)*x1^2*y1^2*z0^2, (x0*y0*z0 + x1*y1*z1)*x1^2*y1^2*z1^2]]]
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixFactor(self)
     def simplify(self):
+        """
+        Performs the symbolic simplification of the expressions
+        associated with the hypermatrix entries. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: x,y=var('x,y'); ((x+y)^2*HM(2,2,2,'one')).simplify()
+            [[[(x + y)^2, (x + y)^2], [(x + y)^2, (x + y)^2]], [[(x + y)^2, (x + y)^2], [(x + y)^2, (x + y)^2]]]
+ 
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixSimplify(self)
     def simplify_full(self):
+        """
+        Performs the symbolic simplification of the expressions
+        associated with the hypermatrix entries. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: x,y=var('x,y'); ((x+y)^2*HM(2,2,2,'one')).simplify_full()
+            [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
+ 
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixSimplifyFull(self)
     def canonicalize_radical(self):
+        """
+        Performs the symbolic simplification of the expressions
+        associated with the hypermatrix entries. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: x,y = var('x,y') 
+            sage: ((x^2+2*x*y+y^2)*HM(2,2,2,'one')).canonicalize_radical() 
+            [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixCanonicalizeRadical(self)
     def numerical(self):
+        """
+        Performs the symbolic simplification of the expressions
+        associated with the hypermatrix entries. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(3,3,[exp(I*2*pi*u*v/3) for v in range(3) for u in range(3)]) 
+            sage: Ha.numerical()
+            [[1.00000000000000, 1.00000000000000, 1.00000000000000], [1.00000000000000, -0.500000000000000 + 0.866025403784439*I, -0.500000000000000 - 0.866025403784439*I], [1.00000000000000, -0.500000000000000 - 0.866025403784439*I, -0.500000000000000 + 0.866025403784439*I]] 
+         
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixNumerical(self)
     def subs(self, *args, **kwds):
+        """
+        Substitute values to the variables in the hypermatrix.
+        All the arguments are transmitted unchanged to the method ``subs`` of
+        the coefficients.
+
+        EXAMPLES:
+
+        ::
+
+            sage: var('a,b,d,e')
+            (a, b, d, e)
+            sage: m=HM([[a,b], [d,e]])
+            sage: m.subs(a=1).printHM()
+            [:, :]=
+            [1 b]
+            [d e]
+            sage: m.subs(a=b, b=d).printHM()
+            [:, :]=
+            [b d]
+            [d e]
+            sage: m.subs({a: 3, b:2, d:1, e:-1}).printHM()
+            [:, :]=
+            [ 3  2]
+            [ 1 -1]
+        """
         return GeneralHypermatrixSubstituteII(self, *args, **kwds)
     def subsn(self,Dct):
+        """
+        Procedure for computes the substitution in the Hypermatrix entries
+        the inputs are the corresponding Hypermatric and a dictionary 
+        datastructure.
+
+        EXAMPLES:
+
+        ::
+
+            sage: HM(3,2,'a','sym').subsn(dict([(var('a011'),1),(var('a001'),2),(var('a000'),3),(var('a111'),4)]))
+            [[[3.00000000000000, 2.00000000000000], [2.00000000000000, 1.00000000000000]], [[2.00000000000000, 1.00000000000000], [1.00000000000000, 4.00000000000000]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return GeneralHypermatrixSubstituteN(self, Dct)
     def transpose(self, i=1):
+        """
+        Outputs a list of lists associated with the general
+        transpose as defined by the cyclic permutation of indices.
+        The code only handles the Hypermatrix HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,2,2,'a')
+            sage: Ha.transpose()
+            [[[a000, a100], [a001, a101]], [[a010, a110], [a011, a111]]]
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
         t = Integer(mod(i, self.order()))
         A = self 
         for i in range(t):
             A = GeneralHypermatrixCyclicPermute(A)
         return A
     def dagger(self, i=1):
+        """
+        Outputs the conjugate transpose of the hypermatrix. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,1,[1+3*I, I])
+            sage: Ha.dagger()
+            [[-3*I + 1, -I]]
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """ 
         t = Integer(mod(i, self.order()))
         A = self 
         for i in range(1,t+1):
@@ -190,11 +513,51 @@ class HM:
     def ndpts(self):
         return len(self.hm[0][0])
     def inverse(self):
+        """
+        Returns the matrix inverse. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,2,'a')
+            sage: Ha.inverse().printHM()
+            [:, :]=
+            [1/a00 - a01*a10/(a00^2*(a01*a10/a00 - a11))               a01/(a00*(a01*a10/a00 - a11))]
+            [              a10/(a00*(a01*a10/a00 - a11))                      -1/(a01*a10/a00 - a11)]
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if self.order()==2 and self.is_cubical():
             return HM(self.n(0), self.n(1), Matrix(SR, self.listHM()).inverse().transpose().list()) 
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
     def printHM(self):
+        """
+        Conveniently displays matrices and third order hypermatrices
+        one depth slice at a time.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,2,2,'a')
+            sage: Ha.printHM()
+            [:, :, 0]=
+            [a000 a010]
+            [a100 a110]
+            <BLANKLINE>
+            [:, :, 1]=
+            [a001 a011]
+            [a101 a111]
+            <BLANKLINE>
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if self.order()==2:
             L=self.listHM()
             print '[:, :]=\n'+Matrix(SR,L).str()
@@ -205,6 +568,25 @@ class HM:
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
     def latexHM(self):
+        """
+        Returns the latex string. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,2,'a')
+            sage: Ha.latexHM()
+            [:, :]=
+             \left(\begin{array}{rr}
+            a_{00} & a_{01} \\
+            a_{10} & a_{11}
+            \end{array}\right)
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if self.order()==2:
             L=self.listHM()
             print '[:, :]=\n'+latex(Matrix(SR,L))
@@ -355,6 +737,17 @@ class HM:
             return Rslt
         else:
             raise ValueError, "Expected a second order hypermatrix or a cubic third order hypermatrix"
+    def rrefII(self):
+        if self.order()==2:
+            # Initiallization of the size parameter
+            sz=max(self.dimensions())
+            # Initialization of the identity matrix
+            Id=HM(2,sz,'kronecker')
+            # Initialization of the permutation matrix
+            Hp=sum(HM(sz,1,[Id[i,sz-1-k] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz))
+            return (Hp.transpose()*((Hp.transpose()*ZeroPadding(self.refII())*Hp).refII())*Hp).refII()
+        else:
+            raise ValueError, "Expected a second order hypermatrix"
 
 def MatrixGenerate(nr, nc, c):
     """
@@ -1265,7 +1658,7 @@ def DiagonalHypermatrix(Mtrx):
                     D[i][j][k] = Mtrx[i,k]
     return D
 
-def Orthogonal2x2x2Hypermatrix(t):
+def Orthogonal2x2x2Hypermatrix(t,x,y):
     """
     Outputs a symbolic parametrization of third order orthogonal hypermatrix
     of size 2x2x2.
@@ -1274,14 +1667,14 @@ def Orthogonal2x2x2Hypermatrix(t):
 
     ::
 
-        sage: t=var('t')
-        sage: Orthogonal2x2x2Hypermatrix(t)
-        [[[cos(t)^(2/3), sin(t)^(2/3)], [sin(t)^(2/3), cos(t)^(2/3)]], [[-sin(t)^(2/3), cos(t)^(2/3)], [sin(t)^(2/3), sin(t)^(2/3)]]]
+        sage: t,x,y=var('t,x,y')
+        sage: Orthogonal2x2x2Hypermatrix(t,x,y)
+        [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    return [[[cos(t)^(2/3),sin(t)^(2/3)],[sin(t)^(2/3), cos(t)^(2/3)]], [[-sin(t)^(2/3),cos(t)^(2/3)],[sin(t)^(2/3),sin(t)^(2/3)]]]
+    return HM([[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]])
 
 def Orthogonal2x2x2HypermatrixII(t,x,y):
     """
@@ -1294,31 +1687,13 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
 
         sage: t,x,y=var('t,x,y')
         sage: Orthogonal2x2x2HypermatrixII(t,x,y)
-        [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
-
-    AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
-    """
-    return HM([[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]])
-
-def Orthogonal2x2x2HypermatrixIII(t,x,y):
-    """
-    Outputs a symbolic parametrization of third order orthogonal hypermatrix
-    of size 2x2x2.
-
-     EXAMPLES:
-
-    ::
-
-        sage: t,x,y=var('t,x,y')
-        sage: Orthogonal2x2x2HypermatrixIII(t,x,y)
         [[[sin(t)^(2/3), y*cos(t)^(2/3)], [cos(t)^(2/3), -x*sin(t)^(2/3)]], [[1/y, sin(t)^(2/3)], [1/x, cos(t)^(2/3)]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the Permutation hypermatrix
-    P=HM([1,0],'perm')
+    P=HM(3,[1,0],'perm')
     return Prod(HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]), P, P.transpose())
 
 def Orthogonal3x3x3Hypermatrix(t1,t2):
@@ -2803,7 +3178,6 @@ def GeneralHypermatrixSimplifyFull(A):
 
     - Edinah K. Gnang
     """
-
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -2866,7 +3240,7 @@ def GeneralHypermatrixCanonicalizeRadical(A):
     ::
 
         sage: x,y = var('x,y') 
-        sage: ((x+y)^2*HM(2,2,2,'one')).simplify_full() 
+        sage: GeneralHypermatrixCanonicalizeRadical((x+y)^2*HM(2,2,2,'one'))
         [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
 
     AUTHORS:
@@ -3851,32 +4225,6 @@ def ZeroPadding(A):
     ::
 
         sage: ZeroPadding(HM(1,1,2,'a'))
-        [[[a000, a001], [0, 0]], [[0, 0], [0, 0]]]
-        
-
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    # Initializing the size parameter
-    sz = max(A.dimensions())
-    # Initializing the Hypermatrix
-    T = HM(sz, sz, sz, 'zero')
-    # Filling up the Hypermatrix
-    for r in range(A.n(0)):
-        for c in range(A.n(1)):
-            for d in range(A.n(2)):
-                T[r,c,d]=A[r,c,d]
-    return T
-
-def GeneralHypermatrixZeroPadding(A):
-    """
-    outputs the zero padding into a cube of the cuboid third order hypermatrix.
-
-    EXAMPLES:
-
-    ::
-
-        sage: GeneralHypermatrixZeroPadding(HM(1,1,2,'a'))
         [[[a000, a001], [0, 0]], [[0, 0], [0, 0]]]
         
 
@@ -7155,8 +7503,8 @@ def GeneralHypermatrixConstrainedOrthogonalizationII(H, X, sz):
         sage: H=apply(HM,[sz for i in range(od)]+['x']).subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
         sage: apply(Prod,[H.transpose(od-i) for i in range(od)])
         [[1/4*(h00*h10 - h01*h11)^2/x10^2 + 1/4*(h00*h10 - h01*h11)^2/x11^2, 0], [0, x10^2 + x11^2]]
-        sage: Ha=HM(3,2,'a'); A=GeneralHypermatrixZeroPadding(Ha)
-        sage: Hx=HM(3,2,'x'); X=GeneralHypermatrixZeroPadding(Hx)
+        sage: Ha=HM(3,2,'a'); A=ZeroPadding(Ha)
+        sage: Hx=HM(3,2,'x'); X=ZeroPadding(Hx)
         sage: k0,k1=var('k0,k1')
         sage: Sln=GeneralHypermatrixConstrainedOrthogonalizationII(A, X, 2)
         sage: H=Hx.subs(dict([(s.lhs(),s.rhs()) for s in Sln])).subs(dict([(k0,0), (k1,0)]))
