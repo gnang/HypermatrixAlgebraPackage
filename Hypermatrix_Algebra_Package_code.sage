@@ -181,6 +181,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixHadamardProduct(self, B)
+
     def elementwise_exponent(self,s):
         """
         Returns the elementwise exponent of the entries
@@ -203,6 +204,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixExponent(self, s)
+
     def elementwise_base_exponent(self, s):
         """
         Returns a hypermatrix whose entries are all
@@ -226,6 +228,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixBaseExponent(self, s)
+
     def elementwise_base_logarithm(self, s):
         """
         Outputs a list of lists associated with the general
@@ -246,6 +249,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixLogarithm(self, s)
+
     def tensor_product(self, V):
         """
         Computes the  Kronecker product of arbitrary hypermatrices A, B of the same order.
@@ -278,6 +282,7 @@ class HM:
             return GeneralHypermatrixKroneckerProduct(self, V)
         else :
             raise ValueError,"not supported for order %d hypermatrices" % self.order()
+
     def block_sum(self, V):
         """
         Returns the block sum of two hypermatrices.
@@ -298,6 +303,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixKroneckerSum(self, V)
+
     def expand(self):
         """
         Outputs a list of lists associated with the general
@@ -318,6 +324,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixExpand(self)
+
     def factor(self):
         """
         Outputs a list of lists associated with the general
@@ -341,6 +348,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixFactor(self)
+
     def simplify(self):
         """
         Performs the symbolic simplification of the expressions
@@ -359,6 +367,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixSimplify(self)
+
     def simplify_full(self):
         """
         Performs the symbolic simplification of the expressions
@@ -377,6 +386,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixSimplifyFull(self)
+
     def canonicalize_radical(self):
         """
         Performs the symbolic simplification of the expressions
@@ -395,6 +405,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixCanonicalizeRadical(self)
+
     def numerical(self):
         """
         Performs the symbolic simplification of the expressions
@@ -414,6 +425,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixNumerical(self)
+
     def subs(self, *args, **kwds):
         """
         Substitute values to the variables in the hypermatrix.
@@ -441,6 +453,7 @@ class HM:
             [ 1 -1]
         """
         return GeneralHypermatrixSubstituteII(self, *args, **kwds)
+
     def subsn(self,Dct):
         """
         Procedure for computes the substitution in the Hypermatrix entries
@@ -460,6 +473,7 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixSubstituteN(self, Dct)
+
     def transpose(self, i=1):
         """
         Outputs a list of lists associated with the general
@@ -482,6 +496,7 @@ class HM:
         for i in range(t):
             A = GeneralHypermatrixCyclicPermute(A)
         return A
+
     def dagger(self, i=1):
         """
         Outputs the conjugate transpose of the hypermatrix. 
@@ -506,12 +521,16 @@ class HM:
             return A
         else:
             return GeneralHypermatrixConjugate(A)
+
     def nrows(self):
         return len(self.hm)
+
     def ncols(self):
         return len(self.hm[0])
+
     def ndpts(self):
         return len(self.hm[0][0])
+
     def inverse(self):
         """
         Returns the matrix inverse. 
@@ -534,6 +553,7 @@ class HM:
             return HM(self.n(0), self.n(1), Matrix(SR, self.listHM()).inverse().transpose().list()) 
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
+
     def printHM(self):
         """
         Conveniently displays matrices and third order hypermatrices
@@ -567,6 +587,7 @@ class HM:
                 print '[:, :, '+str(dpth)+']=\n'+Matrix(SR,self.n(0),self.n(1),[L[i][j][dpth] for i in range(self.n(0)) for j in range(self.n(1))]).str()+'\n'
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
+
     def latexHM(self):
         """
         Returns the latex string. 
@@ -608,6 +629,7 @@ class HM:
             for j in range(i):
                 tmp=tmp[0]
             return len(tmp)
+
     def list(self):
         lst = []
         l = [self.n(i) for i in range(self.order())]
@@ -622,13 +644,16 @@ class HM:
             # Appending to the list
             lst.append(self[tuple(entry)])
         return lst
+
     def listHM(self):
         return self.hm
+
     def matrix(self):
         if self.order()<=2:
             return Matrix(SR,self.listHM())
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
+
     def order(self):
         cnt = 0
         H = self.listHM()
@@ -636,8 +661,10 @@ class HM:
             H = H[0]
             cnt = cnt+1
         return cnt
+
     def dimensions(self):
         return [self.n(i) for i in range(self.order())]
+
     def zero_padd(self):
         sz  = max(self.nrows(), self.ncols(), self.ndpts())
         Tmp = HM(sz,sz,sz,'zero') 
@@ -646,6 +673,7 @@ class HM:
                 for k in range(self.ndpts()):
                     Tmp[i,j,k]=self.hm[i][j][k]
         return Tmp
+
     def fill_with(self, T):
         if T.nrows()>=self.nrows() or T.ncols()>=self.ncols() or T.ndpts()>=self.ndpts():
             for r in range(self.nrows()):
@@ -654,6 +682,7 @@ class HM:
                         self.hm[r][c][d]=T[r,c,d]
         else:
             raise ValueError, "Expected the input 3 hypermatrix to have larger dimensions in all directions"
+
     def show(self):
         import pylab, numpy
         from scipy import misc
@@ -661,16 +690,20 @@ class HM:
         X = misc.toimage(pylab.array(self.listHM()))
         g = graphics_array([[matrix_plot(X)]])
         g.show()
+
     def save(self,filename):
         import pylab, numpy
         from scipy import misc
         # obtaining the image size
         X = misc.toimage(pylab.array(self.listHM()))
         X.save(filename)
+
     def copy(self):
         return GeneralHypermatrixCopy(self)
+
     def append_index(self,indx):
         return GeneralHypermatrixAppendIndex(self,indx)
+
     def norm(self,p=2):
         if p==Infinity:
             return max([abs(i) for i in self.list() if not i.is_zero()])
@@ -682,11 +715,13 @@ class HM:
             return sum([abs(i)^p for i in self.list()])^(1/p)
         else:
             raise ValueError, "Expect a real number greater or equal to 0 or Infinity"
+
     def trace(self):
         if self.order()==2:
             return sum(self[i,i] for i in range(min(self.n(0),self.n(1))))
         else:
             raise ValueError, "Expects a second order hypermatrix"
+
     def det(self):
         if self.order()==2:
             return Deter(self)
@@ -700,25 +735,31 @@ class HM:
             return SixthOrderHyperdeterminant(self)
         else:
             return GeneralHyperdeterminant(self) 
+
     def is_zero(self):
         if Set([f.is_zero() for f in self.list()])==Set([True]):
             return True
         else:
             return False
+
     def is_symmetric(self):
         return (self-self.transpose()).is_zero()
+
     def is_cubical(self):
         return len(Set(self.dimensions()).list())==1
+
     def ref(self):
         if self.order()==2:
             return gaussian_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
         else:
             raise ValueError, "Expected a second order hypermatrix"
+
     def refII(self):
         if self.order()==2:
             return gaussian_eliminationHMIII(self, HM(self.n(0),1,'zero'))[0]
         else:
             raise ValueError, "Expected a second order hypermatrix"
+
     def rref(self):
         if self.order()==2:
             return gauss_jordan_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
@@ -737,6 +778,7 @@ class HM:
             return Rslt
         else:
             raise ValueError, "Expected a second order hypermatrix or a cubic third order hypermatrix"
+
     def rrefII(self):
         if self.order()==2:
             # Initiallization of the size parameter
@@ -748,6 +790,7 @@ class HM:
             return (Hp.transpose()*((Hp.transpose()*ZeroPadding(self.refII())*Hp).refII())*Hp).refII()
         else:
             raise ValueError, "Expected a second order hypermatrix"
+
 
 def MatrixGenerate(nr, nc, c):
     """
@@ -2226,7 +2269,7 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
     and the right hand side vector associate
     with the matrix formulation of the constraints.
     this implementation allows for the lefthand side not to be specified
-    but iinput variables must not be monomials.
+    but input variables must not be monomials.
 
     EXAMPLES:
 
@@ -2251,8 +2294,10 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
     A=Matrix(SR,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst)))
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
-            A[r,c]=CnstrLst[r].coefficient(VrbLst[c])
-    return [A,A*Matrix(SR,len(VrbLst),1,VrbLst)-Matrix(SR,len(CnstrLst),1,CnstrLst)]
+            Tmp=Set(VrbLst).difference(Set([VrbLst[c]])).list()
+            A[r,c]=CnstrLst[r].subs([f==0 for f in Tmp]).coefficient(VrbLst[c])
+    b=-Matrix(len(CnstrLst),1,CnstrLst).subs([f==0 for f in VrbLst])
+    return [A,b]
 
 def Companion_matrix(p,vrbl):
     """
@@ -6397,7 +6442,7 @@ def gaussian_eliminationHMIII(Cf, rs):
     Outputs the row echelon form of the input second order hypermatrix and the right hand side.
     does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
     The difference with the previous implementation is the fact that the row linear combination
-    operations are performed in such a way as to not change the determinant. 
+    operations are performed in such a way as to not change the absolute value of the determinant. 
 
     EXAMPLES:
  
@@ -6594,6 +6639,51 @@ def gauss_jordan_eliminationHMII(Cf,rs):
                     A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
             i=i-1; j=0
     return [A,b]
+
+def gauss_jordan_eliminationHMIII(Cf,rs):
+    """
+    Outputs the reduced row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
+    The difference with the previous implementation is the fact that the row linear combination
+    operations are performed in such a way as to not change the absolute value of the determinant.
+    The output of the function is only valid if the input matrix is full rank.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [RefA, c] = gauss_jordan_eliminationHMIII(HM(2,2,'a'), HM(2,1,'b'))
+        sage: RefA.printHM()
+        [:, :]=
+        [               a00                  0]
+        [                 0 -a01*a10/a00 + a11]
+        sage: c.printHM()
+        [:, :]=
+        [-a01*(a10*b00/a00 - b10)/(a01*a10/a00 - a11) + b00]
+        [                                -a10*b00/a00 + b10]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Performing the padding in order to conjugate by the permutation matrix
+    A0=ZeroPadding(Cf)
+    if rs.n(0) != A0.n(0):
+        b0=HM(A0.n(0),1,rs.list()+[0 for i in range(A0.n(0)-rs.n(0))])
+    else:
+        b0=rs
+    [A, b]=gaussian_eliminationHMIII(A0,b0)
+    # Initiallization of the size parameter
+    sz=max(A.dimensions())
+    # Initialization of the identity matrix
+    Id=HM(2,sz,'kronecker')
+    # Initialization of the permutation matrix
+    Hp=sum(HM(sz,1,[Id[i,sz-1-k] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz))
+    [At,bt]=gaussian_eliminationHMIII(Hp.transpose()*A*Hp, Hp*b)
+    return  gaussian_eliminationHMIII(Hp.transpose()*At*Hp, Hp*bt)
+
+
 
 def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     """
