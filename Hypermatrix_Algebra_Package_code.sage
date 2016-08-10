@@ -29,13 +29,13 @@ class HM:
 
     EXAMPLES::
     
-        sage: HM(2,2,2,'a')
+        sage: HM(2,2,2,'a') # Initialization of a third order hypermatrix
         [[[a000, a001], [a010, a011]], [[a100, a101], [a110, a111]]]
-        sage: od=2; sz=2; HM(od,sz,'kronecker')
+        sage: od=2; sz=2; HM(od,sz,'kronecker') # creating a Kronecker delta
         [[1, 0], [0, 1]]
         sage: od=2; HM(od,[0,1,2],'perm')
         [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-        sage: od=2; sz=2; HM(od,sz,'a','sym')
+        sage: od=2; sz=2; HM(od,sz,'a','sym') # creating a symmetric matrix
         [[a00, a01], [a01, a11]]
         sage: sz=2; HM(sz,sz,sz,'a','shift')
         [[[a111, a112], [a121, a122]], [[a211, a212], [a221, a222]]]
@@ -45,10 +45,10 @@ class HM:
         [[0, 0], [0, 0]]
         sage: HM(HM(2,2,'a').matrix()) # Creating a scaling hypermatrix
         [[[a00, 0], [0, a01]], [[a10, 0], [0, a11]]]
-        sage: od=2; sz=2; HM(od,HM(sz,'a').list(),'diag')
-        [[a0, 0], [0, a1]]
         sage: HM(3,'x').list() # creatling a list of variables
         [x0, x1, x2]
+        sage: od=2; sz=2; HM(od,HM(sz,'a').list(),'diag') # diagonal matrix
+        [[a0, 0], [0, a1]]
     """
     def __init__(self,*args):
         if len(args) == 1:
@@ -105,7 +105,7 @@ class HM:
             elif (len(dims) == 3) and (dims[0]==3):
                 self.hm=SymHypermatrixGenerate(dims[1],dims[2])
             else:
-                raise ValueError, "SymHypermatrixGenerate not supported for order %d hypermatrices" % dims[3]
+                raise ValueError, "SymHypermatrixGenerate not supported for order %d hypermatrices" % dims[0]
         elif type(s) == list:
             self.hm=(apply(List2Hypermatrix, args)).listHM()
         else:
@@ -751,12 +751,6 @@ class HM:
     def ref(self):
         if self.order()==2:
             return gaussian_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
-        else:
-            raise ValueError, "Expected a second order hypermatrix"
-
-    def refII(self):
-        if self.order()==2:
-            return gaussian_eliminationHMIII(self, HM(self.n(0),1,'zero'))[0]
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
@@ -2298,6 +2292,59 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
             A[r,c]=CnstrLst[r].subs([f==0 for f in Tmp]).coefficient(VrbLst[c])
     b=-Matrix(len(CnstrLst),1,CnstrLst).subs([f==0 for f in VrbLst])
     return [A,b]
+
+def MonomialConstraintFormator(L, X, MnL, Y):
+    """
+    Takes as input a List of polynomials, a list of
+    variables used in the polynomials,the monomial list 
+    a list of alternative variables to replace the monomials.
+    No right hand side is given. We are implicitly working over SR.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: x1, x2 = var('x1, x2')
+        sage: X = [x1, x2]
+        sage: MnL=[x1*x2, x1, x2]
+        sage: L = [-2*x1*x2 + 3*x2 - 2, -38*x1*x2 - 18*x1 + 11*x2 - 8, -506*x1*x2 + 112*x1 + 121*x2 - 8, -5852*x1*x2 + 202*x1 + 1099*x2 - 8]
+        sage: Y = HM(3,'y').list()
+        sage: [A,b] = MonomialConstraintFormator(L, X, MnL, Y)
+        sage: A
+        [   -2     0     3]
+        [  -38   -18    11]
+        [ -506   112   121]
+        [-5852   202  1099]
+        sage: b
+        [2]
+        [8]
+        [8]
+        [8]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Obtaining the right hand side vector b
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
+    L2=copy(L)
+    # Updating the list to remove the constant terms
+    for i in range(len(L)):
+        L2[i]=L2[i]+tb[i,0]
+    # Performing the monomial substitution
+    Eq=[]; Hy=HM([MnL,Y])
+    cnt=0
+    for g in L2:
+        TmpL=[]
+        for o in g.operands():
+            for j in range(Hy.n(1)):
+                if (o/Hy[0,j]).is_constant():
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
+    # Ready to use the generic Constraint formator
+    return ConstraintFormatorII(Eq, Y)
 
 def Companion_matrix(p,vrbl):
     """
@@ -5225,7 +5272,7 @@ def fast_reduce(f, monom, subst):
     if len(monom) == len(subst):
         s = str(f)
         for i in range(len(monom)):
-            s = s.replace(str(monom[i]), str(subst[i]))
+            s = s.replace(str(monom[i]), '('+str(subst[i])+')')
         return expand((SR(s)).simplify_full())
     else:
         print 'Error the monomial list and the substitution list must have the same length'
