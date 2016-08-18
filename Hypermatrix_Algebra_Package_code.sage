@@ -6768,6 +6768,69 @@ def gauss_jordan_eliminationHMII(Cf,rs):
             i=i-1; j=0
     return [A,b]
 
+def gauss_jordan_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: x1, x2=var('x1, x2')
+        sage: Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]])
+        sage: rs=HM(2,1,'zero')
+        sage: VrbL=[x1, x2]
+        sage: Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
+        sage: [A,b]=gauss_jordan_elimination_ReductionHM(Cf, rs, VrbL, Rlts)
+        sage: A.printHM()
+        [:, :]=
+        [24*x1 - 24          0]
+        [         0 12*x1 - 12]        
+        sage: b.printHM()
+        [:, :]=
+        [0]
+        [0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b] = gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            cf1=A[i,j]
+            for r in range(i-1,-1,-1):
+                #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                cf2=A[r,j]
+                for j0 in range(b.n(1)):
+                    #b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
+                    f=expand(cf2*b[i,j0]-cf1*b[r,j0])
+                    for v in range(len(VrbL)):
+                        for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                            f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+                    b[r,j0]=f
+                #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+                for j0 in range(A.n(1)):
+                    #A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
+                    g=expand(cf2*A[i,j0]-cf1*A[r,j0])
+                    for v in range(len(VrbL)):
+                        for d in range(g.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                            g=expand(fast_reduce(g,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)]))
+                    A[r,j0]=g
+            i=i-1; j=0
+    return [A,b]
+
 def gauss_jordan_eliminationHMIII(Cf,rs):
     """
     Outputs the reduced row echelon form of the input second order hypermatrix and the right hand side.
