@@ -2346,6 +2346,61 @@ def MonomialConstraintFormator(L, X, MnL, Y):
     # Ready to use the generic Constraint formator
     return ConstraintFormatorII(Eq, Y)
 
+def MonomialConstraintFormatorHM(L, X, MnL, Y):
+    """
+    Takes as input a List of polynomials, a list of
+    variables used in the polynomials,the monomial list 
+    a list of alternative variables to replace the monomials.
+    No right hand side is given. We are implicitly working over SR.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: x1, x2 = var('x1, x2')
+        sage: X = [x1, x2]
+        sage: MnL=[x1*x2, x1, x2]
+        sage: L = [-2*x1*x2 + 3*x2 - 2, -38*x1*x2 - 18*x1 + 11*x2 - 8, -506*x1*x2 + 112*x1 + 121*x2 - 8, -5852*x1*x2 + 202*x1 + 1099*x2 - 8]
+        sage: Y = HM(3,'y').list()
+        sage: [A,b] = MonomialConstraintFormatorHM(L, X, MnL, Y)
+        sage: A.printHM()
+        [:, :]=
+        [   -2     0     3]
+        [  -38   -18    11]
+        [ -506   112   121]
+        [-5852   202  1099]
+        sage: b.printHM()
+        [:, :]=
+        [2]
+        [8]
+        [8]
+        [8]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Obtaining the right hand side vector b
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
+    L2=copy(L)
+    # Updating the list to remove the constant terms
+    for i in range(len(L)):
+        L2[i]=L2[i]+tb[i,0]
+    # Performing the monomial substitution
+    Eq=[]; Hy=HM([MnL,Y])
+    cnt=0
+    for g in L2:
+        TmpL=[]
+        for o in g.operands():
+            for j in range(Hy.n(1)):
+                if (o/Hy[0,j]).is_constant():
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
+    # Ready to use the generic Constraint formator
+    return ConstraintFormatorHM(Eq, Y)
+
 def Companion_matrix(p,vrbl):
     """
     Takes as input a polynomial and a variable
@@ -9151,7 +9206,7 @@ def GeneralHypermatrixRankOnePartition(B, Hl, Xl):
     # returning the polynomial conditions eliminating the variables
     return [f.rhs().numerator()-f.rhs().denominator() for f in Sln if f.lhs()==1]
 
-def Form2Hypermatrix(f, od, Vrbls):
+def Form2TotallySymmetricHypermatrix(f, od, Vrbls):
     """
     Procedure for extracting a Hypermatrix from a multivariate
     homogeneous from the the order corresponds to the degree
@@ -9163,7 +9218,7 @@ def Form2Hypermatrix(f, od, Vrbls):
     ::
 
         sage: sz=2; od=2; X=HM(sz,sz,HM(sz^2,'x').list()); f=X.det()
-        sage: H=Form2Hypermatrix(f, 2, X.list()); H.printHM()
+        sage: H=Form2TotallySymmetricHypermatrix(f, 2, X.list()); H.printHM()
         [:, :]=
         [   0    0    0  1/2]
         [   0    0 -1/2    0]
@@ -9188,5 +9243,53 @@ def Form2Hypermatrix(f, od, Vrbls):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=f.diff([Vrbls[v] for v in entry])/factorial(od)
+    return Rh
+
+def Form2Hypermatrix(f, sz, od, Vrbls):
+    """
+    Procedure for extracting a side length 2 Hypermatrix from
+    a non homogeneous multivariate from. The order input is od
+    the side length is sz. The current implementation addresses
+    side length 2 hypermatrices. For form higer degree form
+    we will need to compute hadamard product with a hypermtrix
+    which has the missing factorial factors.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; od=3; X=HM(od,'x').list()
+        sage: f=a111*x0*x1*x2 + a110*x0*x1 + a101*x0*x2 + a011*x1*x2 + a100*x0 + a010*x1 + a001*x2 + a000
+        sage: Form2Hypermatrix(f, sz, od, X).printHM()
+        [:, :, 0]=
+        [a000 a010]
+        [a100 a110]
+        
+        [:, :, 1]=
+        [a001 a011]
+        [a101 a111]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the list 
+    l=[sz for i in range(od)]
+    # Initialization of the hypermatrix 
+    inpts=l+['zero']; Rh=HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry=[Integer(mod(i,l[0]))]
+        sm=Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Tmplst=[]
+        for z in range(len(entry)):
+            Tmplst=Tmplst+[Vrbls[z],entry[z]]
+        Rh[tuple(entry)]=f.diff(*Tmplst).subs([v==0 for v in Vrbls])
     return Rh
  

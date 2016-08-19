@@ -176,11 +176,11 @@ Hypermatrices can be extracted from multilinear forms as follows
 
 ```python
 sage: sz=2; od=2; X=HM(sz,sz,HM(sz^2,'x').list()); f=X.det()
-sage: H=Form2Hypermatrix(f, 2, X.list()); H.printHM()
+sage: H=Form2TotallySymmetricHypermatrix(f, 2, X.list()); H.printHM()
 [:, :]=
-[   0    0    0  1/2] 
-[   0    0 -1/2    0]   
-[   0 -1/2    0    0]   
+[   0    0    0  1/2]
+[   0    0 -1/2    0]
+[   0 -1/2    0    0]
 [ 1/2    0    0    0]
 ```
 
