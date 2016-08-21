@@ -2187,6 +2187,104 @@ def multiplicativeConstraintFormator(CnstrLst, VrbLst):
             A[r,c]=(CnstrLst[r]).lhs().degree(VrbLst[c])
     return [A,b]
 
+def multiplicativeConstraintFormatorII(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y')
+        sage: CnstrLst = [(1/7)*x*y^2, (1/2)*x/y]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = multiplicativeConstraintFormatorII(CnstrLst, VrbLst)
+        sage: A
+        [ 1  2]
+        [ 1 -1]
+        sage: b
+        [7]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the equations
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
+    return multiplicativeConstraintFormator(Eq, VrbLst)
+
+def multiplicativeConstraintFormatorIII(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y'); A=HM(2,2,'a')
+        sage: CnstrLst = [x^A[0,0]*y^A[0,1]==7, x^A[1,0]*y^A[1,1]==2]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = multiplicativeConstraintFormatorIII(CnstrLst, VrbLst)
+        sage: A
+        [a00 a01]
+        [a10 a11]
+        sage: b
+        [1]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=Matrix(SR,len(CnstrLst),len(VrbLst),zero_matrix(len(CnstrLst),len(VrbLst)))
+    b=vector(SR, [eq.rhs() for eq in CnstrLst]).column()
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            #A[r,c]=(CnstrLst[r]).lhs().degree(VrbLst[c])
+            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==1)
+    return [A,b]
+
+def multiplicativeConstraintFormatorIV(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y'); A=HM(2,2,'a')
+        sage: CnstrLst = [(1/7)*x^A[0,0]*y^A[0,1], (1/2)*x^A[1,0]*y^A[1,1]]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = multiplicativeConstraintFormatorIV(CnstrLst, VrbLst)
+        sage: A
+        [a00 a01]
+        [a10 a11]
+        sage: b
+        [7]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the equations
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
+    return multiplicativeConstraintFormatorIII(Eq, VrbLst)
+
 def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
     """
     Takes as input a List of linear constraints
@@ -2223,6 +2321,109 @@ def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
         for c in range(len(VrbLst)):
             A[r,c]=SR((CnstrLst[r]).lhs().degree(VrbLst[c]))
     return [A,b]
+
+def multiplicativeConstraintFormatorIIHM(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs HM
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y')
+        sage: CnstrLst = [(1/7)*x*y^2, (1/2)*x/y]
+        sage: VrbLst = [x, y]
+        sage: [Ha,hb] = multiplicativeConstraintFormatorIIHM(CnstrLst, VrbLst)
+        sage: Ha.printHM()
+        [:, :]=
+        [ 1  2]
+        [ 1 -1]
+        sage: hb.printHM()
+        [:, :]=
+        [7]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
+    return multiplicativeConstraintFormatorHM(Eq, VrbLst)
+
+def multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs HM
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y'); A=HM(2,2,'a')
+        sage: CnstrLst = [(1/7)*x^A[0,0]*y^A[0,1], (1/2)*x^A[1,0]*y^A[1,1]]
+        sage: VrbLst = [x, y]
+        sage: [Ha,hb] = multiplicativeConstraintFormatorHMIII(CnstrLst, VrbLst)
+        sage: Ha.printHM()
+        [:, :]=
+        [a00 a01]
+        [a10 a11]
+        sage: hb.printHM()
+        [:, :]=
+        [7]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=HM(len(CnstrLst),len(VrbLst),'zero')
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            #A[r,c]=SR((CnstrLst[r]).lhs().degree(VrbLst[c]))
+            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==1)
+    return [A,b]
+
+def multiplicativeConstraintFormatorIVHM(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y'); A=HM(2,2,'a')
+        sage: CnstrLst = [(1/7)*x^A[0,0]*y^A[0,1], (1/2)*x^A[1,0]*y^A[1,1]]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = multiplicativeConstraintFormatorIVHM(CnstrLst, VrbLst)
+        sage: A.printHM()
+        [:, :]=
+        [a00 a01]
+        [a10 a11]
+        sage: b.printHM()
+        [:, :]
+        [7]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the equations
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
+    return multiplicativeConstraintFormatorIIIHM(Eq, VrbLst)
 
 def ConstraintFormatorIII(CnstrLst, VrbLst):
     """
@@ -2346,6 +2547,61 @@ def MonomialConstraintFormator(L, X, MnL, Y):
     # Ready to use the generic Constraint formator
     return ConstraintFormatorII(Eq, Y)
 
+def MonomialConstraintFormatorII(L, X, MnL, Y):
+    """
+    Takes as input a List of polynomials, a list of
+    variables used in the polynomials,the monomial list 
+    a list of alternative variables to replace the monomials.
+    No right hand side is given. We are implicitly working over SR.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: x1, x2 = var('x1, x2')
+        sage: X = [x1, x2]
+        sage: MnL=[x1*x2, x1, x2]
+        sage: L = [-2*x1*x2 + 3*x2 - 2, -38*x1*x2 - 18*x1 + 11*x2 - 8, -506*x1*x2 + 112*x1 + 121*x2 - 8, -5852*x1*x2 + 202*x1 + 1099*x2 - 8]
+        sage: Y = HM(3,'y').list()
+        sage: [A,b] = MonomialConstraintFormatorII(L, X, MnL, Y)
+        sage: A
+        [   -2     0     3]
+        [  -38   -18    11]
+        [ -506   112   121]
+        [-5852   202  1099]
+        sage: b
+        [2]
+        [8]
+        [8]
+        [8]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Obtaining the right hand side vector b
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
+    L2=copy(L)
+    # Updating the list to remove the constant terms
+    for i in range(len(L)):
+        L2[i]=L2[i]+tb[i,0]
+    # Performing the monomial substitution
+    Eq=[]; Hy=HM([MnL,Y])
+    cnt=0
+    for g in L2:
+        TmpL=[]
+        for o in g.operands():
+            for j in range(Hy.n(1)):
+                #if (o/Hy[0,j]).is_constant():
+                if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
+    # Ready to use the generic Constraint formator
+    return ConstraintFormatorII(Eq, Y)
+
+
 def MonomialConstraintFormatorHM(L, X, MnL, Y):
     """
     Takes as input a List of polynomials, a list of
@@ -2400,6 +2656,64 @@ def MonomialConstraintFormatorHM(L, X, MnL, Y):
         Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorHM(Eq, Y)
+
+def MonomialConstraintFormatorHMII(L, X, MnL, Y):
+    """
+    Takes as input a List of polynomials, a list of
+    variables used in the polynomials,the monomial list 
+    a list of alternative variables to replace the monomials.
+    No right hand side is given. We are implicitly working over SR.
+    The difference with the implementation above is that this
+    function deals well with symbolic coefficient matrices
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: x1, x2 = var('x1, x2')
+        sage: X = [x1, x2]
+        sage: MnL=[x1*x2, x1, x2]
+        sage: L = [-2*x1*x2 + 3*x2 - 2, -38*x1*x2 - 18*x1 + 11*x2 - 8, -506*x1*x2 + 112*x1 + 121*x2 - 8, -5852*x1*x2 + 202*x1 + 1099*x2 - 8]
+        sage: Y = HM(3,'y').list()
+        sage: [A,b] = MonomialConstraintFormatorHMII(L, X, MnL, Y)
+        sage: A.printHM()
+        [:, :]=
+        [   -2     0     3]
+        [  -38   -18    11]
+        [ -506   112   121]
+        [-5852   202  1099]
+        sage: b.printHM()
+        [:, :]=
+        [2]
+        [8]
+        [8]
+        [8]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Obtaining the right hand side vector b
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
+    L2=copy(L)
+    # Updating the list to remove the constant terms
+    for i in range(len(L)):
+        L2[i]=L2[i]+tb[i,0]
+    # Performing the monomial substitution
+    Eq=[]; Hy=HM([MnL,Y])
+    cnt=0
+    for g in L2:
+        TmpL=[]
+        for o in g.operands():
+            for j in range(Hy.n(1)):
+                #if (o/Hy[0,j]).is_constant():
+                if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
+    # Ready to use the generic Constraint formator
+    return ConstraintFormatorHM(Eq, Y)
+
 
 def Companion_matrix(p,vrbl):
     """
@@ -5331,6 +5645,31 @@ def fast_reduce(f, monom, subst):
         return expand((SR(s)).simplify_full())
     else:
         print 'Error the monomial list and the substitution list must have the same length'
+
+def fast_reduce_no_expand(f, monom, subst):
+    """
+    computes the reduction by the symbolic expression substitution
+    does not expand the resulting polynomial
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: x1,x2,x3=var('x1, x2, x3'); fast_reduce_no_expaand(x1^3+x2+x3^3,[x3^3+x2],[(x2+x3)^2])
+        x1^3 + (x2 + x3)^2
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if len(monom) == len(subst):
+        s = str(f)
+        for i in range(len(monom)):
+            s = s.replace(str(monom[i]), '('+str(subst[i])+')')
+        return SR(s)
+    else:
+        print 'Error the monomial list and the substitution list must have the same length'
+
 
 def SecondOrderHyperdeterminant(H):
     """
