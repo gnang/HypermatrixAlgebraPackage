@@ -2225,6 +2225,8 @@ def multiplicativeConstraintFormatorIII(CnstrLst, VrbLst):
     and the right hand side vector associate
     with the matrix formulation of the constraints.
     working over SR for both A and b.
+    The difference with the implementation above is
+    that it handles symbolic exponents.
 
     EXAMPLES:
 
@@ -2261,6 +2263,9 @@ def multiplicativeConstraintFormatorIV(CnstrLst, VrbLst):
     and the right hand side vector associate
     with the matrix formulation of the constraints.
     working over SR for both A and b.
+    The difference with the implementation above is
+    that it handles symbolic exponents.
+
 
     EXAMPLES:
 
@@ -2292,6 +2297,7 @@ def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
     and the right hand side vector associate
     with the matrix formulation of the constraints.
     working over SR for both A and b.
+
 
     EXAMPLES:
 
@@ -2361,6 +2367,9 @@ def multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst):
     and the right hand side vector associate
     with the matrix formulation of the constraints.
     working over SR for both A and b.
+    The difference with the implementation above is
+    that it handles symbolic exponents.
+
 
     EXAMPLES:
 
@@ -2399,6 +2408,9 @@ def multiplicativeConstraintFormatorIVHM(CnstrLst, VrbLst):
     and the right hand side vector associate
     with the matrix formulation of the constraints.
     working over SR for both A and b.
+    The difference with the implementation above is
+    that it handles symbolic exponents.
+
 
     EXAMPLES:
 
@@ -2601,6 +2613,62 @@ def MonomialConstraintFormatorII(L, X, MnL, Y):
     # Ready to use the generic Constraint formator
     return ConstraintFormatorII(Eq, Y)
 
+def MonomialConstraintFormatorIII(L, X, MnL, Y):
+    """
+    Takes as input a List of polynomials, a list of
+    variables used in the polynomials,the monomial list 
+    a list of alternative variables to replace the monomials.
+    No right hand side is given. We are implicitly working over SR.
+    The difference with the implementation above is
+    that it handles symbolic exponents.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: x1, x2, y1, y2, y3, y4 = var('x1, x2, y1, y2, y3, y4')
+        sage: X = [x1, x2]
+        sage: MnL=[x1^y1*x2^y2, x1^y3, x2^y4]
+        sage: L = [-2*x1^y1*x2^y2 + 3*x2^y4 - 2, -38*x1^y1*x2^y2 - 18*x1^y3 + 11*x2^y4 - 8, -506*x1^y1*x2^y2 + 112*x1^y3 + 121*x2^y4 - 8, -5852*x1^y1*x2^y2 + 202*x1^y3 + 1099*x2^y4 - 8]
+        sage: Y = HM(3,'y').list()
+        sage: [A,b] = MonomialConstraintFormatorIII(L, X, MnL, Y)
+        sage: A
+        [   -2     0     3]
+        [  -38   -18    11]
+        [ -506   112   121]
+        [-5852   202  1099]
+        sage: b
+        [2]
+        [8]
+        [8]
+        [8]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Obtaining the right hand side vector b
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
+    L2=copy(L)
+    # Updating the list to remove the constant terms
+    for i in range(len(L)):
+        L2[i]=L2[i]+tb[i,0]
+    # Performing the monomial substitution
+    Eq=[]; Hy=HM([MnL,Y])
+    cnt=0
+    for g in L2:
+        TmpL=[]
+        for o in g.operands():
+            for j in range(Hy.n(1)):
+                #if (o/Hy[0,j]).is_constant():
+                #if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
+                if Set([(o/Hy[0,j]).diff(v)/((o/Hy[0,j]).subs(v==1)) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
+    # Ready to use the generic Constraint formator
+    return ConstraintFormatorII(Eq, Y)
 
 def MonomialConstraintFormatorHM(L, X, MnL, Y):
     """
@@ -2714,6 +2782,63 @@ def MonomialConstraintFormatorHMII(L, X, MnL, Y):
     # Ready to use the generic Constraint formator
     return ConstraintFormatorHM(Eq, Y)
 
+def MonomialConstraintFormatorHMIII(L, X, MnL, Y):
+    """
+    Takes as input a List of polynomials, a list of
+    variables used in the polynomials,the monomial list 
+    a list of alternative variables to replace the monomials.
+    No right hand side is given. We are implicitly working over SR.
+    The difference with the implementation above is that this
+    function deals well with symbolic coefficient matrices
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: x1, x2, y1, y2, y3, y4 = var('x1, x2, y1, y2, y3, y4')
+        sage: X = [x1, x2]
+        sage: MnL=[x1^y1*x2^y2, x1^y3, x2^y4]
+        sage: L = [-2*x1^y1*x2^y2 + 3*x2^y4 - 2, -38*x1^y1*x2^y2 - 18*x1^y3 + 11*x2^y4 - 8, -506*x1^y1*x2^y2 + 112*x1^y3 + 121*x2^y4 - 8, -5852*x1^y1*x2^y2 + 202*x1^y3 + 1099*x2^y4 - 8]
+        sage: Y = HM(3,'y').list()
+        sage: [A,b] = MonomialConstraintFormatorHMIII(L, X, MnL, Y)
+        sage: A.printHM()
+        [:, :]=
+        [   -2     0     3]
+        [  -38   -18    11]
+        [ -506   112   121]
+        [-5852   202  1099]
+        sage: b.printHM()
+        [:, :]=
+        [2]
+        [8]
+        [8]
+        [8]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Obtaining the right hand side vector b
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
+    L2=copy(L)
+    # Updating the list to remove the constant terms
+    for i in range(len(L)):
+        L2[i]=L2[i]+tb[i,0]
+    # Performing the monomial substitution
+    Eq=[]; Hy=HM([MnL,Y])
+    cnt=0
+    for g in L2:
+        TmpL=[]
+        for o in g.operands():
+            for j in range(Hy.n(1)):
+                #if (o/Hy[0,j]).is_constant():
+                #if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
+                if Set([(o/Hy[0,j]).diff(v)/((o/Hy[0,j]).subs(v==1)) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
+    # Ready to use the generic Constraint formator
+    return ConstraintFormatorHM(Eq, Y)
 
 def Companion_matrix(p,vrbl):
     """
