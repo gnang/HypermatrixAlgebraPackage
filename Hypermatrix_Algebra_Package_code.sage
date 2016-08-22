@@ -6879,6 +6879,15 @@ def gaussian_eliminationHM(Cf, rs):
         [[[[1, 0], [0, 1]], [[a01/a00, 0], [0, a01/a00]]], [[[0, 0], [0, 0]], [[1, 0], [0, 1]]]]
         sage: b
         [[[[b00/a00, 0], [0, b00/a00]]], [[[(a10*b00/a00 - b10)/(a01*a10/a00 - a11), 0], [0, (a10*b00/a00 - b10)/(a01*a10/a00 - a11)]]]]
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,HM(2,'b').list())
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,3,'kronecker'), Ta[1,0]*HM(2,3,'c'), Ta[0,1]*HM(3,2,'d'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,3,'kronecker'), Tb[1,0]*HM(2,3,'zero')])
+        sage: [A,b]=gaussian_eliminationHM(Ha,Hb)
+        sage: A[0,0].printHM()
+        [:, :]=
+        [1 0 0]
+        [0 1 0]
+        [0 0 1]
 
 
     AUTHORS:
@@ -7205,7 +7214,14 @@ def gauss_jordan_eliminationHM(Cf,rs):
         [:, :]=
         [-a01*(a10*b00/a00 - b10)/(a00*(a01*a10/a00 - a11)) + b00/a00]
         [                     (a10*b00/a00 - b10)/(a01*a10/a00 - a11)]
-        
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,HM(2,'b').list()) # Initialization of the factors.
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,2,'kronecker'), Tb[1,0]*HM(2,2,'kronecker')])
+        sage: [A,b]=gauss_jordan_eliminationHM(Ha,Hb) # performing the gaussian elimination where entries are hypermatrices.
+        sage: A
+        [[[[1, 0], [0, 1]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[1, 0], [0, 1]]]]
+        sage: b
+        [[[[-a01*(a10*b0/a00 - b1)/(a00*(a01*a10/a00 - a11)) + b0/a00, 0], [0, -a01*(a10*b0/a00 - b1)/(a00*(a01*a10/a00 - a11)) + b0/a00]]], [[[(a10*b0/a00 - b1)/(a01*a10/a00 - a11), 0], [0, (a10*b0/a00 - b1)/(a01*a10/a00 - a11)]]]]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -7226,15 +7242,15 @@ def gauss_jordan_eliminationHM(Cf,rs):
             # performing row operations
             for r in range(i-1,-1,-1):
                 #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
-                Tb0=HM(1, b.n(1), [b[i,j0] for j0 in range(b.n(1))])
-                Tb1=HM(1, b.n(1), [b[r,j0] for j0 in range(b.n(1))])
-                Trb=-A[r,j]*Tb0+Tb1
+                #Tb0=HM(1, b.n(1), [b[i,j0] for j0 in range(b.n(1))])
+                #Tb1=HM(1, b.n(1), [b[r,j0] for j0 in range(b.n(1))])
+                Trb=-HM(1, b.n(1), [A[r,j]*b[i,j0] for j0 in range(b.n(1))]) + HM(1, b.n(1), [b[r,j0] for j0 in range(b.n(1))])
                 for j0 in range(b.n(1)):
                     b[r,j0]=Trb[0,j0]
                 #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-                Ta0=HM(1, A.n(1), [A[i,j0] for j0 in range(A.n(1))])
-                Ta1=HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))])
-                Tra=-A[r,j]*Ta0+Ta1
+                #Ta0=HM(1, A.n(1), [A[i,j0] for j0 in range(A.n(1))])
+                #Ta1=HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))])
+                Tra=-HM(1, A.n(1), [A[r,j]*A[i,j0] for j0 in range(A.n(1))]) + HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))])
                 for j0 in range(A.n(1)):
                     A[r,j0]=Tra[0,j0]
             i=i-1; j=0
