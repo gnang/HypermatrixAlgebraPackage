@@ -2240,7 +2240,7 @@ def multiplicativeConstraintFormatorIII(CnstrLst, VrbLst):
         [a00 a01]
         [a10 a11]
         sage: b
-        [1]
+        [7]
         [2]
 
 
@@ -2376,9 +2376,9 @@ def multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst):
     ::
 
         sage: x, y = var('x, y'); A=HM(2,2,'a')
-        sage: CnstrLst = [(1/7)*x^A[0,0]*y^A[0,1], (1/2)*x^A[1,0]*y^A[1,1]]
+        sage: CnstrLst = [(1/7)*x^A[0,0]*y^A[0,1]==7, x^A[1,0]*y^A[1,1]==2]
         sage: VrbLst = [x, y]
-        sage: [Ha,hb] = multiplicativeConstraintFormatorHMIII(CnstrLst, VrbLst)
+        sage: [Ha,hb] = multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst)
         sage: Ha.printHM()
         [:, :]=
         [a00 a01]
@@ -2425,7 +2425,7 @@ def multiplicativeConstraintFormatorIVHM(CnstrLst, VrbLst):
         [a00 a01]
         [a10 a11]
         sage: b.printHM()
-        [:, :]
+        [:, :]=
         [7]
         [2]
 
@@ -2565,6 +2565,8 @@ def MonomialConstraintFormatorII(L, X, MnL, Y):
     variables used in the polynomials,the monomial list 
     a list of alternative variables to replace the monomials.
     No right hand side is given. We are implicitly working over SR.
+    The difference with the implementation above is that it not assume
+    that the coefficients are constants they can be themselves polynomials.
 
 
     EXAMPLES:
@@ -2640,10 +2642,10 @@ def MonomialConstraintFormatorIII(L, X, MnL, Y):
         [ -506   112   121]
         [-5852   202  1099]
         sage: b
-        [2]
-        [8]
-        [8]
-        [8]
+        [                 2*0^y1*0^y2 - 3*0^y4 + 2]
+        [     38*0^y1*0^y2 + 18*0^y3 - 11*0^y4 + 8]
+        [  506*0^y1*0^y2 - 112*0^y3 - 121*0^y4 + 8]
+        [5852*0^y1*0^y2 - 202*0^y3 - 1099*0^y4 + 8]        
 
 
     AUTHORS:
@@ -2810,10 +2812,10 @@ def MonomialConstraintFormatorHMIII(L, X, MnL, Y):
         [-5852   202  1099]
         sage: b.printHM()
         [:, :]=
-        [2]
-        [8]
-        [8]
-        [8]
+        [                 2*0^y1*0^y2 - 3*0^y4 + 2]
+        [     38*0^y1*0^y2 + 18*0^y3 - 11*0^y4 + 8]
+        [  506*0^y1*0^y2 - 112*0^y3 - 121*0^y4 + 8]
+        [5852*0^y1*0^y2 - 202*0^y3 - 1099*0^y4 + 8]
 
 
     AUTHORS:
@@ -3080,51 +3082,75 @@ def substitute_matrix(p, vrbl, A):
 def OuterHypermatrixInversePair(U, V):
     """
     Outputs the pseudo inverse pairs associated with the input pairs of hypermatrices
+    The implementation does not assume that the input third order hypermatrices are
+    cubic. In fact U must be m x p x p and V is p x n x p.
+
 
     EXAMPLES:
 
     ::
 
-        sage: Hu=HM(2,2,2,'u'); Hv=HM(2,2,2,'v')
+        sage: Hu=HM(3,2,2,'u'); Hv=HM(2,4,2,'v')
         sage: [Sln, Tx, Ty]=OuterHypermatrixInversePair(Hu, Hv)[0]
         sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1])) 
         sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
-        sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
+        sage: Prod(Hx, Prod(Hu, HM(3,4,2,'a'), Hv), Hy).factor().list()
         [a000,
          a100,
-         (u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)*a010/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)),
-         a110,
+         a200,
+         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)*a010/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v011*v110 - u200*u211*v010*v111)),
+         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)*a110/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u201*u210*v011*v110 - u200*u211*v010*v111)),
+         a210,
+         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v021*v120 - u000*u011*v020*v121)*a020/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v021*v120 - u200*u211*v020*v121)),
+         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u101*u110*v021*v120 - u100*u111*v020*v121)*a120/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u201*u210*v021*v120 - u200*u211*v020*v121)),
+         a220,
+         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v031*v130 - u000*u011*v030*v131)*a030/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v031*v130 - u200*u211*v030*v131)),
+         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u101*u110*v031*v130 - u100*u111*v030*v131)*a130/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u201*u210*v031*v130 - u200*u211*v030*v131)),
+         a230,
          a001,
          a101,
+         a201,
          a011,
-         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)*a111/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111))]  
+         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)*a111/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)),
+         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v011*v110 - u200*u211*v010*v111)*a211/((u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)),
+         a021,
+         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v021*v120 - u100*u111*v020*v121)*a121/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v021*v120 - u000*u011*v020*v121)),
+         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v021*v120 - u200*u211*v020*v121)*a221/((u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v021*v120 - u000*u011*v020*v121)),
+         a031,
+         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v031*v130 - u100*u111*v030*v131)*a131/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v031*v130 - u000*u011*v030*v131)),
+         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v031*v130 - u200*u211*v030*v131)*a231/((u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v031*v130 - u000*u011*v030*v131))]
 
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    if U.is_cubical() and V.is_cubical() and U.dimensions()==V.dimensions() and U.order()==3:
+    if U.n(1)==U.n(2) and V.n(0)==V.n(2) and U.n(1)==V.n(0) and U.order()==3 and V.order()==3:
         # Initialization of the size parameter
-        sz=U.n(0)
+        sz0=U.n(0); sz1=V.n(1); sz2=U.n(2)
         # Initialization of the container matrix
-        M = Matrix(SR,HM(sz^3, sz^3, 'zero').listHM())
-        for i in range(sz):
-            for j in range(sz):
-                for k in range(sz):
-                    for t in range(sz):
-                        M[i*sz^2+j*sz+k,i*sz^2+j*sz+t]=U[i,t,k]*V[t,j,k]
-        # Computing the matrix inverse
-        #B=M.inverse()
-        Fq=(Prod(HM(M.nrows(), M.ncols(), M.list()).transpose(), HM(M.nrows(), M.ncols(), 'z'))-HM(2, M.nrows(), 'kronecker')).list()
-        [F, g]=ConstraintFormatorIV(Fq, HM(M.nrows(), M.ncols(), 'z').list())
-        Mz=Matrix(SR, F.ncols(), 1, HM(M.nrows(), M.ncols(), 'z').list())
-        TSln=linear_solver(F.transpose()*F, F.transpose()*g, Mz, Mz)
-        B=Matrix(SR, HM(M.nrows(), M.ncols(), 'z').subs(dict([(s.lhs(),s.rhs()) for s in TSln])).listHM())
+        M = Matrix(SR,HM(sz0*sz1*sz2, sz0*sz1*sz2, 'zero').listHM())
+        for i in range(sz0):
+            for j in range(sz1):
+                for k in range(sz2):
+                    for t in range(sz2):
+                        M[i*sz1*sz2+j*sz2+k, i*sz1*sz2+j*sz2+t]=U[i,t,k]*V[t,j,k]
+        # Initialization of the coefficient HM
+        Ha=HM(sz0*sz1, sz0*sz1, [HM(sz2,sz2,'zero') for ij in range((sz0*sz1)^2)])
+        for ij in range(sz0*sz1):
+            Ha[ij, ij]=HM(sz2, sz2, M[ij*sz2:ij*sz2+sz2, ij*sz2:ij*sz2+sz2].transpose().list())
+        # Initialization of the RHS
+        Hb=HM(sz0*sz1, 1, [HM(2,sz2,'kronecker') for ij in range(sz0*sz1)])
+        # Computing the matrix pseudo inverse
+        [A,b]=gauss_jordan_eliminationHM(Ha, Hb)
+        # Filling up the solution with the result
+        B=HM(M.nrows(), M.ncols(), 'zero').matrix()
+        for ij in range(sz0*sz1):
+            B[sz2*ij:sz2*ij+sz2, sz2*ij:sz2*ij+sz2]=b[ij,0].simplify_full().matrix()
         # Initializing the multiplicative constraints.
-        X=HM(sz,sz,sz,'x');Y=HM(sz,sz,sz,'y')
-        Eq=[X[i,s,t]+Y[s,j,t]==B[i*sz^2+j*sz+t,sz^2*i+sz*j+s] for i in range(sz) for j in range(sz) for s in range(sz) for t in range(sz)]
+        X=HM(U.n(0), U.n(1), U.n(2), 'x'); Y=HM(V.n(0), V.n(1), V.n(2), 'y')
+        Eq=[X[i,s,t]*Y[s,j,t]==B[i*sz1*sz2+j*sz2+t,i*sz1*sz2+j*sz2+s] for i in range(sz0) for j in range(sz1) for s in range(sz2) for t in range(sz2)]
         # Formating the constraints
-        [A,b]=ConstraintFormatorII(Eq, X.list()+Y.list())
+        [A,b]=multiplicativeConstraintFormator(Eq, X.list()+Y.list())
         Mx=Matrix(SR, A.ncols(), 1, X.list()+Y.list())
         return [[multiplicative_linear_solver(A,b,Mx,Mx), X, Y], multiplicative_gauss_jordan_eliminationII(A,b)]
     else:
@@ -3133,6 +3159,9 @@ def OuterHypermatrixInversePair(U, V):
 def InnerHypermatrixInversePair(X, Y):
     """
     Outputs the pseudo inverse pairs associated with the input pairs of hypermatrices
+    The implementation does not assume that the input third order hypermatrices are 
+    cubic. In fact X is m x p x p and Y is p x n x p.
+
 
     EXAMPLES:
 
@@ -3140,8 +3169,8 @@ def InnerHypermatrixInversePair(X, Y):
 
         sage: Hx=HM(2,2,2,'x'); Hy=HM(2,2,2,'y')
         sage: [Sln, Tu, Tv]=InnerHypermatrixInversePair(Hx, Hy)[0]
-        sage: Hu=Tu.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]])) 
-        sage: Hv=Tv.subs(dict([(s.lhs(),s.rhs()) for s in Sln[:12]]))
+        sage: Hu=Tu.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1])) 
+        sage: Hv=Tv.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1]))
         sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
         [a000,
          a100,
@@ -3152,31 +3181,37 @@ def InnerHypermatrixInversePair(X, Y):
          (x101*x110*y001*y100 - x100*x111*y000*y101)*(x001*x010*y011*y110 - x000*x011*y010*y111)*a011/((x001*x010*y001*y100 - x000*x011*y000*y101)*(x101*x110*y011*y110 - x100*x111*y010*y111)),
          a111]
 
+
     AUTHORS:
     - Edinah K. Gnang
     """
-    if X.is_cubical() and Y.is_cubical() and X.dimensions()==Y.dimensions() and X.order()==3:
+    if X.n(1)==X.n(2) and Y.n(0)==Y.n(2) and X.n(1)==Y.n(0) and X.order()==3 and Y.order()==3:
         # Initialization of the size parameter
-        sz=X.n(0)
+        sz0=X.n(0); sz1=Y.n(1); sz2=Y.n(2)
         # Initialization of the container matrix
-        M=Matrix(SR,HM(sz^3, sz^3, 'zero').listHM())
-        for i in range(sz):
-            for j in range(sz):
-                for s in range(sz):
-                    for t in range(sz):
-                        M[i*sz^2+j*sz+t,sz^2*i+sz*j+s]=X[i,s,t]*Y[s,j,t]
-        # Computing the matrix inverse
-        #B=M.inverse()
-        Fq=(Prod(HM(M.nrows(), M.ncols(), M.list()).transpose(), HM(M.nrows(), M.ncols(), 'z'))-HM(2, M.nrows(), 'kronecker')).list()
-        [F, g]=ConstraintFormatorIV(Fq, HM(M.nrows(), M.ncols(), 'z').list())
-        Mz=Matrix(SR, F.ncols(), 1, HM(M.nrows(), M.ncols(), 'z').list())
-        TSln=linear_solver(F.transpose()*F, F.transpose()*g, Mz, Mz)
-        B=Matrix(SR, HM(M.nrows(), M.ncols(), 'z').subs(dict([(s.lhs(),s.rhs()) for s in TSln])).listHM())
+        M = Matrix(SR,HM(sz0*sz1*sz2, sz0*sz1*sz2, 'zero').listHM())
+        for i in range(sz0):
+            for j in range(sz1):
+                for s in range(sz2):
+                    for t in range(sz2):
+                        M[i*sz1*sz2+j*sz2+t,sz1*sz2*i+sz2*j+s]=X[i,s,t]*Y[s,j,t]
+        # Initialization of the coefficient HM
+        Ha=HM(sz0*sz1, sz0*sz1, [HM(sz2,sz2,'zero') for ij in range((sz0*sz1)^2)])
+        for ij in range(sz0*sz1):
+            Ha[ij, ij]=HM(sz2, sz2, M[ij*sz2:ij*sz2+sz2, ij*sz2:ij*sz2+sz2].transpose().list())
+        # Initialization of the RHS
+        Hb=HM(sz0*sz1, 1, [HM(2,sz2,'kronecker') for ij in range(sz0*sz1)])
+        # Computing the matrix pseudo inverse
+        [A,b]=gauss_jordan_eliminationHM(Ha, Hb)
+        # Filling up the solution with the result
+        B=HM(M.nrows(), M.ncols(), 'zero').matrix()
+        for ij in range(sz0*sz1):
+            B[sz2*ij:sz2*ij+sz2, sz2*ij:sz2*ij+sz2]=b[ij,0].simplify_full().matrix()
         # Initializing the multiplicative constraints.
-        U=HM(sz,sz,sz,'u'); V=HM(sz,sz,sz,'v')
-        Eq=[U[i,t,k]+V[t,j,k]==B[i*sz^2+j*sz+k,i*sz^2+j*sz+t] for i in range(sz) for j in range(sz) for k in range(sz) for t in range(sz)]
+        U=HM(X.n(0),X.n(1),X.n(2),'u'); V=HM(Y.n(0),Y.n(1),Y.n(2),'v')
+        Eq=[U[i,t,k]*V[t,j,k]==B[i*sz1*sz2+j*sz2+k,i*sz1*sz2+j*sz2+t] for i in range(sz0) for j in range(sz1) for k in range(sz2) for t in range(sz2)]
         # Formating the constraints
-        [A,b]=ConstraintFormatorII(Eq, U.list()+V.list())
+        [A,b]=multiplicativeConstraintFormator(Eq, U.list()+V.list())
         Mx=Matrix(SR, A.ncols(), 1, U.list()+V.list())
         return [[multiplicative_linear_solver(A,b,Mx,Mx), U, V], multiplicative_gauss_jordan_eliminationII(A,b)]
     else:
@@ -5780,7 +5815,7 @@ def fast_reduce_no_expand(f, monom, subst):
  
     ::
 
-        sage: x1,x2,x3=var('x1, x2, x3'); fast_reduce_no_expaand(x1^3+x2+x3^3,[x3^3+x2],[(x2+x3)^2])
+        sage: x1,x2,x3=var('x1, x2, x3'); fast_reduce_no_expand(x1^3+x2+x3^3,[x3^3+x2],[(x2+x3)^2])
         x1^3 + (x2 + x3)^2
 
     AUTHORS:
@@ -6857,6 +6892,8 @@ def gaussian_elimination(Cf, rs):
 def gaussian_eliminationHM(Cf, rs):
     """
     Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    This implementation works perfectly well if the entries are matrices or hypermatrices
+    associated with appropriate block partitions.
 
     EXAMPLES:
  
@@ -6953,6 +6990,8 @@ def gaussian_eliminationHMII(Cf, rs):
     """
     Outputs the row echelon form of the input second order hypermatrix and the right hand side.
     does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
+    This implementation tacitly assumes that the entries commute.
+ 
 
     EXAMPLES:
  
@@ -7017,7 +7056,10 @@ def gaussian_eliminationHMIII(Cf, rs):
     Outputs the row echelon form of the input second order hypermatrix and the right hand side.
     does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
     The difference with the previous implementation is the fact that the row linear combination
-    operations are performed in such a way as to not change the absolute value of the determinant. 
+    operations are performed in such a way as to not change the absolute value of the determinant.
+    This implementation is skew fields or division ring friendly by inputing hypermatrices
+    whose entries are themselve hypermatrices of the approprioate size. 
+
 
     EXAMPLES:
  
@@ -7032,6 +7074,14 @@ def gaussian_eliminationHMIII(Cf, rs):
         [:, :]=
         [               b00]
         [-a10*b00/a00 + b10]
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,'b')
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,2,'kronecker'), Tb[1,0]*HM(2,2,'kronecker')])
+        sage: [A,b]=gaussian_eliminationHMIII(Ha,Hb)
+        sage: A
+        [[[[a00, 0], [0, a00]], [[a01, 0], [0, a01]]], [[[0, 0], [0, 0]], [[-a01*a10/a00 + a11, 0], [0, -a01*a10/a00 + a11]]]]
+        sage: b
+        [[[[b00, 0], [0, b00]]], [[[-a10*b00/a00 + b10, 0], [0, -a10*b00/a00 + b10]]]]
 
 
     AUTHORS:
@@ -7070,9 +7120,9 @@ def gaussian_eliminationHMIII(Cf, rs):
                     # Initialization of the coefficient
                     cf2=A[r,j]
                     for j0 in range(b.n(1)):
-                        b[r,j0]=-(cf2/cf1)*b[i,j0]+b[r,j0]
+                        b[r,j0]=-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]
                     for j0 in range(A.n(1)):
-                        A[r,j0]=-(cf2/cf1)*A[i,j0]+A[r,j0]
+                        A[r,j0]=-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]
         # Incrementing the row and column index.
         i=i+1; j=j+1
     return [A,b]
@@ -7200,6 +7250,9 @@ def gauss_jordan_elimination(Cf,rs):
 def gauss_jordan_eliminationHM(Cf,rs):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
+    This implementation is sqew field friendly as illustrated in some of the examples
+    below. We do not assume that the input entries commute. 
+
 
     EXAMPLES:
  
@@ -7223,11 +7276,12 @@ def gauss_jordan_eliminationHM(Cf,rs):
         sage: b
         [[[[-a01*(a10*b0/a00 - b1)/(a00*(a01*a10/a00 - a11)) + b0/a00, 0], [0, -a01*(a10*b0/a00 - b1)/(a00*(a01*a10/a00 - a11)) + b0/a00]]], [[[(a10*b0/a00 - b1)/(a01*a10/a00 - a11), 0], [0, (a10*b0/a00 - b1)/(a01*a10/a00 - a11)]]]]
 
+
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
-    [A, b] = gaussian_eliminationHM(Cf,rs)
+    [A, b] = gaussian_eliminationHM(Cf, rs)
     # Initialization of the row and column index
     i=A.nrows()-1; j=0
     while i>0 or j>0:
@@ -7259,6 +7313,9 @@ def gauss_jordan_eliminationHM(Cf,rs):
 def gauss_jordan_eliminationHMII(Cf,rs):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
+    This implementation assumes that the input entries commute and is therefore NOT
+    skew field friendly
+
 
     EXAMPLES:
  
@@ -7408,8 +7465,6 @@ def gauss_jordan_eliminationHMIII(Cf,rs):
     Hp=sum(HM(sz,1,[Id[i,sz-1-k] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz))
     [At,bt]=gaussian_eliminationHMIII(Hp.transpose()*A*Hp, Hp*b)
     return  gaussian_eliminationHMIII(Hp.transpose()*At*Hp, Hp*bt)
-
-
 
 def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     """
@@ -9739,13 +9794,13 @@ def Form2Hypermatrix(f, sz, od, Vrbls):
 
     ::
 
-        sage: sz=2; od=3; X=HM(od,'x').list()
-        sage: f=a111*x0*x1*x2 + a110*x0*x1 + a101*x0*x2 + a011*x1*x2 + a100*x0 + a010*x1 + a001*x2 + a000
+        sage: sz=2; od=3; A=HM(sz,sz,sz,'a'); X=HM(od,'x').list()
+        sage: f=A[1,1,1]*X[0]*X[1]*X[2] + A[1,1,0]*X[0]*X[1] + A[1,0,1]*X[0]*X[2] + A[0,1,1]*X[1]*X[2] + A[1,0,0]*X[0] + A[0,1,0]*X[1] + A[0,0,1]*X[2] + A[0,0,0]
         sage: Form2Hypermatrix(f, sz, od, X).printHM()
         [:, :, 0]=
         [a000 a010]
         [a100 a110]
-        
+        <BLANKLINE> 
         [:, :, 1]=
         [a001 a011]
         [a101 a111]
