@@ -7028,12 +7028,12 @@ def gaussian_eliminationHMII(Cf, rs):
                 Id=HM(2, Ta.n(0), 'kronecker')
                 P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(i,Ta.n(0)):
+                for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
-                        A[i0,j0]=Ta[i0,j0]
-                for i0 in range(i,Tb.n(0)):
+                        A[i+i0,j0]=Ta[i0,j0]
+                for i0 in range(Tb.n(0)):
                     for j0 in range(Tb.n(1)):
-                        b[i0,j0]=Tb[i0,j0]
+                        b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
             for r in range(i+1,A.nrows()):
@@ -7104,12 +7104,12 @@ def gaussian_eliminationHMIII(Cf, rs):
                 Id=HM(2, Ta.n(0), 'kronecker')
                 P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(i,Ta.n(0)):
+                for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
-                        A[i0,j0]=Ta[i0,j0]
-                for i0 in range(i,Tb.n(0)):
+                        A[i+i0,j0]=Ta[i0,j0]
+                for i0 in range(Tb.n(0)):
                     for j0 in range(Tb.n(1)):
-                        b[i0,j0]=Tb[i0,j0]
+                        b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
             for r in range(i+1,A.nrows()):
@@ -7131,7 +7131,8 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
     """
     Outputs the row echelon form of the input second order hypermatrix and the right hand side.
     does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
-    The algorithm perform the reduction assuming that the relations have monic powers of variables.
+    The algorithm perform the reduction assuming that the the leading term in each relations
+    is a monic powers in a distinct variable as illustrated in the example bellow.
 
     EXAMPLES:
  
@@ -7173,12 +7174,12 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
                 Id=HM(2, Ta.n(0), 'kronecker')
                 P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(i,Ta.n(0)):
+                for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
-                        A[i0,j0]=Ta[i0,j0]
-                for i0 in range(i,Tb.n(0)):
+                        A[i+i0,j0]=Ta[i0,j0]
+                for i0 in range(Tb.n(0)):
                     for j0 in range(Tb.n(1)):
-                        b[i0,j0]=Tb[i0,j0]
+                        b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
             for r in range(i+1,A.nrows()):
@@ -7429,7 +7430,7 @@ def gauss_jordan_eliminationHMIII(Cf,rs):
     does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
     The difference with the previous implementation is the fact that the row linear combination
     operations are performed in such a way as to not change the absolute value of the determinant.
-    The output of the function is only valid if the input matrix is full rank.
+    
 
     EXAMPLES:
  
@@ -7450,21 +7451,30 @@ def gauss_jordan_eliminationHMIII(Cf,rs):
     - Edinah K. Gnang
     - To Do: 
     """
-    # Performing the padding in order to conjugate by the permutation matrix
-    A0=ZeroPadding(Cf)
-    if rs.n(0) != A0.n(0):
-        b0=HM(A0.n(0),1,rs.list()+[0 for i in range(A0.n(0)-rs.n(0))])
-    else:
-        b0=rs
-    [A, b]=gaussian_eliminationHMIII(A0,b0)
-    # Initiallization of the size parameter
-    sz=max(A.dimensions())
-    # Initialization of the identity matrix
-    Id=HM(2,sz,'kronecker')
-    # Initialization of the permutation matrix
-    Hp=sum(HM(sz,1,[Id[i,sz-1-k] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz))
-    [At,bt]=gaussian_eliminationHMIII(Hp.transpose()*A*Hp, Hp*b)
-    return  gaussian_eliminationHMIII(Hp.transpose()*At*Hp, Hp*bt)
+    [A, b] = gaussian_eliminationHMIII(Cf,rs)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            cf1=A[i,j]
+            for r in range(i-1,-1,-1):
+                #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                cf2=A[r,j]
+                for j0 in range(b.n(1)):
+                    b[r,j0]=-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]
+                #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+                for j0 in range(A.n(1)):
+                    A[r,j0]=-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]
+            i=i-1; j=0
+    return [A,b]
 
 def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     """
