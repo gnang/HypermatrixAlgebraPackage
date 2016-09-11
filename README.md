@@ -61,7 +61,7 @@ sage: Hh[0,1,0]
 # Basic hypermatrix operation
 
 The [BM product](http://arxiv.org/abs/1411.6270) is implemented for conformable hypermatrices
-all orders. The BM product is computed as follows
+of all orders. The BM product is computed as follows
 
 ```python
 sage: H1=Prod(HM(3,2,'a'), HM(2,2,'c')) # Matrix product
