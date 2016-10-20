@@ -49,6 +49,16 @@ class HM:
         [x0, x1, x2]
         sage: od=2; sz=2; HM(od,HM(sz,'a').list(),'diag') # diagonal matrix
         [[a0, 0], [0, a1]]
+        sage: La=HM(2, 2, 2, 'a').list(); Lb=HM(2, 2, 2, 'b').list(); Lc=HM(2, 2, 2, 'c').list() # Initialization of the variables
+        sage: F = FreeAlgebra(QQ, 24, La + Lb + Lc)
+        sage: F.<a000,a100,a010,a110,a001,a101,a011,a111,b000,b100,b010,b110,b001,b101,b011,b111,c000,c100,c010,c110,c001,c101,c011,c111> = FreeAlgebra(QQ,24)
+        sage: Ha=HM(2, 2, 2, [a000,a100,a010,a110,a001,a101,a011,a111])
+        sage: Hb=HM(2, 2, 2, [b000,b100,b010,b110,b001,b101,b011,b111])
+        sage: Hc=HM(2, 2, 2, [c000,c100,c010,c110,c001,c101,c011,c111])
+        sage: Prod(Ha,Hb,Hc)[0,0,0]
+        a000*b000*c000 + a010*b001*c100
+        sage: Prod(Hb,Ha,Hc)[0,0,0]
+        b000*a000*c000 + b010*a001*c100
     """
     def __init__(self,*args):
         if len(args) == 1:
@@ -754,6 +764,12 @@ class HM:
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
+    def refII(self):
+        if self.order()==2:
+            return gaussian_eliminationHMIII(self, HM(self.n(0),1,'zero'))[0]
+        else:
+            raise ValueError, "Expected a second order hypermatrix"
+
     def rref(self):
         if self.order()==2:
             return gauss_jordan_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
@@ -782,6 +798,20 @@ class HM:
             # Initialization of the permutation matrix
             Hp=sum(HM(sz,1,[Id[i,sz-1-k] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz))
             return (Hp.transpose()*((Hp.transpose()*ZeroPadding(self.refII())*Hp).refII())*Hp).refII()
+        else:
+            raise ValueError, "Expected a second order hypermatrix"
+
+    def rank(self):
+        if self.order()==2:
+            if self.is_zero():
+                return 0
+            else:
+                cnt=0
+                TmpHm=self.ref().copy()
+                for i in range(min(TmpHm.dimensions())):
+                    if not HM(1,self.n(1),[TmpHm[i,j] for j in range(self.n(1))]).is_zero():
+                        cnt=cnt+1
+                return cnt
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
@@ -5830,7 +5860,6 @@ def fast_reduce_no_expand(f, monom, subst):
     else:
         print 'Error the monomial list and the substitution list must have the same length'
 
-
 def SecondOrderHyperdeterminant(H):
     """
     computes second order i.e. matrix determinant using the Cauchy umbral mnemonic device
@@ -7740,6 +7769,27 @@ def multiplicative_matrix_productHM(A,B):
         for k in range(B.ncols()):
             Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
     return Rslt
+
+def mprod(A,B):
+    """
+    Outputs the result of the multiplicative product of the
+    two input matrices.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: mprod(HM(2,2,'a'), HM(2,2,'b')).printHM()
+        [:, :]=
+        [b00^a00*b10^a01 b01^a00*b11^a01]
+        [b00^a10*b10^a11 b01^a10*b11^a11]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return multiplicative_matrix_productHM(A,B)
 
 def linear_solver(A,b,x,v):
     """
