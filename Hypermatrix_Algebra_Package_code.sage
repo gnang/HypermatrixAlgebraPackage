@@ -260,6 +260,46 @@ class HM:
         """
         return GeneralHypermatrixLogarithm(self, s)
 
+    def apply_map(self, phi):
+        """
+        Apply the given map phi (an arbitrary Python function or callable
+        object) to this hypermatrix.
+        
+         
+        EXAMPLES::
+
+        ::
+
+            sage: A = HM(2,2,'a')
+            sage: phi = lambda x: sin(x)
+            sage: A.apply_map(phi).printHM()
+            [:, :]=
+            [sin(a00) sin(a01)]
+            [sin(a10) sin(a11)]
+
+        """
+        return GeneralHypermatrixApplyMap(self, phi)
+
+    def map(self, phi):
+        """
+        Apply the given map phi (an arbitrary Python function or callable
+        object) to this hypermatrix.
+        
+         
+        EXAMPLES::
+
+        ::
+
+            sage: A = HM(2,2,'a')
+            sage: phi = lambda x: sin(x)
+            sage: A.map(phi).printHM()
+            [:, :]=
+            [sin(a00) sin(a01)]
+            [sin(a10) sin(a11)]
+
+        """
+        return GeneralHypermatrixApplyMap(self, phi)
+
     def tensor_product(self, V):
         """
         Computes the  Kronecker product of arbitrary hypermatrices A, B of the same order.
@@ -3700,6 +3740,47 @@ def GeneralHypermatrixLogarithm(A,s=e):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=log(A[tuple(entry)],s).canonicalize_radical()
+    return Rh
+
+def GeneralHypermatrixApplyMap(A, phi):
+    """
+    Apply the given map phi (an arbitrary Python function or callable
+    object) to this hypermatrix.
+    
+
+    INPUT:
+
+    -  ``phi`` - arbitrary Python function or callable object
+
+
+    OUTPUT: a symbolic hypermatrix
+
+    EXAMPLES::
+
+        sage: A = HM(2,2,'a')
+        sage: phi = lambda x: sin(x)
+        sage: GeneralHypermatrixApplyMap(A, phi).matrix()
+        [sin(a00) sin(a01)]
+        [sin(a10) sin(a11)]
+
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the computations of the entries
+    for i in range(prod(l)):
+        entry = [mod(i,l[0])]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if A[tuple(entry)].is_zero():
+            Rh[tuple(entry)] = 0
+        else:
+            Rh[tuple(entry)] = phi(A[tuple(entry)])
     return Rh
 
 def GeneralHypermatrixConjugate(A):
