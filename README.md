@@ -579,6 +579,11 @@ sage: substitute_matrix(p,x,Matrix(SR,HM(2,2,'a').listHM()))
 [  a00*a10 + a10*a11 + 2*a10*y a01*a10 + a11^2 + 2*a11*y + 1]
 ```
 
+To loading a PNG image into a hypermatrix
+
+ ```python
+sage: A=HM("pic.png")
+```
 # Bug report
 
 Please report any bugs, they will be greatly appreciated.
