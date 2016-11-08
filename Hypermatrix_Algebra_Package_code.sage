@@ -67,6 +67,9 @@ class HM:
                 self.hm=DiagonalHypermatrix(inp)
             elif type(inp) == list:
                 self.hm = inp
+            # Case associated with the initialization of a picture
+            # the inlustration of how images are turned into a hypermatrix
+            # A=HM("I.png")
             elif type(inp) == type("abcd"):
                 # Importing the numerical library
                 import pylab, numpy
@@ -1692,6 +1695,29 @@ def Vandermonde(l):
     """
     return HM(len(l),len(l),[l[j]^i for j in range(len(l)) for i in range(len(l))])
 
+def Lagrange(X):
+    """
+    Constructs a Lagrange matrix from the input list
+    assumed to be either numbers or symbolic variables
+    nothing breaks however if one presents as input a 
+    list of hypermatrices.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Lagrange(HM(3,'x').list())
+        [[x0 - x2, x0 - x1], [x1 - x2, 1]]        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    sz=len(X)-1; L=[]
+    for i in range(sz):
+        tmpl=range(sz,i,-1)
+        L.append([X[i]-X[j] for j in tmpl]+[1 for k in range(sz-len(tmpl))]) 
+    return HM(L) 
 
 def HypermatrixPermutation(s):
     """
