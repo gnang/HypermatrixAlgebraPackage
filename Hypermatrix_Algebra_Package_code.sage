@@ -9550,9 +9550,9 @@ def SecondOrderCharpolyII(A, U, Dg):
 
         sage: A=HM(2,2,'a'); U=HM(2,2,'u'); Dg=HM(2,2,diagonal_matrix(HM(2,'x').list()).list())
         sage: SecondOrderCharpolyII(A, U, Dg)[2].numerator().factor()
-        (a10*u00^2 - a00*u00*u10 + a11*u00*u10 - a01*u10^2)*(a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)*(a10*u01^2 - a00*u01*u11 + a11*u01*u11 - a01*u11^2)*(a01*a10 - a00*a11)*(u01*u10 - u00*u11)^2*u00^3
+        (a10*u00^2 - a00*u00*u10 + a11*u00*u10 - a01*u10^2)*(a10*u01^2 - a00*u01*u11 + a11*u01*u11 - a01*u11^2)*(a01*a10 - a00*a11)
         sage: SecondOrderCharpolyII(A, U, Dg)[2].denominator().factor()
-        (a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)^2*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)^2*(u01*u10 - u00*u11)^2*u00^3
+        (a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)
 
     AUTHORS:
     - Edinah K. Gnang
