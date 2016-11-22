@@ -126,7 +126,9 @@ class HM:
     def __repr__(self):
         return `self.hm`
     def __pow__(self, other):
-        if self.order()==2 and other==-1:
+        if self.order()==2 and self.is_hypercolumn():
+            return vec_exp(self, other)
+        elif self.order()==2 and other==-1:
             return self.inverse()
         else:
             return GeneralHypermatrixHadamardExponent(self,other)
@@ -800,6 +802,9 @@ class HM:
 
     def is_cubical(self):
         return len(Set(self.dimensions()).list())==1
+
+    def is_hypercolumn(self):
+        return Set(self.dimensions()[1:])==Set([1])
 
     def ref(self):
         if self.order()==2:
@@ -7897,6 +7902,28 @@ def mprod(A,B):
     - To Do: 
     """
     return multiplicative_matrix_productHM(A,B)
+
+def vec_exp(x,A):
+    """
+    Outputs the result of the multiplicative product of a
+    matrix by a vector. Does not check that the left input
+    actually is a vector.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: vec_exp(HM(2,1,HM(2,'x').list()), HM(2,2,'a')).printHM()
+        [:, :]=
+        [x0^a00*x1^a01]
+        [x0^a10*x1^a11]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return mprod(A,x)
 
 def linear_solver(A,b,x,v):
     """
