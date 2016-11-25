@@ -8336,6 +8336,36 @@ def RealRow_Gram_Schmidt(M):
         Rs[i,:] = v
     return Rs
 
+def RealRow_Gram_SchmidtHM(Hm):
+    """
+    Implements the naive Gram-Schmidt algorithm for rows.
+    The implementation here is a naive varian of the 
+    implementation above.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Q=RealRow_Gram_SchmidtHM(HM(2,2,'a')); (Q*Q.transpose()).simplify_full().printHM()
+        [:, :]=
+        [                                                  a00^2 + a01^2                                                               0]
+        [                                                              0 (a01^2*a10^2 - 2*a00*a01*a10*a11 + a00^2*a11^2)/(a00^2 + a01^2)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    M=Hm.matrix()
+    # Initialization of the resulting matrix
+    Rs = Matrix(SR, zero_matrix(M.nrows(),M.ncols()))
+    # Initializing the first vector
+    # the implementation assumes that the first vector is non zero
+    Rs[0,:]=M[0,:]
+    for i in range(1,M.nrows()):
+        v = M[i,:]
+        v = v-sum([(v*Rs[j,:].transpose())[0,0]/sum(Rs[j,s]^2 for s in range(Rs.ncols()))*Rs[j,:] for j in range(i) if not sum(Rs[j,s]^2 for s in range(Rs.ncols())).is_zero()])
+        Rs[i,:] = v
+    return HM(M.nrows(),M.ncols(),Rs.transpose().list())
+
 def RealColumn_Gram_Schmidt(M):
     """
     Implements the naive Gram-Schmidt algorithm for the columns.
@@ -8362,6 +8392,37 @@ def RealColumn_Gram_Schmidt(M):
         v = v-sum([(v.transpose()*Rs[:,j])[0,0]/sum(Rs[s,j]^2 for s in range(Rs.nrows()))*Rs[:,j] for j in range(i) if not sum(Rs[s,j]^2 for s in range(Rs.nrows())).is_zero()])
         Rs[:,i] = v
     return Rs
+
+def RealColumn_Gram_SchmidtHM(Hm):
+    """
+    Implements the naive Gram-Schmidt algorithm for the columns.
+    This implementation is a naive variant of the implementation
+    above.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Q=RealColumn_Gram_SchmidtHM(HM(2,2,'a')); (Q.transpose()*Q).simplify_full().printHM()
+        [:, :]=
+        [                                                  a00^2 + a10^2                                                               0]
+        [                                                              0 (a01^2*a10^2 - 2*a00*a01*a10*a11 + a00^2*a11^2)/(a00^2 + a10^2)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    M=Hm.matrix()
+    # Initialization of the symbolic matrix to be used as output
+    Rs = Matrix(SR, zero_matrix(M.nrows(), M.ncols()))
+    # This implementation assumes that the first column is a non zero column.
+    # Initializing the first vector to a unit vector.
+    Rs[:,0]=M[:,0]
+    # Loop removing the bad components for all the remaining vectors
+    for i in range(1, M.ncols()):
+        v = M[:,i]
+        v = v-sum([(v.transpose()*Rs[:,j])[0,0]/sum(Rs[s,j]^2 for s in range(Rs.nrows()))*Rs[:,j] for j in range(i) if not sum(Rs[s,j]^2 for s in range(Rs.nrows())).is_zero()])
+        Rs[:,i] = v
+    return HM(M.nrows(), M.ncols(), Rs.transpose().list())
 
 def All_RealRow_Gram_Schmidt(M):
     """
@@ -8605,6 +8666,37 @@ def GeneralHypermatrixConstrainedOrthogonalizationII(H, X, sz):
         return multiplicative_linear_solver(A, b, v, v)
     else :
         raise ValueError, "The input hypermatrix must be order greater then 1"
+
+def Filmus_GnangConstrainedOrthogonalizationHM(Hm):
+    """
+    Implements Filmus-Gnang orthogonalization procedure.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Q=Filmus_GnangConstrainedOrthogonalizationHM(HM(2,2,'a')); od=Q.order() 
+        sage: apply(Prod,[Q.transpose(od-i) for i in range(od)]).printHM()
+        [:, :]=
+        [1/4*(a00*a10 - a01*a11)^2/x10^2 + 1/4*(a00*a10 - a01*a11)^2/x11^2                                                                 0]
+        [                                                                0                                                     x10^2 + x11^2]
+        sage: Q=Filmus_GnangConstrainedOrthogonalizationHM(HM(3,3,'a')).subs(k0=0,k1=0,k2=0); od=Q.order()
+        sage: apply(Prod,[Q.transpose(od-i) for i in range(od)]).elementwise_product(HM(3,3,'one')-HM(2,3,'kronecker'))
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Hm.is_cubical():
+        # Initialization of the parameters
+        od = Hm.order()
+        sz = Hm.n(0)
+        Sln=GeneralHypermatrixConstrainedOrthogonalizationII(Hm, apply(HM,[sz for i in range(od)]+['x']), sz)
+        return apply(HM,[sz for i in range(od)]+['x']).subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1 ]))
+    else:
+        raise ValueError, "Expected a cubical  hypermatrix"
 
 def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
     """
