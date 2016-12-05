@@ -863,6 +863,205 @@ class HM:
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
+    def matrix_from_rows_and_columns(self, rows, columns):
+        """
+        Return the matrix constructed from self from the given rows and
+        columns.
+    
+        EXAMPLES::
+    
+            sage: A = HM(3,3,range(3^2)); A.printHM()
+            [:, :]=
+            [0 3 6]
+            [1 4 7]
+            [2 5 8]
+            sage: A.matrix_from_rows_and_columns([1], [0,2]).printHM()
+            [:, :]=
+            [1 7]
+            sage: A.matrix_from_rows_and_columns([1,2], [1,2]).printHM()
+            [:, :]=
+            [4 7]
+            [5 8]
+    
+        Note that row and column indices can be reordered or repeated::
+    
+            sage: A.matrix_from_rows_and_columns([2,1], [2,1]).printHM()
+            [:, :]=
+            [8 5]
+            [7 4]
+    
+        For example here we take from row 1 columns 2 then 0 twice, and do
+        this 3 times.
+    
+        ::
+    
+            sage: A.matrix_from_rows_and_columns([1,1,1],[2,0,0]).printHM()
+            [:, :]=
+            [7 1 1]
+            [7 1 1]
+            [7 1 1]
+
+ 
+        AUTHORS:
+    
+        - Edinah K. Gnang
+        """
+        tMp=self.matrix().matrix_from_rows_and_columns(rows, columns)
+        return HM(tMp.nrows(), tMp.ncols(), tMp.transpose().list())
+ 
+    def third_order_hypermatrix_from_rows_columns_and_depths(self, rows, columns, depths):
+        """
+        Return the third order hypermatrix constructed from self from the given rows
+        columns and depths.
+
+        EXAMPLES::
+
+            sage: A = HM(3,3,3,range(3^3)); A.printHM()
+            [:, :, 0]=
+            [0 3 6]
+            [1 4 7]
+            [2 5 8]
+            <BLANKLINE>
+            [:, :, 1]=
+            [ 9 12 15]
+            [10 13 16]
+            [11 14 17]
+            <BLANKLINE>
+            [:, :, 2]=
+            [18 21 24]
+            [19 22 25]
+            [20 23 26]
+            <BLANKLINE>
+            sage: A.third_order_hypermatrix_from_rows_columns_and_depths([1], [0,2], [0,2]).printHM()
+            [:, :, 0]=
+            [1 7]
+            <BLANKLINE>
+            [:, :, 1]=
+            [19 25]
+            <BLANKLINE>
+            sage: A.third_order_hypermatrix_from_rows_columns_and_depths([1,2], [1,2], [1,2]).printHM()
+            [:, :, 0]=
+            [13 16]
+            [14 17]
+            <BLANKLINE>
+            [:, :, 1]=
+            [22 25]
+            [23 26]
+            <BLANKLINE>
+
+        Note that row and column indices can be reordered or repeated::
+
+            sage: A.third_order_hypermatrix_from_rows_columns_and_depths([2,1], [2,1], [2,1]).printHM()
+            [:, :, 0]=
+            [26 23]
+            [25 22]
+            <BLANKLINE>
+            [:, :, 1]=
+            [17 14]
+            [16 13]
+            <BLANKLINE>
+
+        For example here we take from row 1 columns 2 then 0 twice, and do
+        this 3 times.
+
+        ::
+
+            sage: A.third_order_hypermatrix_from_rows_columns_and_depths([1,1,1],[2,0,0],[2,0,0]).printHM()
+            [:, :, 0]=
+            [25 19 19]
+            [25 19 19]
+            [25 19 19]
+            <BLANKLINE>
+            [:, :, 1]=
+            [7 1 1]
+            [7 1 1]
+            [7 1 1]
+            <BLANKLINE>
+            [:, :, 2]=
+            [7 1 1]
+            [7 1 1]
+            [7 1 1]
+            <BLANKLINE>
+
+        AUTHORS:
+
+        - Edinah K. Gnang (2016-12-11)
+        """
+        if self.order()==3:
+            if not type(rows)==list:
+                raise TypeError, "rows must be a list of integers"
+            if not type(columns)==list:
+                raise TypeError, "columns must be a list of integers"
+            if not type(depths)==list:
+                raise TypeError, "depths must be a list of integers"
+            A = HM(len(rows), len(columns), len(depths), 'zero')
+            r = 0 
+            for i in rows:
+                k = 0
+                for j in columns:
+                    t = 0
+                    for l in depths:
+                        A[r,k,t]=self.hm[i][j][l]
+                        t += 1
+                    k += 1
+                r += 1
+            return A
+        else:
+            raise ValueError, "Expected a third order hypermatrix"
+
+    def side_length_subhypermatrices(self, k):
+        r"""
+        Return the list of all side length hypermatrices.
+        Only supported for second and third order hypermatrices. 
+    
+        In the case of matrix The returned list is sorted in lexicographical
+        row major ordering, e.g., if A is a `3 \times 3` matrix then the minors
+        returned are with these rows/columns: [ [0, 1]x[0, 1], [0, 1]x[0, 2], [0, 1]x[1, 2],
+        [0, 2]x[0, 1], [0, 2]x[0, 2], [0, 2]x[1, 2], [1, 2]x[0, 1], [1, 2]x[0, 2], [1, 2]x[1, 2] ].
+    
+        INPUT:
+    
+        - ``k`` -- integer
+    
+        EXAMPLES::
+    
+            sage: A = HM(2,3,[1,2,3,4,5,6]); A.printHM()
+            [:, :]=
+            [1 3 5]
+            [2 4 6]
+            sage: [m.det() for m in A.side_length_subhypermatrices(2)]
+            [-2, -4, -2]
+            sage: [m.det() for m in A.side_length_subhypermatrices(1)]
+            [1, 3, 5, 2, 4, 6]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang (2016-12-11)
+
+        """
+        if self.order() == 2:
+            from sage.combinat.combination import Combinations
+            all_rows = range(self.nrows())
+            all_cols = range(self.ncols())
+            m = []
+            for rows in Combinations(all_rows,k):
+                for cols in Combinations(all_cols,k):
+                    m.append(self.matrix_from_rows_and_columns(rows,cols))
+            return m
+        elif self.order() == 3:
+            from sage.combinat.combination import Combinations
+            all_rows = range(self.nrows())
+            all_cols = range(self.ncols())
+            all_dpts = range(self.ndpts())
+            m = []
+            for rows in Combinations(all_rows,k):
+                for cols in Combinations(all_cols,k):
+                    for dpts in Combinations(all_dpts,k):
+                        m.append(self.third_order_hypermatrix_from_rows_columns_and_depths(rows, cols, dpts))
+            return m
+        else :
+            raise ValueError, "Not supported for hypermatrices of this order"
 
 def MatrixGenerate(nr, nc, c):
     """
