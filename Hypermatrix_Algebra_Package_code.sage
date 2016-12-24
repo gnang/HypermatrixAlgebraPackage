@@ -691,7 +691,7 @@ class HM:
         # Main loop canonicaly listing the elements
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3607,7 +3607,7 @@ def GeneralHypermatrixProduct(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3670,7 +3670,7 @@ def GeneralHypermatrixProductB(*args):
     args = tuple([args[id] for id in range(len(args)-1)])
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3683,7 +3683,7 @@ def GeneralHypermatrixProductB(*args):
             l2 = [B.n(sz) for sz in range(B.order())]
             for j in range(prod(l2)):
                 # Turning the index j into an hypermatrix array location using the decimal encoding trick
-                entry2 = [mod(j,l2[0])]
+                entry2 = [Integer(mod(j,l2[0]))]
                 sm2 = Integer(mod(j,l2[0]))
                 for z in range(len(l2)-1):
                     entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[0:z+1])),l2[z+1])))
@@ -3739,7 +3739,7 @@ def GeneralHypermatrixLogProduct(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3785,7 +3785,7 @@ def GeneralHypermatrixBlockProduct(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3824,7 +3824,7 @@ def GeneralHypermatrixCyclicPermute(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3858,7 +3858,7 @@ def GeneralHypermatrixScale(A,s):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3891,7 +3891,7 @@ def GeneralHypermatrixExponent(A,s):
     Rh = HM(*inpts)
     # Main loop performing the computations of the entries
     for i in range(prod(l)):
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3929,7 +3929,7 @@ def GeneralHypermatrixBaseExponent(A,s):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -3964,7 +3964,7 @@ def GeneralHypermatrixLogarithm(A,s=e):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4002,7 +4002,7 @@ def GeneralHypermatrixApplyMap(A, phi):
     Rh = HM(*inpts)
     # Main loop performing the computations of the entries
     for i in range(prod(l)):
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4040,7 +4040,7 @@ def GeneralHypermatrixConjugate(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4076,7 +4076,7 @@ def GeneralHypermatrixExpand(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4115,7 +4115,7 @@ def GeneralHypermatrixFactor(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4149,7 +4149,7 @@ def GeneralHypermatrixSimplifyFull(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4184,7 +4184,7 @@ def GeneralHypermatrixSimplify(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4219,7 +4219,7 @@ def GeneralHypermatrixCanonicalizeRadical(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4255,7 +4255,7 @@ def GeneralHypermatrixNumerical(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4290,7 +4290,7 @@ def GeneralHypermatrixSubstitute(A, Dct):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4326,7 +4326,7 @@ def GeneralHypermatrixSubstituteN(A, Dct):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4366,7 +4366,7 @@ def GeneralHypermatrixSubstituteII(A, *args, **kwds):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4397,7 +4397,7 @@ def GeneralHypermatrixCopy(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4428,7 +4428,7 @@ def GeneralHypermatrixAppendIndex(A,indx):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4461,7 +4461,7 @@ def List2Hypermatrix(*args):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4502,7 +4502,7 @@ def GeneralHypermatrixAdd(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4542,7 +4542,7 @@ def GeneralHypermatrixHadamardProduct(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4581,7 +4581,7 @@ def GeneralHypermatrixHadamardExponent(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4617,7 +4617,7 @@ def GeneralHypermatrixKroneckerDelta(od, sz):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4657,7 +4657,7 @@ def GeneralHypermatrixMainDiag(od, Lv):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4695,7 +4695,7 @@ def GeneralHypermatrixKroneckerDeltaL(od, sz):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4822,7 +4822,7 @@ def GeneralOrthogonalHypermatrixU(od):
     l = [Q.n(i) for i in range(Q.order())]
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -4876,7 +4876,7 @@ def GeneralOrthogonalHypermatrix(od):
         l = [Q.n(i) for i in range(Q.order())]
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -5011,7 +5011,7 @@ def DFT_image_resizer(sz, dm):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if mod(sz,dm) == 0:
+    if Integer(mod(sz,dm)) == 0:
         # Initializing the identity matrix of the appropriate size
         Idm = identity_matrix(Integer(sz/dm))
         # Computing the Kronecker product with the hadamard 2x2 matrix
@@ -5202,7 +5202,7 @@ def ZeroPadding(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -5406,7 +5406,7 @@ def HypermatrixPseudoInversePairsUnsplit(A,B):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -5460,7 +5460,7 @@ def GenerateRandomHypermatrix(*l):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -5492,7 +5492,7 @@ def GenerateRandomIntegerHypermatrix(*l):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -5524,7 +5524,7 @@ def GenerateRandomBinaryHypermatrix(*l):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -5533,8 +5533,6 @@ def GenerateRandomBinaryHypermatrix(*l):
         return Rh
     else :
         raise ValueError, "The Dimensions must all be non-zero."
-
-
 
 def GeneralStochasticHypermatrix(t, od):
     """
@@ -5567,7 +5565,7 @@ def GeneralStochasticHypermatrix(t, od):
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry = [mod(i,l[0])]
+                entry = [Integer(mod(i,l[0]))]
                 sm = Integer(mod(i,l[0]))
                 for k in range(len(l)-1):
                     entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -5861,7 +5859,7 @@ def GeneralHypermatrixKroneckerSum(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(la)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,la[0])]
+            entry = [Integer(mod(i,la[0]))]
             sm = Integer(mod(i,la[0]))
             for k in range(len(la)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(la[0:k+1])),la[k+1])))
@@ -5872,7 +5870,7 @@ def GeneralHypermatrixKroneckerSum(A,B):
         # Main loop performing the transposition of the entries
         for j in range(prod(lb)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(j,lb[0])]
+            entry = [Integer(mod(j,lb[0]))]
             sm = Integer(mod(j,lb[0]))
             for k in range(len(lb)-1):
                 entry.append(Integer(mod(Integer((j-sm)/prod(lb[0:k+1])),lb[k+1])))
@@ -5905,7 +5903,7 @@ def GeneralHypermatrixKroneckerProduct(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(la)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entrya = [mod(i,la[0])]
+            entrya = [Integer(mod(i,la[0]))]
             sma = Integer(mod(i,la[0]))
             for ka in range(len(la)-1):
                 entrya.append(Integer(mod(Integer((i-sma)/prod(la[0:ka+1])),la[ka+1])))
@@ -5913,7 +5911,7 @@ def GeneralHypermatrixKroneckerProduct(A,B):
             # Main loop performing the transposition of the entries
             for j in range(prod(lb)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entryb = [mod(j,lb[0])]
+                entryb = [Integer(mod(j,lb[0]))]
                 smb = Integer(mod(j,lb[0]))
                 for kb in range(len(lb)-1):
                     entryb.append(Integer(mod(Integer((j-smb)/prod(lb[0:kb+1])),lb[kb+1])))
@@ -6028,7 +6026,7 @@ def GeneralDualHypermatrixProductB(*args):
     args = tuple([args[id] for id in range(len(args)-1)])
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -6041,7 +6039,7 @@ def GeneralDualHypermatrixProductB(*args):
             l2 = [B.n(sz) for sz in range(B.order())]
             for j in range(prod(l2)):
                 # Turning the index j into an hypermatrix array location using the decimal encoding trick
-                entry2 = [mod(j,l2[0])]
+                entry2 = [Integer(mod(j,l2[0]))]
                 sm2 = Integer(mod(j,l2[0]))
                 for z in range(len(l2)-1):
                     entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[0:z+1])),l2[z+1])))
@@ -6077,7 +6075,7 @@ def PathAdjcencyHypermatrix(A, pthl):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [mod(i,l[0])]
+            entry = [Integer(mod(i,l[0]))]
             sm = Integer(mod(i,l[0]))
             for k in range(len(l)-1):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -6429,7 +6427,7 @@ def DodgsonCondensation(A):
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry=[mod(i,l[0])]
+                entry=[Integer(mod(i,l[0]))]
                 sm=Integer(mod(i,l[0]))
                 for k in range(len(l)-1):
                     entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -6438,7 +6436,7 @@ def DodgsonCondensation(A):
                 Bl=[]
                 l2=[2 for j in range(A.order())]
                 for j in range(prod(l2)):
-                    ent=[mod(j,l2[0])]
+                    ent=[Integer(mod(j,l2[0]))]
                     ms=Integer(mod(j,l2[0]))
                     for t in range(len(l2)-1):
                         ent.append(Integer(mod(Integer((j-ms)/prod(l2[0:t+1])),l2[t+1])))
@@ -6451,7 +6449,7 @@ def DodgsonCondensation(A):
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry = [mod(i,l[0])]
+                entry = [Integer(mod(i,l[0]))]
                 sm = Integer(mod(i,l[0]))
                 for k in range(len(l)-1):
                     entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -6460,7 +6458,7 @@ def DodgsonCondensation(A):
                 Bl=[]
                 l2=[2 for j in range(A.order())]
                 for j in range(prod(l2)):
-                    ent=[mod(j,l2[0])]
+                    ent=[Integer(mod(j,l2[0]))]
                     ms=Integer(mod(j,l2[0]))
                     for t in range(len(l2)-1):
                         ent.append(Integer(mod(Integer((j-ms)/prod(l2[0:t+1])),l2[t+1])))
@@ -7018,7 +7016,7 @@ def GeneralHypermatrixLogProductTermList(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [mod(i,l[0])]
+        entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
@@ -7211,7 +7209,7 @@ def gaussian_elimination(Cf, rs):
                 Tb=b[i:,:]
                 # Initializing the cyclic shift permutation matrix
                 Id=identity_matrix(Ta.nrows())
-                P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P=sum([Id[:,k]*Id[Integer(mod(k+1,Ta.nrows())),:] for k in range(Ta.nrows())])
                 Ta=P*Ta; Tb=P*Tb
                 A[i:,:]=Ta
                 b[i:,:]=Tb
@@ -7291,7 +7289,7 @@ def gaussian_eliminationHM(Cf, rs):
                 #Id=identity_matrix(Ta.nrows())
                 Id=HM(2, Ta.n(0), 'kronecker')
                 #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
                 #A[i:,:]=Ta
                 for i0 in range(Ta.n(0)):
@@ -7366,7 +7364,7 @@ def gaussian_eliminationHMII(Cf, rs):
                 Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -7442,7 +7440,7 @@ def gaussian_eliminationHMIII(Cf, rs):
                 Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -7450,19 +7448,20 @@ def gaussian_eliminationHMIII(Cf, rs):
                 for i0 in range(Tb.n(0)):
                     for j0 in range(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
-            # Performing the row operations.
-            cf1=A[i,j]
-            for r in range(i+1,A.nrows()):
-                # Taking care of the zero row
-                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
-                    r=r+1
-                else:
-                    # Initialization of the coefficient
-                    cf2=A[r,j]
-                    for j0 in range(b.n(1)):
-                        b[r,j0]=-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]
-                    for j0 in range(A.n(1)):
-                        A[r,j0]=-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]
+            if A.n(0)-i-1 > 0 and not (HM(A.n(0)-i-1, 1, [A[i0,j] for i0 in range(i+1,A.n(0))]).is_zero() and j <= A.ncols()-1):
+                # Performing the row operations.
+                cf1=A[i,j]
+                for r in range(i+1,A.nrows()):
+                    # Taking care of the zero row
+                    if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                        r=r+1
+                    else:
+                        # Initialization of the coefficient
+                        cf2=A[r,j]
+                        for j0 in range(b.n(1)):
+                            b[r,j0]=-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]
+                        for j0 in range(A.n(1)):
+                            A[r,j0]=-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]
         # Incrementing the row and column index.
         i=i+1; j=j+1
     return [A,b]
@@ -7512,7 +7511,7 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
                 Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -7849,7 +7848,7 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
                 Tb=b[i:,:]
                 # Initializing the cyclic shift permutation matrix
                 Id=identity_matrix(Ta.nrows())
-                P =sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P =sum([Id[:,k]*Id[Integer(mod(k+1,Ta.nrows())),:] for k in range(Ta.nrows())])
                 Ta=P*Ta; Tb=P*Tb
                 A[i:,:]=Ta
                 b[i:,:]=Tb 
@@ -7952,7 +7951,7 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
                 Tb=b[i:,:]
                 # Initializing the cyclic shift permutation matrix
                 Id=identity_matrix(Ta.nrows())
-                P =sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P =sum([Id[:,k]*Id[Integer(mod(k+1,Ta.nrows())),:] for k in range(Ta.nrows())])
                 Ta=P*Ta; Tb=P*Tb
                 A[i:,:]=Ta
                 b[i:,:]=Tb 
@@ -10148,7 +10147,7 @@ def sylvesterian_elimination(EqL, VrbL, c):
                 Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[mod(k+1,Ta.n(0)),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(i,Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -10312,4 +10311,212 @@ def Form2Hypermatrix(f, sz, od, Vrbls):
             Tmplst=Tmplst+[Vrbls[z],entry[z]]
         Rh[tuple(entry)]=f.diff(*Tmplst).subs([v==0 for v in Vrbls])
     return Rh
+
+def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
+    """
+    Outputs the row echelon form of the input coefficient third order hypermatrices 
+    and the corresponding right hand side. This implementation assumes that the
+    inputs are third order hypermatrices whose entries are themselves second order
+    hypermatrices (square matrices to be precise). All entries of Cf1 are matrices
+    of the size m x m and all entries of Cf2 are matrices of the size n x n.
+    Consequently the enntries of Vx and rs are all m x n matrices.
+
+    EXAMPLES:
+    ::
+
+        
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
+        sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
+        sage: Cf1=HM([[[A00, A10, A20], [A01, A11, A21]]])
+        sage: B00=HM(2,HM(2,'g').list(),'diag'); B01=HM(2,HM(2,'h').list(),'diag'); B02=HM(2,HM(2,'i').list(),'diag')
+        sage: B10=HM(2,HM(2,'j').list(),'diag'); B11=HM(2,HM(2,'k').list(),'diag'); B12=HM(2,HM(2,'l').list(),'diag')
+        sage: Cf2=HM([[[B00, B01, B02]], [[B10, B11, B12]]]) 
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
+        sage: [A, X, B, C]=general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [a0  0  0  0  0  0  0  0]
+        [ 0 a1  0  0  0  0  0  0]
+        [ 0  0 a0  0  0  0  0  0]
+        [ 0  0  0 a1  0  0  0  0]
+        [ 0  0  0  0 a0  0  0  0]
+        [ 0  0  0  0  0 a1  0  0]
+        [ 0  0  0  0  0  0 a0  0]
+        [ 0  0  0  0  0  0  0 a1]
+        sage: A00=HM(2,2,'a'); A01=HM(2,2,'b'); A10=HM(2,2,'c')
+        sage: A11=HM(2,2,'d'); A20=HM(2,2,'e'); A21=HM(2,2,'f')
+        sage: Cf1=HM([[[A00, A10, A20], [A01, A11, A21]]])
+        sage: B00=HM(2,2,'g'); B01=HM(2,2,'h'); B02=HM(2,2,'i')
+        sage: B10=HM(2,2,'j'); B11=HM(2,2,'k'); B12=HM(2,2,'l')
+        sage: Cf2=HM([[[B00, B01, B02]], [[B10, B11, B12]]]) 
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
+        sage: [A, X, B, C]=general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [a00 a01   0   0   0   0   0   0]
+        [a10 a11   0   0   0   0   0   0]
+        [  0   0 a00 a01   0   0   0   0]
+        [  0   0 a10 a11   0   0   0   0]
+        [  0   0   0   0 a00 a01   0   0]
+        [  0   0   0   0 a10 a11   0   0]
+        [  0   0   0   0   0   0 a00 a01]
+        [  0   0   0   0   0   0 a10 a11]
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
+        sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
+        sage: Cf1=HM([[[A00, HM(2,2,'zero'), HM(2,2,'zero')], [A01, A11, HM(2,2,'zero')]]])
+        sage: B00=HM(2,HM(2,'g').list(),'diag'); B01=HM(2,HM(2,'h').list(),'diag'); B02=HM(2,HM(2,'i').list(),'diag')
+        sage: B10=HM(2,HM(2,'j').list(),'diag'); B11=HM(2,HM(2,'k').list(),'diag'); B12=HM(2,HM(2,'l').list(),'diag')
+        sage: Cf2=HM([[[B00, HM(2,2,'zero'), HM(2,2,'zero')]], [[B10, B11, HM(2,2,'zero')]]]) 
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
+        sage: [A, X, B, C]=general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [a0  0]
+        [ 0 a1]
+
+ 
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do:
+    """
+    if Cf1.n(1)==Vx.n(2) and Vx.n(2)==Cf2.n(0) and Cf1.n(2)==Cf2.n(2) and 1==Vx.n(0) and Vx.n(0)==Vx.n(1):
+        # Initialization of the variable index
+        vindx=0
+        # Initializing copies of the input hypermatrices.
+        A=Cf1.copy(); X=Vx.copy(); B=Cf2.copy(); C=rs.copy()
+        # Initialization of the row and column index
+        i=0; j=0
+        while i < A.n(2) and j < A.n(1):
+            while (HM(1,1,A.n(2)-i,[A[0,j,i0] for i0 in range(i,A.n(2))]).is_zero() and j < A.n(1)-1) or (HM(1,1,B.n(0)-i,[B[j,0,i0] for i0 in range(i,B.n(0))]).is_zero() and j < B.n(0)-1):
+                # Incrementing the column index
+                j=j+1
+            if (HM(1,A.n(1),A.n(2)-i,[A[0,j0,i0] for i0 in range(i,A.n(2)) for j0 in range(A.n(1))]).is_zero()==False) and (HM(B.n(0),1,B.n(2)-i,[B[j0,0,i0] for i0 in range(i,B.n(2)) for j0 in range(B.n(0))]).is_zero()==False) and j < A.n(1):
+                while A[0,j,i].is_zero() or B[j,0,i].is_zero():
+                    # Initialization of the matrices
+                    Ta=HM(A.n(2)-i,A.n(1),[A[0,j0,i0] for j0 in range(A.n(1)) for i0 in range(i,A.n(2))])
+                    Tb=HM(B.n(2)-i,B.n(0),[B[j0,0,i0] for j0 in range(B.n(0)) for i0 in range(i,B.n(2))])
+                    Tc=HM(C.n(2)-i,1,[C[0,0,i0] for i0 in range(i,C.n(2))])
+                    # Inflating the entries of the identity matrix
+                    idta=HM(2, A[0,0,0].n(0),'kronecker')
+                    Ida=HM(2, Ta.n(0), 'kronecker')
+                    idtb=HM(2, B[0,0,0].n(0),'kronecker')
+                    Idb=HM(2, Tb.n(0), 'kronecker')
+                    for u in range(Ta.n(0)):
+                        for v in range(Ta.n(1)):
+                            Ida[u,v]=idta*Ida[u,v]
+                    for u in range(Tb.n(0)):
+                        for v in range(Tb.n(1)):
+                            Idb[u,v]=idtb*Idb[u,v]
+                    # Initialization of the cyclic shift permutation matrix
+                    Pa=sum([HM(Ta.n(0),1,[Ida[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Ida[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                    Pb=sum([HM(Tb.n(0),1,[Idb[i0,k] for i0 in range(Tb.n(0))])*HM(1,Tb.n(0),[Idb[Integer(mod(k+1,Tb.n(0))),j0] for j0 in range(Tb.n(0))]) for k in range(Tb.n(0))])
+                    # Performing the shift
+                    Ta=Pa*Ta; Tb=Pb*Tb; Tc=Pa*Tc
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            A[0,j0,i+i0]=Ta[i0,j0]
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            B[j0,0,i+i0]=Tb[i0,j0]
+                    for i0 in range(b.n(0)):
+                        C[0,0,i+i0]=Tc[i0,0]
+                # Here is we mean business
+                if (A.n(2)-i-1> 0) and not ((HM(1,1,A.n(2)-i-1,[A[0,j,i0] for i0 in range(i+1,A.n(2))]).is_zero() and j <= A.n(1)-1) and (HM(1,1,B.n(2)-i-1,[B[j,0,i0] for i0 in range(i+1,B.n(2))]).is_zero() and j <= B.n(0)-1)):
+                    # Performing the row operations.
+                    cf1a = A[0,j,i]; cf1b = B[j,0,i]
+                    # Updating the variables
+                    for t in range(X.n(2)):
+                        X[0,0,t]=HM(2,2,'kronecker').tensor_product(X[0,0,t])
+                    # Updating the right hand side
+                    for r in range(i+1,A.n(2)):
+                        # Taking care of the zero row
+                        if (HM(1,A.n(1),1,[A[0,j0,r] for j0 in range(A.n(1))]).is_zero()) or (HM(B.n(1),1,1,[B[j0,0,r] for j0 in range(B.n(0))]).is_zero()):
+                            r=r+1
+                        else:
+                            # Initialization of the coefficient
+                            cf2a=A[0,j,r]; cf2b=B[j,0,r]
+                            # Updating the right hand side.
+                            n0=C[0,0,0].n(0); n1=C[0,0,0].n(1)
+                            U=HM(n0,n1,[var('z'+str(vindx+t)) for t in range(n0*n1)])
+                            # Incrementing the free variable index
+                            vindx=(n0*n1)+vindx
+                            C[0,0,r]=(U-(cf2a*cf1a^(-1))*C[0,0,i]*(cf1b^(-1)*cf2b)).block_sum(C[0,0,r]-U)
+                            # Updating the constraints
+                            for j0 in range(A.n(1)):
+                                A[0,j0,r]=(-(cf2a*cf1a^(-1))*A[0,j0,i]).block_sum(A[0,j0,r])
+                            for j0 in range(B.n(0)):
+                                B[j0,0,r]=(B[j0,0,i]*(cf1b^(-1)*cf2b)).block_sum(B[j0,0,r])
+                    for r in range(i+1):
+                        # Updating the other entries.
+                        for j0 in range(A.n(1)):
+                            A[0,j0,r]=HM(2,2,'kronecker').tensor_product(A[0,j0,r])
+                        for j0 in range(B.n(0)):
+                            B[j0,0,r]=HM(2,2,'kronecker').tensor_product(B[j0,0,r])
+                        C[0,0,r]=HM(2,2,'kronecker').tensor_product(C[0,0,r])
+            # Incrementing the row and column index
+            i=i+1; j=j+1
+        return [A, X, B, C]
+    else:
+        raise ValueError, "Incorrect inputs"
+
+def general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
+    """
+    Outputs the row echelon form of the input coefficient third order hypermatrices 
+    and the corresponding right hand side. This implementation assumes that the
+    inputs are third order hypermatrices whose entries are themselves second order
+    hypermatrices (square matrices to be precise). All entries of Cf1 are matrices
+    of the size m x m and all entries of Cf2 are matrices of the size n x n.
+    Consequently the enntries of Vx and rs are all m x n matrices.
+
+    EXAMPLES:
+    ::
+
+        
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
+        sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
+        sage: Cf1=HM([[[A00, HM(2,2,'zero'), HM(2,2,'zero')], [A01, A11, HM(2,2,'zero')]]])
+        sage: B00=HM(2,HM(2,'g').list(),'diag'); B01=HM(2,HM(2,'h').list(),'diag'); B02=HM(2,HM(2,'i').list(),'diag')
+        sage: B10=HM(2,HM(2,'j').list(),'diag'); B11=HM(2,HM(2,'k').list(),'diag'); B12=HM(2,HM(2,'l').list(),'diag')
+        sage: Cf2=HM([[[B00, HM(2,2,'zero'), HM(2,2,'zero')]], [[B10, B11, HM(2,2,'zero')]]]) 
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
+        sage: [A, X, B, C]=general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A
+        [[[[[a0, 0], [0, a1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[d0, 0], [0, d1]], [[0, 0], [0, 0]]]]]
+        sage: C
+        [[[[[m00 - b0*j0*n00/(d0*k0), m01 - b0*j1*n01/(d0*k1)], [m10 - b1*j0*n10/(d1*k0), m11 - b1*j1*n11/(d1*k1)]], [[n00, n01], [n10, n11]], [[p00, p01], [p10, p11]]]]]
+
+
+ 
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do:
+    """
+    [A, X, B, C]=general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+    # Initialization of the row and column index
+    i=A.n(2)-1; j=0
+    while i > 0 or j > 0:
+        if HM(1,A.n(1),1,[A[0,j0,i] for j0 in range(A.n(1))]).is_zero() or HM(B.n(0),1,1,[B[j0,0,i] for j0 in range(B.n(0))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while A[0,j,i].is_zero() or B[j,0,i].is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # Performing row operations
+            cf1a=A[0,j,i]; cf1b=B[j,0,i]
+            for r in range(i-1,-1,-1):
+                cf2a=A[0,j,r]; cf2b=B[j,0,r]
+                # Updating the right hand side
+                C[0,0,r]=-(cf2a*cf1a^(-1))*C[0,0,i]*(cf1b^(-1)*cf2b) + C[0,0,r]
+                # Updating the coefficients
+                for j0 in range(A.n(1)):
+                    A[0,j0,r]=-(cf2a*cf1a^(-1))*A[0,j0,i] + A[0,j0,r]
+                for j0 in range(B.n(0)):
+                    B[j0,0,r]=B[j0,0,i]*(cf1b^(-1)*cf2b) + B[j0,0,r]
+            i=i-1; j=0
+    return [A, X, B, C]
  
