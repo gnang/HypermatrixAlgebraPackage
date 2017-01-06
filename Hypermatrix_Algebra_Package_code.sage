@@ -2775,8 +2775,9 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
     and a list of variables and outputs matrix
     and the right hand side vector associate
     with the matrix formulation of the constraints.
-    this implementation allows for the lefthand side not to be specified
-    but input variables must not be monomials.
+    this implementation allows for the lefthand side
+    not to be specified but input variables must not
+    be monomials.
 
     EXAMPLES:
 
@@ -2804,6 +2805,46 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
             Tmp=Set(VrbLst).difference(Set([VrbLst[c]])).list()
             A[r,c]=CnstrLst[r].subs([f==0 for f in Tmp]).coefficient(VrbLst[c])
     b=-Matrix(len(CnstrLst),1,CnstrLst).subs([f==0 for f in VrbLst])
+    return [A,b]
+
+def ConstraintFormatorIVHM(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    this implementation allows for the lefthand side
+    not to be specified but input variables must not
+    be monomials.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y = var('x,y')
+        sage: CnstrLst = [x+y-1, x-y-2]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = ConstraintFormatorIVHM(CnstrLst, VrbLst)
+        sage: A.printHM()
+        [:, :]=
+        [ 1  1]
+        [ 1 -1]
+        sage: b.printHM()
+        [:, :]=
+        [1]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=HM(len(CnstrLst),len(VrbLst),'zero')
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            Tmp=Set(VrbLst).difference(Set([VrbLst[c]])).list()
+            A[r,c]=CnstrLst[r].subs([f==0 for f in Tmp]).coefficient(VrbLst[c])
+    b=-HM(len(CnstrLst),1,CnstrLst).subs([f==0 for f in VrbLst])
     return [A,b]
 
 def MonomialConstraintFormator(L, X, MnL, Y):
