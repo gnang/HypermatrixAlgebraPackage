@@ -797,6 +797,14 @@ class HM:
         else:
             return False
 
+    def is_unit(self):
+        if self.n(0)==self.n(1) and self.n(0)==1 and self.list()==[1]:
+            return True
+        elif self.order()==2 and self.n(0)==self.n(1) and self==HM(self.order(),self.n(1),'kronecker'):
+            return True
+        else:
+            return False
+
     def is_symmetric(self):
         return (self-self.transpose()).is_zero()
 
@@ -7385,6 +7393,14 @@ def gaussian_eliminationHMII(Cf, rs):
         [:, :]=
         [              b00]
         [a10*b00 - a00*b10]
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,'b')
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,2,'kronecker'), Tb[1,0]*HM(2,2,'kronecker')])
+        sage: [A,b]=gaussian_eliminationHMII(Ha,Hb)
+        sage: A
+        [[[[a00, 0], [0, a00]], [[a01, 0], [0, a01]]], [[[0, 0], [0, 0]], [[a01*a10 - a00*a11, 0], [0, a01*a10 - a00*a11]]]]
+        sage: b
+        [[[[b00, 0], [0, b00]]], [[[a10*b00 - a00*b10, 0], [0, a10*b00 - a00*b10]]]]
 
 
     AUTHORS:
@@ -7631,7 +7647,7 @@ def gauss_jordan_elimination(Cf,rs):
 def gauss_jordan_eliminationHM(Cf,rs):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
-    This implementation is sqew field friendly as illustrated in some of the examples
+    This implementation is skew field friendly as illustrated in some of the examples
     below. We do not assume that the input entries commute. 
 
 
@@ -7711,6 +7727,16 @@ def gauss_jordan_eliminationHMII(Cf,rs):
         [:, :]=
         [(a10*b00 - a00*b10)*a01 - (a01*a10 - a00*a11)*b00]
         [                                a10*b00 - a00*b10] 
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,'b')
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,2,'kronecker'), Tb[1,0]*HM(2,2,'kronecker')])
+        sage: [A,b]=gauss_jordan_eliminationHMII(Ha,Hb)
+        sage: A
+        [[[[-(a01*a10 - a00*a11)*a00, 0], [0, -(a01*a10 - a00*a11)*a00]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[a01*a10 - a00*a11, 0], [0, a01*a10 - a00*a11]]]]
+        sage: b
+        [[[[(a10*b00 - a00*b10)*a01 - (a01*a10 - a00*a11)*b00, 0], [0, (a10*b00 - a00*b10)*a01 - (a01*a10 - a00*a11)*b00]]], [[[a10*b00 - a00*b10, 0], [0, a10*b00 - a00*b10]]]]
+
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -7808,7 +7834,7 @@ def gauss_jordan_eliminationHMIII(Cf,rs):
     """
     Outputs the reduced row echelon form of the input second order hypermatrix and the right hand side.
     does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
-    The difference with the previous implementation is the fact that the row linear combination
+    The difference with gauss_jordan_eliminationHMII is the fact that the row linear combination
     operations are performed in such a way as to not change the absolute value of the determinant.
     
 
@@ -10560,4 +10586,397 @@ def general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
                     B[j0,0,r]=B[j0,0,i]*(cf1b^(-1)*cf2b) + B[j0,0,r]
             i=i-1; j=0
     return [A, X, B, C]
+
+def ThirdOrderDepthCyclicShift(A, s=1):
+    """ 
+    This function performs a cyclic shift to the order of
+    the depth slices of an input third order hypermatrix A.
+
+    EXAMPLES:
+    ::
+
+  
+        sage: A = HM(3,3,3,'a'); ThirdOrderDepthCyclicShift(A).printHM()
+        [:, :, 0]= 
+        [a002 a012 a022]
+        [a102 a112 a122]
+        [a202 a212 a222]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a000 a010 a020]
+        [a100 a110 a120]
+        [a200 a210 a220]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a001 a011 a021]
+        [a101 a111 a121]
+        [a201 a211 a221]
+        <BLANKLINE>
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the output hypermatrix to be filled
+    B = apply(HM, A.dimensions()+['zero'])
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            for k in range(A.n(2)):
+                B[i,j,k]=A[i,j,Integer(mod(k-s,A.n(2)))]
+    return B
+
+def hadamard_gaussian_eliminationHM(Cf, rs):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
+    This implementation tacitly assumes that the entries commute. As a result this implementation
+    is NOT skew field friendly. Furthermore the implementation assumes that the inputs are
+    second order hypermatrices whose entries are themselves second order hypermatrices.
  
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: Ha=HM(2,2,[HM(2,2,'a'), HM(2,2,'c'), HM(2,2,'b'), HM(2,2,'d')])
+        sage: Hb=HM(2,1,[HM(2,2,'f'), HM(2,2,'g')])
+        sage: [A,b]=hadamard_gaussian_eliminationHM(Ha,Hb)
+        sage: A
+        [[[[a00, a01], [a10, a11]], [[b00, b01], [b10, b11]]], [[[0, 0], [0, 0]], [[b00*c00 - a00*d00, b01*c01 - a01*d01], [b10*c10 - a10*d10, b11*c11 - a11*d11]]]]
+        sage: b
+        [[[[f00, f01], [f10, f11]]], [[[c00*f00 - a00*g00, c01*f01 - a01*g01], [c10*f10 - a10*g10, c11*f11 - a11*g11]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy(); b=rs.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; Tb=P*Tb
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i+i0,j0]=Tb[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=cf2.elementwise_product(b[i,j0])-cf1.elementwise_product(b[r,j0])
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=cf2.elementwise_product(A[i,j0])-cf1.elementwise_product(A[r,j0])
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A,b]
+
+def hadamard_gauss_jordan_eliminationHM(Cf,rs):
+    """
+    Outputs the reduced row echelon form of the input matrix and the right hand side.
+    This implementation assumes that the input entries commute and is therefore NOT
+    skew field friendly. Furthermore the implementation assumes that the inputs are
+    second order hypermatrices whose entries are themselves second order hypermatrices.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: Ha=HM(2,2,[HM(2,2,'a'), HM(2,2,'c'), HM(2,2,'b'), HM(2,2,'d')])
+        sage: Hb=HM(2,1,[HM(2,2,'f'), HM(2,2,'g')])
+        sage: [A,b]=hadamard_gauss_jordan_eliminationHM(Ha,Hb)
+        sage: A
+        [[[[-(b00*c00 - a00*d00)*a00, -(b01*c01 - a01*d01)*a01], [-(b10*c10 - a10*d10)*a10, -(b11*c11 - a11*d11)*a11]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[b00*c00 - a00*d00, b01*c01 - a01*d01], [b10*c10 - a10*d10, b11*c11 - a11*d11]]]]
+        sage: b
+        [[[[(c00*f00 - a00*g00)*b00 - (b00*c00 - a00*d00)*f00, (c01*f01 - a01*g01)*b01 - (b01*c01 - a01*d01)*f01], [(c10*f10 - a10*g10)*b10 - (b10*c10 - a10*d10)*f10, (c11*f11 - a11*g11)*b11 - (b11*c11 - a11*d11)*f11]]], [[[c00*f00 - a00*g00, c01*f01 - a01*g01], [c10*f10 - a10*g10, c11*f11 - a11*g11]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b] = hadamard_gaussian_eliminationHM(Cf,rs)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            cf1=A[i,j]
+            for r in range(i-1,-1,-1):
+                #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                cf2=A[r,j]
+                for j0 in range(b.n(1)):
+                    b[r,j0]=cf2.elementwise_product(b[i,j0])-cf1.elementwise_product(b[r,j0])
+                #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+                for j0 in range(A.n(1)):
+                    A[r,j0]=cf2.elementwise_product(A[i,j0])-cf1.elementwise_product(A[r,j0])
+            i=i-1; j=0
+    return [A,b]
+
+def list_elementwise_product(L):
+    """
+    Procedure for computing Hypermatrix Hadamard products of list elementwise.
+
+    EXAMPLES:
+
+    ::
+
+        sage: A=HM(2,2,'a'); B=HM(2,2,'b'); C=HM(2,2,'c')
+        sage: list_elementwise_product([A,B,C]).printHM()
+        [:, :]=
+        [a00*b00*c00 a01*b01*c01]
+        [a10*b10*c10 a11*b11*c11]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrix
+    Tmp=L[0]
+    for h in L[1:]:
+        Tmp=Tmp.elementwise_product(h)  
+    return Tmp
+
+def GeneralHypermatrixProduct_with_elementwise_product(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner product of the input hypermatrices
+    whose entries are themselves hypermatrices of the same
+    size. The BM product is performed as usual with the 
+    exception that we perform elementwise product performing
+    elementwise product of the entries
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: A=HM(2,2,[HM(2,2,'a'),HM(2,2,'c'),HM(2,2,'b'),HM(2,2,'d')])
+        sage: B=HM(2,2,[HM(2,2,'e'),HM(2,2,'f'),HM(2,2,'g'),HM(2,2,'h')])
+        sage: GeneralHypermatrixProduct_with_elementwise_product(A,B)[0,0].printHM()
+        [:, :]=
+        [a00*e00 + b00*f00 a01*e01 + b01*f01]
+        [a10*e10 + b10*f10 a11*e11 + b11*f11]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [(args[i]).n(i) for i in range(len(args))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the assignement
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(args)<2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(args) >= 2:
+            Rh[tuple(entry)]=sum([list_elementwise_product([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
+    return Rh
+
+def hadamard_linear_solverHM(A,b,x,v):
+    """
+    Outputs the Reduced Row Echelon Form of the input matrix and the right hand side.
+    where A denotes the input matrix, b denotes the right-hand side vector, x denotes
+    the variable vector coming from the original system of equations, and v denotes 
+    the free variable vector.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: [A,b]=ConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
+        sage: Mx=HM(A.ncols(),1,[HM(1,1,[var('x'+str(i))]) for i in range(A.ncols())])
+        sage: Mv=HM(A.ncols(),1,[HM(1,1,[var('t'+str(i))]) for i in range(A.ncols())])
+        sage: Ha=HM(A.n(0),A.n(1),'zero'); Hb=HM(b.n(0),b.n(1),'zero')
+        sage: for i in range(A.n(0)):
+        ....:     Hb[i,0]=HM(1,1,[b[i,0]])
+        ....:     for j in range(A.n(1)):
+        ....:         Ha[i,j]=HM(1,1,[A[i,j]])
+        ....:
+        sage: Sln=hadamard_linear_solverHM(Ha,Hb,Mx,Mv); Sln
+        [[[[x0]], [[a00 - a10 + a11 - t3]]],
+         [[[x1]], [[a11 - t3]]],
+         [[[x2]], [[a10 - a11 + t3]]],
+         [[[0]], [[-a00 + a01 + a10 - a11]]]] 
+        sage: A=HM(2,2,'a'); b=HM(2,1,HM(2,'b').list()); X=HM(2,1,HM(2,'x').list())
+        sage: for i in range(2):
+        ....:     b[i,0]=HM(1,1,[b[i,0]]); X[i,0]=HM(1,1,[X[i,0]])
+        ....:     for j in range(2):
+        ....:         A[i,j]=HM(1,1,[A[i,j]])
+        ....:
+        sage: Sln=hadamard_linear_solverHM(A,b,X,X); Sln
+        [[[[-(a01*a10 - a00*a11)*a00*x0]],
+          [[(a10*b0 - a00*b1)*a01 - (a01*a10 - a00*a11)*b0]]],
+         [[[(a01*a10 - a00*a11)*x1]], [[a10*b0 - a00*b1]]]]
+        
+    AUTHORS:
+    - Initial implementation by Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=hadamard_gauss_jordan_eliminationHM(A,b)
+    Id1=HM(2,Ap.n(0),'kronecker')
+    for i in range(Id1.n(0)):
+        for j in range(Id1.n(1)):
+            Id1[i,j]=HM(2,Ap[0,0].n(0),'kronecker')*Id1[i,j]
+    Id2=HM(2,Ap.n(1),'kronecker')
+    for i in range(Id2.n(0)):
+        for j in range(Id2.n(1)):
+            Id2[i,j]=HM(2,Ap[0,0].n(1),'kronecker')*Id2[i,j]
+    # Obtainin the list of pivot variables.
+    Pm=HM(Ap.n(0),Ap.n(1),[HM(Ap[0,0].n(0),Ap[0,0].n(1),'zero') for cnt in range(Ap.n(0)*Ap.n(1))])
+    for i in range(Ap.n(0)):
+        if not HM(1,Ap.n(1),[Ap[i,u] for u in range(Ap.n(1))]).is_zero():
+            for j in range(Ap.n(1)):
+                #if Ap[i,j].is_unit():
+                if not Ap[i,j].is_zero():
+                    break
+            #Pm=Pm+HM(Id1.n(0),1,[Id1[s,i] for s in range(Id1.n(0))])*HM(1,Id2.n(1),[Id2[j,t]*Ap[i,j] for t in range(Id2.n(1))])
+            Pm[i,j]=Ap[i,j].copy()
+    # Expressing the solutions
+    tp1=GeneralHypermatrixProduct_with_elementwise_product(Pm,x)
+    tp2=bp-GeneralHypermatrixProduct_with_elementwise_product((Ap-Pm),v)
+    return [[tp1[i,0],tp2[i,0]] for i in range(tp1.n(0))]
+
+def outer_product_summand_reduction_constraints(X, Y, Z):
+    """
+    The function takes as input a given factorization and return
+    constraints which determine if it is possible to express the
+    same product as a sum of fewer outer products.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: od=3; sz=2; sz0=2; sz1=2; sz2=2
+        sage: Lx=[sz0,sz ,sz2,'x']; X=apply(HM, Lx)
+        sage: Ly=[sz0,sz1,sz ,'y']; Y=apply(HM, Ly)
+        sage: Lz=[sz ,sz1,sz2,'z']; Z=apply(HM, Lz)
+        sage: CnstrLst=outer_product_summand_reduction_constraints(X, Y, Z)
+        sage: CnstrLst
+        [u00 == -(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*g01/(x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111),
+         u10 == -(x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*g00/(x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101),
+         v00 == -((x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x110*y101*z100 + ((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*x110*y100*z000 - (x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x100*y100*z100)*g00)/((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*g00*x110*y100*z100),
+         v01 == -(x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*((x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x110*y111*z110 + ((x101*x110*y110^2*z110*z111 - x100*x111*y110^2*z110*z111)*x110*y110*z010 - (x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x100*y110*z110)*g01)/((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*g00*x110*y110*z110),
+         1 == (x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*((x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*x010*y011*z110 + ((x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*x010*y010*z010 - (x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*x000*y010*z110)*g01)*g00*x110*y110/((x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*((x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x110*y111*z110 + ((x101*x110*y110^2*z110*z111 - x100*x111*y110^2*z110*z111)*x110*y110*z010 - (x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x100*y110*z110)*g01)*g01*x010*y010),
+         1 == (x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*((x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*x010*y001*z100 + ((x001*x010*y000^2*z100*z101 - x000*x011*y000^2*z100*z101)*x010*y000*z000 - (x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*x000*y000*z100)*g00)*g00*x110*y100/((x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*((x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x110*y101*z100 + ((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*x110*y100*z000 - (x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x100*y100*z100)*g00)*g01*x010*y000),
+         1 == (x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*(x101*x110*y110^2*z110*z111 - x100*x111*y110^2*z110*z111)*g01/((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*g00),
+         1 == (x001*x010*y000^2*z100*z101 - x000*x011*y000^2*z100*z101)*(x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*g00/((x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*g01)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    od=3
+    sz0=X.n(0);sz1=Y.n(1);sz2=Z.n(2);sz=Z.n(0)
+    # Initialization of the matrix of matrices.
+    MM=HM(sz2, 3*(sz-1), 'zero')
+    for k in range(sz2):
+        for t in range(sz-1):
+            Tmp=HM(sz0, sz1, 'zero')
+            for i in range(sz0):
+                for j in range(sz1):
+                    Tmp[i,j]=X[i,sz-1,k]*Y[i,j,0]*Z[sz-1,j,k]
+            MM[k,3*t+0]=Tmp.copy()
+            Tmp=HM(sz0, sz1, 'zero')
+            for i in range(sz0):
+                for j in range(sz1):
+                    Tmp[i,j]=X[i,sz-1,k]*Y[i,j,0]*Z[0,j,k]
+            MM[k,3*t+1]=Tmp.copy()
+            Tmp=HM(sz0,sz1,'zero')
+            for i in range(sz0):
+                for j in range(sz1):
+                    Tmp[i,j]=X[i,0,k]*Y[i,j,0]*Z[sz-1,j,k]
+            MM[k,3*t+2]=Tmp.copy()
+    # Initialization of the Kronecker delta list
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    # Initialization of the 
+    Lb=[HM(sz0,sz1,[ProdB(X,Y,Z,DltL[sz-1])[i,j,k] for j in range(sz1) for i in range(sz0)]) for k in range(sz2)]
+    b=HM(sz2,1,Lb)
+    # Initialization of the variables for the solver
+    U=HM(sz0,sz-1,'u')
+    Uxtd=HM(sz0,3*(sz-1),'zero')
+    for i in range(sz0):
+        for t in range(sz-1):
+            Uxtd[i,3*t+0]=U[i,t]; Uxtd[i,3*t+1]=U[i,t]; Uxtd[i,3*t+2]=1
+    V=HM(sz-1,sz1,'v')
+    Vxtd=HM(3*(sz-1),sz1,'zero')
+    for t in range(sz-1):
+        for j in range(sz1):
+            Vxtd[3*t+0,j]=V[t,j]; Vxtd[3*t+1,j]=1; Vxtd[3*t+2,j]=V[t,j]
+    # Initialization of the Kronecker delta list
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,3*(sz-1))
+    Mx=HM(3*(sz-1),1,[ProdB(Uxtd,Vxtd,DltL[k]) for k in range(3*(sz-1))])
+    # Initialization of the variables for the solver
+    F=HM(sz0,sz-1,'f')
+    Fxtd=HM(sz0,3*(sz-1),'zero')
+    for i in range(sz0):
+        for t in range(sz-1):
+            Fxtd[i,3*t+0]=F[i,t]; Fxtd[i,3*t+1]=F[i,t]; Fxtd[i,3*t+2]=1
+    G=HM(sz-1,sz1,'g')
+    Gxtd=HM(3*(sz-1),sz1,'zero')
+    for t in range(sz-1):
+        for j in range(sz1):
+            Gxtd[3*t+0,j]=G[t,j]; Gxtd[3*t+1,j]=1; Gxtd[3*t+2,j]=G[t,j]
+    # Initialization of the Kronecker delta list
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,3*(sz-1))
+    Mv=HM(3*(sz-1),1,[ProdB(Fxtd,Gxtd,DltL[k]) for k in range(3*(sz-1))])
+    # Obtaining the solutions
+    Sln=hadamard_linear_solverHM(MM,b,Mx,Mv)
+    # Initialization of the list of coefficients
+    TpL=[Sln[i][0].subs([fc==1 for fc in U.list()]+[fc==1 for fc in V.list()]) for i in range(len(Sln))]
+    # Obtaining the hypermatrix constraints.
+    Rslt=[[Sln[i][0].elementwise_product(TpL[i].elementwise_exponent(-1)),\
+           Sln[i][1].elementwise_product(TpL[i].elementwise_exponent(-1))] for i in range(len(Sln))]
+    Eq=[]
+    for l in Rslt:
+        Eq=Eq+[l[0].list()[i]==l[1].list()[i] for i in range(l[0].n(0)*l[0].n(1))]
+    Eq.reverse()
+    # Formatting the multiplicative constraints
+    [MA,Mb] = multiplicativeConstraintFormatorHM(Eq, U.list()+V.list())
+    # Obtaining the solutions
+    MMx=HM(MA.ncols(),1,U.list()+V.list())
+    MMv=HM(MA.ncols(),1,F.list()+G.list())
+    MSln=multiplicative_linear_solverHM(MA,Mb,MMx,MMv)
+    return MSln
+
