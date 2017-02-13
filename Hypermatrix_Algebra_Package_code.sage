@@ -59,6 +59,22 @@ class HM:
         a000*b000*c000 + a010*b001*c100
         sage: Prod(Hb,Ha,Hc)[0,0,0]
         b000*a000*c000 + b010*a001*c100
+        sage: od=2; sz=3; DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+        sage: DltL[0].printHM()
+        [:, :]=
+        [1 0 0]
+        [0 0 0]
+        [0 0 0]
+        sage: DltL[1].printHM()
+        [:, :]=
+        [0 0 0]
+        [0 1 0]
+        [0 0 0]
+        sage: DltL[2].printHM()
+        [:, :]=
+        [0 0 0]
+        [0 0 0]
+        [0 0 1]
     """
     def __init__(self,*args):
         if len(args) == 1:
@@ -10379,6 +10395,323 @@ def Form2Hypermatrix(f, sz, od, Vrbls):
         Rh[tuple(entry)]=f.diff(*Tmplst).subs([v==0 for v in Vrbls])
     return Rh
 
+def diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
+    """
+    Outputs the row echelon form of the input coefficient third order hypermatrices 
+    and the corresponding right hand side. This implementation assumes that the
+    inputs are third order hypermatrices whose entries are themselves diagonal
+    second order hypermatrices. All entries of Cf1 are matrices of the size 
+    m x m and all entries of Cf2 are matrices of the size n x n (this is not 
+    checked). Consequently the entries of Vx and rs are all m x n matrices.
+    This implementation avoids division and would work on other inputs so
+    long as the entries of the coefficien matrices commutes among themeselve.
+
+
+    EXAMPLES:
+    ::
+
+       
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag'); A11=HM(2,HM(2,'d').list(),'diag')
+        sage: B00=HM(2,HM(2,'e').list(),'diag'); B01=HM(2,HM(2,'f').list(),'diag'); B10=HM(2,HM(2,'g').list(),'diag'); B11=HM(2,HM(2,'h').list(),'diag')
+        sage: Cf1=HM([[[A00, A10], [A01, A11]]]); Cf1.dimensions() # Initialization of the left coefficient matrix
+        [1, 2, 2] 
+        sage: Cf2=HM([[[B00, B01]], [[B10, B11]]]); Cf2.dimensions() # Initialization of the right coefficient matrix
+        [2, 1, 2]
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n')]]])
+        sage: [A, X, B, C]=diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [a0  0  0  0]
+        [ 0 a1  0  0]
+        [ 0  0 a0  0]
+        [ 0  0  0 a1]
+        sage: A[0,1,0].printHM()
+        [:, :]=
+        [b0  0  0  0]
+        [ 0 b1  0  0]
+        [ 0  0 b0  0]
+        [ 0  0  0 b1]
+        sage: A[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: A[0,1,1].printHM()
+        [:, :]=
+        [-b0*c0      0      0      0]
+        [     0 -b1*c1      0      0]
+        [     0      0  a0*d0      0]
+        [     0      0      0  a1*d1]
+        sage: B[0,0,0].printHM()
+        [:, :]=
+        [e0  0  0  0]
+        [ 0 e1  0  0]
+        [ 0  0 e0  0]
+        [ 0  0  0 e1]
+        sage: B[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: B[1,0,0].printHM()
+        [:, :]=
+        [g0  0  0  0]
+        [ 0 g1  0  0]
+        [ 0  0 g0  0]
+        [ 0  0  0 g1]
+        sage: B[1,0,1].printHM()
+        [:, :]=
+        [f0*g0     0     0     0]
+        [    0 f1*g1     0     0]
+        [    0     0 e0*h0     0]
+        [    0     0     0 e1*h1]
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
+        sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
+        sage: Cf1=HM([[[A00, A10, A20], [A01, A11, A21]]])
+        sage: B00=HM(2,HM(2,'g').list(),'diag'); B01=HM(2,HM(2,'h').list(),'diag'); B02=HM(2,HM(2,'i').list(),'diag')
+        sage: B10=HM(2,HM(2,'j').list(),'diag'); B11=HM(2,HM(2,'k').list(),'diag'); B12=HM(2,HM(2,'l').list(),'diag')
+        sage: Cf2=HM([[[B00, B01, B02]], [[B10, B11, B12]]]) 
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
+        sage: [A, X, B, C]=diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [a0  0  0  0  0  0  0  0]
+        [ 0 a1  0  0  0  0  0  0]
+        [ 0  0 a0  0  0  0  0  0]
+        [ 0  0  0 a1  0  0  0  0]
+        [ 0  0  0  0 a0  0  0  0]
+        [ 0  0  0  0  0 a1  0  0]
+        [ 0  0  0  0  0  0 a0  0]
+        [ 0  0  0  0  0  0  0 a1]
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
+        sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
+        sage: Cf1=HM([[[A00, HM(2,2,'zero'), HM(2,2,'zero')], [A01, A11, HM(2,2,'zero')]]])
+        sage: Cf1
+        [[[[[a0, 0], [0, a1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]], [[[b0, 0], [0, b1]], [[d0, 0], [0, d1]], [[0, 0], [0, 0]]]]]
+        sage: B00=HM(2,HM(2,'g').list(),'diag'); B01=HM(2,HM(2,'h').list(),'diag'); B02=HM(2,HM(2,'i').list(),'diag')
+        sage: B10=HM(2,HM(2,'j').list(),'diag'); B11=HM(2,HM(2,'k').list(),'diag'); B12=HM(2,HM(2,'l').list(),'diag')
+        sage: Cf2=HM([[[B00, HM(2,2,'zero'), HM(2,2,'zero')]], [[B10, B11, HM(2,2,'zero')]]])
+        sage: Cf2
+        [[[[[g0, 0], [0, g1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]]], [[[[j0, 0], [0, j1]], [[k0, 0], [0, k1]], [[0, 0], [0, 0]]]]]
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
+        sage: [A, X, B, C]=diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A
+        [[[[[a0, 0], [0, a1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]], [[[b0, 0], [0, b1]], [[d0, 0], [0, d1]], [[0, 0], [0, 0]]]]]
+        sage: B
+        [[[[[g0, 0], [0, g1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]]], [[[[j0, 0], [0, j1]], [[k0, 0], [0, k1]], [[0, 0], [0, 0]]]]]
+
+ 
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do:
+    """
+    if Cf1.n(1)==Vx.n(2) and Vx.n(2)==Cf2.n(0) and Cf1.n(2)==Cf2.n(2) and 1==Vx.n(0) and Vx.n(0)==Vx.n(1):
+        # Initialization of the variable index
+        vindx=0
+        # Initializing copies of the input hypermatrices.
+        A=Cf1.copy(); X=Vx.copy(); B=Cf2.copy(); C=rs.copy()
+        # Initialization of the row and column index
+        i=0; j=0
+        while i < A.n(2) and j < A.n(1):
+            while (HM(1,1,A.n(2)-i,[A[0,j,i0] for i0 in range(i,A.n(2))]).is_zero() and j < A.n(1)-1) or (HM(1,1,B.n(0)-i,[B[j,0,i0] for i0 in range(i,B.n(0))]).is_zero() and j < B.n(0)-1):
+                # Incrementing the column index
+                j=j+1
+            if (HM(1,A.n(1),A.n(2)-i,[A[0,j0,i0] for i0 in range(i,A.n(2)) for j0 in range(A.n(1))]).is_zero()==False) and (HM(B.n(0),1,B.n(2)-i,[B[j0,0,i0] for i0 in range(i,B.n(2)) for j0 in range(B.n(0))]).is_zero()==False) and j < A.n(1):
+                while A[0,j,i].is_zero() or B[j,0,i].is_zero():
+                    # Initialization of the matrices
+                    Ta=HM(A.n(2)-i,A.n(1),[A[0,j0,i0] for j0 in range(A.n(1)) for i0 in range(i,A.n(2))])
+                    Tb=HM(B.n(2)-i,B.n(0),[B[j0,0,i0] for j0 in range(B.n(0)) for i0 in range(i,B.n(2))])
+                    Tc=HM(C.n(2)-i,1,[C[0,0,i0] for i0 in range(i,C.n(2))])
+                    # Inflating the entries of the identity matrix
+                    idta=HM(2, A[0,0,0].n(0),'kronecker')
+                    Ida=HM(2, Ta.n(0), 'kronecker')
+                    idtb=HM(2, B[0,0,0].n(0),'kronecker')
+                    Idb=HM(2, Tb.n(0), 'kronecker')
+                    for u in range(Ta.n(0)):
+                        for v in range(Ta.n(1)):
+                            Ida[u,v]=idta*Ida[u,v]
+                    for u in range(Tb.n(0)):
+                        for v in range(Tb.n(1)):
+                            Idb[u,v]=idtb*Idb[u,v]
+                    # Initialization of the cyclic shift permutation matrix
+                    Pa=sum([HM(Ta.n(0),1,[Ida[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Ida[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                    Pb=sum([HM(Tb.n(0),1,[Idb[i0,k] for i0 in range(Tb.n(0))])*HM(1,Tb.n(0),[Idb[Integer(mod(k+1,Tb.n(0))),j0] for j0 in range(Tb.n(0))]) for k in range(Tb.n(0))])
+                    # Performing the shift
+                    Ta=Pa*Ta; Tb=Pb*Tb; Tc=Pa*Tc
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            A[0,j0,i+i0]=Ta[i0,j0]
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            B[j0,0,i+i0]=Tb[i0,j0]
+                    for i0 in range(b.n(0)):
+                        C[0,0,i+i0]=Tc[i0,0]
+                # Main part
+                if (A.n(2)-i-1>0) and not ((HM(1,1,A.n(2)-i-1,[A[0,j,i0] for i0 in range(i+1,A.n(2))]).is_zero() and j <= A.n(1)-1) and (HM(1,1,B.n(2)-i-1,[B[j,0,i0] for i0 in range(i+1,B.n(2))]).is_zero() and j <= B.n(0)-1)):
+                    # Performing the row operations.
+                    cf1a = A[0,j,i]; cf1b = B[j,0,i]
+                    # Backing up the variable prior to the inflation
+                    Xold=X.copy()
+                    # Updating the variables
+                    for t in range(X.n(2)):
+                        X[0,0,t]=HM(2,2,'kronecker').tensor_product(X[0,0,t])
+                    # Updating the right hand side
+                    for r in range(i+1,A.n(2)):
+                        # Taking care of the zero row
+                        if (HM(1,A.n(1),1,[A[0,j0,r] for j0 in range(A.n(1))]).is_zero()) or (HM(B.n(0),1,1,[B[j0,0,r] for j0 in range(B.n(0))]).is_zero()):
+                            r=r+1
+                        else:
+                            # Initialization of the coefficient
+                            cf2a=A[0,j,r]; cf2b=B[j,0,r]
+                            # Updating the right hand side.
+                            n0=C[0,0,0].n(0); n1=C[0,0,0].n(1)
+                            U=HM(n0,n1,[var('z'+str(vindx+t)) for t in range(n0*n1)])
+                            # Incrementing the free variable index
+                            vindx=(n0*n1)+vindx
+                            C[0,0,r]=(U-cf2a*C[0,0,i]*cf2b).block_sum(cf1a*C[0,0,r]*cf1b-U)
+                            # Updating the constraints
+                            for j0 in range(A.n(1)):
+                                if (-cf2a*A[0,j0,i]*Xold[0,0,j0]*B[j0,0,i]*cf2b + cf1a*A[0,j0,r]*Xold[0,0,j0]*B[j0,0,r]*cf1b).is_zero():
+                                    A[0,j0,r]=HM(2,2,'zero').tensor_product(A[0,j0,r])
+                                    B[j0,0,r]=HM(2,2,'zero').tensor_product(B[j0,0,r])
+                                else:
+                                    A[0,j0,r]=(-cf2a*A[0,j0,i]).block_sum(cf1a*A[0,j0,r])
+                                    B[j0,0,r]=( B[j0,0,i]*cf2b).block_sum(B[j0,0,r]*cf1b)
+                    for r in range(i+1):
+                        # Updating the other entries.
+                        for j0 in range(A.n(1)):
+                            A[0,j0,r]=HM(2,2,'kronecker').tensor_product(A[0,j0,r])
+                        for j0 in range(B.n(0)):
+                            B[j0,0,r]=HM(2,2,'kronecker').tensor_product(B[j0,0,r])
+                        C[0,0,r]=HM(2,2,'kronecker').tensor_product(C[0,0,r])
+            # Incrementing the row and column index
+            i=i+1; j=j+1
+        return [A, X, B, C]
+    else:
+        raise ValueError, "Incorrect inputs"
+
+def diagonal_coef_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
+    """
+    Outputs the reduced row echelon form of the input coefficient third order 
+    hypermatrices and the corresponding right hand side. This implementation 
+    assumes that the inputs are third order hypermatrices whose entries are 
+    themselves diagonal second order hypermatrices (this is not checked).
+    All entries of Cf1 are matrices of the size m x m and all entries of Cf2 
+    are matrices of the size n x n. Consequently the entries of Vx and rs are 
+    all m x n matrices. The implementation avoids division and consequently,
+    does normalize the pivots to the units. The procedure would on other inputs so
+    long as the entries of the coefficien matrices commutes among themeselve.
+
+
+    EXAMPLES:
+    ::
+
+       
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag'); A11=HM(2,HM(2,'d').list(),'diag')
+        sage: B00=HM(2,HM(2,'e').list(),'diag'); B01=HM(2,HM(2,'f').list(),'diag'); B10=HM(2,HM(2,'g').list(),'diag'); B11=HM(2,HM(2,'h').list(),'diag')
+        sage: Cf1=HM([[[A00, A10], [A01, A11]]]); Cf1.dimensions() # Initialization of the left coefficient matrix
+        [1, 2, 2] 
+        sage: Cf2=HM([[[B00, B01]], [[B10, B11]]]); Cf2.dimensions() # Initialization of the right coefficient matrix
+        [2, 1, 2]
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n')]]])
+        sage: [A, X, B, C]=diagonal_coef_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [-a0*b0*c0         0         0         0]
+        [        0 -a1*b1*c1         0         0]
+        [        0         0   a0^2*d0         0]
+        [        0         0         0   a1^2*d1]
+        sage: A[0,1,0].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: A[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: A[0,1,1].printHM()
+        [:, :]=
+        [-b0*c0      0      0      0]
+        [     0 -b1*c1      0      0]
+        [     0      0  a0*d0      0]
+        [     0      0      0  a1*d1]
+        sage: B[0,0,0].printHM()
+        [:, :]=
+        [e0*f0*g0        0        0        0]
+        [       0 e1*f1*g1        0        0]
+        [       0        0  e0^2*h0        0]
+        [       0        0        0  e1^2*h1]
+        sage: B[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: B[1,0,0].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: B[1,0,1].printHM()
+        [:, :]=
+        [f0*g0     0     0     0]
+        [    0 f1*g1     0     0]
+        [    0     0 e0*h0     0]
+        [    0     0     0 e1*h1]
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
+        sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
+        sage: Cf1=HM([[[A00, HM(2,2,'zero'), HM(2,2,'zero')], [A01, A11, HM(2,2,'zero')]]])
+        sage: B00=HM(2,HM(2,'g').list(),'diag'); B01=HM(2,HM(2,'h').list(),'diag'); B02=HM(2,HM(2,'i').list(),'diag')
+        sage: B10=HM(2,HM(2,'j').list(),'diag'); B11=HM(2,HM(2,'k').list(),'diag'); B12=HM(2,HM(2,'l').list(),'diag')
+        sage: Cf2=HM([[[B00, HM(2,2,'zero'), HM(2,2,'zero')]], [[B10, B11, HM(2,2,'zero')]]]) 
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
+        sage: [A, X, B, C]=diagonal_coef_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A
+        [[[[[a0*d0, 0], [0, a1*d1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[d0, 0], [0, d1]], [[0, 0], [0, 0]]]]]
+        sage: C
+        [[[[[d0*k0*m00 - b0*j0*n00, d0*k1*m01 - b0*j1*n01], [d1*k0*m10 - b1*j0*n10, d1*k1*m11 - b1*j1*n11]], [[n00, n01], [n10, n11]], [[p00, p01], [p10, p11]]]]]
+
+ 
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do:
+    """
+    [A, X, B, C]=diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+    # Initialization of the row and column index
+    i=A.n(2)-1; j=0
+    while i > 0 or j > 0:
+        if HM(1,A.n(1),1,[A[0,j0,i] for j0 in range(A.n(1))]).is_zero() or HM(B.n(0),1,1,[B[j0,0,i] for j0 in range(B.n(0))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while A[0,j,i].is_zero() or B[j,0,i].is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # Performing row operations
+            cf1a=A[0,j,i]; cf1b=B[j,0,i]
+            for r in range(i-1,-1,-1):
+                cf2a=A[0,j,r]; cf2b=B[j,0,r]
+                # Updating the right hand side
+                C[0,0,r]=-cf2a*C[0,0,i]*cf2b + cf1a*C[0,0,r]*cf1b
+                # Updating the coefficients
+                for j0 in range(A.n(1)):
+                    A[0,j0,r]=-cf2a*A[0,j0,i] + cf1a*A[0,j0,r]
+                    B[j0,0,r]=-B[j0,0,i]*cf2b + B[j0,0,r]*cf1b
+            i=i-1; j=0
+    return [A, X, B, C]
+
 def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
     """
     Outputs the row echelon form of the input coefficient third order hypermatrices 
@@ -10386,12 +10719,69 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
     inputs are third order hypermatrices whose entries are themselves second order
     hypermatrices (square matrices to be precise). All entries of Cf1 are matrices
     of the size m x m and all entries of Cf2 are matrices of the size n x n.
-    Consequently the enntries of Vx and rs are all m x n matrices.
+    Consequently the entries of Vx and rs are all m x n matrices.
 
     EXAMPLES:
     ::
 
-        
+       
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag'); A11=HM(2,HM(2,'d').list(),'diag')
+        sage: B00=HM(2,HM(2,'e').list(),'diag'); B01=HM(2,HM(2,'f').list(),'diag'); B10=HM(2,HM(2,'g').list(),'diag'); B11=HM(2,HM(2,'h').list(),'diag')
+        sage: Cf1=HM([[[A00, A10], [A01, A11]]]); Cf1.dimensions() # Initialization of the left coefficient matrix
+        [1, 2, 2] 
+        sage: Cf2=HM([[[B00, B01]], [[B10, B11]]]); Cf2.dimensions() # Initialization of the right coefficient matrix
+        [2, 1, 2]
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n')]]])
+        sage: [A, X, B, C]=general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [a0  0  0  0]
+        [ 0 a1  0  0]
+        [ 0  0 a0  0]
+        [ 0  0  0 a1]
+        sage: A[0,1,0].printHM()
+        [:, :]=
+        [b0  0  0  0]
+        [ 0 b1  0  0]
+        [ 0  0 b0  0]
+        [ 0  0  0 b1]
+        sage: A[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: A[0,1,1].printHM()
+        [:, :]=
+        [-b0*c0/a0         0         0         0]
+        [        0 -b1*c1/a1         0         0]
+        [        0         0        d0         0]
+        [        0         0         0        d1]
+        sage: B[0,0,0].printHM()
+        [:, :]=
+        [e0  0  0  0]
+        [ 0 e1  0  0]
+        [ 0  0 e0  0]
+        [ 0  0  0 e1]
+        sage: B[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: B[1,0,0].printHM()
+        [:, :]=
+        [g0  0  0  0]
+        [ 0 g1  0  0]
+        [ 0  0 g0  0]
+        [ 0  0  0 g1]
+        sage: B[1,0,1].printHM()
+        [:, :]=
+        [f0*g0/e0        0        0        0]
+        [       0 f1*g1/e1        0        0]
+        [       0        0       h0        0]
+        [       0        0        0       h1] 
         sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
         sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
         sage: Cf1=HM([[[A00, A10, A20], [A01, A11, A21]]])
@@ -10494,13 +10884,15 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
                 if (A.n(2)-i-1> 0) and not ((HM(1,1,A.n(2)-i-1,[A[0,j,i0] for i0 in range(i+1,A.n(2))]).is_zero() and j <= A.n(1)-1) and (HM(1,1,B.n(2)-i-1,[B[j,0,i0] for i0 in range(i+1,B.n(2))]).is_zero() and j <= B.n(0)-1)):
                     # Performing the row operations.
                     cf1a = A[0,j,i]; cf1b = B[j,0,i]
+                    # Backing up the variable prior to the inflation
+                    Xold=X.copy()
                     # Updating the variables
                     for t in range(X.n(2)):
                         X[0,0,t]=HM(2,2,'kronecker').tensor_product(X[0,0,t])
                     # Updating the right hand side
                     for r in range(i+1,A.n(2)):
                         # Taking care of the zero row
-                        if (HM(1,A.n(1),1,[A[0,j0,r] for j0 in range(A.n(1))]).is_zero()) or (HM(B.n(1),1,1,[B[j0,0,r] for j0 in range(B.n(0))]).is_zero()):
+                        if (HM(1,A.n(1),1,[A[0,j0,r] for j0 in range(A.n(1))]).is_zero()) or (HM(B.n(0),1,1,[B[j0,0,r] for j0 in range(B.n(0))]).is_zero()):
                             r=r+1
                         else:
                             # Initialization of the coefficient
@@ -10513,14 +10905,16 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
                             C[0,0,r]=(U-(cf2a*cf1a^(-1))*C[0,0,i]*(cf1b^(-1)*cf2b)).block_sum(C[0,0,r]-U)
                             # Updating the constraints
                             for j0 in range(A.n(1)):
-                                A[0,j0,r]=(-(cf2a*cf1a^(-1))*A[0,j0,i]).block_sum(A[0,j0,r])
-                            for j0 in range(B.n(0)):
-                                B[j0,0,r]=(B[j0,0,i]*(cf1b^(-1)*cf2b)).block_sum(B[j0,0,r])
+                                if (-cf2a*A[0,j0,i]*Xold[0,0,j0]*B[j0,0,i]*cf2b + cf1a*A[0,j0,r]*Xold[0,0,j0]*B[j0,0,r]*cf1b).is_zero():
+                                    A[0,j0,r]=HM(2,2,'zero').tensor_product(A[0,j0,r])
+                                    B[j0,0,r]=HM(2,2,'zero').tensor_product(B[j0,0,r])
+                                else:
+                                    A[0,j0,r]=(-(cf2a*cf1a^(-1))*A[0,j0,i]).block_sum(A[0,j0,r])
+                                    B[j0,0,r]=(B[j0,0,i]*(cf1b^(-1)*cf2b)).block_sum(B[j0,0,r])
                     for r in range(i+1):
                         # Updating the other entries.
                         for j0 in range(A.n(1)):
                             A[0,j0,r]=HM(2,2,'kronecker').tensor_product(A[0,j0,r])
-                        for j0 in range(B.n(0)):
                             B[j0,0,r]=HM(2,2,'kronecker').tensor_product(B[j0,0,r])
                         C[0,0,r]=HM(2,2,'kronecker').tensor_product(C[0,0,r])
             # Incrementing the row and column index
@@ -10531,17 +10925,75 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
 
 def general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
     """
-    Outputs the row echelon form of the input coefficient third order hypermatrices 
+    Outputs the reduced row echelon form of the input coefficient third order hypermatrices 
     and the corresponding right hand side. This implementation assumes that the
     inputs are third order hypermatrices whose entries are themselves second order
     hypermatrices (square matrices to be precise). All entries of Cf1 are matrices
     of the size m x m and all entries of Cf2 are matrices of the size n x n.
-    Consequently the enntries of Vx and rs are all m x n matrices.
+    Consequently the entries of Vx and rs are all m x n matrices.
+
 
     EXAMPLES:
     ::
 
-        
+
+        sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag'); A11=HM(2,HM(2,'d').list(),'diag')
+        sage: B00=HM(2,HM(2,'e').list(),'diag'); B01=HM(2,HM(2,'f').list(),'diag'); B10=HM(2,HM(2,'g').list(),'diag'); B11=HM(2,HM(2,'h').list(),'diag')
+        sage: Cf1=HM([[[A00, A10], [A01, A11]]]); Cf1.dimensions() # Initialization of the left coefficient matrix
+        [1, 2, 2] 
+        sage: Cf2=HM([[[B00, B01]], [[B10, B11]]]); Cf2.dimensions() # Initialization of the right coefficient matrix
+        [2, 1, 2]
+        sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
+        sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n')]]])
+        sage: [A, X, B, C]=general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs)
+        sage: A[0,0,0].printHM()
+        [:, :]=
+        [a0  0  0  0]
+        [ 0 a1  0  0]
+        [ 0  0 a0  0]
+        [ 0  0  0 a1]
+        sage: A[0,1,0].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: A[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: A[0,1,1].printHM()
+        [:, :]=
+        [-b0*c0/a0         0         0         0]
+        [        0 -b1*c1/a1         0         0]
+        [        0         0        d0         0]
+        [        0         0         0        d1]
+        sage: B[0,0,0].printHM()
+        [:, :]=
+        [e0  0  0  0]
+        [ 0 e1  0  0]
+        [ 0  0 e0  0]
+        [ 0  0  0 e1]
+        sage: B[0,0,1].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: B[1,0,0].printHM()
+        [:, :]=
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+        sage: B[1,0,1].printHM()
+        [:, :]=
+        [f0*g0/e0        0        0        0]
+        [       0 f1*g1/e1        0        0]
+        [       0        0       h0        0]
+        [       0        0        0       h1]
         sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag')
         sage: A11=HM(2,HM(2,'d').list(),'diag'); A20=HM(2,HM(2,'e').list(),'diag'); A21=HM(2,HM(2,'f').list(),'diag')
         sage: Cf1=HM([[[A00, HM(2,2,'zero'), HM(2,2,'zero')], [A01, A11, HM(2,2,'zero')]]])
@@ -10552,10 +11004,9 @@ def general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
         sage: rs=HM([[[HM(2,2,'m'), HM(2,2,'n'), HM(2,2,'p')]]])
         sage: [A, X, B, C]=general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs)
         sage: A
-        [[[[[a0, 0], [0, a1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[d0, 0], [0, d1]], [[0, 0], [0, 0]]]]]
+        [[[[[a0, 0], [0, a1]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[d0, 0], [0, d1]], [[0, 0], [0, 0]]]]]        
         sage: C
         [[[[[m00 - b0*j0*n00/(d0*k0), m01 - b0*j1*n01/(d0*k1)], [m10 - b1*j0*n10/(d1*k0), m11 - b1*j1*n11/(d1*k1)]], [[n00, n01], [n10, n11]], [[p00, p01], [p10, p11]]]]]
-
 
  
     AUTHORS:
@@ -10583,7 +11034,7 @@ def general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
                 for j0 in range(A.n(1)):
                     A[0,j0,r]=-(cf2a*cf1a^(-1))*A[0,j0,i] + A[0,j0,r]
                 for j0 in range(B.n(0)):
-                    B[j0,0,r]=B[j0,0,i]*(cf1b^(-1)*cf2b) + B[j0,0,r]
+                    B[j0,0,r]=-B[j0,0,i]*(cf1b^(-1)*cf2b) + B[j0,0,r]
             i=i-1; j=0
     return [A, X, B, C]
 
@@ -10785,6 +11236,18 @@ def GeneralHypermatrixProduct_with_elementwise_product(*args):
         [:, :]=
         [a00*e00 + b00*f00 a01*e01 + b01*f01]
         [a10*e10 + b10*f10 a11*e11 + b11*f11]
+        sage: GeneralHypermatrixProduct_with_elementwise_product(A,B)[0,1].printHM()
+        [:, :]=
+        [a00*g00 + b00*h00 a01*g01 + b01*h01]
+        [a10*g10 + b10*h10 a11*g11 + b11*h11]
+        sage: GeneralHypermatrixProduct_with_elementwise_product(A,B)[1,0].printHM()
+        [:, :]=
+        [c00*e00 + d00*f00 c01*e01 + d01*f01]
+        [c10*e10 + d10*f10 c11*e11 + d11*f11]
+        sage: GeneralHypermatrixProduct_with_elementwise_product(A,B)[1,1].printHM()
+        [:, :]=
+        [c00*g00 + d00*h00 c01*g01 + d01*h01]
+        [c10*g10 + d10*h10 c11*g11 + d11*h11]
 
 
     AUTHORS:
@@ -10847,6 +11310,7 @@ def hadamard_linear_solverHM(A,b,x,v):
         [[[[-(a01*a10 - a00*a11)*a00*x0]],
           [[(a10*b0 - a00*b1)*a01 - (a01*a10 - a00*a11)*b0]]],
          [[[(a01*a10 - a00*a11)*x1]], [[a10*b0 - a00*b1]]]]
+
         
     AUTHORS:
     - Initial implementation by Edinah K. Gnang
@@ -10877,106 +11341,4 @@ def hadamard_linear_solverHM(A,b,x,v):
     tp2=bp-GeneralHypermatrixProduct_with_elementwise_product((Ap-Pm),v)
     return [[tp1[i,0],tp2[i,0]] for i in range(tp1.n(0))]
 
-def outer_product_summand_reduction_constraints(X, Y, Z):
-    """
-    The function takes as input a given factorization and return
-    constraints which determine if it is possible to express the
-    same product as a sum of fewer outer products.
-
-
-    EXAMPLES:
-
-    ::
-
-        sage: od=3; sz=2; sz0=2; sz1=2; sz2=2
-        sage: Lx=[sz0,sz ,sz2,'x']; X=apply(HM, Lx)
-        sage: Ly=[sz0,sz1,sz ,'y']; Y=apply(HM, Ly)
-        sage: Lz=[sz ,sz1,sz2,'z']; Z=apply(HM, Lz)
-        sage: CnstrLst=outer_product_summand_reduction_constraints(X, Y, Z)
-        sage: CnstrLst
-        [u00 == -(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*g01/(x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111),
-         u10 == -(x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*g00/(x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101),
-         v00 == -((x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x110*y101*z100 + ((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*x110*y100*z000 - (x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x100*y100*z100)*g00)/((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*g00*x110*y100*z100),
-         v01 == -(x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*((x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x110*y111*z110 + ((x101*x110*y110^2*z110*z111 - x100*x111*y110^2*z110*z111)*x110*y110*z010 - (x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x100*y110*z110)*g01)/((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*g00*x110*y110*z110),
-         1 == (x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*((x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*x010*y011*z110 + ((x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*x010*y010*z010 - (x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*x000*y010*z110)*g01)*g00*x110*y110/((x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*((x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x110*y111*z110 + ((x101*x110*y110^2*z110*z111 - x100*x111*y110^2*z110*z111)*x110*y110*z010 - (x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*x100*y110*z110)*g01)*g01*x010*y010),
-         1 == (x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*((x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*x010*y001*z100 + ((x001*x010*y000^2*z100*z101 - x000*x011*y000^2*z100*z101)*x010*y000*z000 - (x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*x000*y000*z100)*g00)*g00*x110*y100/((x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*((x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x110*y101*z100 + ((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*x110*y100*z000 - (x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*x100*y100*z100)*g00)*g01*x010*y000),
-         1 == (x110*x111*y100^2*z001*z100 - x110*x111*y100^2*z000*z101)*(x101*x110*y110^2*z110*z111 - x100*x111*y110^2*z110*z111)*g01/((x101*x110*y100^2*z100*z101 - x100*x111*y100^2*z100*z101)*(x110*x111*y110^2*z011*z110 - x110*x111*y110^2*z010*z111)*g00),
-         1 == (x001*x010*y000^2*z100*z101 - x000*x011*y000^2*z100*z101)*(x010*x011*y010^2*z011*z110 - x010*x011*y010^2*z010*z111)*g00/((x010*x011*y000^2*z001*z100 - x010*x011*y000^2*z000*z101)*(x001*x010*y010^2*z110*z111 - x000*x011*y010^2*z110*z111)*g01)]
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    od=3
-    sz0=X.n(0);sz1=Y.n(1);sz2=Z.n(2);sz=Z.n(0)
-    # Initialization of the matrix of matrices.
-    MM=HM(sz2, 3*(sz-1), 'zero')
-    for k in range(sz2):
-        for t in range(sz-1):
-            Tmp=HM(sz0, sz1, 'zero')
-            for i in range(sz0):
-                for j in range(sz1):
-                    Tmp[i,j]=X[i,sz-1,k]*Y[i,j,0]*Z[sz-1,j,k]
-            MM[k,3*t+0]=Tmp.copy()
-            Tmp=HM(sz0, sz1, 'zero')
-            for i in range(sz0):
-                for j in range(sz1):
-                    Tmp[i,j]=X[i,sz-1,k]*Y[i,j,0]*Z[0,j,k]
-            MM[k,3*t+1]=Tmp.copy()
-            Tmp=HM(sz0,sz1,'zero')
-            for i in range(sz0):
-                for j in range(sz1):
-                    Tmp[i,j]=X[i,0,k]*Y[i,j,0]*Z[sz-1,j,k]
-            MM[k,3*t+2]=Tmp.copy()
-    # Initialization of the Kronecker delta list
-    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
-    # Initialization of the 
-    Lb=[HM(sz0,sz1,[ProdB(X,Y,Z,DltL[sz-1])[i,j,k] for j in range(sz1) for i in range(sz0)]) for k in range(sz2)]
-    b=HM(sz2,1,Lb)
-    # Initialization of the variables for the solver
-    U=HM(sz0,sz-1,'u')
-    Uxtd=HM(sz0,3*(sz-1),'zero')
-    for i in range(sz0):
-        for t in range(sz-1):
-            Uxtd[i,3*t+0]=U[i,t]; Uxtd[i,3*t+1]=U[i,t]; Uxtd[i,3*t+2]=1
-    V=HM(sz-1,sz1,'v')
-    Vxtd=HM(3*(sz-1),sz1,'zero')
-    for t in range(sz-1):
-        for j in range(sz1):
-            Vxtd[3*t+0,j]=V[t,j]; Vxtd[3*t+1,j]=1; Vxtd[3*t+2,j]=V[t,j]
-    # Initialization of the Kronecker delta list
-    DltL=GeneralHypermatrixKroneckerDeltaL(od,3*(sz-1))
-    Mx=HM(3*(sz-1),1,[ProdB(Uxtd,Vxtd,DltL[k]) for k in range(3*(sz-1))])
-    # Initialization of the variables for the solver
-    F=HM(sz0,sz-1,'f')
-    Fxtd=HM(sz0,3*(sz-1),'zero')
-    for i in range(sz0):
-        for t in range(sz-1):
-            Fxtd[i,3*t+0]=F[i,t]; Fxtd[i,3*t+1]=F[i,t]; Fxtd[i,3*t+2]=1
-    G=HM(sz-1,sz1,'g')
-    Gxtd=HM(3*(sz-1),sz1,'zero')
-    for t in range(sz-1):
-        for j in range(sz1):
-            Gxtd[3*t+0,j]=G[t,j]; Gxtd[3*t+1,j]=1; Gxtd[3*t+2,j]=G[t,j]
-    # Initialization of the Kronecker delta list
-    DltL=GeneralHypermatrixKroneckerDeltaL(od,3*(sz-1))
-    Mv=HM(3*(sz-1),1,[ProdB(Fxtd,Gxtd,DltL[k]) for k in range(3*(sz-1))])
-    # Obtaining the solutions
-    Sln=hadamard_linear_solverHM(MM,b,Mx,Mv)
-    # Initialization of the list of coefficients
-    TpL=[Sln[i][0].subs([fc==1 for fc in U.list()]+[fc==1 for fc in V.list()]) for i in range(len(Sln))]
-    # Obtaining the hypermatrix constraints.
-    Rslt=[[Sln[i][0].elementwise_product(TpL[i].elementwise_exponent(-1)),\
-           Sln[i][1].elementwise_product(TpL[i].elementwise_exponent(-1))] for i in range(len(Sln))]
-    Eq=[]
-    for l in Rslt:
-        Eq=Eq+[l[0].list()[i]==l[1].list()[i] for i in range(l[0].n(0)*l[0].n(1))]
-    Eq.reverse()
-    # Formatting the multiplicative constraints
-    [MA,Mb] = multiplicativeConstraintFormatorHM(Eq, U.list()+V.list())
-    # Obtaining the solutions
-    MMx=HM(MA.ncols(),1,U.list()+V.list())
-    MMv=HM(MA.ncols(),1,F.list()+G.list())
-    MSln=multiplicative_linear_solverHM(MA,Mb,MMx,MMv)
-    return MSln
 
