@@ -1,5 +1,5 @@
 #*************************************************************************#
-#       Copyright (C) 2015, 2016 Edinah K. Gnang <kgnang@gmail.com>,      #
+#    Copyright (C) 2015, 2016, 2017 Edinah K.Gnang <kgnang@gmail.com>,    #
 #                          Ori Parzanchevski,                             #
 #                          Yuval Filmus,                                  #
 #                          Doron Zeilberger,                              #
@@ -4219,7 +4219,10 @@ def GeneralHypermatrixSimplifyFull(A):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Rh[tuple(entry)]=(A[tuple(entry)]).simplify_full()
+        if type(Integer(0)) != type(A[tuple(entry)]):
+            Rh[tuple(entry)]=(A[tuple(entry)]).simplify_full()
+        else:
+            Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
 def GeneralHypermatrixSimplify(A):
@@ -4254,7 +4257,10 @@ def GeneralHypermatrixSimplify(A):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Rh[tuple(entry)]=(A[tuple(entry)]).simplify()
+        if type(Integer(0)) != type(A[tuple(entry)]):
+            Rh[tuple(entry)]=(A[tuple(entry)]).simplify()
+        else:
+            Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
 def GeneralHypermatrixCanonicalizeRadical(A):
@@ -4289,7 +4295,10 @@ def GeneralHypermatrixCanonicalizeRadical(A):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Rh[tuple(entry)]=(A[tuple(entry)]).canonicalize_radical()
+        if type(Integer(0)) != type(A[tuple(entry)]):
+            Rh[tuple(entry)]=(A[tuple(entry)]).canonicalize_radical()
+        else:
+            Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
 def GeneralHypermatrixNumerical(A):
@@ -11340,5 +11349,4 @@ def hadamard_linear_solverHM(A,b,x,v):
     tp1=GeneralHypermatrixProduct_with_elementwise_product(Pm,x)
     tp2=bp-GeneralHypermatrixProduct_with_elementwise_product((Ap-Pm),v)
     return [[tp1[i,0],tp2[i,0]] for i in range(tp1.n(0))]
-
 
