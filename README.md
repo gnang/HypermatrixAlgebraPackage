@@ -9,8 +9,9 @@ structural and combinatorial properties of the Bhattacharya-Mesner algebra.
 # Installation 
 
 A properly working install of [sage](http://sagemath.org/) is the only prerequisite to using the 
-hypermatrix package. The hypermatrix algebra package passes all tests on SageMath version 7.4. To run test
-just run the following command in a [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) shell session
+hypermatrix package. The hypermatrix algebra package passes all tests on SageMath version 7.4. To run 
+hypermatrix tests on your sage installation used the following command in a [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell))
+shell session
 
 ```bash
 n:g$ sage -t Hypermatrix_Algebra_Package_code.sage
