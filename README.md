@@ -89,8 +89,24 @@ sage: H1.printHM()
 [a00*c00 + a01*c10 a00*c01 + a01*c11]
 [a10*c00 + a11*c10 a10*c01 + a11*c11]
 [a20*c00 + a21*c10 a20*c01 + a21*c11]
+
 sage: H2=Prod(HM(2,3,4,'a'), HM(2,2,3,'b'), HM(3,2,4,'c')) # Third order product 
-sage: H3=Prod(HM(2,1,2,2,'a'), HM(2,2,1,2,'b'), HM(2,2,2,1,'c'), HM(1,2,2,2,'d')) # Fourth order product
+sage: H2.printHM()
+[:, :, 0]=
+[a000*b000*c000 + a010*b001*c100 + a020*b002*c200 a000*b010*c010 + a010*b011*c110 + a020*b012*c210]
+[a100*b100*c000 + a110*b101*c100 + a120*b102*c200 a100*b110*c010 + a110*b111*c110 + a120*b112*c210]
+
+[:, :, 1]=
+[a001*b000*c001 + a011*b001*c101 + a021*b002*c201 a001*b010*c011 + a011*b011*c111 + a021*b012*c211]
+[a101*b100*c001 + a111*b101*c101 + a121*b102*c201 a101*b110*c011 + a111*b111*c111 + a121*b112*c211]
+
+[:, :, 2]=
+[a002*b000*c002 + a012*b001*c102 + a022*b002*c202 a002*b010*c012 + a012*b011*c112 + a022*b012*c212]
+[a102*b100*c002 + a112*b101*c102 + a122*b102*c202 a102*b110*c012 + a112*b111*c112 + a122*b112*c212]
+
+[:, :, 3]=
+[a003*b000*c003 + a013*b001*c103 + a023*b002*c203 a003*b010*c013 + a013*b011*c113 + a023*b012*c213]
+[a103*b100*c003 + a113*b101*c103 + a123*b102*c203 a103*b110*c013 + a113*b111*c113 + a123*b112*c213]
 ```
 
 As illustrated, the product of conformable matrices recovers the matrix product.
@@ -177,6 +193,7 @@ sage: Ha.block_sum(Hb).printHM()
 [  0   0 b00 b01 b02]
 [  0   0 b10 b11 b12]
 [  0   0 b20 b21 b22]
+
 sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b')
 sage: Ha.block_sum(Hb).printHM()
 [:, :, 0]=
@@ -426,8 +443,14 @@ Diagonal third order hypermatrices are constructed from symmetric matrices as fo
 sage: Mtr=Matrix(SR,SymMatrixGenerate(2,'d')); Mtr
 [d00 d01]
 [d01 d11]
-sage: Dg=HM(Mtr); Dg
-[[[d00, 0], [0, d01]], [[d01, 0], [0, d11]]]
+sage: Dg=HM(Mtr); Dg.printHM()
+[:, :, 0]=
+[d00   0]
+[d01   0]
+
+[:, :, 1]=
+[  0 d01]
+[  0 d11]
 ```
 
 The defining property of diagonal third order hypermatrices is the identity
