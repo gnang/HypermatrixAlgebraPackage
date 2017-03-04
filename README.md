@@ -1,19 +1,25 @@
 =======
 # Hypermatrix Algebra Package
 
-We provide here a sagemath implementation of the Bhattacharya-Mesner(BM) algebra as well as the general BM algebra.
+We provide here a sagemath implementation of the Bhattacharya-Mesner algebra as well as the general Bhattacharya-Mesner algebra.
 
 The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed to experimentally investigate symbolic
-structural and combinatorial properties of the BM algebra.
+structural and combinatorial properties of the Bhattacharya-Mesner algebra.
 
 # Installation 
 
 A properly working install of [sage](http://sagemath.org/) is the only prerequisite to using the 
-hypermatrix package. The hypermatrix algebra package has been tested on SageMath version 7.4.
+hypermatrix package. The hypermatrix algebra package passes all tests on SageMath version 7.4. To run test
+just run the following command in a [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) shell session
+
+```bash
+n:g$ sage -t Hypermatrix_Algebra_Package_code.sage
+```
+
 To get started with SageMath, the authors of this package highly recommend reading 
 [Calcul mathématique avec Sage] (http://sagebook.gforge.inria.fr/)
 
-To use the hypermatrix algebra package, simply download the [hypermatrix algebra package sage file](https://github.com/gnang/HypermatrixAlgebraPackage/blob/master/Hypermatrix_Algebra_Package_code.sage) into your working directory and load the file into your SageMath [interactive shell](http://doc.sagemath.org/html/en/tutorial/interactive_shell.html) session using the command:
+To use the hypermatrix algebra package, simply download the [hypermatrix algebra package sage file](https://github.com/gnang/HypermatrixAlgebraPackage/blob/master/Hypermatrix_Algebra_Package_code.sage) into your working directory and load the file into your SageMath [interactive shell](http://doc.sagemath.org/html/en/tutorial/interactive_shell.html) session via the command:
 
 ```python
 sage: %runfile Hypermatrix_Algebra_Package_code.sage
