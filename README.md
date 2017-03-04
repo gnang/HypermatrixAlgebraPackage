@@ -3,7 +3,7 @@
 
 We provide here a sagemath implementation of the Bhattacharya-Mesner(BM) algebra as well as the general BM algebra.
 
-The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed to experimentally investigate symbolically
+The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed to experimentally investigate symbolic
 structural and combinatorial properties of the BM algebra.
 
 # Installation 
@@ -25,18 +25,37 @@ To create a symbolic hypermatrix of size say 2 by 3 by 4, use
 
 ```python
 sage: Ha=HM(2,3,4,'a')
-sage: Ha 
-[[[a000,a001,a002,a003],[a010,a011,a012,a013],[a020,a021,a022,a023]],[[a100,a101,a102,a103],[a110,a111,a112,a113],[a120,a121,a122,a123]]]
+sage: Ha.printHM()
+[:, :, 0]=
+[a000 a010 a020]
+[a100 a110 a120]
+
+[:, :, 1]=
+[a001 a011 a021]
+[a101 a111 a121]
+
+[:, :, 2]=
+[a002 a012 a022]
+[a102 a112 a122]
+
+[:, :, 3]=
+[a003 a013 a023]
+[a103 a113 a123]
 ```
 
 Alternatively, hypermatrices can be initialized from an arbitrary Python list as follows
 
 ```python
-sage: rng=range(1,3)
-sage: Lst=[var('x{0}{1}{2}'.format(i,j,k)) for k in rng for j in rng for i in rng]
+sage: rng=range(1,3); Lst=[var('x{0}{1}{2}'.format(i,j,k)) for k in rng for j in rng for i in rng]
 sage: Hx=HM(2,2,2,Lst)
-sage: Hx
-[[[x111, x112], [x121, x122]], [[x211, x212], [x221, x222]]]
+sage: Hx.printHM()
+[:, :, 0]=
+[x111 x121]
+[x211 x221]
+
+[:, :, 1]=
+[x112 x122]
+[x212 x222]
 ```
 
 Note that hypermatrix entries are not restricted to numbers and symbolic expressions. The hypermatrix 
@@ -81,17 +100,39 @@ generalizes the matrix transpose and performs a cyclic permutation of the entry
 indices and is performed as follows 
 
 ```python
-sage: HM(2,2,2,'a')
-[[[a000, a001], [a010, a011]], [[a100, a101], [a110, a111]]]
-sage: HM(2,2,2,'a').transpose()
-[[[a000, a100], [a001, a101]], [[a010, a110], [a011, a111]]]
+sage: HM(2,2,2,'a').printHM()
+[:, :, 0]=
+[a000 a010]
+[a100 a110]
+
+[:, :, 1]=
+[a001 a011]
+[a101 a111]
+
+sage: HM(2,2,2,'a').transpose().printHM()
+[:, :, 0]=
+[a000 a001]
+[a010 a011]
+
+[:, :, 1]=
+[a100 a101]
+[a110 a111]
+
+sage: HM(2,2,2,'a').transpose().transpose().printHM()
+[:, :, 0]=
+[a000 a100]
+[a001 a101]
+
+[:, :, 1]=
+[a010 a110]
+[a011 a111]
 ```
 
 To perform two or more consecutive transposes, simply provide as argument
 the number of times we wish the transpose to be performed as follows
 
 ```python
-sage: At=HM(2,2,2,2,'a').transpose( )
+sage: At=HM(2,2,2,2,'a').transpose()
 sage: Att=HM(2,2,2,2,'a').transpose(2)
 sage: Attt=HM(2,2,2,2,'a').transpose(3)
 sage: (HM(2,2,2,2,'a').transpose(4)-HM(2,2,2,2,'a')).is_zero()
@@ -114,30 +155,62 @@ sage: Ha=HM(2,2,2,'a'); Hb=HM(3,3,3,'b')
 sage: Hc=Ha.tensor_product(Hb)
 sage: Hc.dimensions()
 [6, 6, 6]
+sage: Ha=HM(2,2,2,'a'); Hb=HM(1,1,1,'b')
+sage: Ha.tensor_product(Hb).printHM()
+[:, :, 0]=
+[a000*b000 a010*b000]
+[a100*b000 a110*b000]
+
+[:, :, 1]=
+[a001*b000 a011*b000]
+[a101*b000 a111*b000]
 ```
 
 Similarly the block diagonal hypermatrix sum is performed as follows
 
 ```python
 sage: Ha=HM(2,2,'a'); Hb=HM(3,3,'b')
-sage: Hc=Ha.block_sum(Hb)
-sage: Hc.printHM()
+sage: Ha.block_sum(Hb).printHM()
 [:, :]=
 [a00 a01   0   0   0]
 [a10 a11   0   0   0]
 [  0   0 b00 b01 b02]
 [  0   0 b10 b11 b12]
 [  0   0 b20 b21 b22]
+sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b')
+sage: Ha.block_sum(Hb).printHM()
+[:, :, 0]=
+[a000 a010    0    0]
+[a100 a110    0    0]
+[   0    0    0    0]
+[   0    0    0    0]
+
+[:, :, 1]=
+[a001 a011    0    0]
+[a101 a111    0    0]
+[   0    0    0    0]
+[   0    0    0    0]
+
+[:, :, 2]=
+[   0    0    0    0]
+[   0    0    0    0]
+[   0    0 b000 b010]
+[   0    0 b100 b110]
+
+[:, :, 3]=
+[   0    0    0    0]
+[   0    0    0    0]
+[   0    0 b001 b011]
+[   0    0 b101 b111]
 ```
 
 Let X, Y denote 3 by 1 hypermatrices, the product of the transpose of X with Y
 is obtained as follows
 
 ```python
-sage: X=HM(3, 1, HM(3,'x').list()); Y=HM(3, 1, HM(3,'y').list())
+sage: sz=3; X=HM(sz, 1, HM(sz,'x').list()); Y=HM(sz, 1, HM(sz,'y').list()); L=[X, Y]
 sage: Prod(X.transpose(),Y)[0,0]
 x0*y0 + x1*y1 + x2*y2
-sage: L=[X, Y]
 sage: apply(Prod,[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0]
 x0*y0 + x1*y1 + x2*y2
 ```
@@ -146,13 +219,23 @@ Here is an illustration of a similar product in the hypermatrix case for columns
 each of size 3 by 1 by 1
 
 ```python
-sage: X=HM(3,1,1,HM(3,'x').list()); Y=HM(3,1,1,HM(3,'y').list()); Z=HM(3,1,1,HM(3,'z').list())
+sage: sz=3; X=HM(sz,1,1,HM(sz,'x').list()); Y=HM(sz,1,1,HM(sz,'y').list()); Z=HM(sz,1,1,HM(sz,'z').list()); L=[X, Y, Z]
 sage: Prod(X.transpose(2), Y.transpose(), Z)[0,0,0]
 x0*y0*z0 + x1*y1*z1 + x2*y2*z2
-sage: L=[X, Y, Z]
 sage: apply(Prod, [L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0,0]
 x0*y0*z0 + x1*y1*z1 + x2*y2*z2
 ```
+
+Here is a similar command in a more general set up
+
+```python
+sage: AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+sage: od=4; sz=3 # Initialization of the order and size paramaters
+sage: L=[apply(HM, [sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()]) for j in range(od)]
+sage: apply(Prod, [L[i].transpose(i) for i in range(od-1,-1,-1)])
+[[[[w0*x0*y0*z0 + w1*x1*y1*z1 + w2*x2*y2*z2]]]]
+```
+
 
 Multilinear forms associated with an input hypermatrix is conveniently expressed
 using the general BM product as follows
@@ -169,6 +252,17 @@ The corresponding commands for third order hypermatrices is
 sage: X=HM(2,1,1,HM(2,'x').list()); Y=HM(2,1,1,HM(2,'y').list()); Z=HM(2,1,1,HM(2,'z').list())
 sage: A=HM(2,2,2,'a')
 sage: ProdB(X.transpose(2), Y.transpose(), Z, A)[0,0,0]
+a000*x0*y0*z0 + a100*x1*y0*z0 + a010*x0*y1*z0 + a110*x1*y1*z0 + a001*x0*y0*z1 + a101*x1*y0*z1 + a011*x0*y1*z1 + a111*x1*y1*z1
+```
+
+Here is the same command in a more general setup
+
+```python
+sage: AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+sage: od=3; sz=2 # Initialization of the order and size paramaters
+sage: L=[apply(HM, [sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()]) for j in range(od)]
+sage: A=HM(2,2,2,'a') # Initialization of the background hypermatrix
+sage: apply(ProdB, [L[i].transpose(i) for i in range(od-1,-1,-1)]+[A])[0,0,0]
 a000*x0*y0*z0 + a100*x1*y0*z0 + a010*x0*y1*z0 + a110*x1*y1*z0 + a001*x0*y0*z1 + a101*x1*y0*z1 + a011*x0*y1*z1 + a111*x1*y1*z1
 ```
 
@@ -193,11 +287,19 @@ The [Kronecker delta](http://en.wikipedia.org/wiki/Kronecker_delta#Properties_of
 hypermatrices are generalizations of identity matrices in the sense that all entries are zero 
 except for the entries located on the main diagonal as illustated below 
 ```python
-sage: rng=range(2)
-sage: Dlt=HM(3,2,'kronecker')
-sage: A=HM(2,2,2,'a')
-sage: HM(2,2,2,[A[i,j,k]==Dlt[i,j,k] for k in rng for j in rng for i in rng])
-[[[a000==1, a001==0], [a010==0, a011==0]], [[a100==0, a101==0], [a110==0, a111==1]]]
+sage: sz=2; od=3; rng=range(2) # Initialization of the size and order parameters
+sage: Dlt=HM(od, sz, 'kronecker')
+sage: A=HM(sz,sz,sz,'d')
+sage: He=HM(sz,sz,sz,[A[i,j,k]==Dlt[i,j,k] for k in rng for j in rng for i in rng])
+sage: He.list() # Printing constraints associated with the Kronecker delta
+[d000 == 1,
+ d100 == 0,
+ d010 == 0,
+ d110 == 0,
+ d001 == 0,
+ d101 == 0,
+ d011 == 0,
+ d111 == 1]
 ```
 
 ## Orthogonal hypermatrices
@@ -282,10 +384,19 @@ The hypermatrix package also provide and symbolic parametrization of multistocha
 and side length equal to 2 obtained as follows
 
 ```python
-sage: GeneralStochasticHypermatrix(var('x'), 2)
-[[cos(x)^2, sin(x)^2], [sin(x)^2, cos(x)^2]] 
-sage: GeneralStochasticHypermatrix(var('x'), 3)
-[[cos(x)^2, sin(x)^2], [sin(x)^2, cos(x)^2]], [[sin(x)^2, cos(x)^2], [cos(x)^2, sin(x)^2]]]
+sage: GeneralStochasticHypermatrix(var('x'), 2).printHM()
+[:, :]=
+[cos(x)^2 sin(x)^2]
+[sin(x)^2 cos(x)^2] 
+sage: GeneralStochasticHypermatrix(var('x'), 3).printHM()
+[:, :, 0]=
+[cos(x)^2 sin(x)^2]
+[sin(x)^2 cos(x)^2]
+
+[:, :, 1]=
+[sin(x)^2 cos(x)^2]
+[cos(x)^2 sin(x)^2]
+
 sage: GeneralStochasticHypermatrix(var('x'), 4)
 [[[[cos(x)^2, sin(x)^2], [sin(x)^2, cos(x)^2]], [[sin(x)^2, cos(x)^2], [cos(x)^2, sin(x)^2]]], [[[sin(x)^2, cos(x)^2], [cos(x)^2, sin(x)^2]], [[cos(x)^2, sin(x)^2], [sin(x)^2, cos(x)^2]]]]
 ```
@@ -332,7 +443,8 @@ True
 Recall from the algebra of matrices that rank one matrices of size 2 by 3 are obtained as follows
 
 ```python
-sage: Matrix(SR,Prod(HM(2,1,'a'),HM(1,3,'b')).listHM())
+sage: Prod(HM(2,1,'a'),HM(1,3,'b')).printHM()
+[:, :]=
 [a00*b00 a00*b01 a00*b02]
 [a10*b00 a10*b01 a10*b02]
 ```
@@ -340,8 +452,22 @@ sage: Matrix(SR,Prod(HM(2,1,'a'),HM(1,3,'b')).listHM())
 Quite similarly a general rank one third order hypermatrix of size 2 by 3 by 4 is obtained as follows
 
 ```python
-sage: Prod(HM(2,1,4,'a'),HM(2,3,1,'b'),HM(1,3,4,'c'))
-[[[a000*b000*c000, a001*b000*c001, a002*b000*c002, a003*b000*c003], [a000*b010*c010, a001*b010*c011, a002*b010*c012, a003*b010*c013], [a000*b020*c020, a001*b020*c021, a002*b020*c022, a003*b020*c023]], [[a100*b100*c000, a101*b100*c001, a102*b100*c002, a103*b100*c003], [a100*b110*c010, a101*b110*c011, a102*b110*c012, a103*b110*c013], [a100*b120*c020, a101*b120*c021, a102*b120*c022, a103*b120*c023]]]
+sage: Prod(HM(2,1,4,'a'),HM(2,3,1,'b'),HM(1,3,4,'c')).printHM()
+[:, :, 0]=
+[a000*b000*c000 a000*b010*c010 a000*b020*c020]
+[a100*b100*c000 a100*b110*c010 a100*b120*c020]
+
+[:, :, 1]=
+[a001*b000*c001 a001*b010*c011 a001*b020*c021]
+[a101*b100*c001 a101*b110*c011 a101*b120*c021]
+
+[:, :, 2]=
+[a002*b000*c002 a002*b010*c012 a002*b020*c022]
+[a102*b100*c002 a102*b110*c012 a102*b120*c022]
+
+[:, :, 3]=
+[a003*b000*c003 a003*b010*c013 a003*b020*c023]
+[a103*b100*c003 a103*b110*c013 a103*b120*c023]
 ```
 
 It is possible to extract outer product summands from the any BM product by using some Kronecker delta type matrices as follows
@@ -579,12 +705,12 @@ sage: substitute_matrix(p,x,Matrix(SR,HM(2,2,'a').listHM()))
 [  a00*a10 + a10*a11 + 2*a10*y a01*a10 + a11^2 + 2*a11*y + 1]
 ```
 
-To loading a PNG image into a hypermatrix
+To loading a PNG image into a hypermatrix ( warning: very slow !)
 
- ```python
+```python
 sage: A=HM("pic.png")
 ```
 # Bug report
 
-Please report any bugs, they will be greatly appreciated.
+Please reporting bugs is greatly appreciated.
 
