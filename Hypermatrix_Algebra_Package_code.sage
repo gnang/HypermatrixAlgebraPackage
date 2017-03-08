@@ -10423,7 +10423,7 @@ def diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
         sage: A00=HM(2,HM(2,'a').list(),'diag'); A01=HM(2,HM(2,'b').list(),'diag'); A10=HM(2,HM(2,'c').list(),'diag'); A11=HM(2,HM(2,'d').list(),'diag')
         sage: B00=HM(2,HM(2,'e').list(),'diag'); B01=HM(2,HM(2,'f').list(),'diag'); B10=HM(2,HM(2,'g').list(),'diag'); B11=HM(2,HM(2,'h').list(),'diag')
         sage: Cf1=HM([[[A00, A10], [A01, A11]]]); Cf1.dimensions() # Initialization of the left coefficient matrix
-        [1, 2, 2] 
+        [1, 2, 2]
         sage: Cf2=HM([[[B00, B01]], [[B10, B11]]]); Cf2.dimensions() # Initialization of the right coefficient matrix
         [2, 1, 2]
         sage: Vx=HM([[[HM(2,2,'x'), HM(2,2,'y')]]])
@@ -11349,4 +11349,117 @@ def hadamard_linear_solverHM(A,b,x,v):
     tp1=GeneralHypermatrixProduct_with_elementwise_product(Pm,x)
     tp2=bp-GeneralHypermatrixProduct_with_elementwise_product((Ap-Pm),v)
     return [[tp1[i,0],tp2[i,0]] for i in range(tp1.n(0))]
+
+def sylvesterian_eliminationHM(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrbLst=HM(sz,'x').list(); Ha=HM(sz,sz,'a'); Hb=HM(sz,1,HM(sz,'b').list())
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=sylvesterian_eliminationHM(CnstrLst, VrbLst)
+        sage: Lf
+        [a00*x0 + a01*x1 + a02*x2 - b0,
+         -(a11*x1 + a12*x2 - b1)*a00 + (a01*x1 + a02*x2 - b0)*a10,
+         ((a22*x2 - b2)*a00 - (a02*x2 - b0)*a20)*(a01*a10 - a00*a11) - ((a12*x2 - b1)*a00 - (a02*x2 - b0)*a10)*(a01*a20 - a00*a21)]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(PolyLst)
+    # Initializing the degree matrix.
+    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
+    #A.printHM()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        #while (A[i:,j]).is_zero() and j < A.ncols()-1:
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        #if (A[i:,:].is_zero())==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                #Ta=A[i:,:]
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                #Id=identity_matrix(Ta.nrows())
+                Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
+                #A[i:,:]=Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                    #print 'i=', i,'j=', j,' r=', r
+                    #print 'CnstrLst=', CnstrLst
+                    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[u].degree(VrbLst[v])) for v in range(len(VrbLst)) for u in range(len(CnstrLst))])
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return CnstrLst
+
+def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in reduced row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrbLst=HM(sz,'x').list(); Ha=HM(sz,sz,'a'); Hb=HM(sz,1,HM(sz,'b').list())
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=sylvester_kronecker_eliminationHM(CnstrLst, VrbLst)
+        sage: Lf
+        [-((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(a00*x0 - b0) + ((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*a02)*(a01*a10 - a00*a11) + (((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*(a02*a10 - a00*a12) - ((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(a10*b0 - a00*b1))*((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*a01,
+         ((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*((a11*x1 - b1)*a00 - (a01*x1 - b0)*a10) - ((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*(a02*a10 - a00*a12),
+         ((a22*x2 - b2)*a00 - (a02*x2 - b0)*a20)*(a01*a10 - a00*a11) - ((a12*x2 - b1)*a00 - (a02*x2 - b0)*a10)*(a01*a20 - a00*a21)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(sylvesterian_eliminationHM(PolyLst, VrbLst))
+    # Initializing the degree matrix.
+    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1,-1,-1):
+                CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[u].degree(VrbLst[v])) for v in range(len(VrbLst)) for u in range(len(CnstrLst))])
+            i=i-1; j=0
+    return CnstrLst
 
