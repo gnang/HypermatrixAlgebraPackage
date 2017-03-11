@@ -807,6 +807,9 @@ class HM:
         else:
             return GeneralHyperdeterminant(self) 
 
+    def is_empty(self):
+        return self.hm==[]
+
     def is_zero(self):
         if Set([f.is_zero() for f in self.list()])==Set([True]):
             return True
@@ -11309,7 +11312,7 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
     """
     CnstrLst=copy(PolyLst)
     # Initializing the degree matrix.
-    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
+    A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
     #A.printHM()
     # Initialization of the row and column index
     i=0; j=0
@@ -11340,10 +11343,12 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
                 if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
                     r=r+1
                 else:
-                    CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
-                    #print 'i=', i,'j=', j,' r=', r
-                    #print 'CnstrLst=', CnstrLst
-                    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[u].degree(VrbLst[v])) for v in range(len(VrbLst)) for u in range(len(CnstrLst))])
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                        if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                            CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                            #print 'i=', i,'j=', j,' r=', r
+                            #print 'CnstrLst=', CnstrLst
+                            A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
         # Incrementing the row and column index.
         i=i+1; j=j+1
     return CnstrLst
@@ -11389,8 +11394,10 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
                 j = j + 1
             # performing row operations
             for r in range(i-1,-1,-1):
-                CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
-                A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[u].degree(VrbLst[v])) for v in range(len(VrbLst)) for u in range(len(CnstrLst))])
+                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                        CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                        A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
             i=i-1; j=0
     return CnstrLst
 
