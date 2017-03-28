@@ -568,7 +568,27 @@ class HM:
             A = GeneralHypermatrixCyclicPermute(A)
         return A
 
-    def dagger(self, i=1):
+    def conjugate(self):
+        """
+        Outputs the conjugate of the hypermatrix. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,1,[1+3*I, I])
+            sage: Ha.conjugate()
+            [[-3*I + 1], [-I]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """ 
+        A = self 
+        return GeneralHypermatrixConjugate(A)
+
+    def conjugate_transpose(self, i=1):
         """
         Outputs the conjugate transpose of the hypermatrix. 
 
@@ -577,7 +597,7 @@ class HM:
         ::
 
             sage: Ha=HM(2,1,[1+3*I, I])
-            sage: Ha.dagger()
+            sage: Ha.conjugate_transpose()
             [[-3*I + 1, -I]]
 
         AUTHORS:
@@ -688,6 +708,7 @@ class HM:
                 print '[:, :, '+str(dpth)+']=\n'+latex(Matrix(SR,self.n(0),self.n(1),[L[i][j][dpth] for i in range(self.n(0)) for j in range(self.n(1))]))+'\n'
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
+
     def n(self,i):
         if i==0:
             return self.nrows()
@@ -3628,7 +3649,7 @@ def HypermatrixPseudoInversePairs(A,B):
     return [R1,R2]
 
 #@cached_function
-def C(n):
+def CountCompositions(n):
     """
     Counts the number of product composition involving the input
     hypermatrix n times.
@@ -3637,7 +3658,7 @@ def C(n):
     The input n must be greater than 0
     ::
 
-        sage: C(3)
+        sage: CountCompositions(3)
         1
 
     AUTHORS:
@@ -3646,7 +3667,7 @@ def C(n):
     if n == 1 :
         return 1
     else :
-        return sum([C(i)*C(j)*C(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
+        return sum([CountCompositions(i)*CountCompositions(j)*CountCompositions(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
 
 def GeneralHypermatrixProduct(*args):
     """
@@ -8272,9 +8293,7 @@ def linear_solverHM(A,b,x,v):
 
         sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
         sage: [A,b]=ConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
-        sage: Mx=HM(A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
-        sage: Mv=HM(A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
-        sage: linear_solverHM(A,b,Mx,Mv)
+        sage: linear_solverHM(A,b,HM(A.ncols(),1,HM(A.ncols(),'x').list()),HM(A.ncols(),1,HM(A.ncols(),'t').list()))
         [x0 == a00 - a10 + a11 - t3,
          x1 == a11 - t3,
          x2 == a10 - a11 + t3,
@@ -8615,6 +8634,7 @@ def RealRow_Gram_Schmidt(M):
         [                                                  a00^2 + a01^2                                                               0]
         [                                                              0 (a01^2*a10^2 - 2*a00*a01*a10*a11 + a00^2*a11^2)/(a00^2 + a01^2)]
 
+
     AUTHORS:
     - Edinah K. Gnang
     """
@@ -8643,6 +8663,26 @@ def RealRow_Gram_SchmidtHM(Hm):
         [:, :]=
         [                                                  a00^2 + a01^2                                                               0]
         [                                                              0 (a01^2*a10^2 - 2*a00*a01*a10*a11 + a00^2*a11^2)/(a00^2 + a01^2)]
+        sage: A = HM([[-2*I + 3, -2], [5*I - 1, -I + 2]]); od=2; sz = 2
+        sage: B=HM(2*sz, 2*sz,'zero') # Conversion from complex to real
+        sage: for i in range(sz):
+        ....:     for j in range(sz):
+        ....:         Tmp=HM(sz, sz,'zero'); Tmp[i,j]=1
+        ....:         B=B+Tmp.tensor_product(HM([[A[i,j].real(),-A[i,j].imag()],[A[i,j].imag(),A[i,j].real()]]))
+        ....:
+        sage: Q=RealRow_Gram_SchmidtHM(B) # Performing the orthogonalization
+        sage: U=HM(sz, sz,'zero') # Conversion from real back to complex
+        sage: for i in range(0, 2*sz, 2):
+        ....:     for j in range(0, 2*sz, 2):
+        ....:         U[i/2,j/2]=Q[i,j]+I*Q[i+1,j]
+        ....:
+        sage: U.printHM()
+        [:, :]=
+        [     -2*I + 3            -2]
+        [6/17*I + 4/17       13/17*I]
+        sage: U*U.conjugate_transpose()
+        [[17, 0], [0, 13/17]]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -8700,6 +8740,26 @@ def RealColumn_Gram_SchmidtHM(Hm):
         [:, :]=
         [                                                  a00^2 + a10^2                                                               0]
         [                                                              0 (a01^2*a10^2 - 2*a00*a01*a10*a11 + a00^2*a11^2)/(a00^2 + a10^2)]
+        sage: A = HM([[-2*I + 3, -2], [5*I - 1, -I + 2]]); od=2; sz = 2
+        sage: B=HM(2*sz, 2*sz,'zero') # Conversion from complex to real
+        sage: for i in range(sz):
+        ....:     for j in range(sz):
+        ....:         Tmp=HM(sz, sz,'zero'); Tmp[i,j]=1
+        ....:         B=B+Tmp.tensor_product(HM([[A[i,j].real(),-A[i,j].imag()],[A[i,j].imag(),A[i,j].real()]]))
+        ....:
+        sage: Q=RealColumn_Gram_SchmidtHM(B) # Performing the orthogonalization
+        sage: U=HM(sz, sz,'zero') # Conversion from real back to complex
+        sage: for i in range(0, 2*sz, 2):
+        ....:     for j in range(0, 2*sz, 2):
+        ....:         U[i/2,j/2]=Q[i,j]+I*Q[i+1,j]
+        ....:
+        sage: U.printHM()
+        [:, :]=
+        [   -2*I + 3 1/3*I - 1/3]
+        [    5*I - 1       1/3*I]
+        sage: U.conjugate_transpose()*U
+        [[39, 0], [0, 1/3]]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -8866,6 +8926,7 @@ def Nearest_RealColumn_Gram_Schmidt(M):
 def GeneralHypermatrixConstrainedOrthogonalization(H, X):
     """
     Implements the general hypermatrix constrained orthogonalization algorithm.
+    The function simply returns the solution to the corresponding constraints.
 
 
     EXAMPLES:
@@ -8911,6 +8972,9 @@ def GeneralHypermatrixConstrainedOrthogonalization(H, X):
 def GeneralHypermatrixConstrainedOrthogonalizationII(H, X, sz):
     """
     Implements the general hypermatrix constrained orthogonalization algorithm.
+    The difference with the implementation above is that we can change here the
+    size of the support of the inner product. This enables orthogonalization
+    of a smaller hypermatrix block. The function returns the solutions
 
 
     EXAMPLES:
@@ -9961,9 +10025,9 @@ def SecondOrderCharpolyII(A, U, Dg):
     ::
 
         sage: A=HM(2,2,'a'); U=HM(2,2,'u'); Dg=HM(2,2,diagonal_matrix(HM(2,'x').list()).list())
-        sage: SecondOrderCharpolyII(A, U, Dg)[2].numerator().factor()
+        sage: SecondOrderCharpolyII(A, U, Dg)[2].simplify_rational().numerator().factor()
         (a10*u00^2 - a00*u00*u10 + a11*u00*u10 - a01*u10^2)*(a10*u01^2 - a00*u01*u11 + a11*u01*u11 - a01*u11^2)*(a01*a10 - a00*a11)
-        sage: SecondOrderCharpolyII(A, U, Dg)[2].denominator().factor()
+        sage: SecondOrderCharpolyII(A, U, Dg)[2].simplify_rational().denominator().factor()
         (a10*u00*u01 - a00*u01*u10 + a11*u00*u11 - a01*u10*u11)*(a10*u00*u01 + a11*u01*u10 - a00*u00*u11 - a01*u10*u11)
 
     AUTHORS:
