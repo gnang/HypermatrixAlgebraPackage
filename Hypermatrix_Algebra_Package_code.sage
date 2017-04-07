@@ -144,8 +144,15 @@ class HM:
     def __pow__(self, other):
         if self.order()==2 and self.is_hypercolumn():
             return vec_exp(self, other)
-        elif self.order()==2 and other==-1:
+        elif self.order()==2 and other==-1 and self.is_cubical():
             return self.inverse()
+        elif self.order()==2 and other==0 and self.is_cubical():
+            return HM(self.order(), self.n(0), 'kronecker')
+        elif self.order()==2 and type(other)==type(5) and self.is_cubical():
+            if other > 0:
+                return self*(self^(other-1))
+            elif other < 0:
+                return self.inverse()^(-other)
         else:
             return GeneralHypermatrixHadamardExponent(self,other)
     def __add__(self, other):
