@@ -1954,6 +1954,23 @@ def Vandermonde(l):
     """
     return HM(len(l),len(l),[l[j]^i for j in range(len(l)) for i in range(len(l))])
 
+def var_list(c,sz):
+    """
+    Returns a variable list of size sz indexing the input character c.
+
+    EXAMPLES:
+
+    ::
+
+        sage: var_list('x', 3)
+        [x0, x1, x2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return HM(sz,c).list()
+
 def Lagrange(X):
     """
     Constructs a Lagrange matrix from the input list
@@ -11471,4 +11488,5 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
                         A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
             i=i-1; j=0
     return CnstrLst
+
 
