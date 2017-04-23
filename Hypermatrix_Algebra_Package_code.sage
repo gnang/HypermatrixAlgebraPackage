@@ -11490,3 +11490,29 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
     return CnstrLst
 
 
+def degree_matrix(EqL, VrbL):
+    """
+    Outputs the degree matrix associated with the in input system 
+    relative to the input list of variables.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrbL=HM(sz,'x').list(); Ha=HM(sz,sz,'a'); Hb=HM(sz,1,HM(sz,'b').list())
+        sage: EqL=(Ha*HM(sz,1,VrbL)-Hb).list()
+        sage: Ha=degree_matrix(EqL, VrbL)
+        sage: Ha.printHM()
+        [:, :]=
+        [1 1 1]
+        [1 1 1]
+        [1 1 1] 
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return HM([[EqL[i].degree((VrbL)[j]) for j in range(len(VrbL))] for i in range(len(EqL))])
+ 
