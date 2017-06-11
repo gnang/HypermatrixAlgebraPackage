@@ -3406,6 +3406,26 @@ def SylvesterHM(p,q,vrbl):
     else:
         raise ValueError, "The inputs must both be polynomials in the input variable."
 
+def Resultant(p, q, vrbl):
+    """
+    Takes as input two polynomials and a variable
+    and outputs the corresponding resultant.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
+        sage: p=expand((x-a0)*(x-a1))
+        sage: q=expand((x-b0)*(x-b1))
+        sage: Resultant(p, q, x).factor()
+        (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return SylvesterHM(p, q, vrbl).det()
+
 def Gmatrix(p,q,vrbl):
     """
     Takes as input two polynomials and a variable
@@ -5192,6 +5212,25 @@ def channel_product(A,B):
     R2 = Matrix(SR,P2.listHM())*Matrix(SR,Q2.listHM())
     return HM([[(R0[i,:]).list() for i in range(A.n(1))],[(R1[i,:]).list() for i in range(A.n(1))],[(R2[i,:]).list() for i in range(A.n(1))]]).transpose()
 
+def Matrix2HM(A):
+    """
+    Computes symbolically the determinant of a square matrix
+    using the sum over permutation formula.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Lv=var_list('a',5)
+        sage: Matrix2HM(Matrix(SR,[Lv[1:3],Lv[3:]]))
+        [[a1, a2], [a3, a4]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return HM(A.nrows(), A.ncols(), A.transpose().list())
+
 def Deter(A):
     """
     Computes symbolically the determinant of a square matrix
@@ -5210,6 +5249,27 @@ def Deter(A):
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
     return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([A[k,p[k]] for k in range(A.nrows())]) for p in P])
+
+def DeterHadamard(A):
+    """
+    Computes symbolically the determinant of a square matrix
+    using the sum over permutation formula.
+
+    EXAMPLES:
+
+    ::
+
+        sage: DeterHadamard(HM(2,2,[HM(2,2,'a'),HM(2,2,'c'),HM(2,2,'b'),HM(2,2,'d')])).printHM()
+        [:, :]=
+        [-b00*c00 + a00*d00 -b01*c01 + a01*d01]
+        [-b10*c10 + a10*d10 -b11*c11 + a11*d11]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the permutations
+    P = Permutations(range(A.nrows()))
+    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*list_elementwise_product([A[k,p[k]] for k in range(A.nrows())]) for p in P])
 
 def ThirdOrderDeter(H):
     """
@@ -11489,6 +11549,91 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
             i=i-1; j=0
     return CnstrLst
 
+def sylvesterian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
+    """
+    Outputs list of contraints whose degree matrix is in row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation should therefore be used with caution.
+    The polynomial expressions obtained are reduced modulo the single variable
+    variables relations inputed in Rlts. The input list of polynomials must
+    be given in their expanded form
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrL=var_list('x',sz); f=sum(var_list('a',sz)[k]*x^k for k in range(sz))
+        sage: Rlts=[prod(VrL[i]-j for j in range(sz)) for i in range(sz)]
+        sage: CnstrLst=Rlts[:sz-1]+[sum(f.subs(x==VrL[k]) for k in range(sz))]
+        sage: Lf=sylvesterian_elimination_reductionHM(CnstrLst, VrL, Rlts)
+        sage: Lf
+        [(x0 - 1)*(x0 - 2)*x0,
+         (x1 - 1)*(x1 - 2)*x1,
+         -(a1^14*a2^378*x2^2 + a1^15*a2^377*x2 + 3*a0*a1^14*a2^377)*a1^15*a2^377]
+        sage: sz=3; VrL=var_list('x',2*sz); Rlts=[VrL[k]^2-VrL[k] for k in range(2*sz)] 
+        sage: f0=(HM(1,sz-1,VrL[:sz-1])*HM(sz-1,1,[2^k for k in range(sz-1)]))[0,0]
+        sage: f1=(HM(1,sz-1,VrL[sz-1:sz+1])*HM(sz-1,1,[2^k for k in range(sz)]))[0,0]
+        sage: CnstrLst=Rlts[:sz]+[expand(f0*f1)-6]
+        sage: sylvesterian_elimination_reductionHM(CnstrLst, VrL, Rlts)
+        [x0^2 - x0,
+         x1^2 - x1,
+         x2^2 - x2,
+         1399680*(54944*x2*x3 + 9*x2 + 4096*x3)*(4*x2*x3 + x2 + 4*x3)*(2*x2*x3 - 3*x2 - 8*x3)*(x2*x3 - x2)*(x2 + 2*x3)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(PolyLst)
+    # Initializing the degree matrix.
+    A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+    #A.printHM()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        #while (A[i:,j]).is_zero() and j < A.ncols()-1:
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        #if (A[i:,:].is_zero())==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                #Ta=A[i:,:]
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                #Id=identity_matrix(Ta.nrows())
+                Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
+                #A[i:,:]=Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                        #if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                        Cf=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j])
+                        rs=HM(Cf.n(0),1,'zero')
+                        #print prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[0][z,z] for z in range(Cf.n(0)))
+                        if not prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[0][z,z] for z in range(Cf.n(0))).is_zero():
+                            #CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                            CnstrLst[r]=prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[0][z,z] for z in range(Cf.n(0)))
+                            #print 'i=', i,'j=', j,' r=', r
+                            #print 'CnstrLst=', CnstrLst
+                            A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return CnstrLst
 
 def degree_matrix(EqL, VrbL):
     """
@@ -11515,4 +11660,26 @@ def degree_matrix(EqL, VrbL):
     - To Do: 
     """
     return HM([[EqL[i].degree((VrbL)[j]) for j in range(len(VrbL))] for i in range(len(EqL))])
+
+def i2x2(A):
+    """
+    Outputs the symbolic inverse of a 2x2 matrix.
+
+
+    EXAMPLES:
  
+    ::
+
+        sage: i2x2(HM(2,2,'a')).printHM()
+        [:, :]=
+        [-a11/(a01*a10 - a00*a11)  a01/(a01*a10 - a00*a11)]
+        [ a10/(a01*a10 - a00*a11) -a00/(a01*a10 - a00*a11)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return HM([\
+[ A[1,1]/(A[0,0]*A[1,1]-A[0,1]*A[1,0]), -A[0,1]/(A[0,0]*A[1,1]-A[0,1]*A[1,0])],\
+[-A[1,0]/(A[0,0]*A[1,1]-A[0,1]*A[1,0]),  A[0,0]/(A[0,0]*A[1,1]-A[0,1]*A[1,0])]])
