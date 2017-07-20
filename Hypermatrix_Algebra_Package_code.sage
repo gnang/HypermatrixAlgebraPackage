@@ -142,7 +142,9 @@ class HM:
     def __repr__(self):
         return `self.hm`
     def __pow__(self, other):
-        if self.order()==2 and self.is_hypercolumn():
+        if self.order()==2 and other.order()==2 and self.n(0)==other.n(1):
+            return mprod(other, self)
+        elif self.order()==2 and self.is_hypercolumn():
             return vec_exp(self, other)
         elif self.order()==2 and other==-1 and self.is_cubical():
             return self.inverse()
@@ -153,8 +155,10 @@ class HM:
                 return self*(self^(other-1))
             elif other < 0:
                 return self.inverse()^(-other)
-        else:
+        elif self.dimensions()==other.dimensions():
             return GeneralHypermatrixHadamardExponent(self,other)
+        else:
+            raise ValueError, "Operation is not supported !" 
     def __add__(self, other):
         return GeneralHypermatrixAdd(self,other)
     def __div__(other,self):
@@ -195,6 +199,7 @@ class HM:
         return (isinstance(other, self.__class__) and self.list() == other.list())
     def __ne__(self, other):
         return not self.__eq__(other)
+
     def elementwise_product(self,B):
         """
         Returns the elementwise product of two 
@@ -220,6 +225,32 @@ class HM:
         """
         return GeneralHypermatrixHadamardProduct(self, B)
 
+    def hadamard_product(self,B):
+        """
+        Returns the elementwise product of two 
+        hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,2,'a'); B=HM(2,2,2,'b')
+            sage: A.hadamard_product(B)
+            [[[a000*b000, a001*b001], [a010*b010, a011*b011]], [[a100*b100, a101*b101], [a110*b110, a111*b111]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixHadamardProduct(self, B)
+
+
     def elementwise_exponent(self,s):
         """
         Returns the elementwise exponent of the entries
@@ -242,6 +273,30 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixExponent(self, s)
+
+    def hadamard_exponent(self,B):
+        """
+        Returns the elementwise of two hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,2,'a'); B=HM(2,2,2,'b')
+            sage: A.hadamard_exponent(B)
+            [[[a000^b000, a001^b001], [a010^b010, a011^b011]], [[a100^b100, a101^b101], [a110^b110, a111^b111]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixHadamardExponent(self, B)
 
     def elementwise_base_exponent(self, s):
         """
@@ -818,6 +873,18 @@ class HM:
     def trace(self):
         if self.order()==2:
             return sum(self[i,i] for i in range(min(self.n(0),self.n(1))))
+        else:
+            raise ValueError, "Expects a second order hypermatrix"
+
+    def reduce(self, VrbL, Rlts):
+        return GeneralHypermatrixReduce(self, VrbL, Rlts)
+
+    def fast_reduce(self, monom, subst):
+        return apply(HM, self.dimensions()+[[fast_reduce(self.list()[i], monom, subst) for i in rg(prod(self.dimensions()))]])
+
+    def adjoint(self):
+        if self.order()==2:
+            return Matrix2HM((self.matrix()).adjoint())
         else:
             raise ValueError, "Expects a second order hypermatrix"
 
@@ -3285,13 +3352,16 @@ def Companion_matrix(p,vrbl):
             # Initialization of the matrix
             A=Matrix(SR,HM(dg,dg,'zero').listHM())
             # Filling up the matrix
-            A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
+            #A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
+            A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/(p.diff(vrbl, dg)/factorial(dg))
             for i in range(1,dg):
-                A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
+                #A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
+                A[i,dg-1]=-(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))/(p.diff(vrbl,dg).subs(vrbl==0)/factorial(dg))
                 A[i,i-1]=1
             return A
         elif dg==1:
-            return Matrix(SR,1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
+            #return Matrix(SR,1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
+            return Matrix(SR,1,1,[p.subs(dict([(vrbl,0)]))/(diff(p,vrbl).subs(vrbl==0))])
         else:
             raise ValueError, "Must be of degree at least 1."
     else:
@@ -3307,9 +3377,9 @@ def CompanionHM(p,vrbl):
 
     ::
 
-        sage: x=var('x')
-        sage: A=CompanionHM(sum(HM(5,'a').list()[k]*x^(k) for k in range(5)),x);A.matrix().characteristic_polynomial()
-        x^4 + a3/a4*x^3 + a2/a4*x^2 + a1/a4*x + a0/a4
+        sage: sz=5; x=var('x'); Id=HM(2,sz-1,'kronecker')
+        sage: A=CompanionHM(sum(HM(sz,'a').list()[k]*x^(k) for k in range(sz)),x); expand((x*Id-A).det())
+        x^4 + a3*x^3/a4 + a2*x^2/a4 + a1*x/a4 + a0/a4
 
     AUTHORS:
     - Edinah K. Gnang
@@ -3320,13 +3390,16 @@ def CompanionHM(p,vrbl):
             # Initialization of the matrix
             A=HM(dg,dg,'zero')
             # Filling up the matrix
-            A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
+            #A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
+            A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/(p.diff(vrbl, dg)/factorial(dg))
             for i in range(1,dg):
-                A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
+                #A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
+                A[i,dg-1]=-(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))/(p.diff(vrbl,dg).subs(vrbl==0)/factorial(dg))
                 A[i,i-1]=1
             return A
         elif dg==1:
-            return HM(1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
+            #return HM(1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
+            return HM(1,1,[p.subs(dict([(vrbl,0)]))/(diff(p,vrbl).subs(vrbl==0))])
         else:
             raise ValueError, "Must be of degree at least 1."
     else:
@@ -3343,8 +3416,7 @@ def Sylvester_matrix(p,q,vrbl):
     ::
 
         sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
-        sage: p=expand((x-a0)*(x-a1))
-        sage: q=expand((x-b0)*(x-b1))
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: Sylvester_matrix(p, q, x).det().factor()
         (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
@@ -3359,13 +3431,15 @@ def Sylvester_matrix(p,q,vrbl):
         cp=0
         for i in range(dq):
             for j in range(dp):
-                A[i,cp+j]=p.coefficient(vrbl^(dp-j))
+                #A[i,cp+j]=p.coefficient(vrbl^(dp-j))
+                A[i,cp+j]=p.diff(vrbl,(dp-j)).subs(vrbl==0)/factorial(dp-j)
             A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
             cp=cp+1
         cq=0
         for i in range(dp):
             for j in range(dq):
-                A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
+                #A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
+                A[dq+i,cq+j]=q.diff(vrbl,(dq-j)).subs(vrbl==0)/factorial(dq-j)
             A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
             cq=cq+1
         return A
@@ -3384,8 +3458,7 @@ def SylvesterHM(p,q,vrbl):
     ::
 
         sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
-        sage: p=expand((x-a0)*(x-a1))
-        sage: q=expand((x-b0)*(x-b1))
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: SylvesterHM(p, q, x).ref()[3,3].factor()
         -(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
@@ -3400,13 +3473,15 @@ def SylvesterHM(p,q,vrbl):
         cp=0
         for i in range(dq):
             for j in range(dp):
-                A[i,cp+j]=p.coefficient(vrbl^(dp-j))
+                #A[i,cp+j]=p.coefficient(vrbl^(dp-j))
+                A[i,cp+j]=p.diff(vrbl,(dp-j)).subs(vrbl==0)/factorial(dp-j)
             A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
             cp=cp+1
         cq=0
         for i in range(dp):
             for j in range(dq):
-                A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
+                #A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
+                A[dq+i,cq+j]=q.diff(vrbl,(dq-j)).subs(vrbl==0)/factorial(dq-j)
             A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
             cq=cq+1
         return A
@@ -3423,8 +3498,7 @@ def Resultant(p, q, vrbl):
     ::
 
         sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
-        sage: p=expand((x-a0)*(x-a1))
-        sage: q=expand((x-b0)*(x-b1))
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: Resultant(p, q, x).factor()
         (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
@@ -3444,8 +3518,7 @@ def Gmatrix(p,q,vrbl):
     ::
 
         sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
-        sage: p=expand((x-a0)*(x-a1))
-        sage: q=expand((x-b0)*(x-b1))
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: Gmatrix(p,q,x).det().factor()
         (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
@@ -3472,8 +3545,7 @@ def GmatrixHM(p,q,vrbl):
     ::
 
         sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
-        sage: p=expand((x-a0)*(x-a1))
-        sage: q=expand((x-b0)*(x-b1))
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: GmatrixHM(p,q,x).ref()[3,3].factor()
         (a0 + a1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
@@ -3501,7 +3573,7 @@ def substitute_matrix(p, vrbl, A):
 
         sage: x,y = var('x,y')
         sage: p=x^2+2*x*y+1
-        sage: substitute_matrix(p,x,Matrix(SR,HM(2,2,'a').listHM()))
+        sage: substitute_matrix(p,x,HM(2,2,'a').matrix())
         [a00^2 + a01*a10 + 2*a00*y + 1   a00*a01 + a01*a11 + 2*a01*y]
         [  a00*a10 + a10*a11 + 2*a10*y a01*a10 + a11^2 + 2*a11*y + 1]
         
@@ -3509,12 +3581,42 @@ def substitute_matrix(p, vrbl, A):
     AUTHORS:
     - Edinah K. Gnang
     """
+    if A.nrows() == A.ncols():
+        T=p.subs(vrbl == 0)*identity_matrix(A.nrows())
+        d=p.degree(vrbl)
+        for i in rg(1,d+1):
+            #T=T+(A^i)*p.coefficient(vrbl^i)
+            #T=T+(A^Integer(i))*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
+            T=T+(A^i)*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
+        return T
+    else:
+        raise ValueError, "Must be a polynomial in the input variable."
+
+def substituteHM(p, vrbl, A):
+    """
+    The functions takes as input a polynomial p,
+    a variable vrbl, and a hypermatrix A of order 2.
+    The function outputs the polynomial in the variable.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x = var('x'); A=HM(2,2,'a')
+        sage: p=x^2 - A.trace()*x + A.det()
+        sage: substituteHM(p,x,A).expand()
+        [[0, 0], [0, 0]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
     if A.nrows()==A.ncols():
         d=p.degree(vrbl)
-        T=Matrix(SR, zero_matrix(d,d))
-        T=T+p.subs(dict([(vrbl,0)]))*identity_matrix(A.nrows())
-        for i in range(1,d+1):
-            T=T+(A^i)*p.coefficient(vrbl^i)
+        T = p.subs(vrbl==0)*HM(2,A.nrows(),'kronecker')
+        for i in rg(1,d+1):
+            #T=T+(A^Integer(i))*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
+            T=T+(A^i)*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
         return T
     else:
         raise ValueError, "Must be a polynomial in the input variable."
@@ -3699,7 +3801,6 @@ def HypermatrixPseudoInversePairs(A,B):
                 R2[i][j][k] = exp(sln[sz^3+i*sz^2+j*sz^1+k*sz^0,0])
     return [R1,R2]
 
-#@cached_function
 def CountCompositions(n):
     """
     Counts the number of product composition involving the input
@@ -3733,6 +3834,8 @@ def GeneralHypermatrixProduct(*args):
         sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
         sage: Rslt=GeneralHypermatrixProduct(Ha, Hb, Hc); Rslt
         [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111]]]
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); GeneralHypermatrixProduct(Ha, Hb)
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
 
 
     AUTHORS:
@@ -3773,6 +3876,8 @@ def Prod(*args):
         sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
         sage: Rslt=Prod(Ha, Hb, Hc); Rslt
         [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111]]]
+        sage: Prod(HM(2,2,'a'),HM(2,2,'b'))
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
 
 
     AUTHORS:
@@ -5142,6 +5247,50 @@ def GeneralUnitaryHypermatrix(od):
     # Final result
     return [Q,Qc]
 
+def GeneralHypermatrixReduce(A, VrbL, Rlts):
+    """
+    Outputs a list of lists associated with the general
+    hypermatrix with expressions in the entries reduced 
+    modulo the input relations in the list Rlts on the
+    variables VrbL. The relation are assume to be monic.
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: VrbL=[var('x'), var('y')]
+        sage: Ha=HM(2,2,2,[(VrbL[0]+VrbL[1])^(i+j+k) for i in range(2) for j in range(2) for k in range(2)])
+        sage: GeneralHypermatrixReduce(Ha, VrbL, [VrbL[0]^2-5, VrbL[1]^3-7])
+        [[[1, x + y], [x + y, 2*x*y + y^2 + 5]], [[x + y, 2*x*y + y^2 + 5], [2*x*y + y^2 + 5, 3*x*y^2 + 5*x + 15*y + 7]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # Initialization of the function
+        f=(A[tuple(entry)]).expand()
+        # performing the reduction
+        for v in range(len(VrbL)):
+            for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+        Rh[tuple(entry)]=f
+    return Rh
+
 def DFT_image_resizer(sz, dm):
     """
     Generates a third order hypermatrix of 3 slices
@@ -5221,8 +5370,8 @@ def channel_product(A,B):
 
 def Matrix2HM(A):
     """
-    Computes symbolically the determinant of a square matrix
-    using the sum over permutation formula.
+    Converts a matrix to a hypermatrix.
+
 
     EXAMPLES:
 
@@ -8751,6 +8900,10 @@ def RealRow_Gram_SchmidtHM(Hm):
         [6/17*I + 4/17       13/17*I]
         sage: U*U.conjugate_transpose()
         [[17, 0], [0, 13/17]]
+        sage: A = HM([[-2*I + 3, -2], [5*I - 1, -I + 2]]); U = RR2CC_deflate(RealRow_Gram_SchmidtHM(CC2RR_inflate(A))); U
+        [[-2*I + 3, -2], [6/17*I + 4/17, 13/17*I]]
+        sage: U*U.conjugate_transpose()
+        [[17, 0], [0, 13/17]]
 
 
     AUTHORS:
@@ -10395,7 +10548,7 @@ def Form2TotallySymmetricHypermatrix(f, od, Vrbls):
 
     ::
 
-        sage: sz=2; od=2; X=HM(sz,sz,HM(sz^2,'x').list()); f=X.det()
+        sage: sz=2; od=2; X=HM(sz,sz,var_list('x',sz^2)); f=X.det()
         sage: H=Form2TotallySymmetricHypermatrix(f, 2, X.list()); H.printHM()
         [:, :]=
         [   0    0    0  1/2]
@@ -11459,7 +11612,11 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
         [a00*x0 + a01*x1 + a02*x2 - b0,
          -(a11*x1 + a12*x2 - b1)*a00 + (a01*x1 + a02*x2 - b0)*a10,
          ((a22*x2 - b2)*a00 - (a02*x2 - b0)*a20)*(a01*a10 - a00*a11) - ((a12*x2 - b1)*a00 - (a02*x2 - b0)*a10)*(a01*a20 - a00*a21)]
-
+        sage: degree_matrix(Lf, var_list('x',sz)).printHM()
+        [:, :]=
+        [1 1 1]
+        [0 1 1]
+        [0 0 1]
 
 
     AUTHORS:
@@ -11840,3 +11997,329 @@ def Reduced3x3x3CanonicalFactorization(A, Xfa, Yfa, indx):
         #print '\n'
         #(A-Prod(Uf,Vf,Wf)).canonicalize_radical().printHM()
         return [Uf, Vf, Wf]
+
+def Remnant(p, q, vrbl):
+    """
+    Takes as input two polynomials and a variable
+    and outputs the corresponding remnant with the
+    modular arithmetic method.
+ 
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, a0, a1, a2, b0, b1, b2=var('x, a0, a1, a2, b0, b1, b2')
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
+        sage: factor(Remnant(p, q, x).det())
+        (a0 + a1 - b0 - b1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Updating the firt input polynomial to make it monic in vrbl
+    p=p/(p.diff(vrbl,p.degree(vrbl)).subs(vrbl==0)/factorial(p.degree(vrbl)))
+    #print 'p=',p
+    # Initialization of the list
+    L=[]; f=expand(q)
+    #print 'Initial f=',f
+    for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+        f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
+        #print '    f=',f
+    L.append(f)
+    while len(L) < p.degree(vrbl):
+        # Initialization of the update of q
+        f=expand(q*L[len(L)-1])
+        for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+            f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
+        L.append(f)
+    # Initialisation of the matrix
+    return HM(p.degree(vrbl), p.degree(vrbl),[diff(L[i],vrbl,j).subs(vrbl==0)/factorial(j) for j in range(p.degree(vrbl)) for i in range(len(L))]) 
+
+def modular_eliminationHM(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrbLst=var_list('x',sz); Ha=Vandermonde(range(1,sz+1)); Hb=HM(sz,1,var_list('b',sz))
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=modular_eliminationHM(CnstrLst, VrbLst); Lf
+        [-b0 + x0 + x1 + x2, -b0 + b1 - x1 - 2*x2, -2/3*b0 + b1 - 1/3*b2 + 2/3*x2]
+        sage: degree_matrix(Lf, var_list('x',sz)).printHM()
+        [:, :]=
+        [1 1 1]
+        [0 1 1]
+        [0 0 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(PolyLst)
+    # Initializing the degree matrix.
+    A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+    #A.printHM()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        #while (A[i:,j]).is_zero() and j < A.ncols()-1:
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        #if (A[i:,:].is_zero())==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                #Ta=A[i:,:]
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                #Id=identity_matrix(Ta.nrows())
+                Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
+                #A[i:,:]=Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                        if not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                            CnstrLst[r]=Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                            #print 'i=', i,'j=', j,' r=', r
+                            #print 'CnstrLst=', CnstrLst
+                            A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return CnstrLst
+
+def complete_modular_eliminationHM(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in reduced row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: x, a0, a1, a2, b0, b1, b2=var('x, a0, a1, a2, b0, b1, b2')
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
+        sage: [f.factor() for f in complete_modular_eliminationHM([p,q],[x])]
+        [(a0 - x)*(a1 - x),
+         -(a0 + a1 - b0 - b1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)]
+        sage: sz=3; VrbLst=var_list('x',sz); Ha=Vandermonde(range(1,sz+1)); Hb=HM(sz,1,var_list('b',sz))
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=complete_modular_eliminationHM(CnstrLst, VrbLst)
+        sage: Lf
+        [-b0 + 5/6*b1 - 1/6*b2 + 1/3*x0,
+         -b0 + 4/3*b1 - 1/3*b2 - 1/3*x1,
+         -2/3*b0 + b1 - 1/3*b2 + 2/3*x2]        
+        sage: degree_matrix(Lf, var_list('x',sz)).printHM()
+        [:, :]=
+        [1 0 0]
+        [0 1 0]
+        [0 0 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(modular_eliminationHM(PolyLst, VrbLst))
+    # Initializing the degree matrix.
+    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1,-1,-1):
+                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                        CnstrLst[r]=Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                        A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+            i=i-1; j=0
+    return CnstrLst
+
+def outerdeterminant(A, B):
+    """
+    Computes symbolically the outer-product expansions of the determinant
+    using the sum over permutation formula. The inputs should be second 
+    order hypermatrices.
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; outerdeterminant(HM(sz,sz,'a'), HM(sz,sz,'b')).printHM()
+        [:, :]= 
+        [-a01*a10*b01*b10 + a00*a11*b01*b10 -a01*a10*b01*b11 + a00*a11*b01*b11]
+        [ a01*a10*b00*b10 - a00*a11*b00*b10  a01*a10*b00*b11 - a00*a11*b00*b11]
+        sage: outerdeterminant(HM(2,2,'a'), HM(2,2,'b')).trace().factor()
+        -(a01*a10 - a00*a11)*(b01*b10 - b00*b11)
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the permutations
+    P = Permutations(range(A.nrows()))
+    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([\
+HM(A.nrows(),1,[A[i,p[k]] for i in range(A.nrows())])*\
+HM(1,B.ncols(),[B[k,j] for j in range(B.ncols())]) for k in range(A.nrows())]) for p in P])
+
+def CC2RR_inflate(A):
+    """ 
+    Outputs the inflated matrix obtained by replacing
+    complex entries of A by their canonical 2x2 
+    real matrix representations.
+
+
+    EXAMPLES:
+
+    ::  
+
+        sage: A = HM([[-2*I + 3, -2], [5*I - 1, -I + 2]]); CC2RR_inflate(A).printHM()
+        [:, :]=
+        [ 3  2 -2  0]
+        [-2  3  0 -2]
+        [-1 -5  2  1]
+        [ 5 -1 -1  2] 
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.order()==2:
+        # Initialization of the matrix
+        B=HM(2*A.n(0), 2*A.n(1), 'zero') # Conversion from complex to real
+        for i in range(A.n(0)):
+            for j in range(A.n(1)):
+                Tmp=HM(A.n(0), A.n(1), 'zero'); Tmp[i,j]=1
+                B=B+Tmp.tensor_product(HM([[A[i,j].real(),-A[i,j].imag()],[A[i,j].imag(),A[i,j].real()]]))
+        return B
+    else:
+        raise ValueError, "Expected a second order hypermatrix"
+        
+def RR2CC_deflate(Q):
+    """ 
+    Outputs the deflated matrix obtained by replacing
+    the canonical 2x2 real matrix representations by
+    complex numbers.
+
+
+    EXAMPLES:
+
+    ::  
+
+        sage: A = HM([[3, 2, -2, 0], [-2, 3, 0, -2], [-1, -5, 2, 1], [5, -1, -1, 2]]); RR2CC_deflate(A).printHM()
+        [:, :]=
+        [-2*I + 3       -2]
+        [ 5*I - 1   -I + 2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Q.order()==2:
+        # Initialization of the matrix
+        U=HM(Q.n(0)/2, Q.n(1)/2, 'zero') # Conversion from complex to real
+        for i in range(0, Q.n(0), 2):
+            for j in range(0, Q.n(1), 2):
+                Tmp=HM(Q.n(0), Q.n(1), 'zero'); Tmp[i,j]=1
+                U[i/2, j/2] = Q[i, j]+I*Q[i+1, j]
+        return U
+    else:
+        raise ValueError, "Expected a second order hypermatrix"
+ 
+def quaternion_2x2_CC_rep(VrbL): 
+    """ 
+    Outputs the canonical 2x2 complex matrix 
+    representation of quaternions using the input 
+    variables. The input VrbL is a list of pairs 
+    associated with real part and imaginary part
+    of the input complex numbers 
+
+
+    EXAMPLES:
+
+    ::  
+
+        sage: VrbLx=var_list('x',2); VrbLy=var_list('y',2)
+        sage: quaternion_2x2_CC_rep([(VrbLx[i], VrbLy[i]) for i in range(2)]).printHM()
+        [:, :]=
+        [ x1 + I*y1  x0 + I*y0]
+        [-x0 + I*y0  x1 - I*y1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """ 
+    return HM(2,2,[VrbL[1][0]+I*VrbL[1][1], -VrbL[0][0]+I*VrbL[0][1],  VrbL[0][0]+I*VrbL[0][1], VrbL[1][0]-I*VrbL[1][1]])
+
+def quaternion_2x2_unit_abs_CC(VrbL): 
+    """ 
+    Out puts the canonical 2x2 matrix representation
+    using the input variables. Assumes that the 
+    2 variables in VrbL are associated with complex
+    numbers lying on the unit circle
+
+
+    EXAMPLES:
+
+    ::  
+
+        sage: VrbL=var_list('x',2); quaternion_2x2_unit_abs_CC(VrbL).printHM()
+        [:, :]=
+        [   x1    x0]
+        [-1/x0  1/x1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """ 
+    return HM(2,2,[VrbL[1],-1/VrbL[0],  VrbL[0],1/VrbL[1]])
+
+def rg(*args): 
+    """ 
+    Adapts the range function to our purposes.
+    This function makes sure to return a list of
+    integers and not object of type int.
+
+
+    EXAMPLES:
+
+    ::  
+
+        sage: rg(0,10,2)
+        [0, 2, 4, 6, 8]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """ 
+    return [Integer(i) for i in apply(range, args)]
+
