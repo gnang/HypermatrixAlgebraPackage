@@ -26,6 +26,7 @@ class HM:
     -  ``nrows`` - int, the number of rows
     -  ``ncols`` - int, the number of columns
     -  ``ndpts`` - int, the number of depths
+    -  ``a`` - char, the symbolic entry prefix
 
     EXAMPLES::
     
@@ -2822,7 +2823,7 @@ def multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst):
     ::
 
         sage: x, y = var('x, y'); A=HM(2,2,'a')
-        sage: CnstrLst = [(1/7)*x^A[0,0]*y^A[0,1]==7, x^A[1,0]*y^A[1,1]==2]
+        sage: CnstrLst = [x^A[0,0]*y^A[0,1]==7, x^A[1,0]*y^A[1,1]==2]
         sage: VrbLst = [x, y]
         sage: [Ha,hb] = multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst)
         sage: Ha.printHM()
@@ -3328,6 +3329,82 @@ def MonomialConstraintFormatorHMIII(L, X, MnL, Y):
         Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorHM(Eq, Y)
+
+def exponentialConstraintFormatorHM(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs HM
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+    The difference with the implementation above is
+    that it handles symbolic exponents.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y'); A=HM(2,2,'a')
+        sage: CnstrLst = [(A[0,0]^x)*(A[0,1]^y) == 7, (A[1,0]^x)*(A[1,1])^y == 2]
+        sage: VrbLst = [x, y]
+        sage: [Ha,hb] = exponentialConstraintFormatorHM(CnstrLst, VrbLst)
+        sage: Ha.printHM()
+        [:, :]=
+        [a00 a01]
+        [a10 a11]
+        sage: hb.printHM()
+        [:, :]=
+        [7]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initializing the Matrix
+    A=HM(len(CnstrLst),len(VrbLst),'zero')
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
+    for r in range(len(CnstrLst)):
+        for c in range(len(VrbLst)):
+            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==1)
+    return [A.elementwise_base_exponent(e),b]
+
+def exponentialConstraintFormatorHMII(CnstrLst, VrbLst):
+    """
+    Takes as input a List of linear constraints
+    and a list of variables and outputs matrix
+    and the right hand side vector associate
+    with the matrix formulation of the constraints.
+    working over SR for both A and b.
+    The difference with the implementation above is
+    that it handles symbolic exponents.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, y = var('x, y'); A=HM(2,2,'a')
+        sage: CnstrLst = [(1/7)*(A[0,0]^x)*(A[0,1]^y), (1/2)*(A[1,0]^x)*(A[1,1])^y]
+        sage: VrbLst = [x, y]
+        sage: [A,b] = exponentialConstraintFormatorHMII(CnstrLst, VrbLst)
+        sage: A.printHM()
+        [:, :]=
+        [a00 a01]
+        [a10 a11]
+        sage: b.printHM()
+        [:, :]=
+        [7]
+        [2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the equations
+    Eq=[f/f.subs([v==0 for v in VrbLst])==f.subs([v==0 for v in VrbLst])^(-1) for f in CnstrLst]
+    return exponentialConstraintFormatorHM(Eq, VrbLst)
 
 def Companion_matrix(p,vrbl):
     """
@@ -8693,6 +8770,42 @@ def multiplicative_least_square_linear_solverHM(A,b,x,v):
     tp2=multiplicative_matrix_product((Ap-Pm),v)
     return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
+def exponential_linear_solverHM(Ha,b,x,v):
+    """
+    Outputs the solution to a multiplicative linear system of equations.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; X=var_list('x',sz); A=HM(sz,sz,'a'); Eq=[(A[0,0]^X[0])*(A[0,1]^X[1])==7, (A[1,0]^X[0])*(A[1,1]^X[1])==2]
+        sage: [A,b]=exponentialConstraintFormatorHM(Eq,X); Mx=HM(sz,1,X); Mv=HM(sz,1,var_list('t',sz))
+        sage: exponential_linear_solverHM(A,b,Mx,Mv)
+        [e^x0 == ((2*((7*e^(2*I*pi*k0))^(1/log(a00))*e^(2*I*pi*k1))^(-log(a10))*e^(2*I*pi*k2))^(-1/(log(a01)*log(a10)/log(a00) - log(a11)))*e^(2*I*pi*k3))^(-log(a01)/log(a00))*(7*e^(2*I*pi*k0))^(1/log(a00)),
+         e^x1 == (2*((7*e^(2*I*pi*k0))^(1/log(a00))*e^(2*I*pi*k1))^(-log(a10))*e^(2*I*pi*k2))^(-1/(log(a01)*log(a10)/log(a00) - log(a11)))]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    phi = lambda x: ln(x)
+    A = apply(HM, Ha.dimensions()+[ Ha.apply_map(phi).list() ])
+    # Initialization of the reduced echelon form.
+    [Ap,bp] = multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:2]
+    Id1 = identity_matrix(Ap.nrows()); Id2 = identity_matrix(Ap.ncols())
+    # Obtainin the list of pivot variables.
+    Pm = Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
+    for i in range(Ap.nrows()):
+        if not Ap[i,:].is_zero():
+            for j in range(Ap.ncols()):
+                if Ap[i,j] == 1:
+                    break
+            Pm = Pm+Id1[:,i]*Id2[j,:]
+    # Expressing the solutions
+    tp1 = multiplicative_matrix_product(Pm,x)
+    tp2 = multiplicative_matrix_product((Ap-Pm),v)
+    return [exp(tp1[i,0]) == bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def SecondOrderHadamardFactorization(A,B):
     """
@@ -11729,23 +11842,19 @@ def sylvesterian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
  
     ::
 
-        sage: sz=3; VrL=var_list('x',sz); f=sum(var_list('a',sz)[k]*x^k for k in range(sz))
-        sage: Rlts=[prod(VrL[i]-j for j in range(sz)) for i in range(sz)]
-        sage: CnstrLst=Rlts[:sz-1]+[sum(f.subs(x==VrL[k]) for k in range(sz))]
-        sage: Lf=sylvesterian_elimination_reductionHM(CnstrLst, VrL, Rlts)
+        sage: sz=3; VrbLst=var_list('x',sz); f=sum(var_list('a',sz)[k]*x^(k-1) for k in rg(1,sz))
+        sage: Rlts=[prod(VrbLst[i]-j for j in rg(sz-1)) for i in rg(sz)]
+        sage: CnstrLst=Rlts[:sz-1]+[sum(f.subs(x==VrbLst[k]) for k in rg(sz))]
+        sage: Lf=sylvesterian_elimination_reductionHM(CnstrLst, VrbLst, Rlts)
         sage: Lf
-        [(x0 - 1)*(x0 - 2)*x0,
-         (x1 - 1)*(x1 - 2)*x1,
-         -(a1^14*a2^378*x2^2 + a1^15*a2^377*x2 + 3*a0*a1^14*a2^377)*a1^15*a2^377]
-        sage: sz=3; VrL=var_list('x',2*sz); Rlts=[VrL[k]^2-VrL[k] for k in range(2*sz)] 
-        sage: f0=(HM(1,sz-1,VrL[:sz-1])*HM(sz-1,1,[2^k for k in range(sz-1)]))[0,0]
-        sage: f1=(HM(1,sz-1,VrL[sz-1:sz+1])*HM(sz-1,1,[2^k for k in range(sz)]))[0,0]
-        sage: CnstrLst=Rlts[:sz]+[expand(f0*f1)-6]
-        sage: sylvesterian_elimination_reductionHM(CnstrLst, VrL, Rlts)
-        [x0^2 - x0,
-         x1^2 - x1,
-         x2^2 - x2,
-         1399680*(54944*x2*x3 + 9*x2 + 4096*x3)*(4*x2*x3 + x2 + 4*x3)*(2*x2*x3 - 3*x2 - 8*x3)*(x2*x3 - x2)*(x2 + 2*x3)]
+        [(x0 - 1)*x0,
+         (x1 - 1)*x1,
+         48*(135*a1^4*a2^14*x2 + 270*a1^3*a2^15*x2 + 201*a1^2*a2^16*x2 + 66*a1*a2^17*x2 + 8*a2^18*x2 + 81*a1^5*a2^13 + 135*a1^4*a2^14 + 81*a1^3*a2^15 + 21*a1^2*a2^16 + 2*a1*a2^17)*(6*a1*a2^11*x2 + 3*a2^12*x2 + 9*a1^2*a2^10 + 6*a1*a2^11 + a2^12)*(a2^3*x2 + 3*a1*a2^2 + a2^3)*a2^3]
+        sage: degree_matrix(Lf, VrbLst).printHM()
+        [:, :]=
+        [2 0 0]
+        [0 2 0]
+        [0 0 3]
 
 
     AUTHORS:
@@ -11785,7 +11894,7 @@ def sylvesterian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
                 if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
                     r=r+1
                 else:
-                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j])) > 0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                         #if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                         Cf=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j])
                         rs=HM(Cf.n(0),1,'zero')
@@ -11817,7 +11926,7 @@ def degree_matrix(EqL, VrbL):
         [:, :]=
         [1 1 1]
         [1 1 1]
-        [1 1 1] 
+        [1 1 1]
 
 
     AUTHORS:
@@ -12208,7 +12317,7 @@ def CC2RR_inflate(A):
         [ 3  2 -2  0]
         [-2  3  0 -2]
         [-1 -5  2  1]
-        [ 5 -1 -1  2] 
+        [ 5 -1 -1  2]
 
 
     AUTHORS:
