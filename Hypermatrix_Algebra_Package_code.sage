@@ -12121,6 +12121,46 @@ def Remnant(p, q, vrbl):
         sage: x, a0, a1, a2, b0, b1, b2=var('x, a0, a1, a2, b0, b1, b2')
         sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: factor(Remnant(p, q, x).det())
+        (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Updating the firt input polynomial to make it monic in vrbl
+    p=p/(p.diff(vrbl,p.degree(vrbl)).subs(vrbl==0)/factorial(p.degree(vrbl)))
+    #print 'p=',p
+    # Initialization of the list
+    L=[]; f=expand(q)
+    #print 'Initial f=',f
+    for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+        f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
+        #print '    f=',f
+    L.append(f)
+    while len(L) < p.degree(vrbl):
+        # Initialization of the update of q
+        #f=expand(q*L[len(L)-1])
+        f=expand(vrbl*L[len(L)-1])
+        for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+            f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
+        L.append(f)
+    # Initialisation of the matrix
+    return HM(p.degree(vrbl), p.degree(vrbl),[diff(L[i],vrbl,j).subs(vrbl==0)/factorial(j) for j in range(p.degree(vrbl)) for i in range(len(L))])
+
+def RemnantII(p, q, vrbl):
+    """
+    Takes as input two polynomials and a variable
+    and outputs the corresponding remnant with the
+    modular arithmetic method.
+ 
+
+    EXAMPLES:
+
+    ::
+
+        sage: x, a0, a1, a2, b0, b1, b2=var('x, a0, a1, a2, b0, b1, b2')
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
+        sage: factor(RemnantII(p, q, x).det())
         (a0 + a1 - b0 - b1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
  
 
@@ -12231,8 +12271,7 @@ def complete_modular_eliminationHM(PolyLst, VrbLst):
         sage: x, a0, a1, a2, b0, b1, b2=var('x, a0, a1, a2, b0, b1, b2')
         sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: [f.factor() for f in complete_modular_eliminationHM([p,q],[x])]
-        [(a0 - x)*(a1 - x),
-         -(a0 + a1 - b0 - b1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)]
+        [(a0 - x)*(a1 - x), (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)]
         sage: sz=3; VrbLst=var_list('x',sz); Ha=Vandermonde(range(1,sz+1)); Hb=HM(sz,1,var_list('b',sz))
         sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
         sage: Lf=complete_modular_eliminationHM(CnstrLst, VrbLst)
@@ -12270,6 +12309,134 @@ def complete_modular_eliminationHM(PolyLst, VrbLst):
                 if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                     if not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                         CnstrLst[r]=Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                        A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+            i=i-1; j=0
+    return CnstrLst
+
+def modular_eliminationHMII(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrbLst=var_list('x',sz); Ha=Vandermonde(range(1,sz+1)); Hb=HM(sz,1,var_list('b',sz))
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=modular_eliminationHMII(CnstrLst, VrbLst); Lf
+        [-b0 + x0 + x1 + x2, -b0 + b1 - x1 - 2*x2, -2/3*b0 + b1 - 1/3*b2 + 2/3*x2]
+        sage: degree_matrix(Lf, var_list('x',sz)).printHM()
+        [:, :]=
+        [1 1 1]
+        [0 1 1]
+        [0 0 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(PolyLst)
+    # Initializing the degree matrix.
+    A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+    #A.printHM()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        #while (A[i:,j]).is_zero() and j < A.ncols()-1:
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        #if (A[i:,:].is_zero())==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                #Ta=A[i:,:]
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                #Id=identity_matrix(Ta.nrows())
+                Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
+                #A[i:,:]=Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                        if not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                            CnstrLst[r]=RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                            #print 'i=', i,'j=', j,' r=', r
+                            #print 'CnstrLst=', CnstrLst
+                            A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return CnstrLst
+
+def complete_modular_eliminationHMII(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in reduced row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: x, a0, a1, a2, b0, b1, b2=var('x, a0, a1, a2, b0, b1, b2')
+        sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
+        sage: [f.factor() for f in complete_modular_eliminationHMII([p,q],[x])]
+        [(a0 - x)*(a1 - x),
+         -(a0 + a1 - b0 - b1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)]
+        sage: sz=3; VrbLst=var_list('x',sz); Ha=Vandermonde(range(1,sz+1)); Hb=HM(sz,1,var_list('b',sz))
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=complete_modular_eliminationHMII(CnstrLst, VrbLst)
+        sage: Lf
+        [-b0 + 5/6*b1 - 1/6*b2 + 1/3*x0,
+         -b0 + 4/3*b1 - 1/3*b2 - 1/3*x1,
+         -2/3*b0 + b1 - 1/3*b2 + 2/3*x2]        
+        sage: degree_matrix(Lf, var_list('x',sz)).printHM()
+        [:, :]=
+        [1 0 0]
+        [0 1 0]
+        [0 0 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(modular_eliminationHMII(PolyLst, VrbLst))
+    # Initializing the degree matrix.
+    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1,-1,-1):
+                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                        CnstrLst[r]=RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                         A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
             i=i-1; j=0
     return CnstrLst
@@ -12432,3 +12599,313 @@ def rg(*args):
     """ 
     return [Integer(i) for i in apply(range, args)]
 
+def multivariate_leading_term(f, Xv, Pp):
+    """
+    Takes as input a polynomial in the variables
+    specified in the list Xv and outputs the 
+    leading term of the input polynomial.
+    The last input is the list of primes
+    assigned to each variable to determine
+    the monomial ordering
+ 
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: f = 5*Xv[0]*Xv[1]^3*Xv[2]^2 + 4*Xv[1] + 2*Xv[1]*Xv[2]^7 + 5
+        sage: multivariate_leading_term(f, Xv, Pp)
+        2*x1*x2^7
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=len(Xv)
+    # Expression used for specifying the type of the operation.
+    cst = 2
+    add = var('x0') + var('x1')
+    mul = var('x0') * var('x1')
+    xpo = var('x0') ^ var('x1')
+    if f.operator() == add.operator():
+        # Collecting the terms
+        L=f.operands()
+        # Collecting the terms striped from their coefficients
+        L_strpd = list()
+        for i in rg(len(L)):
+            if L[i].arguments() != ():
+                if (L[i].operator()==mul.operator() or (L[i]).operator()==xpo.operator()):
+                    cst_fctr = 1
+                    lst_i = L[i].operands()
+                    for j in rg(len(lst_i)):
+                        if lst_i[j].arguments()==():
+                            cst_fctr = lst_i[j]
+                    L_strpd.append((expand(L[i]/cst_fctr), i))
+                elif L[i] in Xv:
+                    L_strpd.append((L[i], i))
+        # Storing the integer and the index associated with the term
+        tmp_value = L_strpd[0][0].subs([Xv[i]==Pp[i] for i in rg(sz)])
+        idx = L_strpd[0][1]
+        for k in rg(len(L_strpd)):
+            if L_strpd[k][0].subs([Xv[i]==Pp[i] for i in rg(sz)]) > tmp_value:
+                tmp_value = L_strpd[k][0].subs([Xv[i]==Pp[i] for i in rg(sz)])
+                idx = L_strpd[k][1]
+        return L[idx]
+    elif f.operator() == mul.operator():
+        return f
+    elif f.operator() == xpo.operator():
+        return f 
+    else :
+        return f
+
+def multivariate_division(f, List, Xv, Pp):
+    """
+    Takes as input a polynomial f the list of 
+    polynomials and performs the multivariable
+    division algorithm and the list of variables
+    used. The last input is a list of primes which
+    determines the monomial ordering.
+ 
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: f = 5*Xv[0]*Xv[1]^3*Xv[2]^2 + 4*Xv[1] + 2*Xv[1]*Xv[2]^7 + 5
+        sage: List = [Xv[0]^2+5*Xv[1]^3+2, Xv[1]^3*Xv[0]^2+5*Xv[0]+1]
+        sage: multivariate_division(f, List, Xv, Pp)
+        [x0*x2^2, 0, 2*x1*x2^7 - x0^3*x2^2 - 2*x0*x2^2 + 4*x1 + 5]
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=len(Xv)
+    # Initializing the output List
+    L = []
+    for j in rg(len(List)+1):
+        L.append(0)
+    # Initializing the Polynomial
+    p = f
+    while not p.is_zero():
+        i = 0
+        division_occured = False
+        while (i in rg(len(List))) and (not division_occured):
+            if List[i] == 0:
+                i = i+1
+            else:
+                # Getting the Leading term of fi
+                Lt_fi = multivariate_leading_term(List[i], Xv, Pp)
+                # Getting the leading Monomial of fi
+                Lm_fi = Lt_fi/Lt_fi.subs([Xv[j]==1 for j in rg(sz)])
+                # Getting the Leading term of p
+                Lt_p = multivariate_leading_term(p, Xv, Pp)
+                # Getting the leading Monomial of p
+                Lm_p = Lt_p/Lt_p.subs([Xv[j]==1 for j in rg(sz)])
+                m_p  = Lm_p.subs([Xv[j]==Pp[j] for j in rg(sz)])
+                m_fi = Lm_fi.subs([Xv[j]==Pp[j] for j in rg(sz)])
+                if gcd(m_p, m_fi) == m_fi or gcd(m_p, m_fi) == -m_fi:
+                    L[i] = expand(L[i] + Lt_p/Lt_fi)
+                    p = expand(p - List[i] * Lt_p/Lt_fi)
+                    division_occured = True
+                else :
+                    i = i+1
+        if division_occured == False:
+            L[len(List)] = L[len(List)] + multivariate_leading_term(p, Xv, Pp)
+            p = p - multivariate_leading_term(p, Xv, Pp)
+    return L
+
+def multivariate_monomial_lcm(t1, t2, Xv, Pp):
+    """
+    Takes as input two terms t1 and t2 and
+    returns a the least common multiple monomial.
+    the function does not check the inputs.
+    The last imput is a list of prime which
+    determines the monomial ordering. 
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: multivariate_monomial_lcm(Xv[0]*Xv[1]^2*Xv[2], Xv[0]*Xv[2]^2, Xv, Pp)
+        x0*x1^2*x2^2
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=len(Xv)
+    # Initialization of the Prime variable dictionary datastructure
+    PpXv = dict([(Pp[i],Xv[i]) for i in rg(sz)])
+    # These 2 lines of code get rid of the coefficient of the leading terms
+    m1 = t1/t1.subs([Xv[j]==1 for j in rg(sz)])
+    m2 = t2/t2.subs([Xv[j]==1 for j in rg(sz)])
+    # The following computes the lcm value associated with the monomial we seek
+    monomial_lcm_value = lcm(m1.subs([Xv[i]==Pp[i] for i in rg(sz)]), m2.subs([Xv[i]==Pp[i] for i in rg(sz)]))
+    # The next section of line of codes recovers the 
+    # monomial in question from the computed lcm integer.
+    prime_factors = factor(Integer(monomial_lcm_value))
+    factor_list = list(prime_factors)
+    # Initialization of the monomial
+    m = 1
+    for i in rg(len(factor_list)):
+        tmp_list = list(factor_list[i])
+        m = m * PpXv[tmp_list[0]]^Integer(tmp_list[1])
+    return m
+
+def multivariate_S_polynomials(List, Xv, Pp):
+    """
+    Takes as input a list of polynomials
+    returns the list of substracted polynomials.
+    The last input is a list of primes which
+    determines the monomial ordering.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: multivariate_S_polynomials([Xv[0]*Xv[1]^2*Xv[2]+Xv[1]*Xv[2]+1, Xv[0]*Xv[2]^2+1], Xv, Pp)
+        [x1*x2^2 - x1^2 + x2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=len(Xv)
+    L = []
+    for i in rg(len(List)-1):
+        for j in rg(i+1,len(List)):
+            Lt_fi = multivariate_leading_term(List[i], Xv, Pp)
+            Lt_fj = multivariate_leading_term(List[j], Xv, Pp)
+            monomial_lcm = multivariate_monomial_lcm(Lt_fi,Lt_fj, Xv, Pp)
+            Sij = expand(List[i]*(monomial_lcm/Lt_fi) - List[j]*(monomial_lcm/Lt_fj))
+            L.append(Sij)
+    return L
+
+def multivariate_reduce_polynomial(f, Xv, Pp):
+    """
+    Takes as input a polynomial f and removes any redundant monomial
+    common factors between the terms of f. The reduction referes to 
+    the reduced grobner bases. The last input is a list of primes
+    which determines the variable ordering.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: multivariate_reduce_polynomial(Xv[1]*Xv[2]^2 - Xv[1]^2 + Xv[1]*Xv[2], Xv, Pp)
+        x2^2 - x1 + x2
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=len(Xv)
+    # Initialization of the Prime variable dictionary datastructure
+    PpXv = dict([(Pp[i],Xv[i]) for i in rg(sz)])
+    # Checks to see if there is a constant term 
+    # in which case no reduction is needed
+    if not f.subs([Xv[j]==0 for j in rg(sz)]).is_zero():
+        return f
+    elif f == 0:
+        return f
+    else:
+        L = list(f.iterator())
+        # The next piece of code determines i
+        # if the expression is a monomial
+        prd = 1
+        for j in rg(len(L)):
+            prd = prd*L[j]
+        if prd == f:
+            return 1
+        elif (len(L) == 2) and (L[0]^L[1] == f):
+            return f
+        for i in rg(len(L)):
+            # The next line of code gets rid of 
+            # the coefficients in the list
+            L[i] = L[i]/(L[i].subs([Xv[j]==1 for j in rg(sz)]))
+            L[i] = Integer(L[i].subs([Xv[j]==Pp[j] for j in rg(sz)]))
+        # Computing the greatest common divisior
+        cmn_fctr = gcd(L)
+        if cmn_fctr == 1 :
+            return f
+        else :
+            # The next section of line of codes recover the monomial
+            # in question from the computed gcd integer.
+            prime_factors = factor(cmn_fctr)
+            factor_list = list(prime_factors)
+            m = 1
+            for i in rg(len(factor_list)):
+                tmp_list = list(factor_list[i])
+                m = m * PpXv[tmp_list[0]]^Integer(tmp_list[1])
+            g = expand(f/m)
+            return g
+
+def prime_induced_grobner_basis(Idl, Xv, Pp):
+    """
+    Takes as input a polynomial f and removes any redundant monomial
+    common factors between the terms of f. The reduction referes to 
+    the reduced grobner bases. The last input is a list of primes 
+    which determines the variable ordering.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: Idl=[expand((Xv[0]+2*Xv[1])*(2*Xv[2]))-6, Xv[2]^2-Xv[2], Xv[1]^2-Xv[1], Xv[0]^2-Xv[0]] 
+        sage: prime_induced_grobner_basis(Idl, Xv, Pp)[0]
+        2*x0*x2 + 4*x1*x2 - 6
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=len(Xv)
+    # Initialization step 
+    I_curr = list()
+    for i in rg(len(Idl)):
+        I_curr.append(Idl[i])
+    l_old = 0; l_new = len(I_curr)
+    # Boolean variable tracking contradictions
+    finished = False
+    while l_old != l_new and finished == False:
+        # Computes the single pass of the substraction polynomials
+        S  = multivariate_S_polynomials(I_curr, Xv, Pp)
+        #print '\n\n The subtraction polynomials yield'
+        for i in rg(len(S)):
+            S[i] = multivariate_reduce_polynomial(S[i], Xv, Pp)
+            #print 'S[',i,']= ',S[i]
+        # The instruction bellow is the lazy way of getting rid of the duplicates.
+        St = Set(S)
+        S = list(St)
+        #Recording the size of the Ideal generator set before the division
+        l_old = len(I_curr)
+        for i in rg(len(S)):
+            tmp_list = multivariate_division(S[i], I_curr, Xv, Pp)
+            if tmp_list[len(tmp_list)-1]!=0:
+                I_curr.append(tmp_list[len(tmp_list)-1])
+        # Printing the result of the first pass of the Buchberger algorithm.
+        #print '\n\n The Current generator for the Ideal is given by'
+        for i in rg(len(I_curr)):
+            #print I_curr[i]
+            if I_curr[i] == I_curr[i].subs([Xv[j]==0 for j in rg(sz)]) and not I_curr[i].subs([Xv[j]==0 for j in rg(sz)]).is_zero():
+                finished = True
+        #recording the size of the generator set after the division
+        l_new = len(I_curr)
+    return I_curr
