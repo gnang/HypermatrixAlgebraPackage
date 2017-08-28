@@ -417,6 +417,33 @@ class HM:
         else :
             raise ValueError,"not supported for order %d hypermatrices" % self.order()
 
+    def tensor_power(self, m):
+        """
+        Computes the Kronecker product with itself of arbitrary hypermatrices
+        m times.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,'a')
+            sage: A.tensor_power(2)
+            [[a00^2, a00*a01, a00*a01, a01^2], [a00*a10, a00*a11, a01*a10, a01*a11], [a00*a10, a01*a10, a00*a11, a01*a11], [a10^2, a10*a11, a10*a11, a11^2]]
+        
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        if m == 1:
+            return self.copy()
+        elif m in ZZ and m > 1 :
+            Tmp=self.copy()
+            for i in range(m-1):
+                Tmp=Tmp.tensor_product(self)  
+            return Tmp
+        else:
+            raise ValueError, "Expected a positive integer as argument"
+
     def block_sum(self, V):
         """
         Returns the block sum of two hypermatrices.
@@ -888,6 +915,15 @@ class HM:
             return Matrix2HM((self.matrix()).adjoint())
         else:
             raise ValueError, "Expects a second order hypermatrix"
+
+    def per(self):
+        if self.is_cubical():
+            if self.n(0)==1:
+                return self.list()[0]
+            elif self.order()==2:
+                return Per(self)
+        else:
+            raise ValueError, "Expects a cubical second order hypermatrix"
 
     def det(self):
         if self.is_cubical():
@@ -2020,7 +2056,7 @@ def Vandermonde(l):
 
     ::
 
-        sage: Vandermonde(HM(2,'x').list())
+        sage: Vandermonde(var_list('x',2))
         [[1, 1], [x0, x1]]
 
 
@@ -6336,17 +6372,21 @@ def GeneralHypermatrixKroneckerProduct(A,B):
     else:
         raise ValueError, "The order of the input hypermatrices must match."
 
-@cached_function
-def Ca(n):
+def T2Pre(expr):
     """
-    Outputs the number of formula-binary trees only using addition gates.
+    Converts formula written in the bracket tree encoding to the Prefix string encoding notation
+    the symbol m will stand for the input -1
+
 
     EXAMPLES:
-    The input n must be greater than 0
+
+    The function implemented here tacitly assume that the input is valid
+
     ::
 
-        sage: Ca(3)
-        2
+        sage: T2Pre(['+',1,1])
+        '+11'
+
 
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
@@ -6355,42 +6395,44 @@ def Ca(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == 1:
-        return 1
-    else :
-        return sum([Ca(i)*Ca(n-i) for i in range(1,n)])
+    s = str(expr)
+    return ((((s.replace("[","")).replace("]","")).replace(",","")).replace("'","")).replace(" ","").replace('-1','m')
 
-@cached_function
-def Ca3(n):
+
+def T2P(expr):
     """
-    Outputs the number of formula-binary trees only using fan-in three addition gates.
-    This is a special  case of the Fuss-Catalan sequence.
+    Converts the formula tree to Postfix notation
+
 
     EXAMPLES:
-    The input n must be greater than 0
+    The tacitly assume that the input is valid
+
     ::
 
-        sage: Ca3(3)
-        1
+        sage: T2P(['+',1,1])
+        '11+'
+
 
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
 
     To Do :
     - Try to implement faster version of this procedure
+
     """
-    if n == 1 :
-        return 1
-    else :
-        return sum([Ca3(i)*Ca3(j)*Ca3(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
+    s = str(expr)
+    return ((((s.replace("[","")).replace("]","")).replace(",","")).replace("'","")).replace(" ","")[::-1].replace('-1','m')
 
 def RollLD(L):
     """
     Given an Loaded die, L, the procedures rolls it
+    the function output numbers from 1 to len(L)
+    each weighted by the 
 
 
     EXAMPLES:
-    The tacitly assume that the input is a valid binary tree expression
+    The tacitly assume that the input list is made up of positve integers
+
     ::
 
         sage: RollLD([1])
@@ -6406,9 +6448,2173 @@ def RollLD(L):
     """
     N = sum(L)
     r = randint(1,N)
-    for i in range(len(L)):
+    for i in rg(len(L)):
         if sum(L[:i+1]) >= r:
             return 1+i
+
+@cached_function
+def FaT(n):
+    """
+    The list of formula-binary trees only using addition gates
+    which evaluates to the input integer n.
+
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: FaT(3)
+        [['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return [1]
+    else :
+        gu = []
+        for i in range(1,n):
+            gu = gu + [['+', g1, g2] for g1 in FaT(i) for g2 in FaT(n-i)]
+        return gu
+
+@cached_function
+def FaPre(n):
+    """
+    The list of formula only using addition gates
+    which evaluates to the input integer n in prefix notation.
+
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: FaPre(3)
+        ['+1+11', '++111']
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return [T2Pre(g) for g in FaT(n)]
+
+
+@cached_function
+def FaP(n):
+    """
+    The list of formula only using addition gates
+    which evaluates to the input integer n in postfix notation.
+
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: FaP(3)
+        ['11+1+', '111++']
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return [T2P(g) for g in FaT(n)]
+
+
+@cached_function
+def Ca(n):
+    """
+    Outputs the number of formula-binary trees only using addition gates.
+
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: Ca(3)
+        2
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return 1
+    else :
+        return sum([Ca(i)*Ca(n-i) for i in range(1,n)])
+
+@cached_function
+def LopFaT(n):
+    """
+    Outputs all the formula-binary trees only using addition
+    but the first term of the addition is >= the second term
+
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: LopFaT(3)
+        [['+', ['+', 1, 1], 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return [1]
+    else :
+        gu = []
+        for i in range(1, 1+floor(n/2)):
+            gu = gu + [['+', g1, g2] for g1 in LopFaT(n-i) for g2 in LopFaT(i)]
+        return gu
+
+@cached_function
+def LopCa(n):
+    """
+    Outputs the number of formula-binary trees only using addition gates
+    such that the first term of the addition is >= the second term.
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: LopCa(3)
+        1
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return 1
+    else :
+        return sum([LopCa(i)*LopCa(n-i) for i in range(1,1+floor(n/2))])
+
+def RaFaT(n):
+    """
+    Outputs a uniformly randomly chosen formula-binary tree
+    which evaluate to the input integer n.
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFaT(2)
+        ['+', 1, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return 1
+    else :
+        # Rolling the Loaded Die.
+        j = RollLD([Ca(i)*Ca(n-i) for i in range(1,n+1)])
+        return ['+', RaFaT(j), RaFaT(n-j)]
+
+def RaFaPre(n):
+    """
+    Outputs a uniformly randomly chosen formula-binary tree
+    which evaluate to the input integer n in Prefix notation.
+
+    EXAMPLES:
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFaPre(3)
+        '+1+11'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return(T2Pre(RaFaT(n)))
+
+def RaFaP(n):
+    """
+    Outputs a uniformly randomly chosen formula-binary tree
+    which evaluate to the input integer n in Prefix notation.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFaP(2)
+        '11+'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return(T2P(RaFaT(n)))
+
+def RaLopFaT(n):
+    """
+    Outputs a uniformly randomly chosen formula-binary tree
+    which evaluate to the input integer n such that the first
+    term of the addition is >= the second term.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaLopFaT(3)
+        ['+', ['+', 1, 1], 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return 1
+    else:
+        # Rolling the Loaded Die.
+        j = RollLD([LopCa(i)*LopCa(n-i) for i in range(1,2+floor(n/2))])
+        return ['+', RaLopFaT(n-j), RaLopFaT(j)]
+
+def RaLopFaPre(n):
+    """
+    Outputs a uniformly randomly chosen formula-binary tree
+    which evaluate to the input integer n such that the first
+    term of the addition is >= the second term in prefix notation.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaLopFaPre(3)
+        '++111'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return T2Pre(RaLopFaT(n))
+
+def RaLopFaP(n):
+    """
+    Outputs a uniformly randomly chosen formula-binary tree
+    which evaluate to the input integer n such that the first
+    term of the addition is >= the second term in poistfix notation.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaLopFaP(3)
+        '111++'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return T2P(RaLopFaT(n))
+
+def LopFaPre(n):
+    """
+    Outputs all the formula-binary tree
+    which evaluate to the input integer n such that the first
+    term of the addition is >= the second term in prefix notation.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: LopFaPre(3)
+        ['++111']
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return [T2Pre(f) for f in LopFaT(n)]
+
+def LopFaP(n):
+    """
+    Outputs all the formula-binary tree
+    which evaluate to the input integer n such that the first
+    term of the addition is >= the second term in prefix notation.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: LopFaP(3)
+        ['111++']
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return [T2P(f) for f in LopFaT(n)]
+
+def FamTa(n):
+    """
+    The list of formula-binary trees only using addition  and
+    multiplication gates with the top gate being an addition
+    gate which evaluates to the input integer n.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FamTa(3)
+        [['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return [1]
+    else :
+        gu = []
+        for i in range(1,n):
+            gu = gu + [['+', g1, g2] for g1 in FamT(i) for g2 in FamT(n-i)]
+        return gu
+
+@cached_function
+def FamTm(n):
+    """
+    The list of formula-binary trees only using addition  and
+    multiplication gates with the top gate being a multiplication
+    gate which evaluates to the input integer n.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FamTm(4)
+        [['*', ['+', 1, 1], ['+', 1, 1]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return []
+    else :
+        gu = []
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i) == 0:
+                gu = gu + [['*', g1, g2] for g1 in FamT(i) for g2 in FamT(n/i)]
+        return gu
+
+def FamT(n):
+    """
+    The list of formula-binary trees only using addition and
+    multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FamT(3)
+        [['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return FamTa(n) + FamTm(n)
+
+@cached_function
+def Cama(n):
+    """
+    Output the size of the set of formulas produced by the procedure FamTa(n).
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Cama(6)
+        48
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n==1:
+        return 1
+    else:
+        return sum([Cam(i)*Cam(n-i) for i in range(1,n)])
+
+@cached_function
+def Camm(n):
+    """
+    Output the size of the set of formulas produced by the procedure FamTa(n).
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Camm(6)
+        4
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return sum([Cam(i)*Cam(n/i) for i in range(2,1+floor(n/2)) if mod(n,i)==0])
+
+@cached_function
+def Cam(n):
+    """
+    Output the size of the set of formulas produced by the procedure FamTa(n).
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Cam(2)
+        1
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return Cama(n)+Camm(n)
+
+def RaFamTa(n):
+    """
+    Outputs a formula-binary tree sampled uniformly at random
+    which evaluates to the input integer n using only addition
+    and multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFamT(2)
+        ['+', 1, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n==1:
+        return 1
+    else:
+        j = RollLD([Cam(i)*Cam(n-i) for i in range(1,n)])
+        return ['+', RaFamT(j), RaFamT(n-j)]
+
+def RaFamTm(n):
+    """
+    Outputs a formula-binary tree sampled uniformly at random
+    which evaluates to the input integer n using only addition
+    and multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFamT(2)
+        ['+', 1, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if not is_prime(n):
+        lu = []
+        L  = []
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i)==0:
+                lu.append(i)
+                L.append(Cam(i)*Cam(n/i))
+        j = RollLD(L)
+        return ['*', RaFamT(lu[j-1]), RaFamT(n/lu[j-1])]
+
+def RaFamT(n):
+    """
+    Outputs a formula-binary tree sampled uniformly at random
+    which evaluates to the input integer n using only addition
+    and multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFamT(2)
+        ['+', 1, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n==1:
+        return 1
+    else:
+        i = RollLD([Cama(n),Camm(n)])
+        if i==1:
+            return RaFamTa(n)
+        else :
+            return RaFamTm(n)
+
+@cached_function
+def FamP(n):
+    """
+    Outputs the set of formula-binary tree written in postfix notation
+    which evaluates to the input integer n using only addition
+    and multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FamP(3)
+        ['11+1+', '111++']
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return [T2P(f) for f in FamT(n)]
+
+@cached_function
+def FamPre(n):
+    """
+    Outputs the set of formula-binary tree written in prefix notation
+    which evaluates to the input integer n using only addition
+    and multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FamPre(3)
+        ['+1+11', '++111']
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return [T2Pre(f) for f in FamT(n)]
+
+def RaFamP(n):
+    """
+    Outputs a uniformly randomly sample formula-binary tree written
+    in postfix notation which evaluates to the input integer n using
+    only addition and multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFamP(6)
+        '11+1+11+1++'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return T2P(RaFamT(n))
+
+def RaFamPre(n):
+    """
+    Outputs a uniformly randomly sample formula-binary tree written
+    in prefix notation which evaluates to the input integer n using
+    only addition and multiplication gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFamPre(6)
+        '++1+11+1+11'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return T2Pre(RaFamT(n))
+
+@cached_function
+def FameTa(n):
+    """
+    The list of formula-binary trees only using addition,
+    multiplication, and exponentiation gates. The top gate
+    being an addition gate and and the formula evaluates to
+    the input integer n.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+        sage: FameTa(3)
+        [['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return [1]
+    else:
+        gu = []
+        for i in range(1,n):
+            gu = gu + [['+', g1, g2] for g1 in FameT(i) for g2 in FameT(n-i)]
+        return gu
+
+@cached_function
+def FameTm(n):
+    """
+    The list of formula-binary trees only using addition.
+    multiplication and exponentiation gates with the top
+    gate being a multiplication gate which evaluates to the
+    input integer n.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FameTm(6)
+        [['*', ['+', 1, 1], ['+', 1, ['+', 1, 1]]],
+         ['*', ['+', 1, 1], ['+', ['+', 1, 1], 1]],
+         ['*', ['+', 1, ['+', 1, 1]], ['+', 1, 1]],
+         ['*', ['+', ['+', 1, 1], 1], ['+', 1, 1]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return []
+    else :
+        gu = []
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i) == 0:
+                gu = gu + [['*', g1, g2] for g1 in FameT(i) for g2 in FameT(n/i)]
+        return gu
+
+@cached_function
+def FameTe(n):
+    """
+    The list of formula-binary trees only using addition.
+    multiplication and exponentiation gates with the top
+    gate being an exponetiation gate which evaluates to the
+    input integer n.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FameTe(4)
+        [['^', ['+', 1, 1], ['+', 1, 1]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return []
+    else :
+        gu = []
+        for i in range(2,2+floor(log(n)/log(2))):
+            if floor(n^(1/i)) == ceil(n^(1/i)):
+                gu = gu + [['^', g1, g2] for g1 in FameT(i) for g2 in FameT(n^(1/i))]
+        return gu
+
+@cached_function
+def FameT(n):
+    """
+    The list of formula-binary trees only using addition.
+    multiplication and exponentiation gates which evaluates to the
+    input integer n.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: FameT(3)
+        [['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return FameTa(n) + FameTm(n) + FameTe(n)
+
+@cached_function
+def Camea(n):
+    """
+    Output the size of the set of formulas produced by the procedure FameTa(n).
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Camea(6)
+        54
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n==1:
+        return 1
+    else:
+        return sum([Came(i)*Came(n-i) for i in range(1,n)])
+
+@cached_function
+def Camem(n):
+    """
+    Output the size of the set of formulas produced by the procedure FameTm(n).
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Camem(6)
+        4
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return sum([Came(i)*Came(n/i) for i in range(2,1+floor(n/2)) if mod(n,i)==0])
+
+@cached_function
+def Camee(n):
+    """
+    Output the size of the set of formulas produced by the procedure FameTe(n).
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Camee(9)
+        2
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return sum([Came(i)*Came(n^(1/i)) for i in range(2,2+floor(log(n)/log(2))) if floor(n^(1/i)) == ceil(n^(1/i))])
+
+@cached_function
+def Came(n):
+    """
+    Output the size of the set of formulas produced by the procedure FameT(n).
+    Which counts all monotone formula encodings evaluating using a combination
+    of fanin two addition, multiplication and exponentiation gates which evaluates
+    to the input integer n
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Came(6)
+        58
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return Camea(n)+Camem(n)+Camee(n)
+
+def RaFameTa(n):
+    """
+    Output a Random Formula Tres chosen uniformly at random amoung all
+    Tree representation of the positive integer n which use a combination
+    of addition, multiplication and exponentiation gates with the top gate
+    being the addition gate
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFameTa(2)
+        ['+', 1, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return 1
+    else:
+        j = RollLD([Came(i)*Came(n-i) for i in range(1,n)])
+        return ['+', RaFameT(j), RaFameT(n-j)]
+        
+def RaFameTm(n):
+    """
+    Outputs a formula-binary tree sampled uniformly at random
+    which evaluates to the input integer n using only addition
+    and multiplication and exponentiaiton gates, with the top
+    gate being a multiplication gate.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFameT(2)
+        ['+', 1, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if not is_prime(n):
+        lu = []
+        L  = []
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i)==0:
+                lu.append(i)
+                L.append(Came(i)*Came(n/i))
+        j = RollLD(L)
+        return ['*', RaFameT(lu[j-1]), RaFameT(n/lu[j-1])]
+
+def RaFameTe(n):
+    """
+    Outputs a formula-binary tree sampled uniformly at random
+    which evaluates to the input integer n using only addition
+    and multiplication and exponentiaiton gates, with the top
+    gate being an exponentiation gate.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFameTe(27)
+        ['^', ['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if not is_prime(n) and n>1:
+        lu = []
+        L  = []
+        for i in range(2,1+floor(n/2)):
+            if floor(n^(1/i)) == ceil(n^(1/i)):
+                lu.append(i)
+                L.append(Came(i)*Came(n^(1/i)))
+        j = RollLD(L)
+        return ['^', RaFameT( n^(1/lu[j-1]) ), RaFameT(lu[j-1])]
+
+def RaFameT(n):
+    """
+    Outputs a formula-binary tree sampled uniformly at random
+    which evaluates to the input integer n using only addition
+    multiplication and exponentiation gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFameT(2)
+        ['+', 1, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n==1:
+        return 1
+    else:
+        i = RollLD([Camea(n),Camem(n),Camee(n)])
+        if i==1:
+            return RaFameTa(n)
+        elif i==2:
+            return RaFameTm(n)
+        else :
+            return RaFameTe(n)
+
+def RaFameP(n):
+    """
+    Outputs a uniformly randomly sample formula-binary tree written
+    in postfix notation which evaluates to the input integer n using
+    only addition, multiplication and exponentiation gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFameP(2)
+        '11+'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return T2P(RaFameT(n))
+
+def RaFamePre(n):
+    """
+    Outputs a uniformly randomly sample formula-binary tree written
+    in prefix notation which evaluates to the input integer n using
+    only addition, multiplication  and exponentiation gates.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: RaFamePre(2)
+        '+11'
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    return T2Pre(RaFameT(n))
+
+def Tsize(T):
+    """
+    Outputs the size of the Tree associated with the formula.
+ 
+    EXAMPLES:
+    
+    ::
+
+        sage: Tsize(['+', 1, 1])
+        3
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if T==1:
+        return 1
+    elif T==-1:
+        return 1
+    else:
+        return 1+Tsize(T[1])+Tsize(T[2])
+
+@cached_function
+def ShortestTame(n):
+    """
+    Outputs the length and an example of the smallest binary-tree
+    formula using addition, multiplication and exponentiation
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: ShortestTame(2)
+        [3, ['+', 1, 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n==1:
+        return [1,1]
+    else:
+        aluf = []
+        si = 2*n
+        for i in range(1,n):
+            T1 = ShortestTame(i)
+            T2 = ShortestTame(n-i)
+            if (T1[0]+T2[0]+1) < si:
+                si = T1[0]+T2[0]+1
+                if EvalT(T1[1]) <= EvalT(T2[1]):
+                    aluf = ['+', T1[1], T2[1]]
+                else:
+                    aluf = ['+', T2[1], T1[1]]
+        for i in range(2,floor(n/2)):
+            if mod(n,i)==0:
+                T1 = ShortestTame(i)
+                T2 = ShortestTame(n/i)
+                if (T1[0]+T2[0]+1) < si:
+                    si = T1[0]+T2[0]+1
+                    if EvalT(T1[1]) <= EvalT(T2[1]):
+                        aluf = ['*', T1[1], T2[1]]
+                    else:
+                        aluf = ['*', T2[1], T1[1]]
+        for i in range(2,2+floor(log(n)/log(2))):
+            if floor(n^(1/i)) == ceil(n^(1/i)):
+                T1 = ShortestTame(n^(1/i))
+                T2 = ShortestTame(i)
+                if (T1[0]+T2[0]+1) < si:
+                    si = T1[0]+T2[0]+1
+                    aluf = ['^', T1[1], T2[1]]
+        return [si, aluf]
+
+@cached_function
+def ShortestTameList(n):
+    """
+    Outputs the list of the smallest binary-tree
+    formula using addition, multiplication and exponentiation
+
+    EXAMPLES:
+
+    ::
+
+        sage: ShortestTameList(4)
+        [['+', 1, ['+', 1, ['+', 1, 1]]], ['+', 1, ['+', ['+', 1, 1], 1]], ['+', ['+', 1, 1], ['+', 1, 1]], ['+', ['+', 1, ['+', 1, 1]], 1], ['+', ['+', ['+', 1, 1], 1], 1], ['*', ['+', 1, 1], ['+', 1, 1]], ['^', ['+', 1, 1], ['+', 1, 1]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Obtaining the minimal size
+    si=ShortestTame(n)[0]
+    return [f for f in FameT(n) if Tsize(f)==si]
+
+def get_permutation(la,lb):
+    """
+    Obtains a permutation list from two lists of the same size.
+    No check is performed here the user must be very carefull
+    to input lists of the same size
+    
+    EXAMPLES:
+
+    ::
+
+        sage: get_permutation([1, 2, 3, 4, 6, 8],[1, 2, 4, 8, 3, 6])
+        [0, 1, 4, 2, 5, 3]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing the output
+    L = list()
+
+    # Loop performing the evaluation.
+    for i1 in range(len(la)):
+        for i2 in range(len(lb)):
+            if la[i1] == lb[i2]:
+                L.append(i2)
+                break
+    return L
+
+def permute(l,p):
+    """
+    Permutes the entries of the list l according to the permutation p
+    No check is performed here the user must be very carefull
+    to input lists of the same size
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: permute([1, x, x^x, x^(x + 1), x + 1, (x + 1)*x],[0, 1, 4, 2, 5, 3])
+        [1, x, x + 1, x^x, (x + 1)*x, x^(x + 1)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing the output
+    L = list()
+    # Loop performing the evaluation.
+    for i in range(len(l)):
+        L.append(l[p[i]])
+    return L
+
+@cached_function
+def NaiveZetaT(nbit):
+    """
+    Produces Tree associated with the Second Canonical Forms.
+
+    EXAMPLES:
+
+    ::
+
+        sage: NaiveZetaT(1)
+        [[['+', 1, 1]], [1, ['+', 1, 1]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+
+    """
+
+    # Initial conditions
+    Pk = [['+',1,1]]
+    Nk = [1] + Pk
+    for it in range(1,nbit):
+        L = []
+        for p in Pk:
+            if L == []:
+                L = [1] + [p] + [['^',p,Nk[i]] for i in range(1,len(Nk))]
+
+            else:
+                Lp = [p] + [['^',p,Nk[i]] for i in range(1,len(Nk))]
+                L  = L + [['*',L[i],n] for i in range(1,len(L)) for n in Lp] + Lp
+
+        # Sorting the list
+        Va = [EvalT(l) for l in L]
+        Vb = copy(Va)
+        Vb.sort()
+        perm = get_permutation(Vb, Va)
+        # Reinitialization of the list Nk
+        Nk = permute(L, perm)
+        # Set completion
+        l = len(Nk)
+        i = 0
+        while i < l-1:
+            if EvalT(Nk[i+1]) - EvalT(Nk[i]) == 2 :
+                Pk.append(['+',1,Nk[i]])
+                Nk.insert(i+1, ['+',1,Nk[i]])
+                l = l+1
+            else:
+                i = i+1
+    return [Pk, Nk]
+
+
+@cached_function
+def Goodstein(number_of_iterations=1):
+    """
+    Produces the set of symbolic expressions associated with the
+    the first canonical form. In all the expressions the symbolic
+    variable x stands for a short hand notation for the formula (1+1).
+
+    EXAMPLES:
+
+    ::
+
+        sage: Goodstein(1)[:3]
+        [1, x, x + 1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initial condition of Initial set
+    Ng0 = [1, x]
+    # Main loop performing the iteration
+    for iteration in range(number_of_iterations):
+        # Implementation of the set recurrence
+        Ng0 = [1] + [x^n for n in Ng0]
+        # Initialization of a buffer list Ng1
+        # which will store updates to Ng0
+        Ng1 = []
+        for n in Set(Ng0).subsets():
+            if n.cardinality() > 0:
+                Ng1.append(sum(n))
+        Ng0 = list(Ng1)
+    Nf = []
+    for i in range(len(Ng0)):
+        Nf.append([])
+    for i in range(len(Nf)):
+        Nf[(Ng0[i]).subs(x=2)-1].append(Ng0[i])
+    Ng0=[]
+    for i in range(len(Nf)):
+        Ng0.append(Nf[i][0])
+    return Ng0
+
+@cached_function
+def GoodsteinT(number_of_iterations=1):
+    """
+    Produces Tree associated with Goodstein Trees.
+
+    ::
+
+        sage: GoodsteinT(1)
+        [1,
+         ['+', 1, 1],
+         ['+', 1, ['+', 1, 1]],
+         ['^', ['+', 1, 1], ['+', 1, 1]],
+         ['+', 1, ['^', ['+', 1, 1], ['+', 1, 1]]],
+         ['+', ['+', 1, 1], ['^', ['+', 1, 1], ['+', 1, 1]]],
+         ['+', ['+', 1, ['+', 1, 1]], ['^', ['+', 1, 1], ['+', 1, 1]]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initial condition of Initial set
+    Ng0 = [1, ['+',1,1]]
+    # Main loop performing the iteration
+    for iteration in range(number_of_iterations):
+        # Implementation of the set recurrence
+        Tmp = copy(Ng0)
+        Tmp.pop(0)
+        Ng0 = [1] + [['+',1,1]] + [['^',['+',1,1], m] for m in Tmp]
+        # Initialization of a buffer list Ng1
+        # which will store updates to Ng0
+        Ng1 = []
+        for n in Set(range(len(Ng0))).subsets():
+            if n.cardinality() == 1:
+                Ng1.append(Ng0[n[0]])
+            elif n.cardinality() > 1:
+                T = Ng0[n[0]]
+                for j in range(1,n.cardinality()):
+                    T = ['+', T, Ng0[n[j]]]
+                Ng1.append(T)
+        Ng0 = copy(Ng1)
+    # Sorting the obtained list
+    Nf = []
+    for i in range(len(Ng0)):
+        Nf.append([])
+    for i in range(len(Nf)):
+        Nf[EvalT(Ng0[i])-1].append(Ng0[i])
+    Ng0=[]
+    for i in range(len(Nf)):
+        Ng0.append(Nf[i][0])
+    return Ng0
+
+
+def list_eval(L):
+    """
+    Perform the evaluation of the list to integers
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: x=var('x'); list_eval([1, x, x+1, x^x])
+        [1, 2, 3, 4]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return [i.substitute(x=2) for i in L]
+
+def get_permutation(la,lb):
+    """
+    Obtains a permutation list from two lists of the same size.
+    No check is performed here the user must be very carefull
+    to input lists of the same size
+    
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: get_permutation([1, 2, 3, 4, 6, 8], [1, 2, 4, 8, 3, 6])
+        [0, 1, 4, 2, 5, 3]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing the output
+    L = list()
+    # Loop performing the evaluation.
+    for i1 in range(len(la)):
+        for i2 in range(len(lb)):
+            if la[i1] == lb[i2]:
+                L.append(i2)
+                break
+    return L
+
+def permute(l,p):
+    """
+    Permutes the entries of the list l according to the permutation p
+    No check is performed here the user must be very carefull
+    to input lists of the same size
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: permute([1, x, x^x, x^(x + 1), x + 1, (x + 1)*x],[0, 1, 4, 2, 5, 3])
+        [1, x, x + 1, x^x, (x + 1)*x, x^(x + 1)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing the output
+    L = list()
+    # Loop performing the evaluation.
+    for i in range(len(l)):
+        L.append(l[p[i]])
+    return L
+
+@cached_function
+def base2expansion(n):
+    """
+    Returns the polynomial encoding the binary expansion
+     
+    EXAMPLES:
+
+    The function is a crucial first step to the recursive encoding
+    
+    ::
+
+        sage: p = base2expansion(10)
+        sage: p
+        x^3 + x
+
+    AUTHORS:
+    - Edinah K. Gnang
+    -  
+    """
+    x = var('x')
+    # polynomial
+    p = 0
+    k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
+        while k < n:
+            k = k^2
+        if k == n:
+            return x^(log(k,2))
+        elif k > n:
+            k = sqrt(k)
+            while k < n:
+                k = 2*k
+                if k == n:
+                    return x^(log(k,2))
+                elif k > n:
+                    p = x^(floor(log(k/2,2))) + base2expansion(n-k/2)
+    return p
+
+@cached_function
+def base2expansionT(n):
+    """
+    Returns the polynomial encoding the binary expansion
+     
+    EXAMPLES: 
+    The function is a crucial first step to the recursive encoding
+    
+    ::
+
+        sage: base2expansionT(2)
+        ['^', ['+', 1, 1], 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    -  
+    """
+    x = var('x')
+    # polynomial
+    p = 0; k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
+        while k < n:
+            k = k^2
+        if k == n:
+            return ['^',['+',1,1],log(k,2)]
+        elif k > n:
+            k = sqrt(k)
+            while k < n:
+                k = 2*k
+                if k == n:
+                    return ['^',['+',1,1],log(k,2)]
+                elif k > n:
+                    p = ['+',['^',['+',1,1],(floor(log(k/2,2)))],base2expansionT(n-k/2)]
+    return p
+
+@cached_function
+def recurse_base2expansion(n):
+    """
+    Returns the Goodstein encoding of the input integer n
+     
+    EXAMPLES: 
+    The function builds the crucial base2expansion function
+    however it should be noted that it's a horrible idea
+    to use this function to compute the recursive encoding
+    for a list of consecutive integer the number of recursive
+    call is unmanageabl
+    
+    ::
+
+        sage: recurse_base2expansion(4)
+        x^x
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    -  
+    """
+    p = 0; k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
+        while k < n:
+            k = k^2
+        if k == n:
+            return x^recurse_base2expansion(log(k,2))
+        elif k > n:
+            k = sqrt(k)
+            while k < n:
+                k = 2*k
+                if k == n:
+                    return x^recurse_base2expansion(log(k,2))
+                elif k > n:
+                    p = x^recurse_base2expansion(floor(log(k/2,2))) + recurse_base2expansion(n-k/2)
+    return p
+
+@cached_function
+def recurse_base2expansionT(n):
+    """
+    Returns the Goodstein Tree encoding of the input integer n
+     
+    EXAMPLES: 
+    The function builds the crucial base2expansion function
+    however it should be noted that it's a horrible idea
+    to use this function to compute the recursive encoding
+    for a list of consecutive integer the number of recursive
+    call is unmanageable
+    
+    ::
+
+        sage: recurse_base2expansionT(2)
+        ['^', ['+', 1, 1], 1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    -  
+    """
+    p = 0; k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
+        while k < n:
+            k = k^2
+        if k == n:
+            return ['^',['+',1,1],recurse_base2expansionT(log(k,2))]
+        elif k > n:
+            k = sqrt(k)
+            while k < n:
+                k = 2*k
+                if k == n:
+                    return ['^',['+',1,1],recurse_base2expansionT(log(k,2))]
+                elif k > n:
+                    p = ['+',['^',['+',1,1],recurse_base2expansionT(floor(log(k/2,2)))],recurse_base2expansionT(n-k/2)]
+    return p
+
+@cached_function
+def Fa3T(n):
+    """
+    The list of formula-binary trees only using fan-in three addition gates
+    which evaluates to the input integer n.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Fa3T(3)
+        [['+', 1, 1, 1]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1:
+        return [1]
+    else :
+        gu = []
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
+                gu = gu + [['+', g1, g2, g3] for g1 in Fa3T(i) for g2 in Fa3T(j) for g3 in Fa3T(n-i-j)]
+        return gu
+
+@cached_function
+def Ca3(n):
+    """
+    Outputs the number of formula-binary trees only using fan-in three addition gates.
+    This is a special  case of the Fuss-Catalan sequence.
+
+    EXAMPLES:
+
+    The input n must be greater than 0
+
+    ::
+
+        sage: Ca3(3)
+        1
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n == 1 :
+        return 1
+    else :
+        return sum([Ca3(i)*Ca3(j)*Ca3(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
+
+def Zeta(nbitr):
+    """
+    Produces Tree associated with the Second Canonical Forms.
+    Implements an improved version of the zeta recurrence and
+    the combinatorial tower sieve.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Zeta(1)
+        The current iteration will uncover 1.00000000000000 new primes in the range [2.00000000000000, 4.00000000000000]
+        [[x, x + 1], [1, x, x + 1, x^x]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+    
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    x = var('x')
+    # Pr corresponds to the initial list of primes
+    Pr = [x]
+    # Nu corresponds to the initial list of integer
+    NuC  = [1,x]; TNuC = [1,x]
+    # Initializing the upper and lower bound
+    upr_bnd = 2^2; lwr_bnd = 2
+    # Computing the set recurrence
+    for itr in range(nbitr):
+        for jtr in range(log(upr_bnd,2)-log(lwr_bnd,2)):
+            TpNu = [1]
+            for p in Pr:
+                TpNu=TpNu+[m*pn for m in TpNu for pn in [p^n for n in NuC if (p^n).subs(x=2)<=2^(log(lwr_bnd,2)+jtr+1)] if (m*pn).subs(x=2)<=2^(log(lwr_bnd,2)+jtr+1)]
+            # Keeping only the elements within the range of the upper and lower bound
+            Nu = [f for f in TpNu if (2^(log(lwr_bnd,2)+jtr)<f.subs(x=2) and f.subs(x=2)<=2^(log(lwr_bnd,2)+jtr+1))]
+            print 'The current iteration will uncover '+str(2^(N(log(lwr_bnd,2))+jtr+1)-2^(N(log(lwr_bnd,2))+jtr)-len(Nu))+' new primes in the range ['+str(2^(N(log(lwr_bnd,2))+jtr))+', '+str(2^(N(log(lwr_bnd,2))+jtr+1))+']'
+            # Obtaining the corresponding sorted integer list
+            la = [f.subs(x=2) for f in Nu]; lb = copy(la); lb.sort()
+            # Obtaining the sorting permutation
+            perm = []
+            for i1 in range(len(la)):
+                for i2 in range(len(lb)):
+                    if lb[i1]==la[i2]:
+                        perm.append(i2)
+                        break
+            # Sorting the list using the obtained permutation
+            Nu = [Nu[perm[j]] for j in range(len(Nu))]
+            # Computing the set completion
+            TNuC = TNuC + Nu
+            l = len(TNuC)
+            i = 2^(log(lwr_bnd,2)+jtr-1)
+            while i<l-1:
+                if(TNuC[i+1].subs(x=2)-TNuC[i].subs(x=2)==2):
+                    Pr.append(TNuC[i]+1)
+                    TNuC.insert(i+1,TNuC[i]+1)
+                    l=l+1
+                else:
+                    i=i+1
+        # Updating the list of integers
+        NuC = TNuC
+        # Updating the upper and lower bound
+        lwr_bnd = upr_bnd
+        upr_bnd = 2^upr_bnd
+    return [Pr,NuC]        
+
+@cached_function
+def ZetaT(nbitr):
+    """
+    Produces Tree associated with the Second Canonical Forms.
+    Implements an improved version of the zeta recurrence and
+    the combinatorial tower sieve.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ZetaT(1)
+        The current iteration will uncover 1.00000000000000 new primes in the range [2.00000000000000, 4.00000000000000]
+        [[['+', 1, 1], ['+', 1, ['+', 1, 1]]],
+         [1, ['+', 1, 1], ['+', 1, ['+', 1, 1]], ['^', ['+', 1, 1], ['+', 1, 1]]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Pr corresponds to the initial list of primes
+    Pr = [ ['+',1,1] ]
+    # Nu corresponds to the initial list of integer
+    NuC  = [1] + Pr
+    TNuC = [1] + Pr
+    # Initializing the upper and lower bound
+    upr_bnd = 2^2
+    lwr_bnd = 2
+    # Computing the set recurrence
+    for itr in range(nbitr):
+        for jtr in range(log(upr_bnd,2)-log(lwr_bnd,2)):
+            TpNu = [1]
+            for p in Pr:
+                TpNu = TpNu+[pn for pn in [['^',p,n] for n in NuC if EvalT(['^',p,n])<=2^(log(lwr_bnd,2)+jtr+1)]]+[['*',m,pn] for m in TpNu[1:] for pn in [['^',p,n] for n in NuC if EvalT(['^',p,n])<=2^(log(lwr_bnd,2)+jtr+1)]  if EvalT(['*',m,pn])<=2^(log(lwr_bnd,2)+jtr+1)]
+            # Keeping only the elements within the range of the upper and lower bound
+            Nu = [f for f in TpNu if (2^(log(lwr_bnd,2)+jtr)<EvalT(f) and EvalT(f)<=2^(log(lwr_bnd,2)+jtr+1))] 
+            print 'The current iteration will uncover '+str(2^(N(log(lwr_bnd,2))+jtr+1)-2^(N(log(lwr_bnd,2))+jtr)-len(Nu))+' new primes in the range ['+str(2^(N(log(lwr_bnd,2))+jtr))+', '+str(2^(N(log(lwr_bnd,2))+jtr+1))+']'
+            # Obtaining the corresponding sorted integer list
+            la = [EvalT(f) for f in Nu]; lb = copy(la); lb.sort()
+            # Obtaining the sorting permutation
+            perm = []
+            for i1 in range(len(la)):
+                for i2 in range(len(lb)):
+                    if lb[i1]==la[i2]:
+                        perm.append(i2)
+                        break
+            # Sorting the list using the obtained permutation
+            Nu = [Nu[perm[j]] for j in range(len(Nu))]
+            # Perfoming the set completion
+            TNuC = TNuC + Nu
+            l = len(TNuC)
+            i = 2^(log(lwr_bnd,2)+jtr-1)
+            while i<l-1:
+                if(EvalT(TNuC[i+1])-EvalT(TNuC[i])==2):
+                    Pr.append(['+',1,TNuC[i]])
+                    TNuC.insert(i+1,['+',1,TNuC[i]])
+                    l=l+1
+                else:
+                    i=i+1
+        # Updating the list of integers
+        NuC = TNuC
+        # Updating the upper and lower bound
+        lwr_bnd = upr_bnd
+        upr_bnd = 2^upr_bnd
+    return [Pr,NuC]        
+
+def Horner(nbitr):
+    """
+    Produces list of symbolic expressions associated with recursive horner encoding.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Horner(2)
+        [1, x, x + 1, x^x, (x + 1)*x, (x + 1)*x^x, x^(x^x), x^(x + 1), x^x + 1, (x^x + 1)*x, (x^x + 1)*x^x, (x^x + 1)*x^(x^x), x^(x + 1)*(x^x + 1), x^((x + 1)*x), x^((x + 1)*x^x), x^(x^(x^x)), x^(x^(x + 1)), x^(x^x + 1), (x + 1)*x + 1, (x + 1)*x^x + 1, x^(x^x) + 1, x^(x + 1) + 1]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+
+    """
+    x = var('x')
+    Nk  = [1, x, 1+x, x^x]
+    # Initialization of the lists
+    LEk = [x^x]; LOk = [1+x]; LPk = [x, x^x]
+    # Main loop computing the encoding
+    for i in range(nbitr):
+        # Updating the list
+        LEkp1 = [lp*lo for lp in LPk for lo in LOk] + [x^m for m in LEk+LOk]
+        LOkp1 = [n+1 for n in LEk]
+        LPkp1 = LPk + [x^m for m in LEk+LOk]
+        # The New replaces the old
+        Nk = Nk + LEkp1+LOkp1
+        LEk = LEkp1; LOk = LOkp1; LPk = LPkp1
+    return Nk
+
+def HornerT(nbitr):
+    """
+    Produces Tree associated with the recursive Horner encoding
+
+    EXAMPLES:
+
+    ::
+
+        sage: HornerT(1)
+        [1,
+         ['+', 1, 1],
+         ['+', 1, ['+', 1, 1]],
+         ['^', ['+', 1, 1], ['+', 1, 1]],
+         ['*', ['+', 1, 1], ['+', 1, ['+', 1, 1]]],
+         ['*', ['^', ['+', 1, 1], ['+', 1, 1]], ['+', 1, ['+', 1, 1]]],
+         ['^', ['+', 1, 1], ['^', ['+', 1, 1], ['+', 1, 1]]],
+         ['^', ['+', 1, 1], ['+', 1, ['+', 1, 1]]],
+         ['+', 1, ['^', ['+', 1, 1], ['+', 1, 1]]]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+
+    """
+    # Initial set
+    Nk  = [ 1, ['+',1,1], ['+',1,['+',1,1]], ['^',['+',1,1],['+',1,1]] ]
+    # Initialization of the lists
+    LEk = [ ['^',['+',1,1],['+',1,1]] ]
+    LOk = [ ['+',1,['+',1,1]] ]
+    LPk = [ ['+',1,1], ['^',['+',1,1],['+',1,1]] ]
+    # Main loop computing the recursive horner encoding
+    for i in range(nbitr):
+        # Updating the list
+        LEkp1 = [['*',lp,lo] for lp in LPk for lo in LOk] + [['^',['+',1,1],m] for m in LEk+LOk]
+        LOkp1 = [['+',1,n] for n in LEk]
+        LPkp1 = LPk + [['^',['+',1,1],m] for m in LEk+LOk]
+        # The New replaces the old
+        Nk = Nk+LEkp1+LOkp1
+        LEk = LEkp1; LOk = LOkp1; LPk = LPkp1
+    return Nk
+
+def EvalT(T):
+    """
+    Outputs the evaluation value of a tree.
+
+    EXAMPLES:
+
+    ::
+
+        sage: EvalT(['+', ['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]])
+        6
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+    """
+    if T == 1:
+        return 1
+    elif T == -1:
+        return -1
+    elif T[0] == '+':
+        return EvalT(T[1]) + EvalT(T[2])
+    elif T[0] == '*':
+        return EvalT(T[1]) * EvalT(T[2])
+    elif T[0] == '^':
+        return EvalT(T[1]) ^ EvalT(T[2])
+    else:
+        print 'IMPROPER INPUT !!!'
+
+@cached_function
+def MonotoneFormula(n):
+    """
+    Outputs Monotone formula encodings of length at most n.
+
+    EXAMPLES:
+
+    ::
+
+        sage: MonotoneFormula(3)
+        [[], [1], [], []]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n<=3:
+        return [[], [1], [], []]
+    elif n>3:
+        # Initialization of the list of formula.
+        A=[[], [1]] + [[] for t in range(n-1)]
+        # Main loop.
+        for sz in range(3,n+1):
+            # Initialization of the fifth entry
+            for o in ['+', '*', '^']:
+                for i in range(1,sz-1):
+                        A[sz]=A[sz]+[[o,s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0)]
+        return A 
+
+@cached_function
+def ReducedMonotoneFormula(n):
+    """
+    Outputs non-monotone formula encodings of length at most n.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ReducedMonotoneFormula(3)
+        [[], [1], [], []]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n<=3:
+        return [[], [1], [], []]
+    elif n>3:
+        # Initialization of the list of formula.
+        A=[[], [1]] + [[] for t in range(n-1)]
+        # Main loop.
+        for sz in range(3,n+1):
+            # Initialization of the fifth entry
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and not EvalT(s).is_zero() and not EvalT(t).is_zero() and not EvalT(['+',s,t]).is_zero()]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['*',s,t])!=1]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['^',s,t])!=1]
+        return A
+
+def ReducedMonotoneFormulaSets(sz):
+    """
+    Outputs set of numbers associated with monotone encodings
+    of complexity less then the size input parameter sz.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ReducedMonotoneFormulaSets(5)
+        [{}, {1}, {}, {2}, {}, {3}]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    Lt=ReducedMonotoneFormula(sz)
+    # Filling up the result list
+    Rslt=[]
+    for n in range(sz+1):
+        L=[]; i=0
+        while i<len(Lt[n]):
+            L.append(Lt[n][i])
+            i=i+1
+        Rslt.append(Set([EvalT(L[i]) for i in range(len(L))]))
+    # Cleaning up the list
+    for i in range(1,len(Rslt)):
+        for j in range(i):
+            Rslt[i]=Rslt[i].difference(Rslt[j])
+    return Rslt
+
+@cached_function
+def NonMonotoneFormula(n):
+    """
+    Outputs non-monotone formula encodings of length at most n.
+
+    EXAMPLES:
+
+    ::
+
+        sage: NonMonotoneFormula(3)
+        [[], [1, -1], [], []]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n<=3:
+        return [[], [1,-1], [], []]
+    elif n>3:
+        # Initialization of the list of formula.
+        A=[[], [1,-1]] + [[] for t in range(n-1)]
+        # Main loop.
+        for sz in range(3,n+1):
+            # Initialization of the fifth entry
+            for o in ['+', '*', '^']:
+                for i in range(1,sz-1):
+                        A[sz]=A[sz]+[[o,s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0)]
+        return A
+
+@cached_function
+def ReducedNonMonotoneFormula(n):
+    """
+    Outputs non-monotone formula encodings of length at most n.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ReducedNonMonotoneFormula(3)
+        [[], [1, -1], [], []]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n<=3:
+        return [[], [1,-1], [], []]
+    elif n>3:
+        # Initialization of the list of formula.
+        A=[[], [1,-1]] + [[] for t in range(n-1)]
+        # Main loop.
+        for sz in range(3,n+1):
+            # Initialization of the fifth entry
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and not EvalT(s).is_zero() and not EvalT(t).is_zero() and not EvalT(['+',s,t]).is_zero()]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['*',s,t])!=1]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['^',s,t])!=1]
+        return A
+
+def ReducedNonMonotoneFormulaSets(sz):
+    """
+    Outputs set of numbers associated with non monotone encodings
+    of complexity less then the size input parameter sz.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ReducedNonMonotoneFormulaSets(5)
+        [{}, {1, -1}, {}, {2, -2}, {}, {3, -1/2, -3, 1/2}]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    Lt=ReducedNonMonotoneFormula(sz)
+    # Filling up the result list
+    Rslt=[]
+    for n in range(sz+1):
+        L=[]; i=0
+        while i<len(Lt[n]):
+            L.append(Lt[n][i])
+            i=i+1
+        Rslt.append(Set([EvalT(L[i]) for i in range(len(L))]))
+    # Cleaning up the list
+    for i in range(1,len(Rslt)):
+        for j in range(i):
+            Rslt[i]=Rslt[i].difference(Rslt[j])
+    return Rslt
 
 def GeneralDualHypermatrixProductB(*args):
     """
@@ -8588,7 +10794,7 @@ def linear_solverHM(A,b,x,v):
 
         sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
         sage: [A,b]=ConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
-        sage: linear_solverHM(A,b,HM(A.ncols(),1,HM(A.ncols(),'x').list()),HM(A.ncols(),1,HM(A.ncols(),'t').list()))
+        sage: linear_solverHM(A,b,HM(A.ncols(),1,var_list('x',A.ncols())),HM(A.ncols(),1,var_list('t',A.ncols())))
         [x0 == a00 - a10 + a11 - t3,
          x1 == a11 - t3,
          x2 == a10 - a11 + t3,
@@ -8598,6 +10804,49 @@ def linear_solverHM(A,b,x,v):
     - Initial implementation by Edinah K. Gnang updates to the doc string by Jeanine S. Gnang
     - To Do: 
     """
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=gauss_jordan_eliminationHM(A,b)
+    Id1 = HM(2, Ap.n(0), 'kronecker')
+    Id2 = HM(2, Ap.n(1), 'kronecker')
+    # Obtainin the list of pivot variables.
+    Pm=HM(Ap.n(0), Ap.n(1), 'zero')
+    for i in range(Ap.n(0)):
+        if not HM(1, Ap.n(1), [SR(Ap[i,u]) for u in range(Ap.n(1))]).is_zero():
+            for j in range(Ap.n(1)):
+                if Ap[i,j]==1:
+                    break
+            Pm=Pm+HM(Id1.n(0), 1, [SR(Id1[s,i]) for s in range(Id1.n(0))])*HM(1,Id2.n(1),[SR(Id2[j,t]) for t in range(Id2.n(1))])
+    # Expressing the solutions
+    tp1=Pm*x; tp2=bp-(Ap-Pm)*v
+    return [tp1[i,0]==tp2[i,0] for i in range(tp1.n(0))]
+
+def default_linear_solver(EqL, Lv, Lf):
+    """
+    Formats the constraints and outputs the solution of the system of linear constraints.
+    The input EqL is the list of constraints. The input Lv corresponds to the list of
+    variable constraints appearing in EqL. The input Lf corresponds to the free variable
+    name each of which is put in correspondent with the entries of Lv.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; EqL=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: default_linear_solver(EqL, var_list('x', 2*sz), var_list('t', 2*sz))
+        [x0 == a00 - a10 + a11 - t3,
+         x1 == a11 - t3,
+         x2 == a10 - a11 + t3,
+         0  == -a00 + a01 + a10 - a11]
+
+    AUTHORS:
+    - Initial implementation by Edinah K. Gnang updates to the doc string by Jeanine S. Gnang
+    - To Do: 
+    """
+    # Formating the constraints
+    [A,b]=ConstraintFormatorHM(EqL,Lv)
+    # Initialization of the variable vectors
+    x=HM(A.ncols(), 1, Lv); v=HM(A.ncols(), 1, Lf)
     # Initialization of the reduced echelon form.
     [Ap,bp]=gauss_jordan_eliminationHM(A,b)
     Id1 = HM(2, Ap.n(0), 'kronecker')
@@ -8690,6 +10939,54 @@ def multiplicative_linear_solverHM(A,b,x,v):
     # Expressing the solutions
     tp1=multiplicative_matrix_product(Pm,x)
     tp2=multiplicative_matrix_product((Ap-Pm),v)
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
+
+def default_multiplicative_linear_solver(EqL, Lv, Lf):
+    """
+    Formats the constraints performs and solves the multiplicatively linear constraints.
+    Outputs the solutions. The input EqL corresponds to a list of constraints. The input Lv
+    corresponds to the list of variables appearing in the constraints. The input Lf corresponds
+    to the list of free varaibles each taken in correspondence with the entries of Lv. This 
+    implementation tacitly assumes that the  the input constraints are indeed multiplicatively linear.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; EqL=[var('x'+str(i))*var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: default_multiplicative_linear_solver(EqL, var_list('x', 2*sz), var_list('t', 2*sz))
+        [x0 == a00*a11/(a10*t3),
+         x1 == a11/t3,
+         x2 == a10*t3/a11,
+         1 == a01*a10/(a00*a11)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Formatting the constraints
+    [A,b]=multiplicativeConstraintFormatorHM(EqL, Lv)
+    # Initialization of the variables
+    x=HM(A.ncols(), 1, Lv); v=HM(A.ncols(), 1, Lf)
+    # Initialization of the reduced echelon form.
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:2]
+    #Id1=identity_matrix(Ap.nrows())
+    Id1=HM(2, Ap.nrows(), 'kronecker')
+    #Id2=identity_matrix(Ap.ncols())
+    Id2=HM(2, Ap.ncols(), 'kronecker')
+    # Obtainin the list of pivot variables.
+    #Pm=Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
+    Pm=HM(Ap.nrows(), Ap.ncols(), 'zero')
+    for i in range(Ap.nrows()):
+        if not Ap[i,:].is_zero():
+            for j in range(Ap.ncols()):
+                if Ap[i,j]==1:
+                    break
+            Pm=Pm+HM(Ap.nrows(),1,[Id1[f,i] for f in rg(Ap.nrows())])*HM(1,Ap.ncols(),[Id2[j,g] for g in rg(Ap.ncols())])
+    # Expressing the solutions
+    tp1=x^Pm; tp2=v^(Matrix2HM(Ap)-Pm)
     return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def multiplicative_least_square_linear_solver(A,b,x,v):
@@ -11774,6 +14071,7 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
                             CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                             #print 'i=', i,'j=', j,' r=', r
                             #print 'CnstrLst=', CnstrLst
+                            #degree_matrix(CnstrLst,VrbLst).printHM()
                             A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
         # Incrementing the row and column index.
         i=i+1; j=j+1
@@ -12894,7 +15192,7 @@ def prime_induced_grobner_basis(Idl, Xv, Pp):
         # The instruction bellow is the lazy way of getting rid of the duplicates.
         St = Set(S)
         S = list(St)
-        #Recording the size of the Ideal generator set before the division
+        # Recording the size of the Ideal generator set before the division
         l_old = len(I_curr)
         for i in rg(len(S)):
             tmp_list = multivariate_division(S[i], I_curr, Xv, Pp)
@@ -12906,6 +15204,62 @@ def prime_induced_grobner_basis(Idl, Xv, Pp):
             #print I_curr[i]
             if I_curr[i] == I_curr[i].subs([Xv[j]==0 for j in rg(sz)]) and not I_curr[i].subs([Xv[j]==0 for j in rg(sz)]).is_zero():
                 finished = True
-        #recording the size of the generator set after the division
+        # Recording the size of the generator set after the division
         l_new = len(I_curr)
     return I_curr
+
+def generate_general_linear_constraints(sz,l):
+    """
+    Creates a sage file which intializes a general linear 
+    system of sz constraints in l variables.
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_general_linear_constraints(3,2)
+        sage: load('general_linear_system_3_2.sage')
+        [:, :, 0]=
+        [a00*x0*b00 + a01*x1*b10]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a10*x0*b01 + a11*x1*b11]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a20*x0*b02 + a21*x1*b12]
+        sage: from subprocess import call
+        sage: call("rm general_linear_system_3_2.sage", shell=True)
+        0
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrices.
+    Al=HM(sz,l,'a').list(); Bl=HM(l,sz,'b').list(); Xl=var_list('x',l)
+    # Creating the file name string.
+    filename='general_linear_system_'+str(sz)+'_'+str(l)+'.sage'
+    # Opening the file
+    f=open(filename,'w')
+    #f.write('# Loading the Hypermatrix Package\n')
+    #f.write("load('./Hypermatrix_Algebra_tst.sage')\n\n")
+    f.write('# Initializing the number of constraints and the number of variableas\n')
+    f.write('sz='+str(sz)+'; l='+str(l)+'\n\n')
+    f.write('# Initialization of the variables\n')
+    f.write("La=HM(sz,l,'a').list()\n")
+    f.write("Lb=HM(l,sz,'b').list()\n")
+    f.write("Lx=var_list('x',l)\n\n")
+    f.write('# Initializing the free variables\n')
+    f.write('F=FreeAlgebra(QQ,len(La+Lx+Lb),La+Lx+Lb)\n')
+    f.write('F.<'+str(Al+Xl+Bl)[1:len(str(Al+Xl+Bl))-1]+'>=FreeAlgebra(QQ,len(La+Lx+Lb))\n\n')
+    f.write('# Initialization of the hypermatrices with symbolic variable entries which do not commute\n')
+    f.write('# associated with the map\n')
+    f.write('Ha=HM(1,l,sz,HM(sz,l,'+str(Al)+').transpose().list())\n')
+    f.write('Hx=HM(1,1,l,'+str(Xl)+')\n')
+    f.write('Hb=HM(l,1,sz,'+str(Bl)+')\n\n')
+    f.write('# Initialization of the product\n')
+    f.write('Hr=Prod(Ha,Hx,Hb)\n')
+    f.write('Hr.printHM()\n')
+    # Closing the file
+    f.close()
+
