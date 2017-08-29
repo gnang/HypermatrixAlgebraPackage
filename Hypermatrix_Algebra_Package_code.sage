@@ -145,7 +145,7 @@ class HM:
     def __pow__(self, other):
         if self.order()==2 and other.order()==2 and self.n(0)==other.n(1):
             return mprod(other, self)
-        elif self.order()==2 and self.is_hypercolumn():
+        elif self.order()==2 and self.is_hypercolumn() and prod(self.dimensions())>1:
             return vec_exp(self, other)
         elif self.order()==2 and other==-1 and self.is_cubical():
             return self.inverse()
@@ -13383,6 +13383,7 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
     of the size m x m and all entries of Cf2 are matrices of the size n x n.
     Consequently the entries of Vx and rs are all m x n matrices.
 
+
     EXAMPLES:
     ::
 
@@ -13509,7 +13510,7 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
         # Initialization of the row and column index
         i=0; j=0
         while i < A.n(2) and j < A.n(1):
-            while (HM(1,1,A.n(2)-i,[A[0,j,i0] for i0 in range(i,A.n(2))]).is_zero() and j < A.n(1)-1) or (HM(1,1,B.n(0)-i,[B[j,0,i0] for i0 in range(i,B.n(0))]).is_zero() and j < B.n(0)-1):
+            while (HM(1,1,A.n(2)-i,[A[0,j,i0] for i0 in range(i,A.n(2))]).is_zero() and j < A.n(1)-1) or (HM(1,1,B.n(2)-i,[B[j,0,i0] for i0 in range(i,B.n(2))]).is_zero() and j < B.n(2)-1):
                 # Incrementing the column index
                 j=j+1
             if (HM(1,A.n(1),A.n(2)-i,[A[0,j0,i0] for i0 in range(i,A.n(2)) for j0 in range(A.n(1))]).is_zero()==False) and (HM(B.n(0),1,B.n(2)-i,[B[j0,0,i0] for i0 in range(i,B.n(2)) for j0 in range(B.n(0))]).is_zero()==False) and j < A.n(1):
@@ -13542,7 +13543,7 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
                             B[j0,0,i+i0]=Tb[i0,j0]
                     for i0 in range(b.n(0)):
                         C[0,0,i+i0]=Tc[i0,0]
-                # Here is we mean business
+                # Here we mean business
                 if (A.n(2)-i-1> 0) and not ((HM(1,1,A.n(2)-i-1,[A[0,j,i0] for i0 in range(i+1,A.n(2))]).is_zero() and j <= A.n(1)-1) and (HM(1,1,B.n(2)-i-1,[B[j,0,i0] for i0 in range(i+1,B.n(2))]).is_zero() and j <= B.n(0)-1)):
                     # Performing the row operations.
                     cf1a = A[0,j,i]; cf1b = B[j,0,i]
@@ -15246,9 +15247,9 @@ def generate_general_linear_constraints(sz,l):
     f.write('# Initializing the number of constraints and the number of variableas\n')
     f.write('sz='+str(sz)+'; l='+str(l)+'\n\n')
     f.write('# Initialization of the variables\n')
+    f.write("Lx=var_list('x',l)\n")
     f.write("La=HM(sz,l,'a').list()\n")
-    f.write("Lb=HM(l,sz,'b').list()\n")
-    f.write("Lx=var_list('x',l)\n\n")
+    f.write("Lb=HM(l,sz,'b').list()\n\n")
     f.write('# Initializing the free variables\n')
     f.write('F=FreeAlgebra(QQ,len(La+Lx+Lb),La+Lx+Lb)\n')
     f.write('F.<'+str(Al+Xl+Bl)[1:len(str(Al+Xl+Bl))-1]+'>=FreeAlgebra(QQ,len(La+Lx+Lb))\n\n')
