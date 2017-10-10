@@ -76,6 +76,16 @@ class HM:
         [0 0 0]
         [0 0 0]
         [0 0 1]
+        sage: Ha=HM(2,1,2,'a');Hb=HM(2,1,2,'b');Hc=HM(2,2,1,'c');Hd=HM(2,2,1,'d');Hf=HM(1,2,2,'f');Hg=HM(1,2,2,'g')
+        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
+        sage: BlockProd(A, B, C)[0,0,0].printHM() # Computing the block product
+        [:, :, 0]=
+        [a000*c000*f000 + b000*d000*g000 a000*c010*f010 + b000*d010*g010]
+        [a100*c100*f000 + b100*d100*g000 a100*c110*f010 + b100*d110*g010]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
+        [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
     """
     def __init__(self,*args):
         if len(args) == 1:
@@ -847,23 +857,116 @@ class HM:
     def dimensions(self):
         return [self.n(i) for i in range(self.order())]
 
-    def zero_padd(self):
-        sz  = max(self.nrows(), self.ncols(), self.ndpts())
-        Tmp = HM(sz,sz,sz,'zero') 
-        for i in range(self.nrows()):
-            for j in range(self.ncols()):
-                for k in range(self.ndpts()):
-                    Tmp[i,j,k]=self.hm[i][j][k]
-        return Tmp
+    def zero_pad(self, dimLst):
+        """
+        return the zero padding of the input hypermatrix the inputs dimLst
+        is desired dimensions of the padding        
+
+        EXAMPLES::
+        
+            sage: A = HM(2,3,'a'); B=A.zero_pad([4,4])
+            sage: B.printHM()
+            [:, :]=
+            [a00 a01 a02   0]
+            [a10 a11 a12   0]
+            [  0   0   0   0]
+            [  0   0   0   0]
+            sage: U = HM(2,1,'u'); V=U.zero_pad([2,2,2])
+            sage: V.printHM()
+            [:, :, 0]=
+            [u00   0]
+            [u10   0]
+            <BLANKLINE>
+            [:, :, 1]=
+            [0 0]
+            [0 0] 
+        """
+        if len(dimLst) == self.order():
+            l = self.dimensions()
+            Rh = apply(HM,[max(dimLst[z],self.n(z)) for z in rg(self.order())]+['zero'])
+            # Main loop performing the transposition of the entries
+            for i in range(prod(l)):
+                # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                entry = [Integer(mod(i,l[0]))]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                booldim = True
+                for j in rg(self.order()):
+                    if entry[j] >= self.n(j):
+                        booldim = False
+                        break
+                if  booldim:
+                    Rh[tuple(entry)]=self[tuple(entry)]
+                else:
+                    Rh[tuple(entry)]=0
+            return Rh
+        elif len(dimLst) > self.order():
+            Rh = apply(HM, [max(dimLst[z],self.n(z)) for z in self.dimensions()]+[dimLst[z] for z in rg(self.order(),len(dimLst))]+['zero'])
+            l = Rh.dimensions()
+            # Main loop performing the transposition of the entries
+            for i in range(prod(l)):
+                # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                entry = [Integer(mod(i,l[0]))]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                booldim = True
+                for j in rg(self.order()):
+                    if entry[j] >= self.n(j):
+                        booldim = False
+                        break
+                if entry[self.order():] == [0 for z in rg(self.order(),len(dimLst))] and booldim:
+                    Rh[tuple(entry)]=self[tuple(entry[:self.order()])]
+                else:
+                    Rh[tuple(entry)]=0
+            return Rh
+        else:
+            raise ValueError, "The order must not be smaller the starting hypermatrix"
 
     def fill_with(self, T):
-        if T.nrows()>=self.nrows() or T.ncols()>=self.ncols() or T.ndpts()>=self.ndpts():
-            for r in range(self.nrows()):
-                for c in range(self.ncols()):
-                    for d in range(self.ndpts()):
-                        self.hm[r][c][d]=T[r,c,d]
-        else:
-            raise ValueError, "Expected the input 3 hypermatrix to have larger dimensions in all directions"
+        """
+        returns a hypermatrix whose top left corner is replaced with the entries a same order
+        but smaller size input hypermatrix T. This method generalizes slightly the zero padding
+        method for hypermatrices of the same order. 
+
+        EXAMPLES::
+        
+            sage: A=HM(3,3,'a'); B=HM(2,2,'b') 
+            sage: A.fill_with(B).printHM()
+            [:, :]=
+            [b00 b01 a02]
+            [b10 b11 a12]
+            [a20 a21 a22]
+ 
+        """
+        boolsize = True
+        for d in rg(self.order()):
+            if T.n(d) > self.n(d):
+                boolsize = False
+                raise ValueError, "Expected the input hypermatrix to have larger dimensions in all directions"
+        l = self.dimensions()
+        Rh = apply(HM, [self.n(z) for z in rg(self.order())]+['zero'])
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i, l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            booldim = True
+            for j in rg(self.order()):
+                if entry[j] >= T.n(j):
+                    booldim = False
+                    break
+            if booldim:
+                Rh[tuple(entry)]=T[tuple(entry)]
+            else:
+                Rh[tuple(entry)]=self[tuple(entry)]
+        return Rh
 
     def show(self):
         import pylab, numpy
@@ -909,6 +1012,9 @@ class HM:
 
     def fast_reduce(self, monom, subst):
         return apply(HM, self.dimensions()+[[fast_reduce(self.list()[i], monom, subst) for i in rg(prod(self.dimensions()))]])
+
+    def mod(self, m):
+        return apply(HM, self.dimensions()+[[Integer(mod(self.list()[i], m)) for i in rg(prod(self.dimensions()))]])
 
     def adjoint(self):
         if self.order()==2:
@@ -4070,6 +4176,43 @@ def ProdB(*args):
     """
     return GeneralHypermatrixProductB(*args) 
 
+def BlockProd(*args):
+    """  
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner block product of the input hypermatrices.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::   
+
+        sage: Ha=HM(2,2,2,'a');Hb=HM(2,2,2,'b');Hc=HM(2,2,2,'c');Hd=HM(2,2,2,'d');Hf=HM(2,2,2,'f');Hg=HM(2,2,2,'g')
+        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
+        sage: Rslt=BlockProd(A, B, C); Rslt[0,0,0].printHM()
+        [:, :, 0]=
+        [a000*c000*f000 + a010*c001*f100 + b000*d000*g000 + b010*d001*g100 a000*c010*f010 + a010*c011*f110 + b000*d010*g010 + b010*d011*g110]
+        [a100*c100*f000 + a110*c101*f100 + b100*d100*g000 + b110*d101*g100 a100*c110*f010 + a110*c111*f110 + b100*d110*g010 + b110*d111*g110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*c000*f001 + a011*c001*f101 + b001*d000*g001 + b011*d001*g101 a001*c010*f011 + a011*c011*f111 + b001*d010*g011 + b011*d011*g111]
+        [a101*c100*f001 + a111*c101*f101 + b101*d100*g001 + b111*d101*g101 a101*c110*f011 + a111*c111*f111 + b101*d110*g011 + b111*d111*g111]
+        sage: Ha=HM(2,1,2,'a');Hb=HM(2,1,2,'b');Hc=HM(2,2,1,'c');Hd=HM(2,2,1,'d');Hf=HM(1,2,2,'f');Hg=HM(1,2,2,'g')
+        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
+        sage: BlockProd(A, B, C)[0,0,0].printHM() # Computing the block product
+        [:, :, 0]=
+        [a000*c000*f000 + b000*d000*g000 a000*c010*f010 + b000*d010*g010]
+        [a100*c100*f000 + b100*d100*g000 a100*c110*f010 + b100*d110*g010]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
+        [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixBlockProduct(*args) 
+
 def GeneralHypermatrixLogProduct(*args):
     """
     Outputs a list of lists associated with the general
@@ -5732,6 +5875,53 @@ def ProbabilityMatrix(n, xi=0):
     M[n-1,n-1]=1-sum([M[j,n-1] for j in range(n-1)])
     return M
 
+def ProbabilityHM(sz, xi=0):
+    """
+    outputs the symbolic parametrization of a doubly stochastic matrix
+
+    EXAMPLES:
+
+    ::
+
+        sage: ProbabilityHM(2).printHM()
+        [:, :]=
+        [     cos(t0)^2      sin(t0)^2]
+        [-cos(t0)^2 + 1 -sin(t0)^2 + 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the matrix to be filled
+    M = HM(sz,sz, 'zero')
+    # Initialixzing the variable index
+    indx=xi
+    for c in rg(sz-1):
+        # Initializing the probability vector associated with the row c
+        La = GenerateUnitLpNormVector(sz-c,1,indx)
+        # Updating the variable index
+        indx = indx+len(La)-1
+        # Initializing the probability vector associated with the column c
+        Lb = GenerateUnitLpNormVector(sz-c-1,1,indx)
+        # Updating the variable index
+        indx = indx+len(Lb)-1
+        # Loop which fills up the Matrix
+        for i in range(c, c+len(La)):
+            if c > 0:
+                # Filling up the row c of the Matrix M
+                M[c,i] = (1-sum([M[c,j] for j in rg(c)]))*La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = (1-sum([M[j,c] for j in rg(c+1)]))*Lb[i-c-1]
+            else:
+                # Filling up the row c of the Matrix M
+                M[c,i] = La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = (1-sum([M[j,c] for j in rg(c+1)]))*Lb[i-c-1]
+    M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in rg(sz-1)])
+    return M
+
 def ProbabilitySymMatrix(n, xi=0):
     """
     outputs the symbolic parametrization of a symetric doubly stochastic matrix
@@ -5773,6 +5963,50 @@ def ProbabilitySymMatrix(n, xi=0):
                     # Filling up the column c of the Matrix M
                     M[i,c] = M[c,i]
     M[n-1,n-1]=1-sum([M[j,n-1] for j in range(n-1)])
+    return M
+
+def ProbabilitySymHM(sz, xi=0):
+    """
+    outputs the symbolic parametrization of a symetric doubly stochastic matrix
+
+    EXAMPLES:
+
+    ::
+
+        sage: ProbabilitySymHM(2).printHM()
+        [:, :]=
+        [     cos(t0)^2      sin(t0)^2]
+        [     sin(t0)^2 -sin(t0)^2 + 1]
+        
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initializing the matrix to be filled
+    M = HM(sz, sz, 'zero')
+    # Initialixzing the variable index
+    indx=xi
+    for c in rg(sz-1):
+        # Initializing the probability vector associated with the row c
+        La = GenerateUnitLpNormVector(sz-c,1,indx)
+        # Updating the variable index
+        indx = indx+len(La)-1
+        # Loop which fills up the Matrix
+        for i in range(c, c+len(La)):
+            if c > 0:
+                # Filling up the row c of the Matrix M
+                M[c,i] = (1-sum([M[c,j] for j in range(c)]))*La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = M[c,i] 
+            else:
+                # Filling up the row c of the Matrix M
+                M[c,i] = La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = M[c,i]
+    M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in range(sz-1)])
     return M
 
 def HypermatrixPseudoInversePairsII(A,B):

@@ -23,7 +23,7 @@ n: g$ sage -t Hypermatrix_Algebra_Package_code.sage
 ```
 
 To get started with SageMath, the authors of the hypermatrix package highly recommend reading 
-[Calcul mathématique avec Sage] (http://sagebook.gforge.inria.fr/)
+[Mathematical Computation with SageMath] (http://sagebook.gforge.inria.fr/)
 
 The python file can be created from the sage file in the bash terminal as follows
 
