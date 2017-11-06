@@ -153,6 +153,30 @@ class HM:
     def __repr__(self):
         return `self.hm`
     def __pow__(self, other):
+        """
+        This method returns the exponentiation
+        operation. I uses the convention I have
+        introduced for exponentiation which work
+        for coformable block partition and relates
+        multiplicative constraints. The functions
+        should not be confused with exp(B*ln(A))
+
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,'a'); B=HM(2,2,'b')
+            sage: (A^B).printHM()
+            [:, :]=
+            [a00^b00*a10^b01 a01^b00*a11^b01]
+            [a00^b10*a10^b11 a01^b10*a11^b11]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if self.order()==2 and other.order()==2 and self.n(0)==other.n(1):
             return mprod(other, self)
         elif self.order()==2 and self.is_hypercolumn() and prod(self.dimensions())>1:
@@ -173,6 +197,27 @@ class HM:
     def __add__(self, other):
         return GeneralHypermatrixAdd(self,other)
     def __div__(other,self):
+        """
+        This method returns the product self
+        with the inverse of the input other.
+        It only works for second order hypermatrices.
+
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,'a'); B=HM(2,var_list('b',2),'diag')
+            sage: (A/B).printHM()
+            [:, :]=
+            [a00/b0 a01/b1]
+            [a10/b0 a11/b1]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if self.order()==2:
             return other*self.inverse()
     def __radd__(self, other):
@@ -182,6 +227,37 @@ class HM:
     def __sub__(self, other):
         return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-1))
     def __mul__(self, other):
+        """
+        This method returns the BM product, it
+        is a short cuc of sort which avoid having
+        to write Prod all the time.
+
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,'a'); B=HM(2,2,'b') # The matrix setting
+            sage: (A*B).printHM()
+            [:, :]=
+            [a00*b00 + a01*b10 a00*b01 + a01*b11]
+            [a10*b00 + a11*b10 a10*b01 + a11*b11]
+            sage: A=HM(2,2,2,'a'); B=HM(2,2,2,'a'); C=HM(2,2,2,'c')
+            sage: D=A*(B,C); D.printHM()
+            [:, :, 0]=
+            [   a000^2*c000 + a001*a010*c100 a000*a010*c010 + a010*a011*c110]
+            [   a100^2*c000 + a101*a110*c100 a100*a110*c010 + a110*a111*c110]
+            <BLANKLINE>
+            [:, :, 1]=
+            [a000*a001*c001 + a001*a011*c101    a001*a010*c011 + a011^2*c111]
+            [a100*a101*c001 + a101*a111*c101    a101*a110*c011 + a111^2*c111]
+            <BLANKLINE>
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if other.__class__.__name__=='HM':
             return Prod(self,other)
         elif other.__class__.__name__=='tuple':
@@ -205,13 +281,34 @@ class HM:
                 i = i[1:]
             tmp[i[0]] = v
     def __call__(self, *inpts):
-        return GeneralHypermatrixProduct(self, *inpts)
+        """
+        This method uses the call functionality
+        to return the general BM product inspired
+        the notation the self is the background
+        hypermatrix while inpts refers to the 
+        conformable hypermatrices to be multiplied.
+
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,2,'a'); B=HM(2,2,2,'b'); C=HM(2,2,2,'c'); D=HM(2,2,2,'d')
+            sage: D(A,B,C)-ProdB(A,B,C,D)
+            [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return apply(ProdB, [inp for inp in inpts]+[self])
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and self.list() == other.list())
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def elementwise_product(self,B):
+    def elementwise_product(self, B):
         """
         Returns the elementwise product of two 
         hypermatrices.
@@ -236,7 +333,7 @@ class HM:
         """
         return GeneralHypermatrixHadamardProduct(self, B)
 
-    def hadamard_product(self,B):
+    def hadamard_product(self, B):
         """
         Returns the elementwise product of two 
         hypermatrices.
@@ -261,7 +358,6 @@ class HM:
         """
         return GeneralHypermatrixHadamardProduct(self, B)
 
-
     def elementwise_exponent(self,s):
         """
         Returns the elementwise exponent of the entries
@@ -285,7 +381,7 @@ class HM:
         """
         return GeneralHypermatrixExponent(self, s)
 
-    def hadamard_exponent(self,B):
+    def hadamard_exponent(self, B):
         """
         Returns the elementwise of two hypermatrices.
         This routine assumes that ``self`` and ``B``
@@ -765,6 +861,7 @@ class HM:
             [a101 a111]
             <BLANKLINE>
 
+
         AUTHORS:
 
         - Edinah K. Gnang
@@ -810,6 +907,22 @@ class HM:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
 
     def n(self,i):
+        """
+        Returns the i-th side length
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,3,2,'a')
+            sage: Ha.n(1)
+            3
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if i==0:
             return self.nrows()
         elif i==1:
@@ -823,6 +936,21 @@ class HM:
             return len(tmp)
 
     def list(self):
+        """
+        Returns the hypermatrix as a list going down by columns.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,3,'a'); Ha.list()
+            [a00, a10, a01, a11, a02, a12]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         lst = []
         l = [self.n(i) for i in range(self.order())]
         # Main loop canonicaly listing the elements
@@ -838,15 +966,62 @@ class HM:
         return lst
 
     def listHM(self):
+        """
+        Returns the hypermatrix as a list of list
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,3,'a'); Ha.listHM()
+            [[a00, a01, a02], [a10, a11, a12]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return self.hm
 
     def matrix(self):
+        """
+        Returns the sage matrix class conversion of a
+        the second order hypermatrix associated with self
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,3,'a'); Ha.matrix()
+            [a00 a01 a02]
+            [a10 a11 a12]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         if self.order()<=2:
             return Matrix(SR,self.listHM())
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
 
     def order(self):
+        """
+        Returns the hypermatrix order.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,3,'a'); Ha.order()
+            2
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         cnt = 0
         H = self.listHM()
         while type(H) == type([]):
@@ -855,6 +1030,21 @@ class HM:
         return cnt
 
     def dimensions(self):
+        """
+        Returns the list of hypermatrix side lengths.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,3,'a'); Ha.dimensions()
+            [2, 3]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
         return [self.n(i) for i in range(self.order())]
 
     def zero_pad(self, dimLst):
@@ -926,11 +1116,14 @@ class HM:
         else:
             raise ValueError, "The order must not be smaller the starting hypermatrix"
 
-    def fill_with(self, T):
+    def fill_with(self, T, st=0):
         """
         returns a hypermatrix whose top left corner is replaced with the entries a same order
         but smaller size input hypermatrix T. This method generalizes slightly the zero padding
-        method for hypermatrices of the same order. 
+        method for hypermatrices of the same order. The input st which is set by default to 0
+        is the shift parameter. It adds st to all the index and has the effec of translating the
+        block along the main diagonal. 
+
 
         EXAMPLES::
         
@@ -940,15 +1133,21 @@ class HM:
             [b00 b01 a02]
             [b10 b11 a12]
             [a20 a21 a22]
+            sage: A=HM(3,3,'a'); B=HM(2,2,'b','shift') 
+            sage: A.fill_with(B,1).printHM()
+            [:, :]=
+            [a00 a01 a02]
+            [a10 b11 b12]
+            [a20 b21 b22]
  
         """
         boolsize = True
         for d in rg(self.order()):
-            if T.n(d) > self.n(d):
+            if T.n(d)+st > self.n(d):
                 boolsize = False
                 raise ValueError, "Expected the input hypermatrix to have larger dimensions in all directions"
         l = self.dimensions()
-        Rh = apply(HM, [self.n(z) for z in rg(self.order())]+['zero'])
+        Rh = self.copy()
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
@@ -963,9 +1162,7 @@ class HM:
                     booldim = False
                     break
             if booldim:
-                Rh[tuple(entry)]=T[tuple(entry)]
-            else:
-                Rh[tuple(entry)]=self[tuple(entry)]
+                Rh[tuple([z+st for z in entry])]=T[tuple(entry)]
         return Rh
 
     def show(self):
@@ -6007,6 +6204,92 @@ def ProbabilitySymHM(sz, xi=0):
                     # Filling up the column c of the Matrix M
                     M[i,c] = M[c,i]
     M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in range(sz-1)])
+    return M
+
+def GenerateRandomOneZeroHM(sz, k):
+    """
+    Outputs uniformly randomly chosen 0,1 vector having k ones and sz-k zeros
+    with the index fi being forbidden
+
+    EXAMPLES:
+
+    ::
+
+        sage: GenerateRandomOneZeroHM(2,2)
+        [1, 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if type(k)==type(2) and k > 0 :
+        # Initialization of the set of powers of 2
+        S=Set([2^i for i in rg(sz)])
+        # Initialization of the list of integers
+        L=[sum(s) for s in S.subsets(k)]
+        # Chosing uniformly at random a memeber of L
+        if len(L)==0 :
+            return HM(sz,'zero').list()
+        else :
+            rn=L[randint(0,len(L)-1)]
+            # obtaining the bits of the chose number
+            bL=rn.bits()
+            return bL+[0 for i in rg(len(bL),sz)]
+    else :
+        return HM(sz,'zero').list()
+
+def Random_d_regular_adjacencyHM(sz, d):
+    """
+    outputs a directed graph such that every vertex has in-degree
+    out-degree both equal to d.
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=5; A=Random_d_regular_adjacencyHM(sz,3)
+        sage: (A*HM(sz,1,'one')).printHM()
+        [:, :]=
+        [3]
+        [3]
+        [3]
+        [3]
+        [3]
+        sage: (HM(1,sz,'one')*A).printHM()
+        [:, :]=
+        [3 3 3 3 3]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the matrix to be filled
+    M = HM(sz,sz, 'zero'); M[sz-1,sz-1]=1
+    # List of regular graph on 2 vertices
+    while M[sz-1,sz-1]!=0 or (M*HM(sz,1,'one')).list() != (HM(1,sz,'one')*M).list():
+        for c in rg(sz-1):
+            # Initializing the vector associated with the row c
+            La = [0]+GenerateRandomOneZeroHM(sz-c-1,d-sum(M[c,j] for j in rg(c)))
+            # Initializing the vector associated with the column c
+            if sz-c-2 > 0:
+                Lb = [0]+GenerateRandomOneZeroHM(sz-c-2,d-sum(M[j,c] for j in rg(c+1)))
+            elif sz-c-2 == 0:
+                Lb=[0]
+            # Loop which fills up the Matrix
+            for i in range(c, c+len(La)):
+                if c > 0:
+                    # Filling up the row c of the Matrix M
+                    M[c,i] = La[i-c]
+                    if i > c:
+                        # Filling up the column c of the Matrix M
+                        M[i,c] = Lb[i-c-1]
+                else:
+                    # Filling up the row c of the Matrix M
+                    M[c,i] = La[i-c]
+                    if i > c:
+                        # Filling up the column c of the Matrix M
+                        M[i,c] = Lb[i-c-1]
+        M[sz-1,sz-1]=d-sum([M[j,sz-1] for j in rg(sz-1)])
     return M
 
 def HypermatrixPseudoInversePairsII(A,B):
