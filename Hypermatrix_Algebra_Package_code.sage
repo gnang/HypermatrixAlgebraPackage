@@ -1277,7 +1277,7 @@ class HM:
 
     def ref(self):
         if self.order()==2:
-            return gaussian_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
+            return gaussian_eliminationHMIV(self)
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
@@ -1531,6 +1531,30 @@ class HM:
             return m
         else :
             raise ValueError, "Not supported for hypermatrices of this order"
+
+    def matrix_minor(self,u,v):
+        """
+        Outputs a second order minor hypermatrix
+        where the row u and column v is removed
+
+        EXAMPLES:
+ 
+        ::
+
+            sage: HM(3,3,'a').matrix_minor(0,0).printHM()
+            [:, :]=
+            [a11 a12]
+            [a21 a22]
+
+        AUTHORS:
+        - Edinah K. Gnang
+        - To Do: 
+        """
+        if self.order()==2 and self.n(0)>1 and self.n(1)>1:
+            return HM(self.n(0)-1,self.n(1)-1, [self[i,j] for j in rg(self.n(1)) for i in rg(self.n(0)) if j!=v and i!=u])
+        else :
+            raise ValueError, "Not supported for hypermatrices of order > 2 and evry dimension must exceed 1"
+
 
 def MatrixGenerate(nr, nc, c):
     """
@@ -3876,7 +3900,7 @@ def SylvesterHM(p,q,vrbl):
         sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
         sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: SylvesterHM(p, q, x).ref()[3,3].factor()
-        -(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
+        (a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
     AUTHORS:
     - Edinah K. Gnang
@@ -3963,7 +3987,7 @@ def GmatrixHM(p,q,vrbl):
         sage: x, a0, a1, b0, b1=var('x, a0, a1, b0, b1')
         sage: p=(x-a0)*(x-a1); q=(x-b0)*(x-b1)
         sage: GmatrixHM(p,q,x).ref()[3,3].factor()
-        (a0 + a1)*(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
+        -(a0 - b0)*(a0 - b1)*(a1 - b0)*(a1 - b1)
 
     AUTHORS:
     - Edinah K. Gnang
@@ -4373,43 +4397,6 @@ def ProdB(*args):
     """
     return GeneralHypermatrixProductB(*args) 
 
-def BlockProd(*args):
-    """  
-    Outputs a list of lists associated with the general
-    Bhattacharya-Mesner block product of the input hypermatrices.
-    The code only handles the Hypermatrix HM class objects.
-
-    EXAMPLES:
-
-    ::   
-
-        sage: Ha=HM(2,2,2,'a');Hb=HM(2,2,2,'b');Hc=HM(2,2,2,'c');Hd=HM(2,2,2,'d');Hf=HM(2,2,2,'f');Hg=HM(2,2,2,'g')
-        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
-        sage: Rslt=BlockProd(A, B, C); Rslt[0,0,0].printHM()
-        [:, :, 0]=
-        [a000*c000*f000 + a010*c001*f100 + b000*d000*g000 + b010*d001*g100 a000*c010*f010 + a010*c011*f110 + b000*d010*g010 + b010*d011*g110]
-        [a100*c100*f000 + a110*c101*f100 + b100*d100*g000 + b110*d101*g100 a100*c110*f010 + a110*c111*f110 + b100*d110*g010 + b110*d111*g110]
-        <BLANKLINE>
-        [:, :, 1]=
-        [a001*c000*f001 + a011*c001*f101 + b001*d000*g001 + b011*d001*g101 a001*c010*f011 + a011*c011*f111 + b001*d010*g011 + b011*d011*g111]
-        [a101*c100*f001 + a111*c101*f101 + b101*d100*g001 + b111*d101*g101 a101*c110*f011 + a111*c111*f111 + b101*d110*g011 + b111*d111*g111]
-        sage: Ha=HM(2,1,2,'a');Hb=HM(2,1,2,'b');Hc=HM(2,2,1,'c');Hd=HM(2,2,1,'d');Hf=HM(1,2,2,'f');Hg=HM(1,2,2,'g')
-        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
-        sage: BlockProd(A, B, C)[0,0,0].printHM() # Computing the block product
-        [:, :, 0]=
-        [a000*c000*f000 + b000*d000*g000 a000*c010*f010 + b000*d010*g010]
-        [a100*c100*f000 + b100*d100*g000 a100*c110*f010 + b100*d110*g010]
-        <BLANKLINE>
-        [:, :, 1]=
-        [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
-        [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    return GeneralHypermatrixBlockProduct(*args) 
-
 def GeneralHypermatrixLogProduct(*args):
     """
     Outputs a list of lists associated with the general
@@ -4494,6 +4481,205 @@ def GeneralHypermatrixBlockProduct(*args):
         elif len(args) >= 2:
             Rh[tuple(entry)]=sum([apply(Prod,[args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
+
+def BlockProd(*args):
+    """  
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner block product of the input hypermatrices.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::   
+
+        sage: Ha=HM(2,2,2,'a');Hb=HM(2,2,2,'b');Hc=HM(2,2,2,'c');Hd=HM(2,2,2,'d');Hf=HM(2,2,2,'f');Hg=HM(2,2,2,'g')
+        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
+        sage: Rslt=BlockProd(A, B, C); Rslt[0,0,0].printHM()
+        [:, :, 0]=
+        [a000*c000*f000 + a010*c001*f100 + b000*d000*g000 + b010*d001*g100 a000*c010*f010 + a010*c011*f110 + b000*d010*g010 + b010*d011*g110]
+        [a100*c100*f000 + a110*c101*f100 + b100*d100*g000 + b110*d101*g100 a100*c110*f010 + a110*c111*f110 + b100*d110*g010 + b110*d111*g110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*c000*f001 + a011*c001*f101 + b001*d000*g001 + b011*d001*g101 a001*c010*f011 + a011*c011*f111 + b001*d010*g011 + b011*d011*g111]
+        [a101*c100*f001 + a111*c101*f101 + b101*d100*g001 + b111*d101*g101 a101*c110*f011 + a111*c111*f111 + b101*d110*g011 + b111*d111*g111]
+        sage: Ha=HM(2,1,2,'a');Hb=HM(2,1,2,'b');Hc=HM(2,2,1,'c');Hd=HM(2,2,1,'d');Hf=HM(1,2,2,'f');Hg=HM(1,2,2,'g')
+        sage: A=HM(1,2,1,[Ha,Hb]); B=HM(1,1,2,[Hc,Hd]); C=HM(2,1,1,[Hf,Hg])
+        sage: BlockProd(A, B, C)[0,0,0].printHM() # Computing the block product
+        [:, :, 0]=
+        [a000*c000*f000 + b000*d000*g000 a000*c010*f010 + b000*d010*g010]
+        [a100*c100*f000 + b100*d100*g000 a100*c110*f010 + b100*d110*g010]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
+        [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixBlockProduct(*args) 
+
+def GeneralHypermatrixProductII(Lh, Op, F):
+    """
+    Outputs a list of lists associated with the functional 
+    approach to the Bhattacharya-Mesner product of the input
+    hypermatrices. This version is theoretically more general
+    then the next implementation but in practice is hard for
+    to input arbitrary functions for F for instance I do not
+    know how to specify F so that effect the Categorically
+    inspired perspective. For this reason we also supply
+    the next function which implements the composition formulation.  
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GeneralHypermatrixProductII([Ha, Hb, Hc], prod, sum); Rslt.printHM()
+        [:, :, 0]=
+        [(a000 + b000 + c000)*(a010 + b001 + c100) (a000 + b010 + c010)*(a010 + b011 + c110)]
+        [(a100 + b100 + c000)*(a110 + b101 + c100) (a100 + b110 + c010)*(a110 + b111 + c110)]
+        <BLANKLINE>
+        [:, :, 1]=
+        [(a001 + b000 + c001)*(a011 + b001 + c101) (a001 + b010 + c011)*(a011 + b011 + c111)]
+        [(a101 + b100 + c001)*(a111 + b101 + c101) (a101 + b110 + c011)*(a111 + b111 + c111)]        
+        
+        sage: Rslt=GeneralHypermatrixProductII([Ha, Hb, Hc], sum, prod); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); GeneralHypermatrixProductII([Ha, Hb], sum, prod)
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [(Lh[i]).n(i) for i in range(len(Lh))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the assignement
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(Lh)<2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(Lh) >= 2:
+            Rh[tuple(entry)]=apply(Op, [[apply(F, [[Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]]]) for t in range((Lh[0]).n(1))]])
+    return Rh
+
+def GeneralHypermatrixProductIII(Lh, Op, Lv):
+    """
+    Outputs a list of lists associated with the composition
+    based Bhattacharya-Mesner product of the input hypermatrices.
+    The entries of the hypermatrices are taken to be functions
+    so that while performing the product we compose with the entries
+    of the first of the list of inputs. This implementation is aesthetically
+    more pleasing then the previous one because it explicitly articulate the
+    preference for composition as our defacto product operation. Hoever it is
+    theoretically less general then the previous one. Both these implementations
+    are inspired by initial exposure to ideas from Category theory, the implementation
+    also make painfully obvious some of the programming constraints imposed by Python.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y=var('x,y'); Ha=x*y*HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GeneralHypermatrixProductIII([Ha,Hb,Hc], sum, [x,y]); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+
+        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GeneralHypermatrixProductIII([Ha, Hb], sum, [x])
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GeneralHypermatrixProductIII([Ha, Hb], prod, [x])
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [(Lh[i]).n(i) for i in range(len(Lh))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the assignement
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(Lh)<2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(Lh) >= 2:
+            Rh[tuple(entry)]=apply(Op, [ [([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[0].subs([Lv[z-1]==([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[z] for z in rg(1,len(Lh))]) for t in range((Lh[0]).n(1))] ])
+    return Rh
+
+def GProd(Lh, Op, Lv):
+    """
+    Outputs a list of lists associated with the composition
+    based Bhattacharya-Mesner product of the input hypermatrices.
+    The entries of the hypermatrices are taken to be functions
+    so that while performing the product we compose with the entries
+    of the first of the list of inputs. This implementation is aesthetically
+    more pleasing then the previous one because it explicitly articulate the
+    preference for composition as our defacto product operation. Hoever it is
+    theoretically less general then the previous one. Both these implementations
+    are inspired by initial exposure to ideas from Category theory, the implementation
+    also make painfully obvious some of the programming constraints imposed by Python.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y=var('x,y'); Ha=x*y*HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GProd([Ha,Hb,Hc], sum, [x,y]); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+
+        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GProd([Ha, Hb], sum, [x])
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GeneralHypermatrixProductIII([Ha, Hb], prod, [x])
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductIII(Lh, Op, Lv)
 
 def GeneralHypermatrixCyclicPermute(A):
     """
@@ -6240,14 +6426,17 @@ def GenerateRandomOneZeroHM(sz, k):
 
 def Random_d_regular_adjacencyHM(sz, d):
     """
-    outputs a directed graph such that every vertex has in-degree
-    out-degree both equal to d.
+    outputs a complementary pair of directed graphs where 
+    the first graphs has vertex in-degree and out-degree 
+    both equal to d for every vertex. While the second has
+    vertex in-degree and out-degree both equal to sz-d-1
+    for all of it's vertices.
 
     EXAMPLES:
 
     ::
 
-        sage: sz=5; A=Random_d_regular_adjacencyHM(sz,3)
+        sage: sz=5; [A,B]=Random_d_regular_adjacencyHM(sz,3)
         sage: (A*HM(sz,1,'one')).printHM()
         [:, :]=
         [3]
@@ -6290,7 +6479,45 @@ def Random_d_regular_adjacencyHM(sz, d):
                         # Filling up the column c of the Matrix M
                         M[i,c] = Lb[i-c-1]
         M[sz-1,sz-1]=d-sum([M[j,sz-1] for j in rg(sz-1)])
-    return M
+    return [M, HM(sz,sz,'one')-M-HM(2,sz,'kronecker')]
+
+def BipInflateHM(sz):
+    """
+    outputs bipartite where vertex in-degree and out-degree 
+    both equal to (sz-1)/2 for every vertex. The partition
+    are made up of complementary adjacency matrices.
+    The number of vertices sz must be odd. 
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=5; A= BipInflateHM(sz)
+        sage: (A*HM(2*sz,1,'one')).printHM()
+        [:, :]=
+        [2]
+        [2]
+        [2]
+        [2]
+        [2]
+        [2]
+        [2]
+        [2]
+        [2]
+        [2]
+        sage: (HM(1,2*sz,'one')*A).printHM()
+        [:, :]=
+        [2 2 2 2 2 2 2 2 2 2]
+
+    AUTHORS:
+    - Edinah K. Gnang, James Murphy
+    """
+    if Integer(mod(sz,2))==1:
+        d=Integer((sz-1)/2)
+        [A,B]=Random_d_regular_adjacencyHM(sz, d)
+        return HM([[0,1],[0,0]]).tensor_product(A)+HM([[0,0],[1,0]]).tensor_product(B)
+    else:
+        raise ValueError, "The number of vertices must be odd"
 
 def HypermatrixPseudoInversePairsII(A,B):
     """
@@ -10590,6 +10817,73 @@ def gaussian_eliminationHMIII(Cf, rs):
         i=i+1; j=j+1
     return [A,b]
 
+def gaussian_eliminationHMIV(Cf):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
+    This implementation tacitly assumes that the entries commute.
+    The computation is performed in such a way that the last entry on the main diagonal is 
+    the determinant.
+     
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: A=gaussian_eliminationHMIV(HM(2,2,'a'))
+        sage: A.printHM()
+        [:, :]=
+        [               a00                a01]
+        [                 0 -a01*a10 + a00*a11]
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,'b')
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,2,'kronecker'), Tb[1,0]*HM(2,2,'kronecker')])
+        sage: A=gaussian_eliminationHMIV(Ha)
+        sage: A
+        [[[[a00, 0], [0, a00]], [[a01, 0], [0, a01]]], [[[0, 0], [0, 0]], [[-a01*a10 + a00*a11, 0], [0, -a01*a10 + a00*a11]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    if r==j+1:
+                        for j0 in range(j,A.n(1)):
+                            A[r,j0]=-cf2*A[i,j0]+cf1*A[r,j0]
+                    else:
+                        for j0 in range(j,A.n(1)):
+                            A[r,j0]=(-cf2*A[i,j0]+cf1*A[r,j0])/cf1
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return A
+
 def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
     """
     Outputs the row echelon form of the input second order hypermatrix and the right hand side.
@@ -10671,6 +10965,100 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
         # Incrementing the row and column index.
         i=i+1; j=j+1
     return [A,b]
+
+def gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
+    The algorithm perform the reduction assuming that the the leading term in each relations
+    is a monic powers in a distinct variable as illustrated in the example bellow.
+    The computation is perform in such a way that the last diagonal entry holds the determinant
+    of the whole matrix it is also true that each diagonal entry corresponds to the determinant
+    of the corresponding top diagonal block of the matrix. Note that the relation in Rlts are
+    assumed to be univariate leading term. This implementaion also gets the sign right for the
+    determinant. This implementation is considerably more efficient then the previous one above
+    because the extra multiplicative factor is kept minimal.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: x1, x2=var('x1, x2')
+        sage: Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]])
+        sage: VrbL=[x1, x2]
+        sage: Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
+        sage: A=gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts)
+        sage: A.printHM()
+        [:, :]=
+        [         -2   -2*x1 + 3]
+        [          0 -12*x1 + 12]
+        sage: od=2; sz=3 # Initialization of the order and size parameter
+        sage: A=HM(od,sz,'a','sym'); X=HM(sz,sz,[x^(sz^abs(j-i)) for j in rg(sz) for i in rg(sz)])
+        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
+        sage: for i in rg(sz):
+        ....:     for j in rg(sz):
+        ....:         if i < j:
+        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
+        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
+        ....:             clidx=clidx+1
+        ....:
+        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
+        sage: M=(HM(od,[x*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
+        sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
+        sage: Rh=gaussian_elimination_ReductionHMII(M,[x],[x^(1+d)])
+        sage: Rh[1,1]
+        a00*a01*a02*x^13 + a00*a02*a12*x^13 + a00*a01*a12*x^7
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    if r==j+1:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
+                            for v in range(len(VrbL)):
+                                #f=f.maxima_methods().divide(Rlts[v])[1]
+                                for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                    f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+                            A[r,j0]=f
+                    else:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            g=expand((-cf2*A[i,j0]+cf1*A[r,j0])/cf1)
+                            A[r,j0]=g
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return A
 
 def gauss_jordan_elimination(Cf,rs):
     """
