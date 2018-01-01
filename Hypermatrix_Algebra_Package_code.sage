@@ -1,8 +1,9 @@
 #*************************************************************************#
-#    Copyright (C) 2018, 19, 20, 21 Edinah K.Gnang <kgnang@gmail.com>,    #
+# Copyright (C) 2018, 19, 20, 21, 22 Edinah K.Gnang <kgnang@gmail.com>,   #
 #                          Ori Parzanchevski,                             #
 #                          Yuval Filmus,                                  #
 #                          Doron Zeilberger,                              #
+#                          Fan Tian,                                      #
 #                                                                         #
 #  Distributed under the terms of the GNU General Public License (GPL)    #
 #                                                                         #
@@ -109,6 +110,10 @@ class HM:
         sage: sz=2; od=3; J0=Prod(HM(sz,sz,sz,'one'), HM(sz,sz,sz,'one'), HM(od,sz,'kronecker')); J1=Prod(HM(od,sz,'kronecker'), HM(sz,sz,sz,'one'), HM(sz,sz,sz,'one'))
         sage: Prod(J0,HM(sz,sz,sz,'a'),J1)-HM(sz,sz,sz,'a')
         [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]
+        sage: od=Integer(2); sz=Integer(4); A=HM(sz,sz,'a'); X=var_list('x', sz); F=expand(((A*HM(od,X,'diag'))^4).trace()) # Setup for listing walks of lenght 4
+        sage: X0=HM([[0, X[0]], [0, 0]]); X1=HM([[0, X[1]], [0, 0]]); X2=HM([[0, X[2]], [0, 0]]) # Initialization of 2x2 matrices to be substituted into F to list directed 4-cycles
+        sage: F_x0=(X0.substituteHMinto(F, X[0]).expand())[0,1]; F_x0_x1=(X1.substituteHMinto(F_x0,X[1]).expand())[0,1]; F_x0_x1_x2=(X2.substituteHMinto(F_x0_x1,X[2]).expand())[0,1]; F_x0_x1_x2
+        4*a02*a13*a21*a30*x0*x1*x2*x3 + 4*a01*a12*a23*a30*x0*x1*x2*x3 + 4*a03*a12*a20*a31*x0*x1*x2*x3 + 4*a02*a10*a23*a31*x0*x1*x2*x3 + 4*a01*a13*a20*a32*x0*x1*x2*x3 + 4*a03*a10*a21*a32*x0*x1*x2*x3
     """
     def __init__(self,*args,func=None):
         if len(args) == 1:
@@ -13332,6 +13337,82 @@ def Poly2HM(P,X):
         Rh[tuple(entry)]=P.subs([X[v]==entry[v] for v in rg(len(l))])
     return Rh
 
+def Poly2HMII(P,X):
+    """
+    Outputs the hypermatrix encoding of the input polynomial using
+    evaluations from the (Z_n)^Z_n lattice. The value n is len(X)
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: x0,x1=var('x0,x1'); Poly2HMII((x0 - 1)*(x1 - 1) + x0*x1, [x0,x1]).p()
+        [:, :]=
+        [1 0]
+        [0 1]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang and Doron Zeilberger
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [len(X) for i in rg(len(X))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=P.subs([X[v]==entry[v] for v in rg(len(l))])
+    return Rh
+
+def Poly2HMIII(P,X):
+    """
+    Outputs the hypermatrix encoding of the input polynomial using
+    evaluations from roots of unity  w^((Z_n)^Z_n) lattice. The value n is len(X)
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: x0,x1=var('x0,x1'); Poly2HMIII((x0 - 1)*(x1 - 1) + x0*x1, [x0,x1]).p()
+        [:, :]=
+        [ 1 -1]
+        [-1  5]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang and Doron Zeilberger
+    """
+    # Initialization of the primitive root of unity
+    w=exp(sqrt(-1)*2*pi/len(X))
+    # Initialization of the list specifying the dimensions of the output
+    l = [len(X) for i in rg(len(X))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=P.subs([X[v]==w^entry[v] for v in rg(len(l))])
+    return Rh
+
 def Poly2Integer(P,X):
     """
     Outputs the binary encoding of the boolean formula
@@ -16722,6 +16803,16 @@ def linear_solverHM(A,b,x,v):
          x1 == a11 - t3,
          x2 == a10 - a11 + t3,
          0  == -a00 + a01 + a10 - a11]
+        sage: sz=Integer(2); A=HM(sz, sz, 'a'); Ha=HM([A.elementwise_exponent(i).list() for i in rg(sz^2)])
+        sage: linear_solverHM(Ha.t(),HM(sz^2,1,'zero'),HM(Ha.n(1),1,var_list('x',Ha.n(1))),HM(Ha.n(1),1,var_list('t',Ha.n(1))))
+        [x0 == 0, x1 == 0, x2 == 0, x3 == 0]
+        sage: sz=Integer(2); A=HM(sz, sz, 'a'); Ha=HM([(A^i).list() for i in rg(sz^2-1)])
+        sage: linear_solverHM(Ha.t(), HM(sz^2,1,'zero'), HM(Ha.n(1),1,var_list('x',Ha.n(1))), HM(Ha.n(1),1,var_list('t',Ha.n(1))))
+        [x0 == -(a00^2 + a01*a10 - (a00*a10 + a10*a11)*a00/a10)*t2,
+         x1 == -(a00*a10 + a10*a11)*t2/a10,
+         0 == -(a00*a01 + a01*a11 - (a00*a10 + a10*a11)*a01/a10)*t2,
+         0 == (a00^2 - a11^2 - (a00*a10 + a10*a11)*(a00 - a11)/a10)*t2]
+
 
     AUTHORS:
     - Initial implementation by Edinah K. Gnang updates to the doc string by Jeanine S. Gnang
@@ -19219,7 +19310,12 @@ def Additive_Determinant_Matrix(f, g, t):
     ::
 
         sage: x=var('x'); f=x^2+sum(HM(2,'a').list()[i]*x^i for i in range(2)); g=x^3+sum(HM(3,'b').list()[i]*x^i for i in range(3))
-        sage: Ha=Additive_Determinant_Matrix(f, g, x); Hb=Ha.copy()
+        sage: Ha=Additive_Determinant_Matrix(f, g, x)
+        sage: (Ha.refII()[2,2].ref()[2,2]).canonicalize_radical() 
+        ((b2 + 1)*x^2 + x^3 + (a1 + b1)*x + a0 + b0)/(a1*x + x^2 + a0)
+        sage: (Ha.refII()[1,1].ref()[1,1]).canonicalize_radical()
+        a1*x + x^2 + a0
+        sage: Hb=Ha.copy()
         sage: for k in range(Hb.n(0)):
         ....:     Hb=BlockSweep(Hb,k)
         ....:
@@ -20884,6 +20980,30 @@ def degree_matrix(EqL, VrbL):
                 Ha[i,j]=EqL[i].degree((VrbL)[j])
     return Ha
 
+def charpoly2x2(A,v):
+    """
+    Outputs the Characteristic polynomial of the input 2x2 matrix A
+    in the input variable v.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: x0=var('x0'); sz=Integer(2); M=HM(sz,sz,'m'); CP=charpoly2x2(M,x0); CP
+        -m01*m10 + m00*m11 - (m00 + m11)*x0 + x0^2
+        sage: M.substituteHMinto(CP, x0).expand().p()
+        [:, :]=
+        [0 0]
+        [0 0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return v^2-A.trace()*v+Deter(A)
+
 def i2x2(A):
     """
     Outputs the symbolic inverse of a 2x2 matrix.
@@ -21666,6 +21786,25 @@ def rg(*args):
     - Edinah K. Gnang
     """ 
     return [Integer(i) for i in range(*args)]
+
+def imod(a,d): 
+    """ 
+    returns the residue class mod the input integer d
+    of the input integer a.
+    
+
+    EXAMPLES:
+
+    ::  
+
+        sage: imod(5,2)
+        1
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """ 
+    return Integer(mod(a,d))
 
 def multivariate_leading_term(f, Xv, Pp):
     """
@@ -24636,6 +24775,35 @@ def Monomial2Tuple(mnm, VrbL, sz):
         Tp=[EdgeDct[g] for g in f.operands()]; Tp.sort()
     return Tp
 
+def Monomial2TupleII(mnm, VrbL):
+    """
+    Outputs the tuple edge list description of the input monomial mnm.
+    The output of the function is taken to be the exponent of the variables.
+    The current implementation does not check that the input is a monomial.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=Integer(3); X=var_list('x',sz); F=expand(prod(X[j]-X[i] for j in rg(sz) for i in rg(sz) if i<j))
+        sage: L=[Monomial2TupleII(mnm, X) for mnm in F.operands()]; L
+        [[(0, 2), (1, 1), (2, 0)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 2), (1, 0), (2, 1)],
+         [(0, 0), (1, 2), (2, 1)],
+         [(0, 1), (1, 0), (2, 2)],
+         [(0, 0), (1, 1), (2, 2)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Getting rid of the coefficient
+    trm=mnm/(mnm.subs([v==1 for v in VrbL]))
+    return [(i, trm.degree(VrbL[i])) for i in rg(len(VrbL))]
+
 def RootedTupleClassTreeFunctionList(tp):
     """
     Computes determines the set all functional
@@ -24701,6 +24869,34 @@ def BasicLagrangeInterpolation(L, x):
             fk = fk*((x-L[j][0])/(L[idx][0]-L[j][0]))
         f = f + L[idx][1]*fk
     return f
+
+def bli(L, x):
+    """
+    Implements the basic lagrange interpolation.
+    The functions take as input a list of tuples
+    and outputs a polynomial in the variable x
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: x=var('x'); bli([(0,0), (1,1), (2,2), (3,3)], x)
+        1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the function
+    F = 0
+    # Code for building the parts 
+    for idx in rg(len(L)):
+        fk = 1
+        for j in [i for i in rg(len(L)) if i != idx]:
+            fk = fk*((x-L[j][0])/(L[idx][0]-L[j][0]))
+        F = F + L[idx][1]*fk
+    return F
 
 def LagrangeInterpolationZn(F, X):
     """
@@ -25269,7 +25465,6 @@ def tpl_pre_image_set_functionII(tp):
     """
     return [[v for v in tpl_pre_image_set(tp, i) if v != i] for i in rg(len(tp))]
 
-
 def tpl_leaf_set(tp):
     """
     returns the list of leaf vertex set of the functional directed graph
@@ -25291,6 +25486,46 @@ def tpl_leaf_set(tp):
     L0=Set([t[1] for t in tp]).list(); L0.sort()
     L1=[tp[i][0] for i in rg(len(tp)) if not tp[i][0] in L0]; L1.sort()
     return L1
+
+def tuple_order(T):
+    """
+    Given a tuple description of a function the present function
+    determines the LCM of the cycle lengths which appear in the graph
+    The implementation uses the adjacency matrix of the functional
+    directed graph.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(4); T=[(i, Integer(mod(i+1,sz))) for i in rg(sz)]; tuple_order(T)
+        4
+        sage: sz=Integer(6); T=[(0, 0), (1, 2), (2, 1), (3, 4), (4, 5), (5, 3)]; tuple_order(T)
+        6
+        sage: sz=Integer(8); T=[(0, 1), (1, 0)]+[(2, 3), (3, 4), (4, 2)]+[(i, i-1) for i in rg(5, sz)]; tuple_order(T)
+        6
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(T))
+    # Initializing the symbolic edge weights
+    A=HM(sz,sz,'a')
+    # Initialization of the adjacency matrix
+    At=A.elementwise_product(Tuple_to_Adjacency(T))
+    # Initialization of the polynomial which computes the cycle lengths
+    F=Modulo(sum((At^k).trace() for k in rg(1,sz+1)), A.list(), [v^2 for v in A.list()])[1]
+    #print("F = ", F)
+    add = var('x0') + var('x1'); mul = var('x0') * var('x1')
+    if F.operator() == add.operator():
+        Lt=[Monomial2Tuple(mnm, A.list(), sz) for mnm in F.operands()] 
+        #print('Lt = ', Lt)
+    elif F.operator() == mul.operator():
+       Lt=[Monomial2Tuple(F, A.list(), sz)] 
+    return LCM([len(l) for l in Lt])
 
 def gcomp(tp, tq):
     """
@@ -25414,6 +25649,8 @@ def Modulo(f, VrbL, Rlts):
     a multivariate polynomial f in the variables in the
     input list VrbL and a list of monic univariate polynomial
     which correspond to the relations we are moding by.
+    All polynomials must be inputed in expanded form otherwise
+    the output is incorrect
 
 
     EXAMPLES:
@@ -25422,6 +25659,20 @@ def Modulo(f, VrbL, Rlts):
         
         sage: VrbL = var_list('x', 2); f = expand((VrbL[0]+VrbL[1])^10); Rlts = [VrbL[0]^2-5, VrbL[1]^3-7]; Modulo(f, VrbL, Rlts)[1]
         44100*x0*x1^2 + 35650*x0*x1 + 39150*x1^2 + 108430*x0 + 184093*x1 + 260375
+        sage: sz=Integer(3); X=var_list('x',sz); P=expand(prod(prod(X[i]^(3+2*i) for i in rg(sz))-j for j in rg(sz)))
+        sage: G0 = expand(Modulo(P, X, [expand(prod(X[i]-j for j in rg(sz))) for i in rg(sz)])[1]); G0
+        4380205822152*x0^2*x1^2*x2^2 - 4380201691920*x0^2*x1^2*x2 - 4379939196912*x0^2*x1*x2^2 - 4363039572840*x0*x1^2*x2^2 + 4379935066848*x0^2*x1*x2 + 4363035457488*x0*x1^2*x2 + 4362773971728*x0*x1*x2^2 - 4362769856544*x0*x1*x2
+        sage: Rlts = [expand((x1 - 1)*(x1 - 2)*x1), expand((x0 - 1)*(x0 - 2)*x0), expand((x2 - 1)*(x2 - 2)*x2)]
+        sage: G1 = expand(Modulo(P, [x1,x0,x2], Rlts)[1]); G1
+        4380205822152*x0^2*x1^2*x2^2 - 4380201691920*x0^2*x1^2*x2 - 4379939196912*x0^2*x1*x2^2 - 4363039572840*x0*x1^2*x2^2 + 4379935066848*x0^2*x1*x2 + 4363035457488*x0*x1^2*x2 + 4362773971728*x0*x1*x2^2 - 4362769856544*x0*x1*x2
+        sage: G0-G1
+        0
+        sage: expand(sum(P.subs([X[i]==T[i][1] for i in rg(sz)])*prod(prod((X[i]-ji)/(T[i][1]-ji) for ji in rg(sz) if ji!=T[i][1]) for i in rg(sz)) for T in Lf))
+        4380205822152*x0^2*x1^2*x2^2 - 4380201691920*x0^2*x1^2*x2 - 4379939196912*x0^2*x1*x2^2 - 4363039572840*x0*x1^2*x2^2 + 4379935066848*x0^2*x1*x2 + 4363035457488*x0*x1^2*x2 + 4362773971728*x0*x1*x2^2 - 4362769856544*x0*x1*x2
+        sage: F0 = Modulo(P, X, [expand(prod(X[i]-j for j in rg(sz))) for i in rg(sz)])[0]; F0
+        (x0^3 - 3*x0^2 + 2*x0)*x0^6*x1^15*x2^21 + 3*(x0^3 - 3*x0^2 + 2*x0)*x0^5*x1^15*x2^21 + 7*(x0^3 - 3*x0^2 + 2*x0)*x0^4*x1^15*x2^21 + (4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^18 + 3*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^17 + 7*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^16 + 15*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^15 + 31*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^14 + 63*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^13 + (255*x0^2*x2^21 - 254*x0*x2^21)*(x1^3 - 3*x1^2 + 2*x1)*x1^12 + 127*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^12 + 3*(255*x0^2*x2^21 - 254*x0*x2^21)*(x1^3 - 3*x1^2 + 2*x1)*x1^11 + 12*(88771421*x0^2*x1^2 - 88766010*x0^2*x1 - 88423410*x0*x1^2 + 88418020*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^11 + 7*(255*x0^2*x2^21 - 254*x0*x2^21)*(x1^3 - 3*x1^2 + 2*x1)*x1^10 + 2*(1067322123*x0^2*x1^2 - 1067257110*x0^2*x1 - 1063138566*x0*x1^2 + 1063073804*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^10 + 15*(255*x0^2*x2^21 - 254*x0*x2^21)*(x1^3 - 3*x1^2 + 2*x1)*x1^9 + 6*(712236439*x0^2*x1^2 - 712193070*x0^2*x1 - 709444926*x0*x1^2 + 709401724*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^9 + 31*(255*x0^2*x2^21 - 254*x0*x2^21)*(x1^3 - 3*x1^2 + 2*x1)*x1^8 + 2*(4275483705*x0^2*x1^2 - 4275223410*x0^2*x1 - 4258727202*x0*x1^2 + 4258467908*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^8 + 3*(5355*x0^2*x2^21 - 5334*x0*x2^21 - 31*x0^2*x2^14 + 30*x0*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^7 + 6*(2851010827*x0^2*x1^2 - 2850837270*x0^2*x1 - 2839837350*x0*x1^2 + 2839664460*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^7 + (32385*x0^2*x2^21 - 32258*x0*x2^21 - 279*x0^2*x2^14 + 270*x0*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^6 + 2*(17108130033*x0^2*x1^2 - 17107088610*x0^2*x1 - 17041081746*x0*x1^2 + 17040044324*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^6 + 3*(21675*x0^2*x2^21 - 21590*x0*x2^21 - 217*x0^2*x2^14 + 210*x0*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^5 + 762*(89811877*x0^2*x1^2 - 89806410*x0^2*x1 - 89459898*x0*x1^2 + 89454452*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^5 + (130305*x0^2*x2^21 - 129794*x0*x2^21 - 1395*x0^2*x2^14 + 1350*x0*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^4 + 12*(11406452565*x0^2*x1^2 - 11405758242*x0^2*x1 - 11361749992*x0*x1^2 + 11361058336*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^4 + 3*(5*x1^15*x2^21 - x1^10*x2^14)*(x0^3 - 3*x0^2 + 2*x0)*x0^3 + 93*(2805*x0^2*x2^21 - 2794*x0*x2^21 - 31*x0^2*x2^14 + 30*x0*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^3 + 24*(11406624658*x0^2*x1^2 - 11405930328*x0^2*x1 - 11361921465*x0*x1^2 + 11361229802*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^3 + (31*x1^15*x2^21 - 9*x1^10*x2^14)*(x0^3 - 3*x0^2 + 2*x0)*x0^2 + (521985*x0^2*x2^21 - 519938*x0*x2^21 - 5859*x0^2*x2^14 + 5670*x0*x2^14 + 6*x0^2*x2^7 - 4*x0*x2^7)*(x1^3 - 3*x1^2 + 2*x1)*x1^2 + 24*(22813421409*x0^2*x1^2 - 22812032742*x0^2*x1 - 22724014403*x0*x1^2 + 22722631070*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^2 + 21*(3*x1^15*x2^21 - x1^10*x2^14)*(x0^3 - 3*x0^2 + 2*x0)*x0 + 3*(348075*x0^2*x2^21 - 346710*x0*x2^21 - 3937*x0^2*x2^14 + 3810*x0*x2^14 + 6*x0^2*x2^7 - 4*x0*x2^7)*(x1^3 - 3*x1^2 + 2*x1)*x1 + 24*(45627014911*x0^2*x1^2 - 45624237570*x0^2*x1 - 45448200279*x0*x1^2 + 45445433606*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2 + (127*x1^15*x2^21 - 45*x1^10*x2^14 + 2*x1^5*x2^7)*(x0^3 - 3*x0^2 + 2*x0) + (2088705*x0^2*x2^21 - 2080514*x0*x2^21 - 23715*x0^2*x2^14 + 22950*x0*x2^14 + 42*x0^2*x2^7 - 28*x0*x2^7)*(x1^3 - 3*x1^2 + 2*x1) + 24*(91254201915*x0^2*x1^2 - 91248647226*x0^2*x1 - 90896572031*x0*x1^2 + 90891038678*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)
+        sage: F1 = Modulo(P, [x1,x0,x2], Rlts)[0]; F1
+        (x1^3 - 3*x1^2 + 2*x1)*x0^9*x1^12*x2^21 + 3*(x1^3 - 3*x1^2 + 2*x1)*x0^9*x1^11*x2^21 + 7*(x1^3 - 3*x1^2 + 2*x1)*x0^9*x1^10*x2^21 + 15*(x1^3 - 3*x1^2 + 2*x1)*x0^9*x1^9*x2^21 + 31*(x1^3 - 3*x1^2 + 2*x1)*x0^9*x1^8*x2^21 + (4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^18 + 3*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^17 + 7*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^16 + 15*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^15 + 31*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^14 + 63*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^13 + 127*(4177665*x0^2*x1^2 - 4177410*x0^2*x1 - 4161282*x0*x1^2 + 4161028*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^12 + 12*(88771421*x0^2*x1^2 - 88766010*x0^2*x1 - 88423410*x0*x1^2 + 88418020*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^11 + 2*(1067322123*x0^2*x1^2 - 1067257110*x0^2*x1 - 1063138566*x0*x1^2 + 1063073804*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^10 + 6*(712236439*x0^2*x1^2 - 712193070*x0^2*x1 - 709444926*x0*x1^2 + 709401724*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^9 + 2*(4275483705*x0^2*x1^2 - 4275223410*x0^2*x1 - 4258727202*x0*x1^2 + 4258467908*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^8 + 3*(21*x0^9*x2^21 - x0^6*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^7 + 6*(2851010827*x0^2*x1^2 - 2850837270*x0^2*x1 - 2839837350*x0*x1^2 + 2839664460*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^7 + (16383*x1^2*x2^21 - 16382*x1*x2^21)*(x0^3 - 3*x0^2 + 2*x0)*x0^6 + (127*x0^9*x2^21 - 9*x0^6*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^6 + 2*(17108130033*x0^2*x1^2 - 17107088610*x0^2*x1 - 17041081746*x0*x1^2 + 17040044324*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^6 + 3*(16383*x1^2*x2^21 - 16382*x1*x2^21)*(x0^3 - 3*x0^2 + 2*x0)*x0^5 + 3*(85*x0^9*x2^21 - 7*x0^6*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^5 + 762*(89811877*x0^2*x1^2 - 89806410*x0^2*x1 - 89459898*x0*x1^2 + 89454452*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^5 + 7*(16383*x1^2*x2^21 - 16382*x1*x2^21)*(x0^3 - 3*x0^2 + 2*x0)*x0^4 + (511*x0^9*x2^21 - 45*x0^6*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^4 + 12*(11406452565*x0^2*x1^2 - 11405758242*x0^2*x1 - 11361749992*x0*x1^2 + 11361058336*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^4 + 3*(81915*x1^2*x2^21 - 81910*x1*x2^21 - 511*x1^2*x2^14 + 510*x1*x2^14)*(x0^3 - 3*x0^2 + 2*x0)*x0^3 + 93*(11*x0^9*x2^21 - x0^6*x2^14)*(x1^3 - 3*x1^2 + 2*x1)*x1^3 + 24*(11406624658*x0^2*x1^2 - 11405930328*x0^2*x1 - 11361921465*x0*x1^2 + 11361229802*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^3 + (507873*x1^2*x2^21 - 507842*x1*x2^21 - 4599*x1^2*x2^14 + 4590*x1*x2^14)*(x0^3 - 3*x0^2 + 2*x0)*x0^2 + (2047*x0^9*x2^21 - 189*x0^6*x2^14 + 2*x0^3*x2^7)*(x1^3 - 3*x1^2 + 2*x1)*x1^2 + 24*(22813421409*x0^2*x1^2 - 22812032742*x0^2*x1 - 22724014403*x0*x1^2 + 22722631070*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2^2 + 21*(49149*x1^2*x2^21 - 49146*x1*x2^21 - 511*x1^2*x2^14 + 510*x1*x2^14)*(x0^3 - 3*x0^2 + 2*x0)*x0 + 3*(1365*x0^9*x2^21 - 127*x0^6*x2^14 + 2*x0^3*x2^7)*(x1^3 - 3*x1^2 + 2*x1)*x1 + 24*(45627014911*x0^2*x1^2 - 45624237570*x0^2*x1 - 45448200279*x0*x1^2 + 45445433606*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)*x2 + (2080641*x1^2*x2^21 - 2080514*x1*x2^21 - 22995*x1^2*x2^14 + 22950*x1*x2^14 + 30*x1^2*x2^7 - 28*x1*x2^7)*(x0^3 - 3*x0^2 + 2*x0) + (8191*x0^9*x2^21 - 765*x0^6*x2^14 + 14*x0^3*x2^7)*(x1^3 - 3*x1^2 + 2*x1) + 24*(91254201915*x0^2*x1^2 - 91248647226*x0^2*x1 - 90896572031*x0*x1^2 + 90891038678*x0*x1)*(x2^3 - 3*x2^2 + 2*x2)
 
 
     AUTHORS:
@@ -25451,6 +25702,8 @@ def ModuloII(f, VrbL, Rlts):
     a multivariate polynomial f in the variables in the
     input list VrbL and a list of monic univariate polynomial
     which correspond to the relations we are moding by.
+    The imput polynomials must be presented in expanded form
+    otherwise the output may be incorrect.
 
 
     EXAMPLES:
@@ -25482,6 +25735,130 @@ def ModuloII(f, VrbL, Rlts):
     else:
         raise ValueError("Expected univariate algebraic relations.")
 
+def ModuloUnivarRelations(F, Xv, Rlts):
+    """
+    Outputs the sequence reduced polynomials for Euclidean division.
+    The algorithm takes as input a multivariate polynomial F in the
+    variables in the input list Xv and a list of monic univariate polynomial
+    which correspond the same polynomial in different variables. All polynomials
+    must be inputed in expanded form otherwise the output is incorrect.
+    This implementation assumes that the input is a polynomial and not a single mononial
+    term.
+
+    EXAMPLES:
+
+    ::
+        
+        sage: Xv=var_list('x',2); F = expand((Xv[0]+Xv[1])^10); Rlts = [Xv[0]^3-7, Xv[1]^3-7]; ModuloUnivarRelations(F, Xv, Rlts)
+        [x0^10 + 10*x0^9*x1 + 45*x0^8*x1^2 + 120*x0^7*x1^3 + 210*x0^6*x1^4 + 252*x0^5*x1^5 + 210*x0^4*x1^6 + 120*x0^3*x1^7 + 45*x0^2*x1^8 + 10*x0*x1^9 + x1^10,
+         x0^10 + x1^10 + 840*x0^7 + 840*x1^7 - (x0^3 - 7)^3*x0 - (x1^3 - 7)^3*x1 - 840*(x0^3 - 7)^2*x0 + 45*(x1^8 - (x1^3 - 7)^2*x1^2)*x0^2 - 840*(x1^3 - 7)^2*x1 + 45*(x0^8 - (x0^3 - 7)^2*x0^2)*x1^2 + 252*(x0^5 - (x0^3 - 7)*x0^2)*(x1^5 - (x1^3 - 7)*x1^2) + 210*(x1^6 - (x1^3 - 7)^2)*(x0^4 - (x0^3 - 7)*x0) + 210*(x0^6 - (x0^3 - 7)^2)*(x1^4 - (x1^3 - 7)*x1) + 10*(x1^9 - (x1^3 - 7)^3)*x0 + 10*(x0^9 - (x0^3 - 7)^3)*x1,
+         21*x0^7 + 21*x1^7 + 11613*x0^4 + 7938*x0^2*x1^2 + 11613*x1^4 - 21*(x0^3 - 7)^2*x0 + 630*(x1^5 - (x1^3 - 7)*x1^2)*x0^2 - 21*(x1^3 - 7)^2*x1 + 630*(x0^5 - (x0^3 - 7)*x0^2)*x1^2 + 210*(x1^6 - (x1^3 - 7)^2)*x0 - 11613*(x0^3 - 7)*x0 + 210*(x0^6 - (x0^3 - 7)^2)*x1 - 11613*(x1^3 - 7)*x1 + 24353*x0 + 24353*x1,
+         294*x0^4 + 16758*x0^2*x1^2 + 294*x1^4 - 294*(x0^3 - 7)*x0 - 294*(x1^3 - 7)*x1 + 114905*x0 + 114905*x1]
+        sage: Xv=var_list('x',2); F=expand((Xv[0]+Xv[1])^5); Rlts=[Xv[i]*(Xv[i]-1) for i in rg(len(Xv))]; rmdL=ModuloUnivarRelations(F, Xv, Rlts); rmdL
+        [x0^5 + 5*x0^4*x1 + 10*x0^3*x1^2 + 10*x0^2*x1^3 + 5*x0*x1^4 + x1^5,
+         -(x0 - 1)^2*x0^3 + x0^5 - (x1 - 1)^2*x1^3 + x1^5 + 10*((x1 - 1)*x1^2 - x1^3)*((x0 - 1)*x0 - x0^2) + 10*((x0 - 1)*x0^2 - x0^3)*((x1 - 1)*x1 - x1^2) - 5*((x1 - 1)^2*x1^2 - x1^4)*x0 - 5*((x0 - 1)^2*x0^2 - x0^4)*x1,
+         -2*(x0 - 1)^2*x0^2 + 2*x0^4 - 2*(x1 - 1)^2*x1^2 + 2*x1^4 + (x0 - 1)*x0^2 - x0^3 + (x1 - 1)*x1^2 - x1^3 - 10*((x1 - 1)*x1^2 - x1^3)*x0 - 5*((x1 - 1)*x1 - x1^2)*x0 - 10*((x0 - 1)*x0^2 - x0^3)*x1 - 5*((x0 - 1)*x0 - x0^2)*x1,
+         -4*(x0 - 1)*x0^2 + 4*x0^3 - 4*(x1 - 1)*x1^2 + 4*x1^3 - 10*((x1 - 1)*x1 - x1^2)*x0 + 3*(x0 - 1)*x0 - 3*x0^2 - 10*((x0 - 1)*x0 - x0^2)*x1 + 10*x0*x1 + 3*(x1 - 1)*x1 - 3*x1^2,
+         -4*(x0 - 1)*x0 + 4*x0^2 + 30*x0*x1 - 4*(x1 - 1)*x1 + 4*x1^2 - 3*x0 - 3*x1]
+        sage: for i in rg(len(rmdL)): # Loop checking that the canonical reamainder is the same.
+        ....:     print(expand(remainder_via_lagrange_interpolation(expand(rmdL[0]), rg(2), Xv)))
+        ....:
+        30*x0*x1 + x0 + x1
+        30*x0*x1 + x0 + x1
+        30*x0*x1 + x0 + x1
+        30*x0*x1 + x0 + x1
+        30*x0*x1 + x0 + x1
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the degree of the polynomial
+    m=Rlts[0].degree(Xv[0])
+    # Initialization of the list of coefficients
+    Lc=[trm.subs([Xv[i]==1 for i in rg(len(Xv))]) for trm in F.operands()] #print('Lc=',Lc)
+    # Initialization of the list of monomials
+    Lt=[trm/trm.subs([Xv[i]==1 for i in rg(len(Xv))]) for trm in F.operands()] #print('Lt=',Lt)
+    # Initialization of the tuple descriptions associated with the monomial support
+    Lh=[[(i,SR(trm).degree(Xv[i])) for i in rg(len(Xv))] for trm in F.operands()] #print('Lh=',Lh)
+    # Initialization of the first remainder
+    rmd=F; rmdL=[F]
+    while max([rmd.degree(Xv[i]) for i in rg(len(Xv))]) >= m:
+        rmd=sum(Lc[t]*prod(Xv[i]^Lh[t][i][1] for i in rg(len(Xv)) if Lh[t][i][1]<m)*prod(Xv[i]^Lh[t][i][1]-Xv[i]^(Lh[t][i][1]-m*floor(Lh[t][i][1]/m))*(Rlts[i])^floor(Lh[t][i][1]/m) for i in rg(len(Xv)) if Lh[t][i][1]>=m) for t in rg(len(Lh)))
+        rmdL.append(rmd)
+        # Expanding the remainder obtained at the current iteration
+        rmd=expand(rmd)
+        # Obtaining the new list of coefficients
+        Lc=[trm.subs([Xv[i]==1 for i in rg(len(Xv))]) for trm in rmd.operands()]
+        # Obtaining the new list of terms
+        Lt=[trm/trm.subs([Xv[i]==1 for i in rg(len(Xv))]) for trm in rmd.operands()]
+        # Obtaining the new list of tuple descriptions associated with the monomial support
+        Lh=[[(i, SR(trm).degree(Xv[i])) for i in rg(len(Xv))] for trm in rmd.operands()]
+    return rmdL
+
+def CanonicalModulo(f, VrbL, Rlts):
+    """
+    Outputs the quotient divisor part as well as the remainder of
+    the simultaneous Euclidean division.
+    This implementation accounts for the different orderings of the relations
+    The algorithm takes as input a multivariate polynomial f in the variables in the
+    input list VrbL and a list of monic univariate polynomial
+    which correspond to the relations we are moding by.
+    All polynomials must be inputed in expanded form otherwise
+    the output is incorrect. It is tacitly assumed here that the relations are
+    univariate polynomial in each of the variable. The benefit of this implementation
+    is the fact that we can tell from the quotient divisor part whether the input polynomial
+    is symmetric
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: VrbL = var_list('x', 2); f = expand((VrbL[0]+VrbL[1])^10); Rlts = [VrbL[0]^2-5, VrbL[1]^3-7]; CanonicalModulo(f, VrbL, Rlts)[0]
+        (x0^2 - 5)*x0^8 + 10*(x0^2 - 5)*x0^7*x1 + 5*(x0^2 - 5)*(9*x1^2 + 1)*x0^6 + 45/2*(x1^3 - 7)*x0^2*x1^5 + 10*(x1^3 - 7)*x0*x1^6 + (x1^3 - 7)*x1^7 + 5*(12*x1^3 + 5*x1)*(x0^2 - 5)*x0^5 + 5*(x0^2 - 5)*x0^5*(5*x1 + 84) + 5/2*(42*x1^4 + 45*x1^2 + 5)*(x0^2 - 5)*x0^4 + 5/2*(x0^2 - 5)*(45*x1^2 + 294*x1 + 5)*x0^4 + 1/2*(120*x0^3 + 7)*(x1^3 - 7)*x1^4 + 1/2*(x1^3 - 7)*(600*x0 + 7)*x1^4 + 225/2*(x1^3 - 7)*x1^5 + (126*x1^5 + 300*x1^3 + 125*x1)*(x0^2 - 5)*x0^3 + (x0^2 - 5)*(882*x1^2 + 125*x1 + 2100)*x0^3 + 35*(3*x0^4 + x0)*(x1^3 - 7)*x1^3 + 35*(x1^3 - 7)*(x0 + 75)*x1^3 + 5/2*(42*x1^6 + 210*x1^4 + 225*x1^2 + 25)*(x0^2 - 5)*x0^2 + 5/2*(x0^2 - 5)*(225*x1^2 + 1470*x1 + 2083)*x0^2 + 63/2*(4*x0^5 + 5*x0^2)*(x1^3 - 7)*x1^2 + 1575/2*(x1^3 - 7)*(4*x0 + 1)*x1^2 + 5*(12*x1^7 + 126*x1^5 + 300*x1^3 + 125*x1)*(x0^2 - 5)*x0 + 5*(x0^2 - 5)*(882*x1^2 + 713*x1 + 2100)*x0 + 7/2*(30*x0^6 + 120*x0^3 + 7)*(x1^3 - 7)*x1 + 7/2*(x1^3 - 7)*(600*x0 + 3757)*x1 + 5*(12*x0^7 + 147*x0^4 + 49*x0)*(x1^3 - 7) + 5/2*(9*x1^8 + 210*x1^6 + 1050*x1^4 + 1125*x1^2 + 125)*(x0^2 - 5) + 5/2*(x0^2 - 5)*(1566*x1^2 + 7350*x1 + 10415) + 5*(x1^3 - 7)*(1549*x0 + 3675)
+        sage: sz=Integer(2); X=var_list('x',sz); P=expand((X[1]-X[0])^4)
+        sage: G0 = CanonicalModulo(P, X, [expand(prod(X[i]-j for j in rg(sz))) for i in rg(sz)])[0]; G0
+        1/2*(x0^2 - x0)*x0^2 - 1/2*(x0^2 - x0)*x0*(4*x1 - 1) - 1/2*(x1^2 - x1)*(4*x0 - 1)*x1 - 2*(x0^2 - x0)*x0*x1 - 2*(x1^2 - x1)*x0*x1 + 1/2*(x1^2 - x1)*x1^2 + (x0^2 - x0)*(3*x1^2 - 2*x1) + (3*x0^2 - 2*x0)*(x1^2 - x1) + 1/2*(x1^2 - x1)*(2*x0 + 1) + 1/2*(x0^2 - x0)*(2*x1 + 1)
+        sage: G1 = CanonicalModulo(P, [X[1], X[0]], [expand(prod(X[i]-j for j in rg(sz))) for i in [Integer(1),Integer(0)]])[0]; G1
+        1/2*(x0^2 - x0)*x0^2 - 1/2*(x0^2 - x0)*x0*(4*x1 - 1) - 1/2*(x1^2 - x1)*(4*x0 - 1)*x1 - 2*(x0^2 - x0)*x0*x1 - 2*(x1^2 - x1)*x0*x1 + 1/2*(x1^2 - x1)*x1^2 + (x0^2 - x0)*(3*x1^2 - 2*x1) + (3*x0^2 - 2*x0)*(x1^2 - x1) + 1/2*(x1^2 - x1)*(2*x0 + 1) + 1/2*(x0^2 - x0)*(2*x1 + 1)
+       
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the degree matrix
+    Dm = degree_matrix(Rlts, VrbL)
+    for i in rg(min(Dm.n(0), Dm.n(1))):
+        for j in rg(min(Dm.n(0), Dm.n(1))):
+            Dm[i,j]=0
+    if Dm.is_zero():
+        # Initialization of the quotient
+        # and the initial remainder.
+        q = 0; r = f
+        for v in rg(len(VrbL)):
+            for d in rg(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]), -1, -1):
+                q = q + (VrbL[v]^d)*r.coefficient(VrbL[v]^(d+Rlts[v].degree(VrbL[v])))*Rlts[v]
+                r = expand(fast_reduce(r, [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))], [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+    else:
+        raise ValueError("Expected univariate algebraic relations.")
+    # Initialization of the list of permutation
+    Sn=PermutationFunctionList(len(VrbL))
+    for T in Sn[1:]:
+        # Initialization of the of the permutation of the variables
+        VrbL=[VrbL[T[i][1]] for i in rg(len(VrbL))]; Rlts=[Rlts[T[i][1]] for i in rg(len(VrbL))]
+        # Initialization of the quotient
+        # and the initial remainder.
+        tmp_q = 0; tmp_r = f
+        for v in rg(len(VrbL)):
+            for d in rg(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]), -1, -1):
+                tmp_q = tmp_q + (VrbL[v]^d)*tmp_r.coefficient(VrbL[v]^(d+Rlts[v].degree(VrbL[v])))*Rlts[v]
+                tmp_r = expand(fast_reduce(tmp_r, [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))], [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+        # Updating the quotient
+        q=q+tmp_q
+    return [q/factorial(len(VrbL)), r]
+
 def remainder_via_lagrange_interpolation(f, Lr, X):
     """
     Returns the canonical representative of the residue class
@@ -25506,7 +25883,31 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
     """
     # Initialization the number of variables
     sz=len(X)
-    return sum(f.subs([X[i] == Lr[t[i][1]] for i in rg(sz)])*prod(prod((X[k]-jk)/(t[k][1]-jk) for jk in Lr if jk !=t[k][1]) for k in rg(sz) ) for t in TupleFunctionList(sz))
+    return sum(f.subs([X[i] == Lr[t[i][1]] for i in rg(sz)])*prod(prod((X[k]-jk)/(Lr[t[k][1]]-jk) for jk in Lr if jk !=Lr[t[k][1]]) for k in rg(sz) ) for t in TupleFunctionList(sz))
+
+def canonical_representative(f, Lr, X):
+    """
+    Returns the canonical representative of the residue class
+    f modulo Ld. The input f is an arbitrary multivariate polynomial
+    in the variables stored in the list input X. Lr is is the list of distinct
+    roots of the monic univariate polynomial associated with each variable.
+    This implementation does not require the input polunomial to be in 
+    factored form. Easier to remember compared to the previous function name.
+
+
+    EXAMPLES:
+    ::
+
+        sage: sz=3; X=var_list('x',sz); f=expand(var('x0')^2*var('x1')+var('x2')^4); Lr=rg(sz)
+        sage: expand(canonical_representative(f, Lr, X))
+        x0^2*x1 + 7*x2^2 - 6*x2
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    return remainder_via_lagrange_interpolation(f, Lr, X)
 
 def GeneralHypermatrixFlatten(A, dms, indx):
     """
@@ -25844,46 +26245,60 @@ def EliminationHMI(Ha,i):
     """
     Procedure for performing a row linear combination which cancels the first entry
     of non-zero entries. This implementation can serve as the basis for a parallel
-    solver
+    solver. The input Ha is the coefficient matrix of the linear system where as
+    the second input i correspond to the index of the row being replaced. This
+    implementation has a very symbolic bent to it. It also handles zero initial
+    entries for some of the rows
 
 
     EXAMPLES:
 
     ::
 
-        sage: sz=3; Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,1).canonicalize_radical()
-        sage: Hb.printHM()
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,1).canonicalize_radical(); Hb.p()
         [:, :]=
         [                                                                              a00                                                                               a01                                                                               a02]
         [                                                                                0 -1/2*a00*a10*a21*(I*sqrt(3) + 1) - 1/2*(a00*a11*(-I*sqrt(3) + 1) - 2*a01*a10)*a20 -1/2*a00*a10*a22*(I*sqrt(3) + 1) - 1/2*(a00*a12*(-I*sqrt(3) + 1) - 2*a02*a10)*a20]
         [                                                                              a20                                                                               a21                                                                               a22]
-        sage: sz=3; Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,2).canonicalize_radical()
-        sage: Hb.printHM()
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,2).canonicalize_radical(); Hb.p()
         [:, :]=
         [                                                                             a00                                                                              a01                                                                              a02]
         [                                                                             a10                                                                              a11                                                                              a12]
-        [                                                                               0 1/2*a00*a10*a21*(I*sqrt(3) - 1) + 1/2*(a00*a11*(-I*sqrt(3) - 1) + 2*a01*a10)*a20 1/2*a00*a10*a22*(I*sqrt(3) - 1) + 1/2*(a00*a12*(-I*sqrt(3) - 1) + 2*a02*a10)*a20] 
-        sage: Hb=EliminationHMI(Ha,1); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
+        [                                                                               0 1/2*a00*a10*a21*(I*sqrt(3) - 1) + 1/2*(a00*a11*(-I*sqrt(3) - 1) + 2*a01*a10)*a20 1/2*a00*a10*a22*(I*sqrt(3) - 1) + 1/2*(a00*a12*(-I*sqrt(3) - 1) + 2*a02*a10)*a20]
+        sage: sz=3; Ha=HM(sz,sz,'a'); Ha[1,0]=0; Hb=EliminationHMI(Ha,1).canonicalize_radical(); Hb.p()
         [:, :]=
-        [0 0 0]
-        [1 0 0]
-        [0 0 0]
-        sage: Hb=EliminationHMI(Ha,2); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
+        [a00 a01 a02]
+        [  0 a11 a12]
+        [a20 a21 a22]
+        sage: sz=4; Ha=HM(sz,sz,'a'); Ha[2,0]=0; Hb=EliminationHMI(Ha,3).canonicalize_radical(); Hb.p()                                                                                                                    
         [:, :]=
-        [0 0 0]
-        [0 0 0]
-        [1 0 0]
+        [                                                                             a00                                                                              a01                                                                              a02                                                                              a03]
+        [                                                                             a10                                                                              a11                                                                              a12                                                                              a13]
+        [                                                                               0                                                                              a21                                                                              a22                                                                              a23]
+        [                                                                               0 1/2*a00*a10*a31*(I*sqrt(3) - 1) + 1/2*(a00*a11*(-I*sqrt(3) - 1) + 2*a01*a10)*a30 1/2*a00*a10*a32*(I*sqrt(3) - 1) + 1/2*(a00*a12*(-I*sqrt(3) - 1) + 2*a02*a10)*a30 1/2*a00*a10*a33*(I*sqrt(3) - 1) + 1/2*(a00*a13*(-I*sqrt(3) - 1) + 2*a03*a10)*a30]
 
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    A=Ha.copy()
-    #Sm=sum([exp(I*2*pi*i*k/A.n(0))*prod([A[j,0] for j in rg(A.n(0)) if j!=k])*A.slice([k],'row') for k in rg(A.n(0))])
-    Sm=sum([exp(I*2*pi*i*k/A.n(0))*GeneralHypermatrixScaleRight(GeneralHypermatrixScale(A.slice([k],'row'),prod(A[j,0] for j in rg(A.n(0)) if j<k)), prod([A[j,0] for j in rg(A.n(0)) if j>k])) for k in rg(A.n(0))])
-    for jndx in rg(A.n(1)):
-        A[i,jndx]=Sm[0,jndx]
-    return A
+    # Testing that the first entry is not already zero
+    if Ha[i,0].is_zero():
+        return Ha
+    else:
+        # Initialization of a copy of the input hypermatrix
+        Hr=Ha.copy()
+        # Indexing the row with non-zero first entry
+        eL=[u for u in rg(Ha.n(0)) if not Ha[u,0].is_zero()]
+        # Initialization of the matrix A with rows in Ha whose first entry is non-zero
+        A=Ha.slice(eL,0) #; A.p()
+        # obtaining the new index
+        for u in rg(len(eL)):
+            if A.slice([u],'row') == Ha.slice([i],'row'):
+                indx=u; break
+        Sm=sum([exp(I*2*pi*indx*k/A.n(0))*GeneralHypermatrixScaleRight(GeneralHypermatrixScale(A.slice([k],'row'),prod(A[j,0] for j in rg(A.n(0)) if j<k)), prod([A[j,0] for j in rg(A.n(0)) if j>k])) for k in rg(A.n(0))])
+        for jndx in rg(A.n(1)):
+            Hr[i,jndx]=Sm[0,jndx]
+        return Hr
 
 def EliminationHMII(Ha):
     """
@@ -26163,27 +26578,35 @@ def mod_coefficients(F, d, Lx):
     elif F.operator() == mul.operator():
         return Integer(mod(F.subs([v==1 for v in Lx]),2))*(F/F.subs([v==1 for v in Lx]))
 
-def HM2Poly(A, Lr):
+def HM2Poly(A, X):
     """
     Returns multivariate polynomial whose evaluation over 
-    the grid specified by the cartesian product of Lr with
-    itself yields entries of the hypermatrix.
+    the transformation monoid lattice Zn^Zm, where n is
+    is the side length of the input hypermatrix
+    A and m is order of the input hypermatrix A.
 
 
     EXAMPLES:
     ::
 
-        sage: A=HM(2,2,[1,0,0,1])
-        sage: HM2Poly(A,rg(2))
-        (x0 - 1)*(x1 - 1) + x0*x1
+        sage: sz=Integer(3); A=HM(sz, sz, 'a'); X=var_list('x', 2)
+        sage: P=HM2Poly(A, X)
+        sage: HM(3,3,[HM2Poly(A,var_list('x',2)).subs([x0==T[0][1],x1==T[1][1]]) for T in TupleFunctionListII(2, sz)]).p()
+        [:, :]=
+        [a00 a01 a02]
+        [a10 a11 a12]
+        [a20 a21 a22]
+
 
     AUTHORS:
 
     - Edinah K. Gnang
     """
-    # Initialization of the list of variables and the size parameter
-    X=var_list('x', A.order()); sz=len(X)
-    return sum(A[tuple([Lr[t[i][1]] for i in rg(sz)])]*prod(prod((X[k]-jk)/(t[k][1]-jk) for jk in Lr if jk !=t[k][1]) for k in rg(sz) ) for t in TupleFunctionList(sz))
+    if len(X) == A.order():
+        Lp=TupleFunctionListII(A.order(), sz)
+        return sum(A[tuple([Ts[l][1] for l in rg(A.order())])]*prod(prod((X[k]-jk)/(Ts[k][1]-jk) for jk in rg(sz) if jk !=Ts[k][1]) for k in rg(A.order())) for Ts in Lp)
+    else:
+        raise ValueError("Expected the length of the list to match the order of the hypermatrix")
 
 def HM2PolyII(A,Y):
     """
@@ -26695,6 +27118,33 @@ def Function_lex(T):
     - Edinah K. Gnang
     """
     return sum(T[i][1]*len(T)^i for i in rg(len(T)))
+
+def Function_lexII(T, b):
+    """
+    Outputs the lexicographic ordering of the input function.
+    The input is taken to be the tuple description of a member of
+    the composition monoid.
+    The lexicographic ordering is based upon the decimal expansion where
+    the digits correspond to evaluations of the function
+    count.
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: T=[(0, 0), (1, 2), (2, 3), (3, 0)]; b=Integer(3); Function_lexII(T, b)
+        56
+        sage: T=[(0, 0), (1, 0), (2, 0), (3, 0)]; b=Integer(3); Function_lexII(T, b)
+        0
+        sage: T=[(0, 3), (1, 3), (2, 3), (3, 3)]; b=Integer(3); Function_lexII(T, b)
+        255
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return sum(T[i][1]*b^i for i in rg(len(T)))
 
 def Graph_lex(A):
     """
@@ -28317,8 +28767,8 @@ def generate_unlabeled_tree_graceful_listing_script(sz):
     """
     Creates a sage file which corresponds to a script
     which list unlabeled graceful trees on sz vertices
-    having no loop edges this implementation is very slow.
-    The smallest number of vertices for which this works
+    this implementation is very slow. The smallest 
+    number of vertices for which this works
     is sz=5
 
 
@@ -28353,7 +28803,7 @@ def generate_unlabeled_tree_graceful_listing_script(sz):
     f = open(filename,'w')
     # Writting the size parameter
     f.write('# Initializing the size and order parameters\n')
-    f.write('sz='+str(sz)+'; od=2\n')
+    f.write('sz=Integer('+str(sz)+'); od=Integer(2)\n')
     # Writing the symbols in capital letters
     f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
     cnt = 0
@@ -28369,6 +28819,7 @@ def generate_unlabeled_tree_graceful_listing_script(sz):
             f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),\\"+"\n")
             cnt=cnt+1
     f.write("HM(od,sz,'"+Lc[cnt]+"','sym')]"+"\n")
+    f.write('# Initializing the second hypermatrix\n')
     f.write("\nBh=HM(od,sz,'a','sym')\n")
     # Writing the symbols in lower case letters
     f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
@@ -28816,8 +29267,6 @@ def LeftRightActionTuple(T, P, Q):
     - Edinah K. Gnang
     """
     return Adjacency_to_Tuple(Tuple_to_Adjacency(P)*Tuple_to_Adjacency(T)*Tuple_to_Adjacency(Q))
-
-
 
 def generate_subgraph_unlabeled_listing_script(sz, T):
     """
@@ -31000,6 +31449,89 @@ def SymPoly_lead_term_eliminate(mf, Xv, Lm, Pv, Sv):
         GiL.append( Pv[bnd]==bnd*(-1)^bnd*sum( ( factorial(sum(l)-1)/prod(factorial(l[j]) for j in rg(len(l)))) * prod( (-Sv[i])^l[i-1] for i in rg(1,bnd+1) ) for l in eL ) )
     return [G]+[Sln]+[GiL,[Sv[i]==sum(prod(s) for s in Set(Xv).subsets(i)) for i in rg(1,sz+1)]]
 
+def SymPoly_lead_term_eliminateG(mf, Xv, Lm, Pv, Sv, RtL):
+    """
+    Takes as inputs a monomial term mf, a list of variables, 
+    a list of monomial terms which are strictly greater then mf
+    according to some prime induced orderering, a list of sum of powers shifted
+    by constants a list of len(Xv) variables specified by the users to describe the list
+    of the variable describing the sum of powers
+    a list of variables describing specified by the user to describe elementary
+    symmetric polynomials.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: f=Xv[1]*Xv[2]^2 - Xv[1]^2 + Xv[1]*Xv[2] # Initial non-symmetric polynomial 
+        sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: Lm=[mnm for mnm in SymPoly_leading_term_list(mf, Xv, Pp) if not mnm==mf]
+        sage: SymPoly_lead_term_eliminateG(mf, Xv, Lm, [1]+var_list('p', sum(mf.degree(v) for v in Xv),1), [1]+var_list('s', len(Xv),1), rg(sz))
+        [p1*p2*y1 + p3*y0,
+         [y0 == -1, y1 == 1],
+         [p1 == s1,
+          p2 == (s1 + 3)^2 - 2*s2 - 9,
+          p3 == (s1 + 3)^3 - 3*(s1 + 3)*(s2 + 2) + 3*s3 - 9],
+         [s1 == x0 + x1 + x2 - 3, s2 == x0*x1 + x0*x2 + x1*x2 - 2, s3 == x0*x1*x2]]
+        sage: sz=4; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: f=Xv[0]*Xv[1]^3*Xv[3] + Xv[1]^2*Xv[2] + Xv[0]*Xv[2]^3*Xv[3] + 5
+        sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: Lm=[mnm for mnm in SymPoly_leading_term_list(mf, Xv, Pp) if not mnm==mf]
+        sage: rsLt=SymPoly_lead_term_eliminateG(mf, Xv, Lm, [1]+var_list('p', sum(mf.degree(v) for v in Xv),1), [1]+var_list('s', len(Xv),1), rg(sz))
+        sage: rsLt
+        [p1^2*p3*y5 + p2*p3*y0 + p2*p3*y1 + p1*p4*y2 + p1*p4*y3 + ((p4 + 98)*(s1 + 6) - (p3 + 36)*(s2 + 11) + (p2 + 14)*(s3 + 6) - (p1 + 6)*s4 - 276)*y4,
+         [y0 == -y1 - 1/2, y2 == -y3 - 1, y4 == 1, y5 == (1/2), 0 == 0, 0 == 0],
+         [p1 == s1,
+          p2 == (s1 + 6)^2 - 2*s2 - 36,
+          p3 == (s1 + 6)^3 - 3*(s1 + 6)*(s2 + 11) + 3*s3 - 18,
+          p4 == (s1 + 6)^4 - 4*(s1 + 6)^2*(s2 + 11) + 2*(s2 + 11)^2 + 4*(s1 + 6)*(s3 + 6) - 4*s4 - 98],
+         [s1 == x0 + x1 + x2 + x3 - 6,
+          s2 == x0*x1 + x0*x2 + x1*x2 + x0*x3 + x1*x3 + x2*x3 - 11,
+          s3 == x0*x1*x2 + x0*x1*x3 + x0*x2*x3 + x1*x2*x3 - 6,
+          s4 == x0*x1*x2*x3]]
+        sage: rsLt[0].subs([eq for eq in rsLt[1] if eq.lhs()!=0]+rsLt[2])
+        1/2*((s1 + 6)^3 - 3*(s1 + 6)*(s2 + 11) + 3*s3 - 18)*s1^2 - 1/2*((s1 + 6)^3 - 3*(s1 + 6)*(s2 + 11) + 3*s3 - 18)*((s1 + 6)^2 - 2*s2 - 36)*(2*y1 + 1) + ((s1 + 6)^3 - 3*(s1 + 6)*(s2 + 11) + 3*s3 - 18)*((s1 + 6)^2 - 2*s2 - 36)*y1 - ((s1 + 6)^4 - 4*(s1 + 6)^2*(s2 + 11) + 2*(s2 + 11)^2 + 4*(s1 + 6)*(s3 + 6) - 4*s4 - 98)*s1*(y3 + 1) + ((s1 + 6)^4 - 4*(s1 + 6)^2*(s2 + 11) + 2*(s2 + 11)^2 + 4*(s1 + 6)*(s3 + 6) - 4*s4 - 98)*s1*y3 + ((s1 + 6)^4 - 4*(s1 + 6)^2*(s2 + 11) + 2*(s2 + 11)^2 + 4*(s1 + 6)*(s3 + 6) - 4*s4)*(s1 + 6) - ((s1 + 6)^3 - 3*(s1 + 6)*(s2 + 11) + 3*s3 + 18)*(s2 + 11) + ((s1 + 6)^2 - 2*s2 - 22)*(s3 + 6) - (s1 + 6)*s4 - 276
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Fan Tian
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(Xv))
+    # Initialization of the vector of unknowns
+    Y=var_list('y',1+len(Lm))
+    #print('Y=',Y)
+    # Initialization of the total degree
+    td=sum(mf.degree(v) for v in Xv)
+    # Initialization of the list of sum of powers
+    Lp=[1]+[sum(Xv[i]^j - RtL[i]^j for i in rg(sz)) for j in rg(1,1+td)]
+    # Initialization of the polynomial
+    Fn=expand(sum(Y[i]*prod(Lp[Lm[i].degree(Xv[u])] for u in rg(sz)) for i in rg(len(Lm)))+Y[len(Lm)]*prod(Lp[mf.degree(Xv[u])] for u in rg(sz)))
+    #print('Fn=',Fn)
+    G=sum(Y[i]*prod(Pv[Lm[i].degree(Xv[u])] for u in rg(sz)) for i in rg(len(Lm)))+Y[len(Lm)]*prod(Pv[mf.degree(Xv[u])] for u in rg(sz))
+    # Obtaining the system of linear constraints
+    CnstrLst=[Fn.coefficient(mnm) for mnm in Lm]+[Fn.coefficient(mf)-1]
+    #print('CnstrLst=',CnstrLst)
+    # Initialization of the total degree
+    [A,b]=ConstraintFormatorIVHM(CnstrLst, Y)
+    #A.printHM()
+    Sln=linear_solverHM(A, b, HM(A.n(1),1,Y), HM(A.n(1),1,Y))
+    # Performing the reduction in degrees
+    for d in rg(td):
+        if (td-d)>sz:
+            #G=fast_reduce_no_expand(G, [Pv[td-d]],[-sum((-1)^k*Sv[k]*Pv[(td-d)-k] for k in rg(1,sz+1))])
+            G=fast_reduce_no_expand(G, [Pv[td-d]],[-sum(RtL[u]^(td-d) for u in rg(sz))-sum((-1)^k*(Sv[k]+sum(prod(s) for s in Set(RtL).subsets(k)))*(Pv[(td-d)-k]+sum(RtL[u]^((td-d)-k) for u in rg(sz))) for k in rg(1,sz+1))])
+    # Initialization of the list derived from Girard's identities
+    GiL=[Pv[1]==Sv[1]]
+    for bnd in rg(2,sz+1):
+        eL=[l for l in List_of_Integers([1+floor(bnd/i) for i in rg(1,bnd+1)]) if bnd==sum(l[i]*(i+1) for i in rg(bnd))]
+        GiL.append( Pv[bnd]==bnd*(-1)^bnd*sum( ( factorial(sum(l)-1)/prod(factorial(l[j]) for j in rg(len(l)))) * prod( (-Sv[i]-sum(prod(s) for s in Set(RtL).subsets(i)))^l[i-1] for i in rg(1,bnd+1) ) for l in eL ) - sum(RtL[u]^bnd for u in rg(sz)))
+    return [G]+[Sln]+[GiL,[Sv[i]==sum(prod(s) for s in Set(Xv).subsets(i)) - sum(prod(s) for s in Set(RtL).subsets(i)) for i in rg(1,sz+1)]]
+
 def SymPoly_lead_term_eliminateII(mf, Xv, Lm, Pv, Sv):
     """
     Takes as inputs a monomial term mf, a list of variables, 
@@ -31079,6 +31611,89 @@ def SymPoly_lead_term_eliminateII(mf, Xv, Lm, Pv, Sv):
         eL=[l for l in List_of_Integers([1+floor(bnd/i) for i in rg(1,bnd+1)]) if bnd==sum(l[i]*(i+1) for i in rg(bnd))]
         NwL.append( Sv[bnd]==(-1)^bnd*sum( prod( (-Pv[i])^l[i-1]/(factorial(l[i-1])*i^l[i-1]) for i in rg(1,bnd+1) ) for l in eL ) )
     return [G]+[Sln]+[NwL,[Pv[i]==sum(Xv[j]^i for j in rg(sz)) for i in rg(1,1+sz)]]
+
+def SymPoly_lead_term_eliminateIIG(mf, Xv, Lm, Pv, Sv, RtL):
+    """
+    Takes as inputs a monomial term mf, a list of variables, 
+    a list of monomial terms which are strictly greater then mf
+    according to some prime induced orderering, a list of sum of powers
+    a list of len(Xv) variables specified by the users to describe the list
+    of the variable describing the sum of powers, each shifted by a constant
+    a list of  variables describing specified by the user to describe elementary
+    symmetric polynomials. Making use of the fact that I know the roots now
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: f=Xv[1]*Xv[2]^2 - Xv[1]^2 + Xv[1]*Xv[2] # Initial non-symmetric polynomial 
+        sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: Lm=[mnm for mnm in SymPoly_leading_term_list(mf, Xv, Pp) if not mnm==mf]
+        sage: SymPoly_lead_term_eliminateIIG(mf, Xv, Lm, [1]+var_list('p', sum(mf.degree(v) for v in Xv),1), [1]+var_list('s', len(Xv),1), rg(sz))
+        [p1*p2*y1 + p3*y0,
+         [y0 == -1, y1 == 1],
+         [s1 == p1,
+          s2 == 1/2*(p1 + 3)^2 - 1/2*p2 - 9/2,
+          s3 == 1/6*(p1 + 3)^3 - 1/2*(p1 + 3)*(p2 + 5) + 1/3*p3 + 3],
+         [p1 == x0 + x1 + x2 - 3,
+          p2 == x0^2 + x1^2 + x2^2 - 5,
+          p3 == x0^3 + x1^3 + x2^3 - 9]]
+        sage: sz=4; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: f=Xv[0]*Xv[1]^3*Xv[3] + Xv[1]^2*Xv[2] + Xv[0]*Xv[2]^3*Xv[3] + 5
+        sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: Lm=[mnm for mnm in SymPoly_leading_term_list(mf, Xv, Pp) if not mnm==mf]
+        sage: rsLt=SymPoly_lead_term_eliminateIIG(mf, Xv, Lm, [1]+var_list('p', sum(mf.degree(v) for v in Xv),1), [1]+var_list('s', len(Xv),1), rg(sz)); rsLt
+        [p1^2*p3*y5 + p2*p3*y0 + p2*p3*y1 + p1*p4*y2 + p1*p4*y3 + ((p4 + 98)*(s1 + 6) - (p3 + 36)*(s2 + 11) + (p2 + 14)*(s3 + 6) - (p1 + 6)*s4 - 276)*y4,
+         [y0 == -y1 - 1/2, y2 == -y3 - 1, y4 == 1, y5 == (1/2), 0 == 0, 0 == 0],
+         [s1 == p1,
+          s2 == 1/2*(p1 + 6)^2 - 1/2*p2 - 18,
+          s3 == 1/6*(p1 + 6)^3 - 1/2*(p1 + 6)*(p2 + 14) + 1/3*p3 + 6,
+          s4 == 1/24*(p1 + 6)^4 - 1/4*(p1 + 6)^2*(p2 + 14) + 1/8*(p2 + 14)^2 + 1/3*(p1 + 6)*(p3 + 36) - 1/4*p4 - 49/2],
+         [p1 == x0 + x1 + x2 + x3 - 6,
+          p2 == x0^2 + x1^2 + x2^2 + x3^2 - 14,
+          p3 == x0^3 + x1^3 + x2^3 + x3^3 - 36,
+          p4 == x0^4 + x1^4 + x2^4 + x3^4 - 98]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Fan Tian
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(Xv))
+    # Initialization of the vector of unknowns
+    Y=var_list('y',1+len(Lm))
+    #print('Y=',Y)
+    # Initialization of the total degree
+    td=sum(mf.degree(v) for v in Xv)
+    # Initialization of the list of sum of powers
+    Lp=[1]+[sum(Xv[i]^j - RtL[i]^j for i in rg(sz)) for j in rg(1,1+td)]
+    # Initialization of the polynomial
+    Fn=expand(sum(Y[i]*prod(Lp[Lm[i].degree(Xv[u])] for u in rg(sz)) for i in rg(len(Lm)))+Y[len(Lm)]*prod(Lp[mf.degree(Xv[u])] for u in rg(sz)))
+    #print('Fn=',Fn)
+    G=sum(Y[i]*prod(Pv[Lm[i].degree(Xv[u])] for u in rg(sz)) for i in rg(len(Lm)))+Y[len(Lm)]*prod(Pv[mf.degree(Xv[u])] for u in rg(sz))
+    # Obtaining the system of linear constraints
+    CnstrLst=[Fn.coefficient(mnm) for mnm in Lm]+[Fn.coefficient(mf)-1]
+    #print('CnstrLst=',CnstrLst)
+    # Initialization of the total degree
+    [A,b]=ConstraintFormatorIVHM(CnstrLst, Y)
+    #A.printHM()
+    Sln=linear_solverHM(A, b, HM(A.n(1),1,Y), HM(A.n(1),1,Y))
+    # Performing the reduction in degrees
+    for d in rg(td):
+        if (td-d)>sz:
+            #G=fast_reduce_no_expand(G, [Pv[td-d]],[-sum((-1)^k*Sv[k]*Pv[(td-d)-k] for k in rg(1,sz+1))])
+            G=fast_reduce_no_expand(G, [Pv[td-d]],[-sum(RtL[u]^(td-d) for u in rg(sz))-sum((-1)^k*(Sv[k]+sum(prod(s) for s in Set(RtL).subsets(k)))*(Pv[(td-d)-k]+sum(RtL[u]^((td-d)-k) for u in rg(sz))) for k in rg(1,sz+1))])
+    # Initialization of the list derived from Newton's identities
+    NwL=[Sv[1]==Pv[1]]
+    for bnd in rg(2,sz+1):
+        eL=[l for l in List_of_Integers([1+floor(bnd/i) for i in rg(1,bnd+1)]) if bnd==sum(l[i]*(i+1) for i in rg(bnd))]
+        #NwL.append( Sv[bnd]==(-1)^bnd*sum( prod( (-Pv[i])^l[i-1]/(factorial(l[i-1])*i^l[i-1]) for i in rg(1,bnd+1) ) for l in eL ) )
+        NwL.append( Sv[bnd]==-sum(prod(s) for s in Set(RtL).subsets(bnd))+(-1)^bnd*sum( prod( (-Pv[i]-sum(RtL[u]^i for u in rg(sz)))^l[i-1]/(factorial(l[i-1])*i^l[i-1]) for i in rg(1,bnd+1) ) for l in eL ) )
+    return [G]+[Sln]+[NwL,[Pv[i]==sum(Xv[j]^i - j^i for j in rg(sz)) for i in rg(1,1+sz)]]
 
 def SymPoly_Expansion(F, Xv, Pv, Sv):
     """
@@ -31311,6 +31926,169 @@ def SymPoly_ExpansionII(F, Xv, Pv, Sv):
                 #print('rG after =',rG); print('Pol after = ',Pol)
     return [rG, [Pv[i]==sum(Xv[j]^i for j in rg(sz)) for i in rg(1,1+sz)]]
 
+def SymPoly_ExpansionIIG(F, Xv, Pv, Sv, RtL):
+    """
+    Takes as inputs a symmetrix polynomial F, a list of variables, and
+    outputs the expansion of f as a polynomial of the sparsest generators
+    odf the ring of symmetric polynomials. Each generator is shifted by a
+    constant
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: f=Xv[1]*Xv[2]^2 - Xv[1]^2 + Xv[1]*Xv[2] # Initial non-symmetric polynomial 
+        sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: rsLt=SymPoly_ExpansionIIG(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1), rg(sz))); rsLt
+        [p1^2 + p1*p2 + 11*p1 - p3,
+         [p1 == x0 + x1 + x2 - 3,
+          p2 == x0^2 + x1^2 + x2^2 - 5,
+          p3 == x0^3 + x1^3 + x2^3 - 9]] 
+        sage: F-expand((p1^2 + p1*p2 + 11*p1 - p3).subs([p1 == x0 + x1 + x2-3, p2 == x0^2 + x1^2 + x2^2-5, p3 == x0^3 + x1^3 + x2^3-9]))  
+        0
+        sage: sz=4; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: f=Xv[0]*Xv[1]^3*Xv[3] + Xv[1]^2*Xv[2] + Xv[0]*Xv[2]^3*Xv[3] + 5
+        sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: rsLt=SymPoly_ExpansionIIG(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1), rg(sz)); rsLt
+        [-1/6*p1^5 - 5*p1^4 + 5/3*p1^3*p2 - 110/3*p1^3 + 30*p1^2*p2 - 5/2*p1*p2^2 - 4/3*p1^2*p3 + 12*p1^2 + 112*p1*p2 - 15*p2^2 - 16*p1*p3 + 4/3*p2*p3 + p1*p4 + 500*p1 - 94/3*p3 + 6*p4 + 552,
+         [p1 == x0 + x1 + x2 + x3 - 6,
+          p2 == x0^2 + x1^2 + x2^2 + x3^2 - 14,
+          p3 == x0^3 + x1^3 + x2^3 + x3^3 - 36,
+          p4 == x0^4 + x1^4 + x2^4 + x3^4 - 98]]
+        sage: F-expand(rsLt[0].subs(rsLt[1]))
+        0
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: F=expand(prod(Xv[j]-Xv[i] for j in rg(sz) for i in rg(sz) if i<j)^2) # determinant of the Vandermonde square 
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: rsLt=SymPoly_ExpansionIIG(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1), rg(sz)); rsLt
+        [-1/6*p1^6 - 3*p1^5 + 3/2*p1^4*p2 - 91/6*p1^4 + 18*p1^3*p2 - 7/2*p1^2*p2^2 - 4/3*p1^3*p3 - 14*p1^3 + 47*p1^2*p2 - 21*p1*p2^2 + 1/2*p2^3 - 12*p1^2*p3 + 6*p1*p2*p3 + 1/6*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) + 3*p1^2 - 1/2*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 12*p1*p2 - 49/2*p2^2 + (p1 + 3)*(p3 + 9) - 22/3*p1*p3 + 18*p2*p3 - 3*p3^2 - 12*p1 + 10*p2 - 4*p3 - 13,
+         [p1 == x0 + x1 + x2 - 3,
+          p2 == x0^2 + x1^2 + x2^2 - 5,
+          p3 == x0^3 + x1^3 + x2^3 - 9]]
+        sage: F-expand(rsLt[0].subs(rsLt[1]))
+        0
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: F=Per(VandermondeHM(HM(sz, 1, Xv))) # Permanent of the Vandermonde square 
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: rsLt=SymPoly_ExpansionIIG(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1), rg(sz)); rsLt
+        [p1*p2 + 5*p1 + 3*p2 - p3 + 6,
+         [p1 == x0 + x1 + x2 - 3,
+          p2 == x0^2 + x1^2 + x2^2 - 5,
+          p3 == x0^3 + x1^3 + x2^3 - 9]]
+        sage: F-expand(rsLt[0].subs(rsLt[1]))
+        0
+        sage: sz=Integer(3); od=Integer(2);X=var_list('x', sz); Y=var_list('y', od); z=var('z');Tf=[(Integer(0), Integer(2)), (Integer(1), Integer(0)), (Integer(2), Integer(1))]
+        sage: Af=Tuple_to_Adjacency(Tf); Pf=HM2Poly(Af, Y); Lt=TupleFunctionListII(od, sz); Lb=[]
+        sage: for k in rg(sz): # Initialization of the list of matrices associated with edge labels
+        ....:     TmpB=HM(sz,sz,'zero')
+        ....:     for i in rg(sz):
+        ....:         for j in rg(sz):
+        ....:             if abs(j-i) == k:
+        ....:                 TmpB[i,j]=1
+        ....:                     Lb.append(TmpB.copy())
+        sage: F=sum((1-sum(Pf.subs([y0==bli([(u,X[u]) for u in rg(sz)],Q[0][1]),\
+        ....: y1==bli([(v,X[v]) for v in rg(sz)],Q[1][1])])*Lb[k][Q[0][1],Q[1][1]] for Q in TupleFunctionListII(od, sz)))^2 for k in rg(sz))
+        sage: Lc=CosetPolynomialRepresentativeList(F, X) # Initialization of the list of coset representatives
+        sage: Fs=prod(F.subs([X[i]==X[T[i][1]] for i in rg(sz)]) for T in Lc) # Performing the symmetrization
+        sage: P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] # Initialization of the list of primes for the monomial ordering in the Hardworking Lemma
+        sage: mf=multivariate_leading_term(Fr, X, Pp); mf=mf/mf.subs([X[i]==1 for i in rg(sz)]) # Initialization of the leading term
+        sage: rsLt=SymPoly_ExpansionIIG(Fr,X,[1]+var_list('p', max(sum(mf.degree(v) for v in X),sz),1), [1]+var_list('s', len(X),1), rg(sz))
+        sage: F-expand(rsLt[0].subs(rsLt[1]))
+        0
+        sage: sz=Integer(3); Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]; Tf=[(i,0) for i in rg(sz)]
+        sage: F=prod((Xv[j]-Xv[i])^2*((Xv[Tf[j][1]]-Xv[j])^2-(Xv[Tf[i][1]]-Xv[i])^2)^2 for i in rg(sz) for j in rg(sz) if i<j)
+        sage: Lc=CosetPolynomialRepresentativeList(F, Xv) # Initialization of the list of coset representatives
+        sage: Fs=expand(sum(F.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in Lc)) # Performing the additive symmetrization of F
+        sage: mf=multivariate_leading_term(Fs, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)]) # Initialization of the leading term
+        sage: rsLt=SymPoly_ExpansionIIG(Fs, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1), rg(sz)); rsLt
+        [1/36*p1^18 + 3/2*p1^17 - 3/4*p1^16*p2 + 69/2*p1^16 - 36*p1^15*p2 + 101/12*p1^14*p2^2 + 7/9*p1^15*p3 + 439*p1^15 - 4355/6*p1^14*p2 + 707/2*p1^13*p2^2 - 301/6*p1^12*p2^3 + 35*p1^14*p3 - 35/2*p1^13*p2*p3 + 4355093/1296*p1^14 - 15925/2*p1^13*p2 + 24563/4*p1^12*p2^2 - 1806*p1^11*p2^3 + 667/4*p1^10*p2^4 + 1295/2*p1^13*p3 - 1365/2*p1^12*p2*p3 + 472/3*p1^11*p2^2*p3 + 319/36*p1^12*p3^2 + 1706285/108*p1^13 - 66792523/1296*p1^12*p2 + 57045*p1^11*p2^2 - 26464*p1^10*p2^3 + 10005/2*p1^9*p2^4 - 577/2*p1^8*p2^5 + 6302*p1^12*p3 - 32135/3*p1^11*p2*p3 + 5192*p1^10*p2^2*p3 - 4235/6*p1^9*p2^3*p3 + 319*p1^11*p3^2 - 319/2*p1^10*p2*p3^2 + 117044429/2592*p1^12 - 1605857/8*p1^11*p2 + 44234929/144*p1^10*p2^2 - 408585/2*p1^9*p2^3 + 241285/4*p1^8*p2^4 - 6924*p1^7*p2^5 + 733/4*p1^6*p2^6 + 11095453/324*p1^11*p3 - 86086*p1^10*p2*p3 + 134585/2*p1^9*p2^2*p3 - 38115/2*p1^8*p2^3*p3 + 1575*p1^7*p2^4*p3 + 4466*p1^10*p3^2 - 4785*p1^9*p2*p3^2 + 4305/4*p1^8*p2^2*p3^2 + 160/3*p1^9*p3^3 + 5584163/72*p1^11 - 67313213/144*p1^10*p2 + 70613513/72*p1^9*p2^2 - 130233523/144*p1^8*p2^3 + 381345*p1^7*p2^4 - 134409/2*p1^6*p2^5 + 6597/2*p1^5*p2^6 + 117/2*p1^4*p2^7 + 22049147/216*p1^10*p3 - 121104461/324*p1^9*p2*p3 + 434430*p1^8*p2^2*p3 - 197190*p1^7*p2^3*p3 + 33075*p1^6*p2^4*p3 - 2745/2*p1^5*p2^5*p3 + 30150*p1^9*p3^2 - 53835*p1^8*p2*p3^2 + 25830*p1^7*p2^2*p3^2 - 3225*p1^6*p2^3*p3^2 + 1440*p1^8*p3^3 - 720*p1^7*p2*p3^3 + 1283077/16*p1^10 - 23149453/36*p1^9*p2 + 177245213/96*p1^8*p2^2 - 9420723/4*p1^7*p2^3 + 199477543/144*p1^6*p2^4 - 699219/2*p1^5*p2^5 + 107145/4*p1^4*p2^6 + 702*p1^3*p2^7 - 27*p1^2*p2^8 + 25723105/162*p1^9*p3 - 6896859/8*p1^8*p2*p3 + 8858153/6*p1^7*p2^2*p3 - 997380*p1^6*p2^3*p3 + 526725/2*p1^5*p2^4*p3 - 41175/2*p1^4*p2^5*p3 - 90*p1^3*p2^6*p3 + 10593103/108*p1^8*p3^2 - 277920*p1^7*p2*p3^2 + 222840*p1^6*p2^2*p3^2 - 58050*p1^5*p2^3*p3^2 + 14445/4*p1^4*p2^4*p3^2 + 13680*p1^7*p3^3 - 15120*p1^6*p2*p3^3 + 3240*p1^5*p2^2*p3^3 + 180*p1^6*p3^4 + 29444*p1^9 - 22316263/48*p1^8*p2 + 1931763*p1^7*p2^2 - 251747351/72*p1^6*p2^3 + 5826055/2*p1^5*p2^4 - 50313995/48*p1^4*p2^5 + 122715*p1^3*p2^6 + 2079*p1^2*p2^7 - 162*p1*p2^8 + 9/4*p2^9 + 3302029/24*p1^8*p3 - 6171551/6*p1^7*p2*p3 + 31477409/12*p1^6*p2^2*p3 - 47488715/18*p1^5*p2^3*p3 + 1038690*p1^4*p2^4*p3 - 126225*p1^3*p2^5*p3 - 810*p1^2*p2^6*p3 + 81/2*p1*p2^7*p3 + 1229284/9*p1^7*p3^2 - 17578571/27*p1^6*p2*p3^2 + 844020*p1^5*p2^2*p3^2 - 363150*p1^4*p2^3*p3^2 + 43335*p1^3*p2^4*p3^2 + 81/2*p1^2*p2^5*p3^2 + 51840*p1^6*p3^3 - 103680*p1^5*p2*p3^3 + 48600*p1^4*p2^2*p3^3 - 4860*p1^3*p2^3*p3^3 + 3240*p1^5*p3^4 - 1620*p1^4*p2*p3^4 - 125405/8*p1^8 - 61293/2*p1^7*p2 + 19486945/24*p1^6*p2^2 - 10087413/4*p1^5*p2^3 + 309292145/96*p1^4*p2^4 - 13798025/8*p1^3*p2^5 + 4912387/16*p1^2*p2^6 + 405/2*p1*p2^7 - 567/4*p2^8 + 589955/12*p1^7*p3 - 7369499/12*p1^6*p2*p3 + 13647749/6*p1^5*p2^2*p3 - 14109449/4*p1^4*p2^3*p3 + 76438213/36*p1^3*p2^4*p3 - 394146*p1^2*p2^5*p3 - 2025/2*p1*p2^6*p3 + 243/2*p2^7*p3 + 5011831/54*p1^6*p3^2 - 647380*p1^5*p2*p3^2 + 8553635/6*p1^4*p2^2*p3^2 - 1006020*p1^3*p2^3*p3^2 + 196020*p1^2*p2^4*p3^2 + 243*p1*p2^5*p3^2 - 81/4*p2^6*p3^2 + 4986220/81*p1^5*p3^3 - 252720*p1^4*p2*p3^3 + 218700*p1^3*p2^2*p3^3 - 43740*p1^2*p2^3*p3^3 + 16200*p1^4*p3^4 - 19440*p1^3*p2*p3^4 + 3645*p1^2*p2^2*p3^4 + 324*p1^3*p3^5 + 111063/2*p1^7 - 333697/4*p1^6*p2 + 24522*p1^5*p2^2 - 12408091/24*p1^4*p2^3 + 11135949/8*p1^3*p2^4 - 20647917/16*p1^2*p2^5 + 2926389/8*p1*p2^6 - 29809/16*p2^7 - 27999/2*p1^6*p3 - 724339/12*p1^5*p2*p3 + 752289*p1^4*p2^2*p3 - 35159891/18*p1^3*p2^3*p3 + 15979673/8*p1^2*p2^4*p3 - 7237519/12*p1*p2^5*p3 + 1458*p2^6*p3 + 156587/6*p1^5*p3^2 - 834490/3*p1^4*p2*p3^2 + 2784808/3*p1^3*p2^2*p3^2 - 10701727/9*p1^2*p2^3*p3^2 + 396090*p1*p2^4*p3^2 - 243*p2^5*p3^2 + 787894/27*p1^4*p3^3 - 15352964/81*p1^3*p2*p3^3 + 349920*p1^2*p2^2*p3^3 - 131220*p1*p2^3*p3^3 + 14580*p1^3*p3^4 - 51030*p1^2*p2*p3^4 + 21870*p1*p2^2*p3^4 + 2916*p1^2*p3^5 - 1458*p1*p2*p3^5 + 12897*p1^6 - 548631/2*p1^5*p2 + 2119047/4*p1^4*p2^2 - 714697/2*p1^3*p2^3 + 3812253/16*p1^2*p2^4 - 593007/2*p1*p2^5 + 5366409/32*p2^6 + 59117*p1^5*p3 - 94485*p1^4*p2*p3 + 744737/12*p1^3*p2^2*p3 - 1070499/4*p1^2*p2^3*p3 + 1607690/3*p1*p2^4*p3 - 2775955/8*p2^5*p3 - 19079/4*p1^4*p3^2 - 47284/3*p1^3*p2*p3^2 + 1021559/6*p1^2*p2^2*p3^2 - 383884*p1*p2^3*p3^2 + 10585045/36*p2^4*p3^2 + 381794/81*p1^3*p3^3 - 43684*p1^2*p2*p3^3 + 1180952/9*p1*p2^2*p3^3 - 131220*p2^3*p3^3 + 295133/81*p1^2*p3^4 - 21870*p1*p2*p3^4 + 32805*p2^2*p3^4 + 1458*p1*p3^5 - 4374*p2*p3^5 + 243*p3^6 - 77760*p1^5 + 1170945/4*p1^4*p2 - 316197/2*p1^3*p2^2 - 585937/4*p1^2*p2^3 + 131973*p1*p2^4 - 407001/16*p2^5 - 28371/2*p1^4*p3 - 121005*p1^3*p2*p3 + 453885/2*p1^2*p2^2*p3 - 1452961/12*p1*p2^3*p3 + 159633/8*p2^4*p3 + 24694*p1^3*p3^2 - 250883/6*p1^2*p2*p3^2 + 42363/2*p1*p2^2*p3^2 - 30205/9*p2^3*p3^2 + 3425/9*p1^2*p3^3 - 1474/9*p1*p2*p3^3 + 98/9*p2^2*p3^3 + 140/27*p1*p3^4 - 28/81*p2*p3^4 + 64305*p1^4 - 80838*p1^3*p2 - 266625/2*p1^2*p2^2 + 328617/2*p1*p2^3 - 327829/8*p2^4 - 41592*p1^3*p3 + 182196*p1^2*p2*p3 - 150516*p1*p2^2*p3 + 33374*p2^3*p3 - 25086*p1^2*p3^2 + 25416*p1*p2*p3^2 - 70597/12*p2^2*p3^2 - 1100/3*p1*p3^3 + 955/9*p2*p3^3 - 317/81*p3^4 - 21816*p1^3 - 30726*p1^2*p2 + 102222*p1*p2^2 - 157923/4*p2^3 + 41148*p1^2*p3 - 89172*p1*p2*p3 + 65799/2*p2^2*p3 + 11664*p1*p3^2 - 5709*p2*p3^2 + 114*p3^3 - 7/216*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3)) + 1/648*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3)) - 815/432*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3)) + 6563/72*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 269/24*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 806*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) - 35923/6*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) + 128081/36*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 1/432*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3)) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 815/864*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + 7/72*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 269/8*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + 806*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6563/48*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + 128081/24*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 278659/12*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 35923/2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 34512*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) + 1/648*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3)) - 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3)) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3) + 7/72*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3)) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3) - 269/24*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3) + 815/432*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3)) + 3*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) + (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3)) - 3*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - 6*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3) - 6563/24*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9)) + (((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*((p1 + 3)^2 - p2 - 5) - (2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3))*(p1 + 3) + 128081/36*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3) - 806*(2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9)) + 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) + 2*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9)) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 3*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3))*(p1 + 3))*(p1 + 3) + 35923/2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*((p1 + 3)^2 - p2 - 5) - 2*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) - 2*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9))*(p1 + 3) - 46032*(((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + 278659/6*((((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p1 + 3) - 3*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 6*(p1 + 3)*(p3 + 9))*(p1 + 3) + ((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 3*((p1 + 3)^2 - p2 - 5)*(p3 + 9))*(p1 + 3) + 2592*p1^2 - 46032*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p2 + 5) - 103536*((p1 + 3)^2 - p2 - 5)*(p2 + 5) + 20088*p1*p2 - 19035*p2^2 + 278659/6*((p1 + 3)^3 - 3*(p1 + 3)*(p2 + 5) + 2*p3 + 18)*(p3 + 9) + 138096*((p1 + 3)^2 - p2 - 5)*(p3 + 9) + 207072*(p1 + 3)*(p3 + 9) - 14544*p1*p3 + 15228*p2*p3 - 2076*p3^2 - 10368*p1 + 41040*p2 - 112320*p3 - 835920,
+    [p1 == x0 + x1 + x2 - 3,
+     p2 == x0^2 + x1^2 + x2^2 - 5,
+     p3 == x0^3 + x1^3 + x2^3 - 9]]
+    sage: rsLt[0].subs([p1==3,p2==5,p3==9])
+    11289600
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Fan Tian
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(Xv))
+    # Initialization of th elist of primes for the monomial ordering
+    P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+    # Initializing the Polynomial
+    Pol = F; rG = 0
+    #for cnt in rg(4):
+    while not Pol.is_zero():
+        # Obtaining the leadind term
+        mf=multivariate_leading_term(SR(Pol), Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        #print('mf=',mf); print('Pol=',Pol); print('rG=',rG)
+        # Testing to find out id the leading term is a constant
+        if mf == SR(1):
+            rG=rG+Pol; Pol=SR(0)
+        else:
+            # Obtaining the list of striclty greater monomials
+            Lm=[mnm for mnm in SymPoly_leading_term_list(mf, Xv, Pp) if not mnm==mf]
+            # Testing to find out if no greater leading term is obtained as a result of our construction
+            if len(Lm) == 0:
+                # Initialization of the total degree
+                td=sum(mf.degree(v) for v in Xv)
+                # Initialization of the polynomial constructions i.e. product of Ps
+                tmpG=prod(Pv[mf.degree(Xv[u])] for u in rg(sz))
+                # Performing the reduction in degrees of the sum of powers
+                for d in rg(td):
+                    if (td-d)>sz:
+                        #print('before tmpG=',tmpG)
+                        #tmpG=fast_reduce_no_expand(tmpG, [Pv[td-d]],[-sum((-1)^k*Sv[k]*Pv[(td-d)-k] for k in rg(1,sz+1))])
+                        tmpG=fast_reduce_no_expand(tmpG, [Pv[td-d]],[-sum(RtL[u]^(td-d) for u in rg(sz))-sum((-1)^k*(Sv[k]+sum(prod(s) for s in Set(RtL).subsets(k)))*(Pv[(td-d)-k]+sum(RtL[u]^((td-d)-k) for u in rg(sz))) for k in rg(1,sz+1))])
+                        #print('after tmpG=',tmpG)
+                # Initialization of Girard's identities
+                NwL=[Sv[1]==Pv[1]]
+                for bnd in rg(2,sz+1):
+                    eL=[l for l in List_of_Integers([1+floor(bnd/i) for i in rg(1,bnd+1)]) if bnd==sum(l[i]*(i+1) for i in rg(bnd))]
+                    #NwL.append( Sv[bnd]==(-1)^bnd*sum( prod( (-Pv[i])^l[i-1]/(factorial(l[i-1])*i^l[i-1]) for i in rg(1,bnd+1) ) for l in eL ) )
+                    NwL.append( Sv[bnd]==-sum(prod(s) for s in Set(RtL).subsets(bnd))+(-1)^bnd*sum( prod( (-Pv[i]-sum(RtL[u]^i for u in rg(sz)))^l[i-1]/(factorial(l[i-1])*i^l[i-1]) for i in rg(1,bnd+1) ) for l in eL ) )
+                # Performing the substitution reducing the degree of the sum of powers appearing
+                tmpG=tmpG.subs(NwL)
+                #print('final tmpG=',tmpG)
+                # Initialization of the list of sum of powers
+                Lp=[1]+[sum(Xv[i]^j - RtL[i]^j for i in rg(sz)) for j in rg(1,1+td)]
+                # Initialization of the polynomial 
+                tmp=expand(Pol.coefficient(mf)*prod(Lp[mf.degree(Xv[u])] for u in rg(sz)))
+                #print('[] rG=',rG); print('[] Pol before = ',Pol)
+                if Pol==multivariate_division(Pol, [tmp], Xv, Pp)[1]:
+                    rG=rG+Pol.coefficient(mf)*tmpG
+                    Pol=SR(0)
+                else:
+                    rG=rG+Pol.coefficient(mf)*tmpG
+                    Pol=multivariate_division(Pol, [tmp], Xv, Pp)[1]
+                #print('[] Pol after = ',Pol)
+            else:
+                # Initialization of the total degree
+                td=sum(mf.degree(v) for v in Xv)
+                # Initialization of the list of sum of powers
+                Lp=[1]+[sum(Xv[i]^j - RtL[i]^j for i in rg(sz)) for j in rg(1,1+td)]
+                # Obtaining the list of striclty greater monomials
+                Lm=[mnm for mnm in SymPoly_leading_term_list(mf, Xv, Pp) if not mnm==mf]
+                #print('\nLm=', Lm)
+                # Constructing the symmetric polynomial in the elementary symmetric polynomial
+                rsLt=SymPoly_lead_term_eliminateIIG(mf, Xv, Lm, Pv, Sv, RtL)
+                tmp=expand(rsLt[0].subs([eq for eq in rsLt[1] if eq.lhs()!=0]+rsLt[2]))
+                #print('rsLt=',rsLt); print('tmp=',tmp)
+                #print('rG before =',rG); print('Pol before = ',Pol)
+                if Pol==multivariate_division(Pol, [expand(Pol.coefficient(mf)*tmp.subs(rsLt[3]))], Xv, Pp)[1]:
+                    rG=rG+Pol.coefficient(mf)*tmp
+                    Pol=SR(0)
+                else:
+                    rG=rG+Pol.coefficient(mf)*tmp
+                    Pol=multivariate_division(Pol, [expand(Pol.coefficient(mf)*tmp.subs(rsLt[3]))], Xv, Pp)[1]
+                #print('rG after =',rG); print('Pol after = ',Pol)
+    return [rG, [Pv[i]==sum(Xv[j]^i - RtL[j]^i for j in rg(sz)) for i in rg(1,1+sz)]]
+
 def Newton_Identities(Xv, Pv, Sv):
     """
     Takes as inputs three lists of vraiables  and outputs
@@ -31449,10 +32227,12 @@ def hypermatrix_action_over_F2(sz, od):
 
     ::
 
-        sage: sz=2; od=2; hypermatrix_action_over_F2(sz, od)[0]
+        sage: sz=2; od=2; [cL, Lt]=hypermatrix_action_over_F2(sz, od); cL
         [[(0, 0), (1, 0), (2, 0), (3, 0)],
          [(0, 0), (1, 1), (2, 0), (3, 1)],
          [(0, 0), (1, 2), (2, 1), (3, 3)]] 
+        sage: A=HM(Integer(2)^sz, Integer(2)^sz, 'a'); F=sum(prod(A[i,T[i][1]] for i in rg(2^sz)) for T in Lt); F
+        a00*a10*a20*a30 + a00*a11*a21*a30 + a00*a12*a22*a30 + a00*a13*a23*a30 + a00*a11*a20*a31 + a00*a10*a21*a31 + a00*a13*a22*a31 + a00*a12*a23*a31 + a00*a12*a20*a32 + a00*a13*a21*a32 + a00*a10*a22*a32 + a00*a11*a23*a32 + a00*a13*a20*a33 + a00*a12*a21*a33 + a00*a11*a22*a33 + a00*a10*a23*a33
 
 
     AUTHORS:
@@ -31479,6 +32259,73 @@ def hypermatrix_action_over_F2(sz, od):
     # Looping over the hypermatrix choices
     for al in Li:
         Lt.append([(sum(l[k]*2^k for k in rg(sz)), sum(2^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(2).list()[k] for k in rg(sz))) for l in Lev])
+    # Initialization of the list storing the rpresentatives of conjugacy classes of functional digraphs.
+    cL=[]
+    # Loop perfomring the binning by conjugacy classes.
+    for T in Lt:
+        nwT=True
+        for i in range(len(cL)):
+            # Initialization of the bipartite adjacency matrices
+            Aadj=(Tuple_to_Adjacency(T).index_rotation(-pi/2).block_sum(HM(2^sz,2^sz,'zero')).index_rotation(pi/2)).matrix()
+            Badj=(Tuple_to_Adjacency(cL[i]).index_rotation(-pi/2).block_sum(HM(2^sz,2^sz,'zero')).index_rotation(pi/2)).matrix()
+            if DiGraph(Aadj).is_isomorphic(DiGraph(Badj)):
+                nwT=False
+                break
+        if nwT==True:
+            cL.append(T)
+    return [cL, Lt]
+
+def hypermatrix_shifted_action_over_F2(sz, od):
+    """
+    Implements the hypermatrix shifted action on 
+    vector spaces over the field of two elements.
+    The inputs to the function are the size and
+    order parameters. 
+    The function outputs the list of representative of
+    of the left right action classes of functional directed
+    graphs as well as the list of all functional directed
+    graphs associated with hypermatrix transforms.
+    vertex labels arise from the canonical lexicographic
+    map on binary vectors in F2^sz.
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; od=2; [cL, Lt]=hypermatrix_shifted_action_over_F2(sz, od); cL
+        [[(0, 0), (1, 0), (2, 0), (3, 0)],
+         [(0, 0), (1, 1), (2, 0), (3, 1)],
+         [(0, 0), (1, 2), (2, 1), (3, 3)]]
+        sage: A=HM(Integer(2)^sz, Integer(2)^sz, 'a'); F=sum(prod(A[i,T[i][1]] for i in rg(2^sz)) for T in Lt); F
+        a00*a10*a20*a30 + a01*a11*a20*a30 + a02*a12*a20*a30 + a03*a13*a20*a30 + a01*a10*a21*a30 + a00*a11*a21*a30 + a03*a12*a21*a30 + a02*a13*a21*a30 + a02*a10*a22*a30 + a03*a11*a22*a30 + a00*a12*a22*a30 + a01*a13*a22*a30 + a03*a10*a23*a30 + a02*a11*a23*a30 + a01*a12*a23*a30 + a00*a13*a23*a30 + a01*a10*a20*a31 + a00*a11*a20*a31 + a03*a12*a20*a31 + a02*a13*a20*a31 + a00*a10*a21*a31 + a01*a11*a21*a31 + a02*a12*a21*a31 + a03*a13*a21*a31 + a03*a10*a22*a31 + a02*a11*a22*a31 + a01*a12*a22*a31 + a00*a13*a22*a31 + a02*a10*a23*a31 + a03*a11*a23*a31 + a00*a12*a23*a31 + a01*a13*a23*a31 + a02*a10*a20*a32 + a03*a11*a20*a32 + a00*a12*a20*a32 + a01*a13*a20*a32 + a03*a10*a21*a32 + a02*a11*a21*a32 + a01*a12*a21*a32 + a00*a13*a21*a32 + a00*a10*a22*a32 + a01*a11*a22*a32 + a02*a12*a22*a32 + a03*a13*a22*a32 + a01*a10*a23*a32 + a00*a11*a23*a32 + a03*a12*a23*a32 + a02*a13*a23*a32 + a03*a10*a20*a33 + a02*a11*a20*a33 + a01*a12*a20*a33 + a00*a13*a20*a33 + a02*a10*a21*a33 + a03*a11*a21*a33 + a00*a12*a21*a33 + a01*a13*a21*a33 + a01*a10*a22*a33 + a00*a11*a22*a33 + a03*a12*a22*a33 + a02*a13*a22*a33 + a00*a10*a23*a33 + a01*a11*a23*a33 + a02*a12*a23*a33 + a03*a13*a23*a33
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of variables
+    X=var_list('x',sz)
+    # Initialization of Background hypermatrix
+    iL=[sz for i in rg(od)]+['a']; A=HM(*iL)
+    # Initialization of the list of projectors
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    # Performing the projectors
+    Lh=[ProdB(*([A.transpose(j) for j in rg(od)]+[DltL[i]])) for i in rg(sz)]
+    # Initialization of the list of transpose of the vectors
+    Lv=[HM(*([sz]+[1 for i in rg(od-1)]+[var_list('x',sz)])) for j in rg(od)]
+    # Initialization of the vector
+    Y=HM(*([sz]+[1 for i in rg(od-1)]+[[ProdB(*([Lv[i].transpose(i) for i in rg(od-1,-1,-1)]+[Lh[j]])).list()[0] for j in rg(sz)]])).factor()
+    # Initializing the list of integer lists associated with the hypermatrix choices
+    Li=List_of_Integers([2 for i in rg(sz^od)])
+    # Initialization of the list of integer lists associated with evaluation points
+    Lev=List_of_Integers([2 for i in rg(sz)])
+    # Tuple list description of the elements of the transformation monoid
+    Lt=[]
+    # Looping over the hypermatrix choices
+    for al in Li:
+        for ve in Lev:
+            Lt.append([(sum(l[k]*2^k for k in rg(sz)), sum(2^k*imod(ve[k]+Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(2).list()[k],2) for k in rg(sz) ) ) for l in Lev])
     # Initialization of the list storing the rpresentatives of conjugacy classes of functional digraphs.
     cL=[]
     # Loop perfomring the binning by conjugacy classes.
@@ -31541,4 +32388,63 @@ def CosetRepresentativeList(T):
             Tq=[(i, p[i]-1) for i in rg(sz)]
             Sn_quot.append(Tq)
     return Sn_quot
+
+def automorphism_group(F, X):
+    """
+    The method returns a list of tuples which describe
+    automorphism group of the  input polynomial F in
+    in the input variables X
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); od=Integer(2); X=var_list('x', sz)
+        sage: automorphism_group(prod(X[j]-X[i] for i in rg(sz) for j in rg(sz) if i<j), X)
+        [[(0, 0), (1, 1), (2, 2)], [(0, 1), (1, 2), (2, 0)], [(0, 2), (1, 0), (2, 1)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(X))
+    # Initialization of the list of permutations
+    SnL=PermutationFunctionList(sz)
+    # Computing the automorphism group
+    return [T for T  in SnL if (F-F.subs([X[i]==X[T[i][1]] for i in rg(sz)])).is_zero()]
+
+def CosetPolynomialRepresentativeList(F, X):
+    """
+    The method returns a list of tuples which describe
+    representative of left cosets of the automorphism
+    group of the input polynomial F in the variables
+    specified by the second input list X
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); od=Integer(2); X=var_list('x', sz)
+        sage: CosetPolynomialRepresentativeList(prod(X[j]-X[i] for i in rg(sz) for j in rg(sz) if i<j), X)
+        [[(0, 0), (1, 1), (2, 2)], [(0, 0), (1, 2), (2, 1)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(X))
+    # Initialization of the list of permutations
+    SnL=PermutationFunctionList(sz)
+    # Computing the automorphism group
+    GrP=[T for T  in SnL if (F-F.subs([X[i]==X[T[i][1]] for i in rg(sz)])).is_zero()]
+    # Initializing the list which stores the coset
+    CstL=[[(i, i) for i in rg(sz)]]; RmSt=[T for T in SnL if not T in GrP]
+    while len(RmSt)>0:
+        Q=copy(RmSt[0]); CstL.append(RmSt[0])
+        for T in GrP:
+            RmSt.remove(compose_tuple(Q,T))
+    return CstL
 
