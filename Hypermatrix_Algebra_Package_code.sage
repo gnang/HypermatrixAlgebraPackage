@@ -32,7 +32,7 @@ class HM:
     
         sage: HM(2,2,2,'a') # Initialization of a third order hypermatrix
         [[[a000, a001], [a010, a011]], [[a100, a101], [a110, a111]]]
-        sage: od=2; sz=2; HM(od,sz,'kronecker') # creating a Kronecker delta
+        sage: od=2; sz=2; HM(od,sz,'kronecker') # creating a Kronecker delta or identity matrix
         [[1, 0], [0, 1]]
         sage: od=2; HM(od,[0,1,2],'perm')
         [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
@@ -48,7 +48,9 @@ class HM:
         [[[a00, 0], [0, a01]], [[a10, 0], [0, a11]]]
         sage: HM(3,'x').list() # creatling a list of variables
         [x0, x1, x2]
-        sage: od=2; sz=2; HM(od,HM(sz,'a').list(),'diag') # diagonal matrix
+        sage: sz=3; var_list('x',sz) # alternative approach to creatling a list of variables
+        [x0, x1, x2]
+        sage: od=2; sz=2; HM(od,var_list('a',sz),'diag') # diagonal matrix
         [[a0, 0], [0, a1]]
         sage: La=HM(2, 2, 2, 'a').list(); Lb=HM(2, 2, 2, 'b').list(); Lc=HM(2, 2, 2, 'c').list() # Initialization of the variables
         sage: F = FreeAlgebra(QQ, 24, La + Lb + Lc)
@@ -1209,6 +1211,34 @@ class HM:
 
     def fast_reduce(self, monom, subst):
         return apply(HM, self.dimensions()+[[fast_reduce(self.list()[i], monom, subst) for i in rg(prod(self.dimensions()))]])
+
+    def operands(self):
+        # Turning the hypermatrix into a list
+        L=self.list()
+        # Boolean variables checking that the operator is the same
+        # for all entries.
+        CommonOperator=True
+        # max_len keeps track of the maximum number of operands.
+        max_len=len(L[0].operands())
+        for f in L[1:]:
+            if f.operator() != L[0].operator():
+                CommonOperator=False
+                break
+            else:
+                if max_len < len(f.operands()):
+                    max_len = len(f.operands())
+        if CommonOperator==False:
+            raise ValueError, "Expects the same operator for all entries."
+        else:
+            # Initilization of the list of operands
+            Lst=[f.operands()+[0 for i in rg(max_len-len(f.operands()))] for f in L]
+            # Initialization of the list which will store the hypermatrix operands
+            LstOprds=[]
+            # Looping over operands. The operamnds order is the default
+            # sage lexicographic order
+            for i in rg(max_len):
+                LstOprds.append(apply(HM, self.dimensions()+[[l[i] for l in Lst]]))  
+            return LstOprds
 
     def mod(self, m):
         return apply(HM, self.dimensions()+[[Integer(mod(self.list()[i], m)) for i in rg(prod(self.dimensions()))]])
@@ -2421,7 +2451,7 @@ def Lagrange(X):
     ::
 
         sage: Lagrange(HM(3,'x').list())
-        [[x0 - x2, x0 - x1], [x1 - x2, 1]]        
+        [[x0 - x2, x0 - x1], [x1 - x2, 1]]
 
 
     AUTHORS:
@@ -2517,6 +2547,9 @@ def Orthogonal2x2x2Hypermatrix(t,x,y):
         sage: t,x,y=var('t,x,y')
         sage: Orthogonal2x2x2Hypermatrix(t,x,y)
         [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
+        sage: U=Orthogonal2x2x2Hypermatrix(t,x,y); Prod(U,U.transpose(2),U.transpose())
+        [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
+
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -2535,6 +2568,9 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
         sage: t,x,y=var('t,x,y')
         sage: Orthogonal2x2x2HypermatrixII(t,x,y)
         [[[sin(t)^(2/3), y*cos(t)^(2/3)], [cos(t)^(2/3), -x*sin(t)^(2/3)]], [[1/y, sin(t)^(2/3)], [1/x, cos(t)^(2/3)]]]
+        sage: U=Orthogonal2x2x2HypermatrixII(t,x,y); Prod(U,U.transpose(2),U.transpose())
+        [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
+
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -2542,6 +2578,27 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
     # Initialization of the Permutation hypermatrix
     P=HM(3,[1,0],'perm')
     return Prod(HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]), P, P.transpose())
+
+def Orthogonal2x2x2HypermatrixIII(t,x,y):
+    """
+    Outputs a symbolic parametrization of third order orthogonal hypermatrix
+    of size 2x2x2.
+
+     EXAMPLES:
+
+    ::
+
+        sage: t,x,y=var('t,x,y')
+        sage: Orthogonal2x2x2HypermatrixIII(t,x,y)
+        [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
+        sage: U=Orthogonal2x2x2HypermatrixIII(t,x,y); Prod(U,U.transpose(2),U.transpose())
+        [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    return HM([[[sin(t)^(2/3), x*cos(t)^(2/3)], [cos(t)^(2/3), -y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]])
+
 
 def Orthogonal3x3x3Hypermatrix(t1,t2):
     """
@@ -2568,7 +2625,7 @@ def Orthogonal3x3x3Hypermatrix(t1,t2):
           [0, cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3)],
           [0,
            -1/2*(-I*sqrt(3) + 1)*cos(t2)^(2/3)*sin(t1)^(2/3),
-           sin(t1)^(2/3)*sin(t2)^(2/3)]]]        
+           sin(t1)^(2/3)*sin(t2)^(2/3)]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -3266,7 +3323,7 @@ def ConstraintFormatorIII(CnstrLst, VrbLst):
         [ 1.00000000000000 -1.00000000000000]
         sage: b
         [1.00000000000000]
-        [2.00000000000000]       
+        [2.00000000000000]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -3496,7 +3553,7 @@ def MonomialConstraintFormatorIII(L, X, MnL, Y):
         [                 2*0^y1*0^y2 - 3*0^y4 + 2]
         [     38*0^y1*0^y2 + 18*0^y3 - 11*0^y4 + 8]
         [  506*0^y1*0^y2 - 112*0^y3 - 121*0^y4 + 8]
-        [5852*0^y1*0^y2 - 202*0^y3 - 1099*0^y4 + 8]        
+        [5852*0^y1*0^y2 - 202*0^y3 - 1099*0^y4 + 8]
 
 
     AUTHORS:
@@ -3779,20 +3836,19 @@ def Companion_matrix(p,vrbl):
 
     ::
 
-        sage: x=var('x')
-        sage: A=Companion_matrix(sum(HM(5,'a').list()[k]*x^(k) for k in range(5)),x);A.characteristic_polynomial()
+        sage: x=var('x'); p=sum(HM(5,'a').list()[k]*x^(k) for k in range(5))
+        sage: A=Companion_matrix(p,x);A.characteristic_polynomial()
         x^4 + a3/a4*x^3 + a2/a4*x^2 + a1/a4*x + a0/a4
 
     AUTHORS:
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl):
-        dg=p.degree(vrbl)
+        dg=Integer(p.degree(vrbl))
         if dg>1:
             # Initialization of the matrix
-            A=Matrix(SR,HM(dg,dg,'zero').listHM())
+            A=HM(dg,dg,'zero').matrix()
             # Filling up the matrix
-            #A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
             A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/(p.diff(vrbl, dg)/factorial(dg))
             for i in range(1,dg):
                 #A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
@@ -3825,7 +3881,7 @@ def CompanionHM(p,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl):
-        dg=p.degree(vrbl)
+        dg=Integer(p.degree(vrbl))
         if dg>1:
             # Initialization of the matrix
             A=HM(dg,dg,'zero')
@@ -3864,22 +3920,22 @@ def Sylvester_matrix(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
         # Initialization of the matrix
-        A=Matrix(SR,HM(dp+dq,dp+dq,'zero').listHM())
+        A=HM(dp+dq,dp+dq,'zero').matrix()
         # Filling up the matrix
         cp=0
         for i in range(dq):
             for j in range(dp):
                 #A[i,cp+j]=p.coefficient(vrbl^(dp-j))
-                A[i,cp+j]=p.diff(vrbl,(dp-j)).subs(vrbl==0)/factorial(dp-j)
+                A[i,cp+j]=p.diff(vrbl,Integer(dp-j)).subs(vrbl==0)/factorial(dp-j)
             A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
             cp=cp+1
         cq=0
         for i in range(dp):
             for j in range(dq):
                 #A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
-                A[dq+i,cq+j]=q.diff(vrbl,(dq-j)).subs(vrbl==0)/factorial(dq-j)
+                A[dq+i,cq+j]=q.diff(vrbl,Integer(dq-j)).subs(vrbl==0)/factorial(dq-j)
             A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
             cq=cq+1
         return A
@@ -3906,7 +3962,7 @@ def SylvesterHM(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
         # Initialization of the second order hypermatrix
         A=HM(dp+dq,dp+dq,'zero')
         # Filling up the matrix
@@ -3914,14 +3970,14 @@ def SylvesterHM(p,q,vrbl):
         for i in range(dq):
             for j in range(dp):
                 #A[i,cp+j]=p.coefficient(vrbl^(dp-j))
-                A[i,cp+j]=p.diff(vrbl,(dp-j)).subs(vrbl==0)/factorial(dp-j)
+                A[i,cp+j]=p.diff(vrbl,Integer(dp-j)).subs(vrbl==0)/factorial(dp-j)
             A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
             cp=cp+1
         cq=0
         for i in range(dp):
             for j in range(dq):
                 #A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
-                A[dq+i,cq+j]=q.diff(vrbl,(dq-j)).subs(vrbl==0)/factorial(dq-j)
+                A[dq+i,cq+j]=q.diff(vrbl,Integer(dq-j)).subs(vrbl==0)/factorial(dq-j)
             A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
             cq=cq+1
         return A
@@ -3966,7 +4022,7 @@ def Gmatrix(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
         if dp >= 1 and dq >= 1:
             return identity_matrix(dq).tensor_product(Companion_matrix(p,vrbl))-(Companion_matrix(q,vrbl)).tensor_product(identity_matrix(dp))
         else:
@@ -3993,7 +4049,7 @@ def GmatrixHM(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
         if dp >= 1 and dq >= 1:
             return HM(2,dq,'kronecker').tensor_product(CompanionHM(p,vrbl))-(CompanionHM(q,vrbl)).tensor_product(HM(2,dp,'kronecker'))
         else:
@@ -4023,7 +4079,7 @@ def substitute_matrix(p, vrbl, A):
     """
     if A.nrows() == A.ncols():
         T=p.subs(vrbl == 0)*identity_matrix(A.nrows())
-        d=p.degree(vrbl)
+        d=Integer(p.degree(vrbl))
         for i in rg(1,d+1):
             #T=T+(A^i)*p.coefficient(vrbl^i)
             #T=T+(A^Integer(i))*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
@@ -4052,7 +4108,7 @@ def substituteHM(p, vrbl, A):
     - Edinah K. Gnang
     """
     if A.nrows()==A.ncols():
-        d=p.degree(vrbl)
+        d=Integer(p.degree(vrbl))
         T = p.subs(vrbl==0)*HM(2,A.nrows(),'kronecker')
         for i in rg(1,d+1):
             #T=T+(A^Integer(i))*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
@@ -5053,15 +5109,14 @@ def GeneralHypermatrixSimplify(A):
 
     ::
 
-        sage: x,y=var('x,y'); ((x+y)^2*HM(2,2,2,'one')).simplify_full()
-        [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
+        sage: x,y=var('x,y'); GeneralHypermatrixSimplify((x+y)^2*HM(2,2,2,'one'))
+        [[[(x + y)^2, (x + y)^2], [(x + y)^2, (x + y)^2]], [[(x + y)^2, (x + y)^2], [(x + y)^2, (x + y)^2]]]
  
 
     AUTHORS:
 
     - Edinah K. Gnang
     """
-
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -6806,7 +6861,7 @@ def ThirdOrderSliceKroneckerProduct(Ha, Hb):
     ::
 
         sage: ThirdOrderSliceKroneckerProduct(HM(2,2,2,'a'),HM(3,3,3,'b'))
-        [[[a000*b000, a000*b001, a000*b002, a001*b000, a001*b001, a001*b002], [a000*b010, a000*b011, a000*b012, a001*b010, a001*b011, a001*b012], [a000*b020, a000*b021, a000*b022, a001*b020, a001*b021, a001*b022], [a010*b000, a010*b001, a010*b002, a011*b000, a011*b001, a011*b002], [a010*b010, a010*b011, a010*b012, a011*b010, a011*b011, a011*b012], [a010*b020, a010*b021, a010*b022, a011*b020, a011*b021, a011*b022]], [[a000*b100, a000*b101, a000*b102, a001*b100, a001*b101, a001*b102], [a000*b110, a000*b111, a000*b112, a001*b110, a001*b111, a001*b112], [a000*b120, a000*b121, a000*b122, a001*b120, a001*b121, a001*b122], [a010*b100, a010*b101, a010*b102, a011*b100, a011*b101, a011*b102], [a010*b110, a010*b111, a010*b112, a011*b110, a011*b111, a011*b112], [a010*b120, a010*b121, a010*b122, a011*b120, a011*b121, a011*b122]], [[a000*b200, a000*b201, a000*b202, a001*b200, a001*b201, a001*b202], [a000*b210, a000*b211, a000*b212, a001*b210, a001*b211, a001*b212], [a000*b220, a000*b221, a000*b222, a001*b220, a001*b221, a001*b222], [a010*b200, a010*b201, a010*b202, a011*b200, a011*b201, a011*b202], [a010*b210, a010*b211, a010*b212, a011*b210, a011*b211, a011*b212], [a010*b220, a010*b221, a010*b222, a011*b220, a011*b221, a011*b222]], [[a100*b000, a100*b001, a100*b002, a101*b000, a101*b001, a101*b002], [a100*b010, a100*b011, a100*b012, a101*b010, a101*b011, a101*b012], [a100*b020, a100*b021, a100*b022, a101*b020, a101*b021, a101*b022], [a110*b000, a110*b001, a110*b002, a111*b000, a111*b001, a111*b002], [a110*b010, a110*b011, a110*b012, a111*b010, a111*b011, a111*b012], [a110*b020, a110*b021, a110*b022, a111*b020, a111*b021, a111*b022]], [[a100*b100, a100*b101, a100*b102, a101*b100, a101*b101, a101*b102], [a100*b110, a100*b111, a100*b112, a101*b110, a101*b111, a101*b112], [a100*b120, a100*b121, a100*b122, a101*b120, a101*b121, a101*b122], [a110*b100, a110*b101, a110*b102, a111*b100, a111*b101, a111*b102], [a110*b110, a110*b111, a110*b112, a111*b110, a111*b111, a111*b112], [a110*b120, a110*b121, a110*b122, a111*b120, a111*b121, a111*b122]], [[a100*b200, a100*b201, a100*b202, a101*b200, a101*b201, a101*b202], [a100*b210, a100*b211, a100*b212, a101*b210, a101*b211, a101*b212], [a100*b220, a100*b221, a100*b222, a101*b220, a101*b221, a101*b222], [a110*b200, a110*b201, a110*b202, a111*b200, a111*b201, a111*b202], [a110*b210, a110*b211, a110*b212, a111*b210, a111*b211, a111*b212], [a110*b220, a110*b221, a110*b222, a111*b220, a111*b221, a111*b222]]] 
+        [[[a000*b000, a000*b001, a000*b002, a001*b000, a001*b001, a001*b002], [a000*b010, a000*b011, a000*b012, a001*b010, a001*b011, a001*b012], [a000*b020, a000*b021, a000*b022, a001*b020, a001*b021, a001*b022], [a010*b000, a010*b001, a010*b002, a011*b000, a011*b001, a011*b002], [a010*b010, a010*b011, a010*b012, a011*b010, a011*b011, a011*b012], [a010*b020, a010*b021, a010*b022, a011*b020, a011*b021, a011*b022]], [[a000*b100, a000*b101, a000*b102, a001*b100, a001*b101, a001*b102], [a000*b110, a000*b111, a000*b112, a001*b110, a001*b111, a001*b112], [a000*b120, a000*b121, a000*b122, a001*b120, a001*b121, a001*b122], [a010*b100, a010*b101, a010*b102, a011*b100, a011*b101, a011*b102], [a010*b110, a010*b111, a010*b112, a011*b110, a011*b111, a011*b112], [a010*b120, a010*b121, a010*b122, a011*b120, a011*b121, a011*b122]], [[a000*b200, a000*b201, a000*b202, a001*b200, a001*b201, a001*b202], [a000*b210, a000*b211, a000*b212, a001*b210, a001*b211, a001*b212], [a000*b220, a000*b221, a000*b222, a001*b220, a001*b221, a001*b222], [a010*b200, a010*b201, a010*b202, a011*b200, a011*b201, a011*b202], [a010*b210, a010*b211, a010*b212, a011*b210, a011*b211, a011*b212], [a010*b220, a010*b221, a010*b222, a011*b220, a011*b221, a011*b222]], [[a100*b000, a100*b001, a100*b002, a101*b000, a101*b001, a101*b002], [a100*b010, a100*b011, a100*b012, a101*b010, a101*b011, a101*b012], [a100*b020, a100*b021, a100*b022, a101*b020, a101*b021, a101*b022], [a110*b000, a110*b001, a110*b002, a111*b000, a111*b001, a111*b002], [a110*b010, a110*b011, a110*b012, a111*b010, a111*b011, a111*b012], [a110*b020, a110*b021, a110*b022, a111*b020, a111*b021, a111*b022]], [[a100*b100, a100*b101, a100*b102, a101*b100, a101*b101, a101*b102], [a100*b110, a100*b111, a100*b112, a101*b110, a101*b111, a101*b112], [a100*b120, a100*b121, a100*b122, a101*b120, a101*b121, a101*b122], [a110*b100, a110*b101, a110*b102, a111*b100, a111*b101, a111*b102], [a110*b110, a110*b111, a110*b112, a111*b110, a111*b111, a111*b112], [a110*b120, a110*b121, a110*b122, a111*b120, a111*b121, a111*b122]], [[a100*b200, a100*b201, a100*b202, a101*b200, a101*b201, a101*b202], [a100*b210, a100*b211, a100*b212, a101*b210, a101*b211, a101*b212], [a100*b220, a100*b221, a100*b222, a101*b220, a101*b221, a101*b222], [a110*b200, a110*b201, a110*b202, a111*b200, a111*b201, a111*b202], [a110*b210, a110*b211, a110*b212, a111*b210, a111*b211, a111*b212], [a110*b220, a110*b221, a110*b222, a111*b220, a111*b221, a111*b222]]]
 
 
     AUTHORS:
@@ -6924,6 +6979,8 @@ def SeventhOrderSliceKroneckerProduct(Ha, Hb):
     ::
 
         sage: A=SeventhOrderSliceKroneckerProduct(HM(2,2,2,2,2,2,2,'a'),HM(2,2,2,2,2,2,2,'b'))
+        sage: A.dimensions()
+        [4, 4, 4, 4, 4, 4, 4]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -6957,6 +7014,7 @@ def HypermatrixSliceKroneckerPower(U,n):
 
         sage: HypermatrixSliceKroneckerPower(HM(2,2,'a'),2)
         [[a00^2, a00*a01, a00*a01, a01^2], [a00*a10, a00*a11, a01*a10, a01*a11], [a00*a10, a01*a10, a00*a11, a01*a11], [a10^2, a10*a11, a10*a11, a11^2]]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -7395,8 +7453,8 @@ def RaFaPre(n):
 
     ::
 
-        sage: RaFaPre(3)
-        '+1+11'
+        sage: RaFaPre(2)
+        '+11'
 
 
     AUTHORS:
@@ -7444,8 +7502,8 @@ def RaLopFaT(n):
 
     ::
 
-        sage: RaLopFaT(3)
-        ['+', ['+', 1, 1], 1]
+        sage: RaLopFaT(2)
+        ['+', 1, 1]
 
 
     AUTHORS:
@@ -7474,8 +7532,8 @@ def RaLopFaPre(n):
 
     ::
 
-        sage: RaLopFaPre(3)
-        '++111'
+        sage: RaLopFaPre(2)
+        '+11'
 
 
     AUTHORS:
@@ -7499,8 +7557,8 @@ def RaLopFaP(n):
 
     ::
 
-        sage: RaLopFaP(3)
-        '111++'
+        sage: RaLopFaP(2)
+        '11+'
 
 
     AUTHORS:
@@ -7524,8 +7582,8 @@ def LopFaPre(n):
 
     ::
 
-        sage: LopFaPre(3)
-        ['++111']
+        sage: LopFaPre(2)
+        ['+11']
 
 
     AUTHORS:
@@ -7549,8 +7607,8 @@ def LopFaP(n):
 
     ::
 
-        sage: LopFaP(3)
-        ['111++']
+        sage: LopFaP(2)
+        ['11+']
 
 
     AUTHORS:
@@ -7574,8 +7632,8 @@ def FamTa(n):
 
     ::
 
-        sage: FamTa(3)
-        [['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+        sage: FamTa(2)
+        [['+', 1, 1]]
 
 
     AUTHORS:
@@ -7766,8 +7824,8 @@ def RaFamTm(n):
 
     ::
 
-        sage: RaFamT(2)
-        ['+', 1, 1]
+        sage: RaFamTm(4)
+        ['*', ['+', 1, 1], ['+', 1, 1]]
 
 
     AUTHORS:
@@ -7883,8 +7941,8 @@ def RaFamP(n):
 
     ::
 
-        sage: RaFamP(6)
-        '11+1+11+1++'
+        sage: RaFamP(2)
+        '11+'
 
 
     AUTHORS:
@@ -7908,8 +7966,8 @@ def RaFamPre(n):
 
     ::
 
-        sage: RaFamPre(6)
-        '++1+11+1+11'
+        sage: RaFamPre(2)
+        '+11'
 
 
     AUTHORS:
@@ -8229,8 +8287,8 @@ def RaFameTe(n):
 
     ::
 
-        sage: RaFameTe(27)
-        ['^', ['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+        sage: RaFameTe(4)
+        ['^', ['+', 1, 1], ['+', 1, 1]]
 
 
     AUTHORS:
@@ -8796,7 +8854,7 @@ def recurse_base2expansion(n):
     however it should be noted that it's a horrible idea
     to use this function to compute the recursive encoding
     for a list of consecutive integer the number of recursive
-    call is unmanageabl
+    call is unmanageable
     
     ::
 
@@ -8842,6 +8900,7 @@ def recurse_base2expansionT(n):
 
         sage: recurse_base2expansionT(2)
         ['^', ['+', 1, 1], 1]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -10140,8 +10199,8 @@ def RandomTransposition(n):
  
     ::
 
-        sage: RandomTransposition(3)
-        [1, 0, 2] 
+        sage: min(RandomTransposition(3))
+        0 
 
     AUTHORS:
     - Edinah K. Gnang
@@ -11060,6 +11119,126 @@ def gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts):
         i=i+1; j=j+1
     return A
 
+def gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, RltsII):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
+    The algorithm perform the reduction assuming that the the leading term in each relations
+    is a monic powers in a distinct variable as illustrated in the example bellow.
+    The computation is perform in such a way that the last diagonal entry holds the determinant
+    of the whole matrix it is also true that each diagonal entry corresponds to the determinant
+    of the corresponding top diagonal block of the matrix. Note that the relation in Rlts are
+    assumed to be univariate leading term. This implementaion also gets the sign right for the
+    determinant. This implementation is considerably more efficient then the previous one above
+    because the extra multiplicative factor is kept minimal.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: x1, x2=var('x1, x2')
+        sage: Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]])
+        sage: VrbL=[x1, x2]
+        sage: Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
+        sage: A=gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, Rlts)
+        sage: A.printHM()
+        [:, :]=
+        [         -2   -2*x1 + 3]
+        [          0 -12*x1 + 12]
+        sage: od=2; sz=3 # Initialization of the order and size parameter
+        sage: A=HM(od,sz,'a','sym'); X=HM(sz,sz,[x^(sz^abs(j-i)) for j in rg(sz) for i in rg(sz)])
+        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
+        sage: for i in rg(sz):
+        ....:     for j in rg(sz):
+        ....:         if i < j:
+        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
+        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
+        ....:             clidx=clidx+1
+        ....:
+        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
+        sage: M=(HM(od,[x*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
+        sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
+        sage: Rh=gaussian_elimination_ReductionHMIII(M,[x],[x^(1+d)],[x^(1+d)])
+        sage: Rh[1,1]
+        a00*a01*a02*x^13 + a00*a02*a12*x^13 + a00*a01*a12*x^7
+        sage: od=2; sz=4 # Initialization of the order and size parameter
+        sage: Lx=var_list('x',sz) # Initialization of the list of vraiables
+        sage: A=HM(od,sz,'a','sym') # Initialization of the adjacency matrix
+        sage: X=HM(sz,sz,[Lx[abs(i-j)] for j in rg(sz) for i in rg(sz)]) # initialization of the edge weight matrix
+        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
+        sage: for i in rg(sz):
+        ....:     for j in rg(sz):
+        ....:         if i < j:
+        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
+        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
+        ....:             clidx=clidx+1
+        ....:
+        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
+        sage: M=(HM(od,[Lx[0]*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
+        sage: d0=3; d1=2; Rh=gaussian_elimination_ReductionHMIII(M,Lx,[v^d0 for v in Lx],[v^d1 for v in Lx])
+        sage: Rh[sz-2,sz-2]
+        a00*a01*a02*a03*x0*x1*x2*x3 + a00*a02*a03*a12*x0*x1*x2*x3 + a00*a03*a12*a13*x0*x1*x2*x3 + a00*a03*a13*a23*x0*x1*x2*x3
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    if r==j+1 and r!=A.n(0)-1:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
+                            for v in range(len(VrbL)):
+                                #f=f.maxima_methods().divide(Rlts[v])[1]
+                                for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                    f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+                            A[r,j0]=f
+                    elif r==j+1 and r==A.n(0)-1:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
+                            for v in range(len(VrbL)):
+                                #f=f.maxima_methods().divide(Rlts[v])[1]
+                                for d in range(f.degree(VrbL[v])-RltsII[v].degree(VrbL[v]),-1,-1):
+                                    f=expand(fast_reduce(f,[VrbL[v]^(d+RltsII[v].degree(VrbL[v]))],[VrbL[v]^(d+RltsII[v].degree(VrbL[v]))-expand(RltsII[v]*VrbL[v]^d)])) 
+                            A[r,j0]=f
+                    else:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            g=expand((-cf2*A[i,j0]+cf1*A[r,j0])/cf1)
+                            A[r,j0]=g
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return A
+
 def gauss_jordan_elimination(Cf,rs):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
@@ -11825,6 +12004,7 @@ def multiplicative_linear_solverHM(A,b,x,v):
          x2 == a10*t3/a11,
          1 == a01*a10/(a00*a11)]
 
+
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
@@ -11907,10 +12087,11 @@ def multiplicative_least_square_linear_solver(A,b,x,v):
         sage: Mx=Matrix(SR,A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
         sage: Mv=Matrix(SR,A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
         sage: multiplicative_least_square_linear_solver(A,b,Mx,Mv)
-        [x0 == sqrt(a00*a01*e^(2*I*pi*k0))/(sqrt(a00*a10*e^(2*I*pi*k3)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x1 == sqrt(a10*a11*e^(2*I*pi*k1))/(sqrt(a00*a10*e^(2*I*pi*k2)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x2 == a00*a10*t3/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))),
+        [x0 == sqrt(a00*a01)*e^(3/2*I*pi*k0 + 1/2*I*pi*k1 - I*pi*k3)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x1 == sqrt(a10*a11)*e^(1/2*I*pi*k0 + 3/2*I*pi*k1 - I*pi*k2)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x2 == a00*a10*t3*e^(-I*pi*k0 - I*pi*k1)/(sqrt(a00*a01)*sqrt(a10*a11)),
          1 == e^(-2*I*pi*k0 - 2*I*pi*k1)]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -11946,10 +12127,11 @@ def multiplicative_least_square_linear_solverHM(A,b,x,v):
         sage: Mx=HM(A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
         sage: Mv=HM(A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
         sage: multiplicative_least_square_linear_solverHM(A,b,Mx,Mv)
-        [x0 == sqrt(a00*a01*e^(2*I*pi*k0))/(sqrt(a00*a10*e^(2*I*pi*k3)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x1 == sqrt(a10*a11*e^(2*I*pi*k1))/(sqrt(a00*a10*e^(2*I*pi*k2)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x2 == a00*a10*t3/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))),
+        [x0 == sqrt(a00*a01)*e^(3/2*I*pi*k0 + 1/2*I*pi*k1 - I*pi*k3)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x1 == sqrt(a10*a11)*e^(1/2*I*pi*k0 + 3/2*I*pi*k1 - I*pi*k2)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x2 == a00*a10*t3*e^(-I*pi*k0 - I*pi*k1)/(sqrt(a00*a01)*sqrt(a10*a11)),
          1 == e^(-2*I*pi*k0 - 2*I*pi*k1)]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -12065,92 +12247,6 @@ def SecondOrderHadamardFactorization(A,B):
                 for k in range(B.n(1)):
                     V[A.n(1)*j+i,k] = B[i,k]*M1[j,k]
         return [U,V]
-    else:
-        # return the error message if the input hypermatrix is cubic
-        raise ValueError, "The input hypermpatrix are of inapropriate sizes"
-
-def ThirdOrderHadamardFactorization(Ha, Hb, Hc):
-    """
-    Outputs the matrix factorization induced by Hadamard third order hypermatrices.
-    The slices of third order matrices involved in outer-product computations must
-    be square and must have sides whose length is a power of 2.   
-
-    EXAMPLES:
- 
-    ::
-
-        sage: [U,V,W]=ThirdOrderHadamardFactorization(HM(4,2,4,'a'),HM(4,4,2,'b'), HM(2,4,4,'c'))
-        sage: Prod(U, V, W).simplify_full()
-        [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101, a002*b000*c002 + a012*b001*c102, a003*b000*c003 + a013*b001*c103], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111, a002*b010*c012 + a012*b011*c112, a003*b010*c013 + a013*b011*c113], [a000*b020*c020 + a010*b021*c120, a001*b020*c021 + a011*b021*c121, a002*b020*c022 + a012*b021*c122, a003*b020*c023 + a013*b021*c123], [a000*b030*c030 + a010*b031*c130, a001*b030*c031 + a011*b031*c131, a002*b030*c032 + a012*b031*c132, a003*b030*c033 + a013*b031*c133]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101, a102*b100*c002 + a112*b101*c102, a103*b100*c003 + a113*b101*c103], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111, a102*b110*c012 + a112*b111*c112, a103*b110*c013 + a113*b111*c113], [a100*b120*c020 + a110*b121*c120, a101*b120*c021 + a111*b121*c121, a102*b120*c022 + a112*b121*c122, a103*b120*c023 + a113*b121*c123], [a100*b130*c030 + a110*b131*c130, a101*b130*c031 + a111*b131*c131, a102*b130*c032 + a112*b131*c132, a103*b130*c033 + a113*b131*c133]], [[a200*b200*c000 + a210*b201*c100, a201*b200*c001 + a211*b201*c101, a202*b200*c002 + a212*b201*c102, a203*b200*c003 + a213*b201*c103], [a200*b210*c010 + a210*b211*c110, a201*b210*c011 + a211*b211*c111, a202*b210*c012 + a212*b211*c112, a203*b210*c013 + a213*b211*c113], [a200*b220*c020 + a210*b221*c120, a201*b220*c021 + a211*b221*c121, a202*b220*c022 + a212*b221*c122, a203*b220*c023 + a213*b221*c123], [a200*b230*c030 + a210*b231*c130, a201*b230*c031 + a211*b231*c131, a202*b230*c032 + a212*b231*c132, a203*b230*c033 + a213*b231*c133]], [[a300*b300*c000 + a310*b301*c100, a301*b300*c001 + a311*b301*c101, a302*b300*c002 + a312*b301*c102, a303*b300*c003 + a313*b301*c103], [a300*b310*c010 + a310*b311*c110, a301*b310*c011 + a311*b311*c111, a302*b310*c012 + a312*b311*c112, a303*b310*c013 + a313*b311*c113], [a300*b320*c020 + a310*b321*c120, a301*b320*c021 + a311*b321*c121, a302*b320*c022 + a312*b321*c122, a303*b320*c023 + a313*b321*c123], [a300*b330*c030 + a310*b331*c130, a301*b330*c031 + a311*b331*c131, a302*b330*c032 + a312*b331*c132, a303*b330*c033 + a313*b331*c133]]]
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    if Ha.n(1)==Hb.n(2) and Hb.n(2)==Hc.n(0) and (log(Integer(Ha.n(0)),2)).is_integer():
-        # Initializing the hadamard matrix
-        H = ThirdOrderHadamardBlockU(Integer(Ha.n(0)))
-        # Initializing the hypermatrices for the slice Kronecker product.
-        L = [GeneralUncorrelatedHypermatrixTuple(3) for i in range(log(Integer(Ha.n(0)),2))]
-        # Initializing the temporary hypermatrices.
-        Tp0 = L[0][0]; Tp1 = L[0][1]; Tp2 = L[0][2]
-        # Computing the slice kronecker product
-        for i in range(1,len(L)):
-            Tp0 = Tp0.tensor_product(L[i][0])
-            Tp1 = Tp1.tensor_product(L[i][1])
-            Tp2 = Tp2.tensor_product(L[i][2])
-        Tp0 = (Tp0.n(0))^(1/3)*Tp0
-        Tp1 = (Tp1.n(0))^(1/3)*Tp1
-        Tp2 = (Tp2.n(0))^(1/3)*Tp2
-        #print 'Prod(H, H.transpose(2), H.transpose())= ', Prod(H,H.transpose(2),H.transpose())
-        # Initializing the extended third order hypermatrices
-        M0 = HM(Ha.n(0), 2*Ha.n(0)-1, Ha.n(0),'zero')
-        for j in range(Ha.n(0)-1):
-            for k in range(Ha.n(0)):
-                for i in range(Ha.n(0)):
-                    M0[i,j,k] = -H[i,j,k]
-        for j in range(Ha.n(0), 2*Ha.n(0)):
-            for k in range(Ha.n(0)):
-                for i in range(Ha.n(0)):
-                    M0[i,j-1,k] = Tp0[i,j-Ha.n(0),k]
-        M1 = HM(Ha.n(0), Ha.n(0), 2*Ha.n(0)-1, 'zero')
-        for j in range(Ha.n(0)-1):
-            for k in range(Ha.n(0)):
-                for i in range(Ha.n(0)):
-                    M1[i,k,j] = (H.transpose(2))[i,k,j]
-        for j in range(Ha.n(0), 2*Ha.n(0)):
-            for k in range(Ha.n(0)):
-                for i in range(Ha.n(0)):
-                    M1[i,k,j-1] = Tp1[i,k,j-Ha.n(0)]
-        M2 = HM(2*Ha.n(0)-1, Ha.n(0), Ha.n(0),'zero')
-        for j in range(Ha.n(0)-1):
-            for k in range(Ha.n(0)):
-                for i in range(Ha.n(0)):
-                    M2[j,i,k] = (H.transpose())[j,i,k]
-        for j in range(Ha.n(0), 2*Ha.n(0)):
-            for k in range(Ha.n(0)):
-                for i in range(Ha.n(0)):
-                    M2[j-1,i,k] = Tp2[j-Ha.n(0),i,k]
-        # Filling up the three thirdhypermatrices to be outputed.
-        U = HM(Ha.n(0), (2*Ha.n(0)-1)*Ha.n(1), Ha.n(0), 'zero')
-        for i in range(Ha.n(1)):
-            for j in range(M0.n(1)):
-                for k in range(Ha.n(0)):
-                    for l in range(Ha.n(2)):
-                        U[k,Ha.n(1)*j+i,l] = Ha[k,i,l]*M0[k,j,l]
-        V = HM(Ha.n(0), Ha.n(0), (2*Ha.n(0)-1)*Ha.n(1), 'zero')
-        for i in range(Hb.n(2)):
-            for j in range(M1.n(2)):
-                for k in range(Hb.n(0)):
-                    for l in range(Hb.n(1)):
-                        V[k,l,Ha.n(1)*j+i] = Hb[k,l,i]*M1[k,l,j]
-        W = HM((2*Ha.n(0)-1)*Ha.n(1), Ha.n(0), Ha.n(0),'zero')
-        for i in range(Hc.n(0)):
-            for j in range(M2.n(0)):
-                for k in range(Hc.n(1)):
-                    for l in range(Hc.n(2)):
-                        W[Ha.n(1)*j+i,k,l] = Hc[i,k,l]*M2[j,k,l]
-        return [U, V, W]
     else:
         # return the error message if the input hypermatrix is cubic
         raise ValueError, "The input hypermpatrix are of inapropriate sizes"
@@ -12851,6 +12947,100 @@ def Triangulations(A,Ha,n,sz):
             gu = gu+[Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in Triangulations(A,Ha,i,sz) for g2 in Triangulations(A,Ha,n-i,sz)]
         return gu
 
+def TriangulationsII(A,Ha,n,sz):
+    """
+    Outputs a list of second order hypermatrices each of which have a single nonzero symbolic entry which
+    describes a triangulation of a regular polygon on n vertices. The input matrix is meant to be 
+    upper-triangular matrices. The difference with the implementaiton above is that we do not expand the
+    polynomials. This implementation is well suited for non commuting variables defined over free fields.
+
+     EXAMPLES:
+
+    ::
+
+        sage: sz=4
+        sage: A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+        sage: for i0 in range(1,sz):
+        ....:   for i1 in range(i0):
+        ....:       A[i0,i1]=0
+        sage: L=TriangulationsII(A,A,sz-1,sz)
+        sage: L[0]
+        [[0, 0, 0, a01*a03*a12*a13*a23], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    if n == 1:
+        return [A]
+    else:
+        gu = []
+        for i in range(1,n):
+            gu = gu+[Prod(g1,g2).elementwise_product(Ha) for g1 in TriangulationsII(A,Ha,i,sz) for g2 in TriangulationsII(A,Ha,n-i,sz)]
+        return gu
+
+def generate_triangulation_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which computes triangulation using non-commutative
+    variables. The script starts with a stricly upper-
+    triangular symbolic adjacency matrix whose non-
+    zero entries defined as free variables.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_triangulation_script(4)
+        sage: load('triangulation_4.sage')
+        sage: L[0].printHM()
+        [:, :]=
+        [                  0                   0                   0 a01*a12*a23*a13*a03]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: L[1].printHM()
+        [:, :]=
+        [                  0                   0                   0 a01*a12*a02*a23*a03]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: from subprocess import call
+        sage: call("rm triangulation_4.sage", shell=True)
+        0
+
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrices.
+    A=HM(sz,sz,'a')
+    for i in rg(sz):
+        for j in rg(sz):
+            if i >= j:
+                A[i,j]=0
+    Al=[HM(sz,sz,'a')[i,j] for i in rg(sz) for j in rg(sz) if i<j]
+    # Creating the file name string.
+    filename='triangulation_'+str(sz)+'.sage'
+    # Opening the file
+    f=open(filename,'w')
+    #f.write('# Loading the Hypermatrix Package\n')
+    #f.write("load('./Hypermatrix_Algebra_tst.sage')\n\n")
+    f.write('# Initializing the number of constraints and the number of variableas\n')
+    f.write('sz='+str(sz)+'\n\n')
+    f.write('# Initialization of the variables\n')
+    f.write("La=[HM(sz,sz,'a')[i,j] for i in rg(sz) for j in rg(sz) if i<j]\n")
+    f.write('# Initializing the free variables\n')
+    f.write('F=FreeAlgebra(QQ,len(La),La)\n')
+    f.write('F.<'+str(Al)[1:len(str(Al))-1]+'>=FreeAlgebra(QQ,len(La))\n\n')
+    f.write('# Initialization of the hypermatrices with symbolic variable entries which do not commute\n')
+    f.write('Ha=HM(sz,sz,'+str(A.list())+')\n')
+    f.write('L=TriangulationsII(Ha,Ha,sz-1,sz)')
+    # Closing the file
+    f.close()
+
 def TriangulationGraphsEdgeList(sz):
     """
     Takes as input the size paramater which corresponds to the number of vertices of the graph
@@ -12994,10 +13184,10 @@ def Tetrahedralizations(A,B,n,sz):
 
     ::
 
-        sage: sz=4; S=HM(sz,sz,sz,'zero') 
-        sage: for i in range(sz): 
+        sage: sz=4; S=HM(sz,sz,sz,'zero')
+        sage: for i in range(sz):
         ....:   for j in range(sz):
-        ....:       for k in range(sz):       
+        ....:       for k in range(sz):
         ....:           if i<j and j<k:
         ....:               S[i,j,k]=1; S[i,k,j]=1
         sage: A=HM(sz,sz,sz,'a').elementwise_product(S)
@@ -13428,19 +13618,18 @@ def GeneralHypermatrixTransform(Hl, X):
 
     ::
 
-        sage: t=var('t'); Q=HM(2,2,[cos(t),sin(t),-sin(t), cos(t)])
-        sage: Y=GeneralHypermatrixTransform([Q.transpose(),Q], HM(2,1,'x')); Y.canonicalize_radical()
-        [[-x00*cos(t) + x10*sin(t)], [x10*cos(t) + x00*sin(t)]]
+        sage: sz=2; t=var('t'); Q=HM(sz,sz,[cos(t),sin(t),-sin(t), cos(t)])
+        sage: Y=GeneralHypermatrixTransform([Q.transpose(),Q], HM(2,1,var_list('x',sz))); Y.canonicalize_radical()
+        [[-x0*cos(t) + x1*sin(t)], [x1*cos(t) + x0*sin(t)]]
         sage: GeneralHypermatrixTransform([Q.transpose(),Q], Y).canonicalize_radical()
-        [[(cos(t)^2 + sin(t)^2)*x00], [(cos(t)^2 + sin(t)^2)*x10]]
-        sage: x,y=var('x,y'); A=HM(2,2,'a')
-        sage: GeneralHypermatrixTransform([A.transpose(),A], HM(2,1,[x,y])).canonicalize_radical()
-        [[a00*x + a01*y], [a10*x + a11*y]]
-        sage: x,y,a00,a10,a01,a11=var('x,y,a00,a10,a01,a11')
-        sage: P0=HM(2,1,[x,y]); A=HM(2,2,[a00, a10, a01, a11]); B=(a00*a11-a01*a10)^(-1)*HM(2,2,[a11, -a10, -a01, a00])
+        [[(cos(t)^2 + sin(t)^2)*x0], [(cos(t)^2 + sin(t)^2)*x1]]
+        sage: sz=2; A=HM(2,2,'a')
+        sage: GeneralHypermatrixTransform([A.transpose(),A], HM(2,1,var_list('x',sz))).canonicalize_radical()
+        [[a00*x0 + a01*x1], [a10*x0 + a11*x1]]
+        sage: sz=2; P0=HM(sz,1,var_list('x',sz)); A=HM(sz,sz,'a'); B=i2x2(A)
         sage: P1=GeneralHypermatrixTransform([A,B],P0).canonicalize_radical()
         sage: sum(f^2 for f in P1.list()).canonicalize_radical()
-        x^2 + y^2
+        ix0^2 + x1^2
 
 
     AUTHORS:
@@ -13471,7 +13660,7 @@ def weighted_hypermatrix_minor(A):
          [[1/2*a00, 0, a02], [0, 0, 0], [a20, 0, 1/2*a22]],
          [[1/2*a00, a01, 0], [a10, 1/2*a11, 0], [0, 0, 0]]]
         sage: sum(L)
-        [[a00, a01, a02], [a10, a11, a12], [a20, a21, a22]] 
+        [[a00, a01, a02], [a10, a11, a12], [a20, a21, a22]]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -15199,7 +15388,7 @@ def LeftRightDiagonalDependence3x3x3(A):
     [F,g]=ConstraintFormatorHM(Eq, X.list()[-sz:])
     # Obtatining the determinant of the matrix F
     dtF=F.det()
-    # Obtaining the parametrization by solving in the variable X[i,j].
+    # Obtaining the parametrization by solving in the variable X[sz-1, sz-2].
     v=X[sz-1, sz-2]
     a0=dtF.subs(v==0)
     a1=diff(dtF, v, 1).subs(v==0)/factorial(1)
@@ -15332,12 +15521,12 @@ def Remnant(p, q, vrbl):
     - Edinah K. Gnang
     """
     # Updating the firt input polynomial to make it monic in vrbl
-    p=p/(p.diff(vrbl,p.degree(vrbl)).subs(vrbl==0)/factorial(p.degree(vrbl)))
+    p=p/(p.diff(vrbl,Integer(p.degree(vrbl))).subs(vrbl==0)/factorial(Integer(p.degree(vrbl))))
     #print 'p=',p
     # Initialization of the list
     L=[]; f=expand(q)
     #print 'Initial f=',f
-    for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+    for d in range(Integer(f.degree(vrbl)-p.degree(vrbl)),-1,-1):
         f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
         #print '    f=',f
     L.append(f)
@@ -15372,12 +15561,12 @@ def RemnantII(p, q, vrbl):
     - Edinah K. Gnang
     """
     # Updating the firt input polynomial to make it monic in vrbl
-    p=p/(p.diff(vrbl,p.degree(vrbl)).subs(vrbl==0)/factorial(p.degree(vrbl)))
+    p=p/(p.diff(vrbl,Integer(p.degree(vrbl))).subs(vrbl==0)/factorial(Integer(p.degree(vrbl))))
     #print 'p=',p
     # Initialization of the list
     L=[]; f=expand(q)
     #print 'Initial f=',f
-    for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+    for d in range(Integer(f.degree(vrbl)-p.degree(vrbl)),-1,-1):
         f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
         #print '    f=',f
     L.append(f)
