@@ -88,6 +88,12 @@ class HM:
         [:, :, 1]=
         [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
         [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
+        sage: HM(3,3,3,'a').slice(A, [2], 'dpt') # Illustrating the slicing
+        [:, :, 0]=
+        [a002 a012 a022]
+        [a102 a112 a122]
+        [a202 a212 a222] 
+        <BLANKLINE>
     """
     def __init__(self,*args):
         if len(args) == 1:
@@ -742,6 +748,26 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixSubstituteN(self, Dct)
+
+    def substituteHMinto(self, poly, vrbl):
+        """
+        Procedure for computing substitution of the Hypermatrix into
+        the input polynomial
+
+        EXAMPLES:
+
+        ::
+
+            sage: x = var('x'); A=HM(2,2,'a')
+            sage: p=x^2 - A.trace()*x + A.det()
+            sage: A.substituteHMinto(p, x).expand()
+            [[0, 0], [0, 0]]
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return substituteHM(poly, vrbl, self)
 
     def transpose(self, i=1):
         """
@@ -1584,6 +1610,44 @@ class HM:
             return HM(self.n(0)-1,self.n(1)-1, [self[i,j] for j in rg(self.n(1)) for i in rg(self.n(0)) if j!=v and i!=u])
         else :
             raise ValueError, "Not supported for hypermatrices of order > 2 and evry dimension must exceed 1"
+
+    def slice(self,L,strg):
+        """
+        Outputs the result of the slicifing 
+
+
+        EXAMPLES:
+ 
+        ::
+
+            sage: HM(3,3,'a').slice([0], 'row').printHM()
+            [:, :]=
+            [a00 a01 a02]
+            <BLANKLINE>
+            sage: HM(3,3,'a').slice([1], 'col').printHM()
+            [:, :]=
+            [a01]
+            [a11]
+            [a21]
+            <BLANKLINE>
+            sage: HM(3,3,3,'a').slice(A, [2], 'dpt')
+            [:, :, 0]=
+            [a002 a012 a022]
+            [a102 a112 a122]
+            [a202 a212 a222] 
+            <BLANKLINE>
+  
+
+        AUTHORS:
+        - Edinah K. Gnang
+        - To Do: 
+        """
+        if self.order()==2:
+            return SecondOrderSlicer(self, L, strg)
+        if self.order()==3:
+            return ThirdOrderSlicer(self, L, strg)
+        else :
+            raise ValueError, "Not supported for hypermatrices of order > 3"
 
 
 def MatrixGenerate(nr, nc, c):
@@ -3837,7 +3901,7 @@ def Companion_matrix(p,vrbl):
     ::
 
         sage: x=var('x'); p=sum(HM(5,'a').list()[k]*x^(k) for k in range(5))
-        sage: A=Companion_matrix(p,x);A.characteristic_polynomial()
+        sage: A=Companion_matrix(p,x); A.characteristic_polynomial()
         x^4 + a3/a4*x^3 + a2/a4*x^2 + a1/a4*x + a0/a4
 
     AUTHORS:
@@ -4093,6 +4157,7 @@ def substituteHM(p, vrbl, A):
     The functions takes as input a polynomial p,
     a variable vrbl, and a hypermatrix A of order 2.
     The function outputs the polynomial in the variable.
+
 
     EXAMPLES:
 
@@ -16357,4 +16422,100 @@ def generate_general_linear_constraints(sz,l):
     f.write('Hr.printHM()\n')
     # Closing the file
     f.close()
+
+def SecondOrderSlicer(A, L, strg):
+    """
+    Outputs slices specified by index list L.
+    the last string input is either row or col
+    and determines the slices to be collected
+    into a hypermatrix
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; A=HM(sz,sz,'a')
+        sage: SecondOrderSlicer(A, [0], 'row').printHM()
+        [:, :]=
+        [a00 a01 a02]
+        <BLANKLINE>
+        sage: SecondOrderSlicer(A, [1], 'col').printHM()
+        [:, :]=
+        [a01]
+        [a11]
+        [a21]
+        <BLANKLINE>
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if   strg=='row':
+        return HM(len(L),A.n(1),[A[i,j] for j in rg(A.n(1)) for i in L])
+    elif strg=='col':
+        return HM(A.n(0),len(L),[A[i,j] for j in L for i in rg(A.n(0))])
+    else:
+        raise ValueError, "Expected the string input to be either row or col"
+
+def ThirdOrderSlicer(A, L, strg):
+    """
+    Outputs slices specified by index list L.
+    the last string input is either row, col or dpt
+    and determines the slices to be collected
+    into a hypermatrix
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; A=HM(sz,sz,sz,'a')
+        sage: ThirdOrderSlicer(A, [0], 'row').printHM()
+        [:, :, 0]=
+        [a000 a010 a020]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001 a011 a021]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a002 a012 a022]
+        <BLANKLINE>
+        sage: ThirdOrderSlicer(A, [1], 'col').printHM()
+        [:, :, 0]=
+        [a010]
+        [a110]
+        [a210]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a011]
+        [a111]
+        [a211]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a012]
+        [a112]
+        [a212]
+        <BLANKLINE>
+        sage: ThirdOrderSlicer(A, [2], 'dpt').printHM()
+        [:, :, 0]=
+        [a002 a012 a022]
+        [a102 a112 a122]
+        [a202 a212 a222] 
+        <BLANKLINE>
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if   strg=='row':
+        return HM(len(L),A.n(1),A.n(2),[A[i,j,k] for k in rg(A.n(2)) for j in rg(A.n(1)) for i in L])
+    elif strg=='col':
+        return HM(A.n(0),len(L),A.n(2),[A[i,j,k] for k in rg(A.n(2)) for j in L for i in rg(A.n(0))])
+    elif strg=='dpt':
+        return HM(A.n(0),A.n(1),len(L),[A[i,j,k] for k in L for j in rg(A.n(1)) for i in rg(A.n(0))])
+    else:
+        raise ValueError, "Expected the string input to be either row, col or dpt"
 
