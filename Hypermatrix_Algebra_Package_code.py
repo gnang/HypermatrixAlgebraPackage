@@ -8,10 +8,10 @@ _sage_const_5 = Integer(5); _sage_const_4 = Integer(4); _sage_const_9 = Integer(
 _sage_const_8 = Integer(8)
 
 #*************************************************************************#
-#    Copyright (C) 2015, 2016, 2017 Edinah K.Gnang <kgnang@gmail.com>,    #
-#                          Ori Parzanchevski,                             #
-#                          Yuval Filmus,                                  #
-#                          Doron Zeilberger,                              #
+# Copyright (C) 2015, 2016, 2017, 2018 Edinah K.Gnang <kgnang@gmail.com>, #
+#                                      Ori Parzanchevski,                 #
+#                                      Yuval Filmus,                      #
+#                                      Doron Zeilberger,                  #
 #                                                                         #
 #  Distributed under the terms of the GNU General Public License (GPL)    #
 #                                                                         #
@@ -41,7 +41,7 @@ class HM:
     
         sage: HM(2,2,2,'a') # Initialization of a third order hypermatrix
         [[[a000, a001], [a010, a011]], [[a100, a101], [a110, a111]]]
-        sage: od=2; sz=2; HM(od,sz,'kronecker') # creating a Kronecker delta
+        sage: od=2; sz=2; HM(od,sz,'kronecker') # creating a Kronecker delta or identity matrix
         [[1, 0], [0, 1]]
         sage: od=2; HM(od,[0,1,2],'perm')
         [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
@@ -57,7 +57,9 @@ class HM:
         [[[a00, 0], [0, a01]], [[a10, 0], [0, a11]]]
         sage: HM(3,'x').list() # creatling a list of variables
         [x0, x1, x2]
-        sage: od=2; sz=2; HM(od,HM(sz,'a').list(),'diag') # diagonal matrix
+        sage: sz=3; var_list('x',sz) # alternative approach to creatling a list of variables
+        [x0, x1, x2]
+        sage: od=2; sz=2; HM(od,var_list('a',sz),'diag') # diagonal matrix
         [[a0, 0], [0, a1]]
         sage: La=HM(2, 2, 2, 'a').list(); Lb=HM(2, 2, 2, 'b').list(); Lc=HM(2, 2, 2, 'c').list() # Initialization of the variables
         sage: F = FreeAlgebra(QQ, 24, La + Lb + Lc)
@@ -95,11 +97,17 @@ class HM:
         [:, :, 1]=
         [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
         [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
+        sage: HM(3,3,3,'a').slice(A, [2], 'dpt') # Illustrating the slicing
+        [:, :, 0]=
+        [a002 a012 a022]
+        [a102 a112 a122]
+        [a202 a212 a222] 
+        <BLANKLINE>
     """
     def __init__(self,*args):
-        if len(args) == _sage_const_1 :
-            inp = args[_sage_const_0 ]
-            if type(inp)==type(Matrix(SR,_sage_const_2 ,_sage_const_1 ,[var('x'),var('y')])) or type(inp)==type(Matrix(RR,_sage_const_2 ,_sage_const_1 ,[_sage_const_1 ,_sage_const_2 ])) or type(inp)==type(Matrix(CC,_sage_const_2 ,_sage_const_1 ,[_sage_const_1 ,_sage_const_1 ])):
+        if len(args) == 1:
+            inp = args[0]
+            if type(inp)==type(Matrix(SR,2,1,[var('x'),var('y')])) or type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
                 self.hm=DiagonalHypermatrix(inp)
             elif type(inp) == list:
                 self.hm = inp
@@ -112,22 +120,22 @@ class HM:
                 from scipy import misc
                 # Defining the input Pictures
                 X  = pylab.imread(inp)
-                sz = max(len(X),len(X[_sage_const_0 ]),len(X[_sage_const_0 ][_sage_const_0 ]))
-                args = (len(X), len(X[_sage_const_0 ]), len(X[_sage_const_0 ][_sage_const_0 ]))
+                sz = max(len(X),len(X[0]),len(X[0][0]))
+                args = (len(X), len(X[0]), len(X[0][0]))
                 T = apply(HypermatrixGenerateAllZero, args)
                 # Filling up the image Hypermatrix
                 for i in range(len(X)):
-                    for j in range(len(X[_sage_const_0 ])):
-                        for k in range(len(X[_sage_const_0 ][_sage_const_0 ])):
+                    for j in range(len(X[0])):
+                        for k in range(len(X[0][0])):
                             T[i][j][k] = X[i,j,k]
                 self.hm = T
             else:
                 raise ValueError, "Expected list as input when generating diagonal hypermatrix"
             return
         # Obtaining the last argument
-        s = args[-_sage_const_1 ]
+        s = args[-1]
         # Initializing the dimension parameters
-        dims = args[:-_sage_const_1 ]
+        dims = args[:-1]
         if s == 'one':
             self.hm = apply(HypermatrixGenerateAllOne, dims)
         elif s == 'zero':
@@ -135,26 +143,26 @@ class HM:
         elif s == 'shift':
             self.hm = apply(HypermatrixGenerateII, dims)
         elif s == 'perm':
-            if dims[_sage_const_0 ]==_sage_const_2 :
+            if dims[0]==2:
                 # Initialization of the size parameter
-                sz=len(dims[_sage_const_1 ])
-                Id=HM(_sage_const_2 ,sz,'kronecker')
-                self.hm=sum(HM(sz,_sage_const_1 ,[Id[i,dims[_sage_const_1 ][k]] for i in range(sz)])*HM(_sage_const_1 ,sz,[Id[k,j] for j in range(sz)]) for k in range(sz)).listHM()
-            elif dims[_sage_const_0 ]==_sage_const_3 :
-                self.hm=HypermatrixPermutation(dims[_sage_const_1 ])
+                sz=len(dims[1])
+                Id=HM(2,sz,'kronecker')
+                self.hm=sum(HM(sz,1,[Id[i,dims[1][k]] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz)).listHM()
+            elif dims[0]==3:
+                self.hm=HypermatrixPermutation(dims[1])
             else:
                 raise ValueError, "not supported for order %d hypermatrices" % len(dims)
         elif s == 'kronecker':
-            self.hm=apply(GeneralHypermatrixKroneckerDelta, args[:-_sage_const_1 ]).listHM()
+            self.hm=apply(GeneralHypermatrixKroneckerDelta, args[:-1]).listHM()
         elif s == 'diag':
-            self.hm=apply(GeneralHypermatrixMainDiag, args[:-_sage_const_1 ]).listHM()
+            self.hm=apply(GeneralHypermatrixMainDiag, args[:-1]).listHM()
         elif s == 'sym':
-            if (len(dims) == _sage_const_3 ) and (dims[_sage_const_0 ]==_sage_const_2 ):
-                self.hm=SymMatrixGenerate(dims[_sage_const_1 ],dims[_sage_const_2 ])
-            elif (len(dims) == _sage_const_3 ) and (dims[_sage_const_0 ]==_sage_const_3 ):
-                self.hm=SymHypermatrixGenerate(dims[_sage_const_1 ],dims[_sage_const_2 ])
+            if (len(dims) == 3) and (dims[0]==2):
+                self.hm=SymMatrixGenerate(dims[1],dims[2])
+            elif (len(dims) == 3) and (dims[0]==3):
+                self.hm=SymHypermatrixGenerate(dims[1],dims[2])
             else:
-                raise ValueError, "SymHypermatrixGenerate not supported for order %d hypermatrices" % dims[_sage_const_0 ]
+                raise ValueError, "SymHypermatrixGenerate not supported for order %d hypermatrices" % dims[0]
         elif type(s) == list:
             self.hm=(apply(List2Hypermatrix, args)).listHM()
         else:
@@ -186,19 +194,19 @@ class HM:
 
         - Edinah K. Gnang
         """
-        if self.order()==_sage_const_2  and other.order()==_sage_const_2  and self.n(_sage_const_0 )==other.n(_sage_const_1 ):
+        if self.order()==2 and other.order()==2 and self.n(0)==other.n(1):
             return mprod(other, self)
-        elif self.order()==_sage_const_2  and self.is_hypercolumn() and prod(self.dimensions())>_sage_const_1 :
+        elif self.order()==2 and self.is_hypercolumn() and prod(self.dimensions())>1:
             return vec_exp(self, other)
-        elif self.order()==_sage_const_2  and other==-_sage_const_1  and self.is_cubical():
+        elif self.order()==2 and other==-1 and self.is_cubical():
             return self.inverse()
-        elif self.order()==_sage_const_2  and other==_sage_const_0  and self.is_cubical():
-            return HM(self.order(), self.n(_sage_const_0 ), 'kronecker')
-        elif self.order()==_sage_const_2  and type(other)==type(_sage_const_5 ) and self.is_cubical():
-            if other > _sage_const_0 :
-                return self*(self**(other-_sage_const_1 ))
-            elif other < _sage_const_0 :
-                return self.inverse()**(-other)
+        elif self.order()==2 and other==0 and self.is_cubical():
+            return HM(self.order(), self.n(0), 'kronecker')
+        elif self.order()==2 and type(other)==type(5) and self.is_cubical():
+            if other > 0:
+                return self*(self^(other-1))
+            elif other < 0:
+                return self.inverse()^(-other)
         elif self.dimensions()==other.dimensions():
             return GeneralHypermatrixHadamardExponent(self,other)
         else:
@@ -227,14 +235,14 @@ class HM:
 
         - Edinah K. Gnang
         """
-        if self.order()==_sage_const_2 :
+        if self.order()==2:
             return other*self.inverse()
     def __radd__(self, other):
         return GeneralHypermatrixAdd(self,other)
     def __neg__(self):
-        return GeneralHypermatrixScale(self,-_sage_const_1 )
+        return GeneralHypermatrixScale(self,-1)
     def __sub__(self, other):
-        return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-_sage_const_1 ))
+        return GeneralHypermatrixAdd(self, GeneralHypermatrixScale(other,-1))
     def __mul__(self, other):
         """
         This method returns the BM product, it
@@ -285,10 +293,10 @@ class HM:
     def __setitem__(self, i, v):
         if   i.__class__.__name__=='tuple':
             tmp = self.hm
-            while len(i)>_sage_const_1 :
-                tmp = tmp[i[_sage_const_0 ]]
-                i = i[_sage_const_1 :]
-            tmp[i[_sage_const_0 ]] = v
+            while len(i)>1:
+                tmp = tmp[i[0]]
+                i = i[1:]
+            tmp[i[0]] = v
     def __call__(self, *inpts):
         """
         This method uses the call functionality
@@ -515,19 +523,19 @@ class HM:
         AUTHORS:
         - Edinah K. Gnang
         """
-        if  self.order()==_sage_const_2 :
+        if  self.order()==2:
             return SecondOrderSliceKroneckerProduct(self, V)
-        elif self.order()==_sage_const_3 :
+        elif self.order()==3:
             return ThirdOrderSliceKroneckerProduct(self, V)
-        elif self.order()==_sage_const_4 :
+        elif self.order()==4:
             return FourthOrderSliceKroneckerProduct(self, V)
-        elif self.order()==_sage_const_5 :
+        elif self.order()==5:
             return FifthOrderSliceKroneckerProduct(self, V)
-        elif self.order()==_sage_const_6 :
+        elif self.order()==6:
             return SixthOrderSliceKroneckerProduct(self, V)
-        elif self.order()==_sage_const_7 :
+        elif self.order()==7:
             return SeventhOrderSliceKroneckerProduct(self, V)
-        elif self.order()>_sage_const_7 :
+        elif self.order()>7:
             return GeneralHypermatrixKroneckerProduct(self, V)
         else :
             raise ValueError,"not supported for order %d hypermatrices" % self.order()
@@ -549,11 +557,11 @@ class HM:
         AUTHORS:
         - Edinah K. Gnang
         """
-        if m == _sage_const_1 :
+        if m == 1:
             return self.copy()
-        elif m in ZZ and m > _sage_const_1  :
+        elif m in ZZ and m > 1 :
             Tmp=self.copy()
-            for i in range(m-_sage_const_1 ):
+            for i in range(m-1):
                 Tmp=Tmp.tensor_product(self)  
             return Tmp
         else:
@@ -750,7 +758,27 @@ class HM:
         """
         return GeneralHypermatrixSubstituteN(self, Dct)
 
-    def transpose(self, i=_sage_const_1 ):
+    def substituteHMinto(self, poly, vrbl):
+        """
+        Procedure for computing substitution of the Hypermatrix into
+        the input polynomial
+
+        EXAMPLES:
+
+        ::
+
+            sage: x = var('x'); A=HM(2,2,'a')
+            sage: p=x^2 - A.trace()*x + A.det()
+            sage: A.substituteHMinto(p, x).expand()
+            [[0, 0], [0, 0]]
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return substituteHM(poly, vrbl, self)
+
+    def transpose(self, i=1):
         """
         Outputs a list of lists associated with the general
         transpose as defined by the cyclic permutation of indices.
@@ -793,7 +821,7 @@ class HM:
         A = self 
         return GeneralHypermatrixConjugate(A)
 
-    def conjugate_transpose(self, i=_sage_const_1 ):
+    def conjugate_transpose(self, i=1):
         """
         Outputs the conjugate transpose of the hypermatrix. 
 
@@ -811,9 +839,9 @@ class HM:
         """ 
         t = Integer(mod(i, self.order()))
         A = self 
-        for i in range(_sage_const_1 ,t+_sage_const_1 ):
+        for i in range(1,t+1):
             A = GeneralHypermatrixCyclicPermute(A)
-        if Integer(mod(i,_sage_const_2 ))==_sage_const_0 :
+        if Integer(mod(i,2))==0:
             return A
         else:
             return GeneralHypermatrixConjugate(A)
@@ -822,10 +850,10 @@ class HM:
         return len(self.hm)
 
     def ncols(self):
-        return len(self.hm[_sage_const_0 ])
+        return len(self.hm[0])
 
     def ndpts(self):
-        return len(self.hm[_sage_const_0 ][_sage_const_0 ])
+        return len(self.hm[0][0])
 
     def inverse(self):
         """
@@ -845,8 +873,8 @@ class HM:
 
         - Edinah K. Gnang
         """
-        if self.order()==_sage_const_2  and self.is_cubical():
-            return HM(self.n(_sage_const_0 ), self.n(_sage_const_1 ), Matrix(SR, self.listHM()).inverse().transpose().list()) 
+        if self.order()==2 and self.is_cubical():
+            return HM(self.n(0), self.n(1), Matrix(SR, self.listHM()).inverse().transpose().list()) 
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
 
@@ -875,13 +903,13 @@ class HM:
 
         - Edinah K. Gnang
         """
-        if self.order()==_sage_const_2 :
+        if self.order()==2:
             L=self.listHM()
             print '[:, :]=\n'+Matrix(SR,L).str()
-        elif self.order()==_sage_const_3 :
+        elif self.order()==3:
             L=self.listHM()
-            for dpth in range(self.n(_sage_const_2 )):
-                print '[:, :, '+str(dpth)+']=\n'+Matrix(SR,self.n(_sage_const_0 ),self.n(_sage_const_1 ),[L[i][j][dpth] for i in range(self.n(_sage_const_0 )) for j in range(self.n(_sage_const_1 ))]).str()+'\n'
+            for dpth in range(self.n(2)):
+                print '[:, :, '+str(dpth)+']=\n'+Matrix(SR,self.n(0),self.n(1),[L[i][j][dpth] for i in range(self.n(0)) for j in range(self.n(1))]).str()+'\n'
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
 
@@ -905,13 +933,13 @@ class HM:
 
         - Edinah K. Gnang
         """
-        if self.order()==_sage_const_2 :
+        if self.order()==2:
             L=self.listHM()
             print '[:, :]=\n'+latex(Matrix(SR,L))
-        elif self.order()==_sage_const_3 :
+        elif self.order()==3:
             L=self.listHM()
-            for dpth in range(self.n(_sage_const_2 )):
-                print '[:, :, '+str(dpth)+']=\n'+latex(Matrix(SR,self.n(_sage_const_0 ),self.n(_sage_const_1 ),[L[i][j][dpth] for i in range(self.n(_sage_const_0 )) for j in range(self.n(_sage_const_1 ))]))+'\n'
+            for dpth in range(self.n(2)):
+                print '[:, :, '+str(dpth)+']=\n'+latex(Matrix(SR,self.n(0),self.n(1),[L[i][j][dpth] for i in range(self.n(0)) for j in range(self.n(1))]))+'\n'
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
 
@@ -932,16 +960,16 @@ class HM:
 
         - Edinah K. Gnang
         """
-        if i==_sage_const_0 :
+        if i==0:
             return self.nrows()
-        elif i==_sage_const_1 :
+        elif i==1:
             return self.ncols()
-        elif i==_sage_const_2 :
+        elif i==2:
             return self.ndpts()
         else:
             tmp=self.listHM()
             for j in range(i):
-                tmp=tmp[_sage_const_0 ]
+                tmp=tmp[0]
             return len(tmp)
 
     def list(self):
@@ -965,11 +993,11 @@ class HM:
         # Main loop canonicaly listing the elements
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             # Appending to the list
             lst.append(self[tuple(entry)])
         return lst
@@ -1010,7 +1038,7 @@ class HM:
 
         - Edinah K. Gnang
         """
-        if self.order()<=_sage_const_2 :
+        if self.order()<=2:
             return Matrix(SR,self.listHM())
         else:
             raise ValueError, "not supported for order %d hypermatrices" %self.order()
@@ -1031,11 +1059,11 @@ class HM:
 
         - Edinah K. Gnang
         """
-        cnt = _sage_const_0 
+        cnt = 0
         H = self.listHM()
         while type(H) == type([]):
-            H = H[_sage_const_0 ]
-            cnt = cnt+_sage_const_1 
+            H = H[0]
+            cnt = cnt+1
         return cnt
 
     def dimensions(self):
@@ -1086,11 +1114,11 @@ class HM:
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry = [Integer(mod(i,l[_sage_const_0 ]))]
-                sm = Integer(mod(i,l[_sage_const_0 ]))
-                for k in range(len(l)-_sage_const_1 ):
-                    entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                    sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+                entry = [Integer(mod(i,l[0]))]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
                 booldim = True
                 for j in rg(self.order()):
                     if entry[j] >= self.n(j):
@@ -1099,7 +1127,7 @@ class HM:
                 if  booldim:
                     Rh[tuple(entry)]=self[tuple(entry)]
                 else:
-                    Rh[tuple(entry)]=_sage_const_0 
+                    Rh[tuple(entry)]=0
             return Rh
         elif len(dimLst) > self.order():
             Rh = apply(HM, [max(dimLst[z],self.n(z)) for z in self.dimensions()]+[dimLst[z] for z in rg(self.order(),len(dimLst))]+['zero'])
@@ -1107,25 +1135,25 @@ class HM:
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry = [Integer(mod(i,l[_sage_const_0 ]))]
-                sm = Integer(mod(i,l[_sage_const_0 ]))
-                for k in range(len(l)-_sage_const_1 ):
-                    entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                    sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+                entry = [Integer(mod(i,l[0]))]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
                 booldim = True
                 for j in rg(self.order()):
                     if entry[j] >= self.n(j):
                         booldim = False
                         break
-                if entry[self.order():] == [_sage_const_0  for z in rg(self.order(),len(dimLst))] and booldim:
+                if entry[self.order():] == [0 for z in rg(self.order(),len(dimLst))] and booldim:
                     Rh[tuple(entry)]=self[tuple(entry[:self.order()])]
                 else:
-                    Rh[tuple(entry)]=_sage_const_0 
+                    Rh[tuple(entry)]=0
             return Rh
         else:
             raise ValueError, "The order must not be smaller the starting hypermatrix"
 
-    def fill_with(self, T, st=_sage_const_0 ):
+    def fill_with(self, T, st=0):
         """
         returns a hypermatrix whose top left corner is replaced with the entries a same order
         but smaller size input hypermatrix T. This method generalizes slightly the zero padding
@@ -1160,11 +1188,11 @@ class HM:
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i, l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i, l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             booldim = True
             for j in rg(self.order()):
                 if entry[j] >= T.n(j):
@@ -1195,21 +1223,21 @@ class HM:
     def append_index(self,indx):
         return GeneralHypermatrixAppendIndex(self,indx)
 
-    def norm(self,p=_sage_const_2 ):
+    def norm(self,p=2):
         if p==Infinity:
             return max([abs(i) for i in self.list() if not i.is_zero()])
-        elif p==_sage_const_0 :
-            return sum([_sage_const_1  for i in self.list() if not i.is_zero()])
-        elif p==_sage_const_1 :
+        elif p==0:
+            return sum([1 for i in self.list() if not i.is_zero()])
+        elif p==1:
             return sum([abs(i) for i in self.list() if not i.is_zero()])
-        elif p>_sage_const_1 :
-            return sum([abs(i)**p for i in self.list()])**(_sage_const_1 /p)
+        elif p>1:
+            return sum([abs(i)^p for i in self.list()])^(1/p)
         else:
             raise ValueError, "Expect a real number greater or equal to 0 or Infinity"
 
     def trace(self):
-        if self.order()==_sage_const_2 :
-            return sum(self[i,i] for i in range(min(self.n(_sage_const_0 ),self.n(_sage_const_1 ))))
+        if self.order()==2:
+            return sum(self[i,i] for i in range(min(self.n(0),self.n(1))))
         else:
             raise ValueError, "Expects a second order hypermatrix"
 
@@ -1219,39 +1247,67 @@ class HM:
     def fast_reduce(self, monom, subst):
         return apply(HM, self.dimensions()+[[fast_reduce(self.list()[i], monom, subst) for i in rg(prod(self.dimensions()))]])
 
+    def operands(self):
+        # Turning the hypermatrix into a list
+        L=self.list()
+        # Boolean variables checking that the operator is the same
+        # for all entries.
+        CommonOperator=True
+        # max_len keeps track of the maximum number of operands.
+        max_len=len(L[0].operands())
+        for f in L[1:]:
+            if f.operator() != L[0].operator():
+                CommonOperator=False
+                break
+            else:
+                if max_len < len(f.operands()):
+                    max_len = len(f.operands())
+        if CommonOperator==False:
+            raise ValueError, "Expects the same operator for all entries."
+        else:
+            # Initilization of the list of operands
+            Lst=[f.operands()+[0 for i in rg(max_len-len(f.operands()))] for f in L]
+            # Initialization of the list which will store the hypermatrix operands
+            LstOprds=[]
+            # Looping over operands. The operamnds order is the default
+            # sage lexicographic order
+            for i in rg(max_len):
+                LstOprds.append(apply(HM, self.dimensions()+[[l[i] for l in Lst]]))  
+            return LstOprds
+
     def mod(self, m):
         return apply(HM, self.dimensions()+[[Integer(mod(self.list()[i], m)) for i in rg(prod(self.dimensions()))]])
 
     def adjoint(self):
-        if self.order()==_sage_const_2 :
+        if self.order()==2:
             return Matrix2HM((self.matrix()).adjoint())
         else:
             raise ValueError, "Expects a second order hypermatrix"
 
     def per(self):
         if self.is_cubical():
-            if self.n(_sage_const_0 )==_sage_const_1 :
-                return self.list()[_sage_const_0 ]
-            elif self.order()==_sage_const_2 :
+            if self.n(0)==1:
+                return self.list()[0]
+            elif self.order()==2:
                 return Per(self)
         else:
             raise ValueError, "Expects a cubical second order hypermatrix"
 
     def det(self):
         if self.is_cubical():
-            if self.n(_sage_const_0 )==_sage_const_1 :
-                return self.list()[_sage_const_0 ]
-            elif self.n(_sage_const_0 )==_sage_const_2 :
+            if self.n(0)==1:
+                return self.list()[0]
+            elif self.n(0)==2:
                 return general_side_length_2_det(self)
-            elif self.order()==_sage_const_2 :
+            elif self.order()==2:
                 return Deter(self)
-            elif self.order()==_sage_const_3 :
+            elif self.order()==3:
                 return ThirdOrderDeter(self)
-            elif self.order()==_sage_const_4 :
+            elif self.order()==4:
                 return FourthOrderHyperdeterminant(self)
-            elif self.order()==_sage_const_5 :
+            elif self.order()==5:
                 return FifthOrderHyperdeterminant(self)
-            elif self.order()==_sage_const_6 :
+            elif self.order()==6:
                 return SixthOrderHyperdeterminant(self)
             else:
                 return GeneralHyperdeterminant(self) 
@@ -1268,9 +1324,9 @@ class HM:
             return False
 
     def is_unit(self):
-        if self.n(_sage_const_0 )==self.n(_sage_const_1 ) and self.n(_sage_const_0 )==_sage_const_1  and self.list()==[_sage_const_1 ]:
+        if self.n(0)==self.n(1) and self.n(0)==1 and self.list()==[1]:
             return True
-        elif self.order()==_sage_const_2  and self.n(_sage_const_0 )==self.n(_sage_const_1 ) and self==HM(self.order(),self.n(_sage_const_1 ),'kronecker'):
+        elif self.order()==2 and self.n(0)==self.n(1) and self==HM(self.order(),self.n(1),'kronecker'):
             return True
         else:
             return False
@@ -1279,29 +1335,29 @@ class HM:
         return (self-self.transpose()).is_zero()
 
     def is_cubical(self):
-        return len(Set(self.dimensions()).list())==_sage_const_1 
+        return len(Set(self.dimensions()).list())==1
 
     def is_hypercolumn(self):
-        return Set(self.dimensions()[_sage_const_1 :])==Set([_sage_const_1 ])
+        return Set(self.dimensions()[1:])==Set([1])
 
     def ref(self):
-        if self.order()==_sage_const_2 :
+        if self.order()==2:
             return gaussian_eliminationHMIV(self)
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
     def refII(self):
-        if self.order()==_sage_const_2 :
-            return gaussian_eliminationHMIII(self, HM(self.n(_sage_const_0 ),_sage_const_1 ,'zero'))[_sage_const_0 ]
+        if self.order()==2:
+            return gaussian_eliminationHMIII(self, HM(self.n(0),1,'zero'))[0]
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
     def rref(self):
-        if self.order()==_sage_const_2 :
-            return gauss_jordan_eliminationHMII(self, HM(self.n(_sage_const_0 ),_sage_const_1 ,'zero'))[_sage_const_0 ]
-        elif self.order()==_sage_const_3  and self.is_cubical():
+        if self.order()==2:
+            return gauss_jordan_eliminationHMII(self, HM(self.n(0),1,'zero'))[0]
+        elif self.order()==3 and self.is_cubical():
             # Initializing the size parameter
-            sz=self.n(_sage_const_0 )
+            sz=self.n(0)
             # initializing the list second order slices
             TmpL=[HM(sz, sz, [self[i,j,k] for j in range(sz) for i in range(sz)]).rref() for k in range(sz)]
             # Initilizing the final second order hypermatrix
@@ -1316,27 +1372,27 @@ class HM:
             raise ValueError, "Expected a second order hypermatrix or a cubic third order hypermatrix"
 
     def rrefII(self):
-        if self.order()==_sage_const_2 :
+        if self.order()==2:
             # Initiallization of the size parameter
             sz=max(self.dimensions())
             # Initialization of the identity matrix
-            Id=HM(_sage_const_2 ,sz,'kronecker')
+            Id=HM(2,sz,'kronecker')
             # Initialization of the permutation matrix
-            Hp=sum(HM(sz,_sage_const_1 ,[Id[i,sz-_sage_const_1 -k] for i in range(sz)])*HM(_sage_const_1 ,sz,[Id[k,j] for j in range(sz)]) for k in range(sz))
+            Hp=sum(HM(sz,1,[Id[i,sz-1-k] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz))
             return (Hp.transpose()*((Hp.transpose()*ZeroPadding(self.refII())*Hp).refII())*Hp).refII()
         else:
             raise ValueError, "Expected a second order hypermatrix"
 
     def rank(self):
-        if self.order()==_sage_const_2 :
+        if self.order()==2:
             if self.is_zero():
-                return _sage_const_0 
+                return 0
             else:
-                cnt=_sage_const_0 
+                cnt=0
                 TmpHm=self.ref().copy()
                 for i in range(min(TmpHm.dimensions())):
-                    if not HM(_sage_const_1 ,self.n(_sage_const_1 ),[TmpHm[i,j] for j in range(self.n(_sage_const_1 ))]).is_zero():
-                        cnt=cnt+_sage_const_1 
+                    if not HM(1,self.n(1),[TmpHm[i,j] for j in range(self.n(1))]).is_zero():
+                        cnt=cnt+1
                 return cnt
         else:
             raise ValueError, "Expected a second order hypermatrix"
@@ -1465,7 +1521,7 @@ class HM:
 
         - Edinah K. Gnang (2016-12-11)
         """
-        if self.order()==_sage_const_3 :
+        if self.order()==3:
             if not type(rows)==list:
                 raise TypeError, "rows must be a list of integers"
             if not type(columns)==list:
@@ -1473,16 +1529,16 @@ class HM:
             if not type(depths)==list:
                 raise TypeError, "depths must be a list of integers"
             A = HM(len(rows), len(columns), len(depths), 'zero')
-            r = _sage_const_0  
+            r = 0 
             for i in rows:
-                k = _sage_const_0 
+                k = 0
                 for j in columns:
-                    t = _sage_const_0 
+                    t = 0
                     for l in depths:
                         A[r,k,t]=self.hm[i][j][l]
-                        t += _sage_const_1 
-                    k += _sage_const_1 
-                r += _sage_const_1 
+                        t += 1
+                    k += 1
+                r += 1
             return A
         else:
             raise ValueError, "Expected a third order hypermatrix"
@@ -1518,7 +1574,7 @@ class HM:
         - Edinah K. Gnang (2016-12-11)
 
         """
-        if self.order() == _sage_const_2 :
+        if self.order() == 2:
             from sage.combinat.combination import Combinations
             all_rows = range(self.nrows())
             all_cols = range(self.ncols())
@@ -1527,7 +1583,7 @@ class HM:
                 for cols in Combinations(all_cols,k):
                     m.append(self.matrix_from_rows_and_columns(rows,cols))
             return m
-        elif self.order() == _sage_const_3 :
+        elif self.order() == 3:
             from sage.combinat.combination import Combinations
             all_rows = range(self.nrows())
             all_cols = range(self.ncols())
@@ -1559,10 +1615,48 @@ class HM:
         - Edinah K. Gnang
         - To Do: 
         """
-        if self.order()==_sage_const_2  and self.n(_sage_const_0 )>_sage_const_1  and self.n(_sage_const_1 )>_sage_const_1 :
-            return HM(self.n(_sage_const_0 )-_sage_const_1 ,self.n(_sage_const_1 )-_sage_const_1 , [self[i,j] for j in rg(self.n(_sage_const_1 )) for i in rg(self.n(_sage_const_0 )) if j!=v and i!=u])
+        if self.order()==2 and self.n(0)>1 and self.n(1)>1:
+            return HM(self.n(0)-1,self.n(1)-1, [self[i,j] for j in rg(self.n(1)) for i in rg(self.n(0)) if j!=v and i!=u])
         else :
             raise ValueError, "Not supported for hypermatrices of order > 2 and evry dimension must exceed 1"
+
+    def slice(self,L,strg):
+        """
+        Outputs the result of the slicifing 
+
+
+        EXAMPLES:
+ 
+        ::
+
+            sage: HM(3,3,'a').slice([0], 'row').printHM()
+            [:, :]=
+            [a00 a01 a02]
+            <BLANKLINE>
+            sage: HM(3,3,'a').slice([1], 'col').printHM()
+            [:, :]=
+            [a01]
+            [a11]
+            [a21]
+            <BLANKLINE>
+            sage: HM(3,3,3,'a').slice(A, [2], 'dpt')
+            [:, :, 0]=
+            [a002 a012 a022]
+            [a102 a112 a122]
+            [a202 a212 a222] 
+            <BLANKLINE>
+  
+
+        AUTHORS:
+        - Edinah K. Gnang
+        - To Do: 
+        """
+        if self.order()==2:
+            return SecondOrderSlicer(self, L, strg)
+        if self.order()==3:
+            return ThirdOrderSlicer(self, L, strg)
+        else :
+            raise ValueError, "Not supported for hypermatrices of order > 3"
 
 
 def MatrixGenerate(nr, nc, c):
@@ -1583,7 +1677,7 @@ def MatrixGenerate(nr, nc, c):
     # Setting the dimensions parameters.
     n_q_rows = nr; n_q_cols = nc
     # Test for dimension match
-    if n_q_rows > _sage_const_0  and n_q_cols > _sage_const_0 :
+    if n_q_rows > 0 and n_q_cols > 0:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_q_rows):
@@ -1614,7 +1708,7 @@ def SymMatrixGenerate(nr, c):
     # Setting the dimensions parameters.
     n_q_rows = nr; n_q_cols = nr
     # Test for dimension match
-    if n_q_rows > _sage_const_0  and n_q_cols > _sage_const_0 :
+    if n_q_rows > 0 and n_q_cols > 0:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_q_rows):
@@ -1644,9 +1738,9 @@ def HypermatrixGenerate(*args):
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
-    if len(args) == _sage_const_1 :
-        return var(args[_sage_const_0 ])
-    return [apply(HypermatrixGenerate, args[_sage_const_1 :-_sage_const_1 ]+(args[-_sage_const_1 ]+str(i),)) for i in range(args[_sage_const_0 ])]
+    if len(args) == 1:
+        return var(args[0])
+    return [apply(HypermatrixGenerate, args[1:-1]+(args[-1]+str(i),)) for i in range(args[0])]
 
 def HypermatrixGenerateII(*args):
     """
@@ -1668,9 +1762,9 @@ def HypermatrixGenerateII(*args):
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
-    if len(args) == _sage_const_1 :
-        return var(args[_sage_const_0 ])
-    return [apply(HypermatrixGenerateII, args[_sage_const_1 :-_sage_const_1 ]+(args[-_sage_const_1 ]+str(i),)) for i in range(_sage_const_1 ,_sage_const_1 +args[_sage_const_0 ])]
+    if len(args) == 1:
+        return var(args[0])
+    return [apply(HypermatrixGenerateII, args[1:-1]+(args[-1]+str(i),)) for i in range(1,1+args[0])]
 
 def HypermatrixGenerateAllOne(*args):
     """
@@ -1689,9 +1783,9 @@ def HypermatrixGenerateAllOne(*args):
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
-    if len(args) == _sage_const_1 :
-        return [_sage_const_1  for i in range(args[_sage_const_0 ])]
-    return [apply(HypermatrixGenerateAllOne, args[_sage_const_1 :] ) for i in range(args[_sage_const_0 ])]
+    if len(args) == 1:
+        return [1 for i in range(args[0])]
+    return [apply(HypermatrixGenerateAllOne, args[1:] ) for i in range(args[0])]
 
 def HypermatrixGenerateAllZero(*args):
     """
@@ -1709,9 +1803,9 @@ def HypermatrixGenerateAllZero(*args):
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
-    if len(args) == _sage_const_1 :
-        return [_sage_const_0  for i in range(args[_sage_const_0 ])]
-    return [apply(HypermatrixGenerateAllZero, args[_sage_const_1 :] ) for i in range(args[_sage_const_0 ])]
+    if len(args) == 1:
+        return [0 for i in range(args[0])]
+    return [apply(HypermatrixGenerateAllZero, args[1:] ) for i in range(args[0])]
 
 def SymHypermatrixGenerate(nr, c):
     """
@@ -1733,7 +1827,7 @@ def SymHypermatrixGenerate(nr, c):
     n_q_cols = nr
     n_q_dpts = nr
     # Test for dimension match
-    if n_q_rows > _sage_const_0  and n_q_cols > _sage_const_0  and n_q_dpts >_sage_const_0 :
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_q_rows):
@@ -1778,10 +1872,10 @@ def HypermatrixVectorize(A):
     """
     # Setting the dimensions parameters.
     n_q_rows = len(A)
-    n_q_cols = len(A[_sage_const_0 ])
-    n_q_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_q_cols = len(A[0])
+    n_q_dpts = len(A[0][0])
     # Test for dimension match
-    if n_q_rows>_sage_const_0  and n_q_cols>_sage_const_0  and n_q_dpts>_sage_const_0 :
+    if n_q_rows>0 and n_q_cols>0 and n_q_dpts>0:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_q_rows):
@@ -1812,10 +1906,10 @@ def HypermatrixAdd(A, B):
     """
     # Setting the dimensions parameters.
     n_q_rows = len(B)
-    n_q_cols = len(B[_sage_const_0 ])
-    n_q_dpts = len(B[_sage_const_0 ][_sage_const_0 ])
+    n_q_cols = len(B[0])
+    n_q_dpts = len(B[0][0])
     # Test for dimension match
-    if n_q_rows==len(A) and n_q_cols==len(A[_sage_const_0 ]) and n_q_dpts==len(A[_sage_const_0 ][_sage_const_0 ]):
+    if n_q_rows==len(A) and n_q_cols==len(A[0]) and n_q_dpts==len(A[0][0]):
         # Initialization of the hypermatrix
         q = []
         for i in range(n_q_rows):
@@ -1851,10 +1945,10 @@ def HypermatrixHadamardProduct(A, B):
     """
     # Setting the dimensions parameters.
     n_q_rows = len(A)
-    n_q_cols = len(A[_sage_const_0 ])
-    n_q_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_q_cols = len(A[0])
+    n_q_dpts = len(A[0][0])
     # Test for dimension match
-    if n_q_rows==len(A) and n_q_cols==len(A[_sage_const_0 ]) and n_q_dpts==len(A[_sage_const_0 ][_sage_const_0 ]):
+    if n_q_rows==len(A) and n_q_cols==len(A[0]) and n_q_dpts==len(A[0][0]):
         # Initialization of the hypermatrix
         q = []
         for i in range(n_q_rows):
@@ -1888,8 +1982,8 @@ def HypermatrixScale(A, s):
     """
     # Setting the dimensions parameters.
     n_q_rows = len(A)
-    n_q_cols = len(A[_sage_const_0 ])
-    n_q_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_q_cols = len(A[0])
+    n_q_dpts = len(A[0][0])
     # Initialization of the hypermatrix
     q = []
     for i in range(n_q_rows):
@@ -1921,8 +2015,8 @@ def HypermatrixEntryExponent(A, s):
     """
     # Setting the dimensions parameters.
     n_q_rows = len(A)
-    n_q_cols = len(A[_sage_const_0 ])
-    n_q_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_q_cols = len(A[0])
+    n_q_dpts = len(A[0][0])
     # Initialization of the hypermatrix
     q = []
     for i in range(n_q_rows):
@@ -1933,7 +2027,7 @@ def HypermatrixEntryExponent(A, s):
     for i in range(len(q)):
         for j in range(len(q[i])):
             for k in range(n_q_dpts):
-                (q[i][j]).append(A[i][j][k]**s)
+                (q[i][j]).append(A[i][j][k]^s)
     return q
 
 def HypermatrixEntryExponentB(s, A):
@@ -1955,8 +2049,8 @@ def HypermatrixEntryExponentB(s, A):
     """
     # Setting the dimensions parameters.
     n_q_rows = len(A)
-    n_q_cols = len(A[_sage_const_0 ])
-    n_q_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_q_cols = len(A[0])
+    n_q_dpts = len(A[0][0])
     # Initialization of the hypermatrix
     q = []
     for i in range(n_q_rows):
@@ -1967,7 +2061,7 @@ def HypermatrixEntryExponentB(s, A):
     for i in range(len(q)):
         for j in range(len(q[i])):
             for k in range(n_q_dpts):
-                (q[i][j]).append(s**(A[i][j][k]))
+                (q[i][j]).append(s^(A[i][j][k]))
     return q
 
 def HypermatrixProduct(A, B, C):
@@ -1990,19 +2084,19 @@ def HypermatrixProduct(A, B, C):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     typ = 'list'
-    if type(A) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(B) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(C)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')):
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
         A = A.listHM(); B = B.listHM(); C = C.listHM()
         typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
-    n_a_cols = len(A[_sage_const_0 ])
-    n_a_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
     n_b_rows = len(B)
-    n_b_cols = len(B[_sage_const_0 ])
-    n_b_dpts = len(B[_sage_const_0 ][_sage_const_0 ])
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
     n_c_rows = len(C)
-    n_c_cols = len(C[_sage_const_0 ])
-    n_c_dpts = len(C[_sage_const_0 ][_sage_const_0 ])
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
     # Test for dimension match
     if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
         # Initialization of the hypermatrix
@@ -2044,19 +2138,19 @@ def HypermatrixProductII(A, B, C, support):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     typ = 'list'
-    if type(A) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(B) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(C)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')):
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
         A = A.listHM(); B = B.listHM(); C = C.listHM()
         typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
-    n_a_cols = len(A[_sage_const_0 ])
-    n_a_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
     n_b_rows = len(B)
-    n_b_cols = len(B[_sage_const_0 ])
-    n_b_dpts = len(B[_sage_const_0 ][_sage_const_0 ])
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
     n_c_rows = len(C)
-    n_c_cols = len(C[_sage_const_0 ])
-    n_c_dpts = len(C[_sage_const_0 ][_sage_const_0 ])
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
     # Test for dimension match
     if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
         # Initialization of the hypermatrix
@@ -2094,19 +2188,19 @@ def HypermatrixLogProduct(A,B,C):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     typ = 'list'
-    if type(A) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(B) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(C)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')):
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
         A = A.listHM(); B = B.listHM(); C = C.listHM()
         typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
-    n_a_cols = len(A[_sage_const_0 ])
-    n_a_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
     n_b_rows = len(B)
-    n_b_cols = len(B[_sage_const_0 ])
-    n_b_dpts = len(B[_sage_const_0 ][_sage_const_0 ])
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
     n_c_rows = len(C)
-    n_c_cols = len(C[_sage_const_0 ])
-    n_c_dpts = len(C[_sage_const_0 ][_sage_const_0 ])
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
     # Test for dimension match
     if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows:
         # Initialization of the hypermatrix
@@ -2145,21 +2239,21 @@ def HypermatrixKroneckerProduct(A, B, C):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     typ = 'list'
-    if type(A) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(B) == type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(C)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')):
+    if type(A) == type(HM(1,1,1,'one')) and type(B) == type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')):
         A = A.listHM(); B = B.listHM(); C = C.listHM()
         typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
-    n_a_cols = len(A[_sage_const_0 ])
-    n_a_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
     n_b_rows = len(B)
-    n_b_cols = len(B[_sage_const_0 ])
-    n_b_dpts = len(B[_sage_const_0 ][_sage_const_0 ])
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
     n_c_rows = len(C)
-    n_c_cols = len(C[_sage_const_0 ])
-    n_c_dpts = len(C[_sage_const_0 ][_sage_const_0 ])
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
     # Test for zero dimension
-    if n_a_rows*n_b_rows*n_c_rows>_sage_const_0  and n_a_cols*n_b_cols*n_c_cols>_sage_const_0  and n_a_dpts*n_b_dpts*n_c_dpts>_sage_const_0 :
+    if n_a_rows*n_b_rows*n_c_rows>0 and n_a_cols*n_b_cols*n_c_cols>0 and n_a_dpts*n_b_dpts*n_c_dpts>0:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_a_rows*n_b_rows*n_c_rows):
@@ -2170,7 +2264,7 @@ def HypermatrixKroneckerProduct(A, B, C):
         for i in range(len(q)):
             for j in range(len(q[i])):
                 for k in range(n_a_dpts*n_b_dpts*n_c_dpts):
-                    (q[i][j]).append(_sage_const_0 )
+                    (q[i][j]).append(0)
         for i0 in range(n_a_rows):
             for i1 in range(n_b_rows):
                 for i2 in range(n_c_rows):
@@ -2210,22 +2304,22 @@ def HypermatrixProductB(A, B, C, D):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     typ = 'list'
-    if type(A)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(B)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(C)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(D)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')):
+    if type(A)==type(HM(1,1,1,'one')) and type(B)==type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')) and type(D)==type(HM(1,1,1,'one')):
         A = A.listHM(); B = B.listHM(); C = C.listHM(); D = D.listHM()
         typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
-    n_a_cols = len(A[_sage_const_0 ])
-    n_a_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
     n_b_rows = len(B)
-    n_b_cols = len(B[_sage_const_0 ])
-    n_b_dpts = len(B[_sage_const_0 ][_sage_const_0 ])
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
     n_c_rows = len(C)
-    n_c_cols = len(C[_sage_const_0 ])
-    n_c_dpts = len(C[_sage_const_0 ][_sage_const_0 ])
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
     n_d_rows = len(D)
-    n_d_cols = len(D[_sage_const_0 ])
-    n_d_dpts = len(D[_sage_const_0 ][_sage_const_0 ])
+    n_d_cols = len(D[0])
+    n_d_dpts = len(D[0][0])
 
     # Test for dimension match
     if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows and n_a_cols==n_d_rows and n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
@@ -2270,22 +2364,22 @@ def HypermatrixDualProductB(A, B, C, D):
     - Edinah K. Gnang
     """
     typ = 'list'
-    if type(A)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(B)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(C)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) and type(D)==type(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')):
+    if type(A)==type(HM(1,1,1,'one')) and type(B)==type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')) and type(D)==type(HM(1,1,1,'one')):
         A = A.listHM(); B = B.listHM(); C = C.listHM(); D = D.listHM()
         typ = 'HM'
     # Setting the dimensions parameters.
     n_a_rows = len(A)
-    n_a_cols = len(A[_sage_const_0 ])
-    n_a_dpts = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_a_cols = len(A[0])
+    n_a_dpts = len(A[0][0])
     n_b_rows = len(B)
-    n_b_cols = len(B[_sage_const_0 ])
-    n_b_dpts = len(B[_sage_const_0 ][_sage_const_0 ])
+    n_b_cols = len(B[0])
+    n_b_dpts = len(B[0][0])
     n_c_rows = len(C)
-    n_c_cols = len(C[_sage_const_0 ])
-    n_c_dpts = len(C[_sage_const_0 ][_sage_const_0 ])
+    n_c_cols = len(C[0])
+    n_c_dpts = len(C[0][0])
     n_d_rows = len(D)
-    n_d_cols = len(D[_sage_const_0 ])
-    n_d_dpts = len(D[_sage_const_0 ][_sage_const_0 ])
+    n_d_cols = len(D[0])
+    n_d_dpts = len(D[0][0])
     # Test for dimension match
     if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows and n_a_cols==n_d_rows and n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
         # Initialization of the hypermatrix
@@ -2325,8 +2419,8 @@ def HypermatrixCyclicPermute(A):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Setting the dimensions parameters.
-    n_q_rows = len(A[_sage_const_0 ])
-    n_q_cols = len(A[_sage_const_0 ][_sage_const_0 ])
+    n_q_rows = len(A[0])
+    n_q_cols = len(A[0][0])
     n_q_dpts = len(A)
     # Initialization of the hypermatrix
     q = []
@@ -2362,7 +2456,7 @@ def HypermatrixKroneckerDelta(nr):
     n_q_cols = nr
     n_q_dpts = nr
     # Test for dimension match
-    if n_q_rows > _sage_const_0  and n_q_cols > _sage_const_0  and n_q_dpts >_sage_const_0 :
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
         # Initialization of the hypermatrix
         q = []
         for i in range(n_q_rows):
@@ -2374,9 +2468,9 @@ def HypermatrixKroneckerDelta(nr):
             for j in range(len(q[i])):
                 for k in range(n_q_dpts):
                     if i==j and i==k:
-                        (q[i][j]).append(_sage_const_1 )
+                        (q[i][j]).append(1)
                     else:
-                        (q[i][j]).append(_sage_const_0 )
+                        (q[i][j]).append(0)
         return q
     else :
         raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integer."
@@ -2399,7 +2493,7 @@ def Vandermonde(l):
     AUTHORS:
     - Edinah K. Gnang
     """
-    return HM(len(l),len(l),[l[j]**i for j in range(len(l)) for i in range(len(l))])
+    return HM(len(l),len(l),[l[j]^i for j in range(len(l)) for i in range(len(l))])
 
 def var_list(c,sz):
     """
@@ -2430,16 +2524,16 @@ def Lagrange(X):
     ::
 
         sage: Lagrange(HM(3,'x').list())
-        [[x0 - x2, x0 - x1], [x1 - x2, 1]]        
+        [[x0 - x2, x0 - x1], [x1 - x2, 1]]
 
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    sz=len(X)-_sage_const_1 ; L=[]
+    sz=len(X)-1; L=[]
     for i in range(sz):
-        tmpl=range(sz,i,-_sage_const_1 )
-        L.append([X[i]-X[j] for j in tmpl]+[_sage_const_1  for k in range(sz-len(tmpl))]) 
+        tmpl=range(sz,i,-1)
+        L.append([X[i]-X[j] for j in tmpl]+[1 for k in range(sz-len(tmpl))]) 
     return HM(L) 
 
 def HypermatrixPermutation(s):
@@ -2466,7 +2560,7 @@ def HypermatrixPermutation(s):
     n_q_cols = n
     n_q_dpts = n
     # Test for dimension match
-    if n_q_rows > _sage_const_0  and n_q_cols > _sage_const_0  and n_q_dpts >_sage_const_0 :
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
         # Initialization of the hypermatrix
         q = []
         T = HypermatrixKroneckerDelta(n)
@@ -2510,7 +2604,7 @@ def DiagonalHypermatrix(Mtrx):
     for i in range(n_d_rows):
         for j in range(n_d_cols):
             for k in range(n_d_dpts):
-                if D[i][j][k] != _sage_const_0 :
+                if D[i][j][k] != 0:
                     D[i][j][k] = Mtrx[i,k]
     return D
 
@@ -2526,11 +2620,14 @@ def Orthogonal2x2x2Hypermatrix(t,x,y):
         sage: t,x,y=var('t,x,y')
         sage: Orthogonal2x2x2Hypermatrix(t,x,y)
         [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
+        sage: U=Orthogonal2x2x2Hypermatrix(t,x,y); Prod(U,U.transpose(2),U.transpose())
+        [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
+
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    return HM([[[sin(t)**(_sage_const_2 /_sage_const_3 ), -x*cos(t)**(_sage_const_2 /_sage_const_3 )], [cos(t)**(_sage_const_2 /_sage_const_3 ), y*sin(t)**(_sage_const_2 /_sage_const_3 )]], [[_sage_const_1 /x, sin(t)**(_sage_const_2 /_sage_const_3 )], [_sage_const_1 /y, cos(t)**(_sage_const_2 /_sage_const_3 )]]])
+    return HM([[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]])
 
 def Orthogonal2x2x2HypermatrixII(t,x,y):
     """
@@ -2544,13 +2641,37 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
         sage: t,x,y=var('t,x,y')
         sage: Orthogonal2x2x2HypermatrixII(t,x,y)
         [[[sin(t)^(2/3), y*cos(t)^(2/3)], [cos(t)^(2/3), -x*sin(t)^(2/3)]], [[1/y, sin(t)^(2/3)], [1/x, cos(t)^(2/3)]]]
+        sage: U=Orthogonal2x2x2HypermatrixII(t,x,y); Prod(U,U.transpose(2),U.transpose())
+        [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
+
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the Permutation hypermatrix
-    P=HM(_sage_const_3 ,[_sage_const_1 ,_sage_const_0 ],'perm')
-    return Prod(HM([[[cos(t)**(_sage_const_2 /_sage_const_3 ), -x*sin(t)**(_sage_const_2 /_sage_const_3 )], [sin(t)**(_sage_const_2 /_sage_const_3 ), y*cos(t)**(_sage_const_2 /_sage_const_3 )]], [[_sage_const_1 /x, cos(t)**(_sage_const_2 /_sage_const_3 )], [_sage_const_1 /y, sin(t)**(_sage_const_2 /_sage_const_3 )]]]), P, P.transpose())
+    P=HM(3,[1,0],'perm')
+    return Prod(HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]), P, P.transpose())
+
+def Orthogonal2x2x2HypermatrixIII(t,x,y):
+    """
+    Outputs a symbolic parametrization of third order orthogonal hypermatrix
+    of size 2x2x2.
+
+     EXAMPLES:
+
+    ::
+
+        sage: t,x,y=var('t,x,y')
+        sage: Orthogonal2x2x2HypermatrixIII(t,x,y)
+        [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
+        sage: U=Orthogonal2x2x2HypermatrixIII(t,x,y); Prod(U,U.transpose(2),U.transpose())
+        [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    return HM([[[sin(t)^(2/3), x*cos(t)^(2/3)], [cos(t)^(2/3), -y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]])
+
 
 def Orthogonal3x3x3Hypermatrix(t1,t2):
     """
@@ -2577,16 +2698,16 @@ def Orthogonal3x3x3Hypermatrix(t1,t2):
           [0, cos(t1)^(2/3), cos(t2)^(2/3)*sin(t1)^(2/3)],
           [0,
            -1/2*(-I*sqrt(3) + 1)*cos(t2)^(2/3)*sin(t1)^(2/3),
-           sin(t1)^(2/3)*sin(t2)^(2/3)]]]        
+           sin(t1)^(2/3)*sin(t2)^(2/3)]]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    c1=cos(t1)**(_sage_const_2 /_sage_const_3 )
-    s1=sin(t1)**(_sage_const_2 /_sage_const_3 )
-    c2=cos(t2)**(_sage_const_2 /_sage_const_3 )
-    s2=sin(t2)**(_sage_const_2 /_sage_const_3 )
-    return [[[c1,s1*c2,_sage_const_0 ],[s1*c2,s1*s2,_sage_const_0 ],[s1*s2,exp(-I*_sage_const_2 *pi/_sage_const_3 )*c1,_sage_const_0 ]], [[s1*s2,c1,exp(-I*_sage_const_2 *pi/_sage_const_3 )*s1*c2],[exp(I*_sage_const_2 *pi/_sage_const_3 )*c1,s1*c2,s1*s2], [s1*c2,s1*s2,c1]],[[_sage_const_0 ,s1*s2,c1],[_sage_const_0 ,c1,s1*c2],[_sage_const_0 ,exp(I*_sage_const_2 *pi/_sage_const_3 )*s1*c2,s1*s2]]]
+    c1=cos(t1)^(2/3)
+    s1=sin(t1)^(2/3)
+    c2=cos(t2)^(2/3)
+    s2=sin(t2)^(2/3)
+    return [[[c1,s1*c2,0],[s1*c2,s1*s2,0],[s1*s2,exp(-I*2*pi/3)*c1,0]], [[s1*s2,c1,exp(-I*2*pi/3)*s1*c2],[exp(I*2*pi/3)*c1,s1*c2,s1*s2], [s1*c2,s1*s2,c1]],[[0,s1*s2,c1],[0,c1,s1*c2],[0,exp(I*2*pi/3)*s1*c2,s1*s2]]]
 
 def HypermatrixCayleyHamiltonStringList(n,c):
     """
@@ -2604,12 +2725,12 @@ def HypermatrixCayleyHamiltonStringList(n,c):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return [c]
     else:
         gu = []
-        for i in range(_sage_const_1 ,n,_sage_const_2 ):
-            for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
                 gu = gu + ["Prod("+g1+", "+g2+", "+g3+")" for g1 in HypermatrixCayleyHamiltonStringList(i,c) for g2 in HypermatrixCayleyHamiltonStringList(j,c) for g3 in HypermatrixCayleyHamiltonStringList(n-(i+j),c)]
         return gu
 
@@ -2635,13 +2756,13 @@ def HypermatrixCayleyHamiltonList(A,n):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return [A.list()]
     else:
         gu = []
-        for i in range(_sage_const_1 ,n,_sage_const_2 ):
-            for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                gu = gu + [HypermatrixProduct(HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),A.n(_sage_const_2 ),g1), HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),A.n(_sage_const_2 ),g2), HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),A.n(_sage_const_2 ),g3)).list() for g1 in HypermatrixCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonList(A,j) for g3 in HypermatrixCayleyHamiltonList(A,n-(i+j))]
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
+                gu = gu + [HypermatrixProduct(HM(A.n(0),A.n(1),A.n(2),g1), HM(A.n(0),A.n(1),A.n(2),g2), HM(A.n(0),A.n(1),A.n(2),g3)).list() for g1 in HypermatrixCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonList(A,j) for g3 in HypermatrixCayleyHamiltonList(A,n-(i+j))]
         return gu
 
 def HypermatrixCayleyHamiltonListII(A,n):
@@ -2659,12 +2780,12 @@ def HypermatrixCayleyHamiltonListII(A,n):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return [A]
     else:
         gu = []
-        for i in range(_sage_const_1 ,n,_sage_const_2 ):
-            for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
                 gu = gu + [HypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonListII(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
         return gu
 
@@ -2686,78 +2807,78 @@ def HypermatrixCayleyHamiltonListIII(A,n):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    if A.order()==_sage_const_3 :
-        if n == _sage_const_1 :
+    if A.order()==3:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
                     gu = gu + [GeneralHypermatrixProduct(g1,g2,g3) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,n-(i+j))]
             return gu
     # Case of order 4
-    elif A.order()==_sage_const_4 :
-        if n == _sage_const_1 :
+    elif A.order()==4:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
                         gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k))]
             return gu
     # Case of order 5
-    elif A.order()==_sage_const_5 :
-        if n == _sage_const_1 :
+    elif A.order()==5:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
                             gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l))]
             return gu
     # Case of order 6
-    elif A.order()==_sage_const_6 :
-        if n == _sage_const_1 :
+    elif A.order()==6:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            for m in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
                                 gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m))]
             return gu
     # Case of order 7
-    elif A.order()==_sage_const_7 :
-        if n == _sage_const_1 :
+    elif A.order()==7:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            for m in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                for o in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
                                     gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m+o))]
             return gu
     # Case of order 8
-    elif A.order()==_sage_const_8 :
-        if n == _sage_const_1 :
+    elif A.order()==8:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            for m in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                for o in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                    for p in range(_sage_const_1 ,n-i-j-k-l-o,_sage_const_2 ):
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    for p in range(1,n-i-j-k-l-o,2):
                                         gu = gu + [GeneralHypermatrixProduct(g1,g2,g3,g4,g5,g6,g7) for g1 in HypermatrixCayleyHamiltonListIII(A,i) for g2 in HypermatrixCayleyHamiltonListIII(A,j) for g3 in HypermatrixCayleyHamiltonListIII(A,k) for g4 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListIII(A,n-(i+j+k+l+m+o+p))]
             return gu
     else :
@@ -2778,90 +2899,90 @@ def HypermatrixSymCayleyHamiltonList(A,n):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    if A.order()==_sage_const_3 :
-        if n == _sage_const_1 :
+    if A.order()==3:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(_sage_const_2 ),g3.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(2),g3.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,n-(i+j))]
             return gu
     # Case of order 4
-    elif A.order()==_sage_const_4 :
-        if n == _sage_const_1 :
+    elif A.order()==4:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(_sage_const_3 ),g3.transpose(_sage_const_2 ),g4.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k))]
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(3),g3.transpose(2),g4.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k))]
     # Case of order 5
-    elif A.order()==_sage_const_5 :
-        if n == _sage_const_1 :
+    elif A.order()==5:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(_sage_const_4 ),g3.transpose(_sage_const_3 ),g4.transpose(_sage_const_2 ),g5.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l))]
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(4),g3.transpose(3),g4.transpose(2),g5.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l))]
     # Case of order 6
-    elif A.order()==_sage_const_6 :
-        if n == _sage_const_1 :
+    elif A.order()==6:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            for m in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(_sage_const_5 ),g3.transpose(_sage_const_4 ),g4.transpose(_sage_const_3 ),g5.transpose(_sage_const_2 ),g6.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m))]
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(5),g3.transpose(4),g4.transpose(3),g5.transpose(2),g6.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m))]
     # Case of order 7
-    elif A.order()==_sage_const_7 :
-        if n == _sage_const_1 :
+    elif A.order()==7:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            for m in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                for o in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                    gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(_sage_const_6 ),g3.transpose(_sage_const_5 ),g4.transpose(_sage_const_4 ),g5.transpose(_sage_const_3 ),g6.transpose(_sage_const_2 ),g7.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))]
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(6),g3.transpose(5),g4.transpose(4),g5.transpose(3),g6.transpose(2),g7.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))]
     # Case of order 8
-    elif A.order()==_sage_const_8 :
-        if n == _sage_const_1 :
+    elif A.order()==8:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            for m in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                for o in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                    for p in range(_sage_const_1 ,n-i-j-k-l-o,_sage_const_2 ):
-                                        gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(_sage_const_7 ),g3.transpose(_sage_const_6 ),g4.transpose(_sage_const_5 ),g5.transpose(_sage_const_4 ),g6.transpose(_sage_const_3 ),g7.transpose(_sage_const_2 ),g8.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p))]
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    for p in range(1,n-i-j-k-l-o,2):
+                                        gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(7),g3.transpose(6),g4.transpose(5),g5.transpose(4),g6.transpose(3),g7.transpose(2),g8.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p))]
     # Case of order 9
-    elif A.order()==_sage_const_9 :
-        if n == _sage_const_1 :
+    elif A.order()==9:
+        if n == 1:
             return [A]
         else:
             gu = []
-            for i in range(_sage_const_1 ,n,_sage_const_2 ):
-                for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
-                    for k in range(_sage_const_1 ,n-i-j,_sage_const_2 ):
-                        for l in range(_sage_const_1 ,n-i-j-k,_sage_const_2 ):
-                            for m in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                for o in range(_sage_const_1 ,n-i-j-k-l,_sage_const_2 ):
-                                    for p in range(_sage_const_1 ,n-i-j-k-l-o,_sage_const_2 ):
-                                        for q in range(_sage_const_1 ,n-i-j-k-l-o-p,_sage_const_2 ):
-                                            gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(_sage_const_8 ),g3.transpose(_sage_const_7 ),g4.transpose(_sage_const_6 ),g5.transpose(_sage_const_5 ),g6.transpose(_sage_const_4 ),g7.transpose(_sage_const_3 ),g8.transpose(_sage_const_2 ),g9.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p)) for g9 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p+q)) ]
+            for i in range(1,n,2):
+                for j in range(1,n-i,2):
+                    for k in range(1,n-i-j,2):
+                        for l in range(1,n-i-j-k,2):
+                            for m in range(1,n-i-j-k-l,2):
+                                for o in range(1,n-i-j-k-l,2):
+                                    for p in range(1,n-i-j-k-l-o,2):
+                                        for q in range(1,n-i-j-k-l-o-p,2):
+                                            gu = gu + [GeneralHypermatrixProduct(g1,g2.transpose(8),g3.transpose(7),g4.transpose(6),g5.transpose(5),g6.transpose(4),g7.transpose(3),g8.transpose(2),g9.transpose()) for g1 in HypermatrixSymCayleyHamiltonList(A,i) for g2 in HypermatrixCayleyHamiltonListII(A,j) for g3 in HypermatrixCayleyHamiltonListII(A,k) for g4 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k)) for g5 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l)) for g6 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m)) for g7 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o))  for g8 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p)) for g9 in HypermatrixCayleyHamiltonListII(A,n-(i+j+k+l+m+o+p+q)) ]
     else :
         raise ValueError, "Not supported for order > 4 and for non cube hypermpatrix of order 3 "
 
@@ -2965,7 +3086,7 @@ def ConstraintFormatorHM(CnstrLst, VrbLst):
     """
     # Initializing the Matrix
     A=HM(len(CnstrLst),len(VrbLst),'zero')
-    b=HM(len(CnstrLst), _sage_const_1 , [eq.rhs() for eq in CnstrLst])
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
             A[r,c]=SR((CnstrLst[r]).lhs().coefficient(VrbLst[c]))
@@ -3034,7 +3155,7 @@ def multiplicativeConstraintFormatorII(CnstrLst, VrbLst):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the equations
-    Eq=[f/f.subs([v==_sage_const_1  for v in VrbLst])==f.subs([v==_sage_const_1  for v in VrbLst])**(-_sage_const_1 ) for f in CnstrLst]
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
     return multiplicativeConstraintFormator(Eq, VrbLst)
 
 def multiplicativeConstraintFormatorIII(CnstrLst, VrbLst):
@@ -3072,7 +3193,7 @@ def multiplicativeConstraintFormatorIII(CnstrLst, VrbLst):
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
             #A[r,c]=(CnstrLst[r]).lhs().degree(VrbLst[c])
-            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==_sage_const_1 )
+            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==1)
     return [A,b]
 
 def multiplicativeConstraintFormatorIV(CnstrLst, VrbLst):
@@ -3106,7 +3227,7 @@ def multiplicativeConstraintFormatorIV(CnstrLst, VrbLst):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the equations
-    Eq=[f/f.subs([v==_sage_const_1  for v in VrbLst])==f.subs([v==_sage_const_1  for v in VrbLst])**(-_sage_const_1 ) for f in CnstrLst]
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
     return multiplicativeConstraintFormatorIII(Eq, VrbLst)
 
 def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
@@ -3141,7 +3262,7 @@ def multiplicativeConstraintFormatorHM(CnstrLst, VrbLst):
     """
     # Initializing the Matrix
     A=HM(len(CnstrLst),len(VrbLst),'zero')
-    b=HM(len(CnstrLst), _sage_const_1 , [eq.rhs() for eq in CnstrLst])
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
             A[r,c]=SR((CnstrLst[r]).lhs().degree(VrbLst[c]))
@@ -3176,7 +3297,7 @@ def multiplicativeConstraintFormatorIIHM(CnstrLst, VrbLst):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    Eq=[f/f.subs([v==_sage_const_1  for v in VrbLst])==f.subs([v==_sage_const_1  for v in VrbLst])**(-_sage_const_1 ) for f in CnstrLst]
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
     return multiplicativeConstraintFormatorHM(Eq, VrbLst)
 
 def multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst):
@@ -3213,11 +3334,11 @@ def multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst):
     """
     # Initializing the Matrix
     A=HM(len(CnstrLst),len(VrbLst),'zero')
-    b=HM(len(CnstrLst), _sage_const_1 , [eq.rhs() for eq in CnstrLst])
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
             #A[r,c]=SR((CnstrLst[r]).lhs().degree(VrbLst[c]))
-            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==_sage_const_1 )
+            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==1)
     return [A,b]
 
 def multiplicativeConstraintFormatorIVHM(CnstrLst, VrbLst):
@@ -3253,7 +3374,7 @@ def multiplicativeConstraintFormatorIVHM(CnstrLst, VrbLst):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the equations
-    Eq=[f/f.subs([v==_sage_const_1  for v in VrbLst])==f.subs([v==_sage_const_1  for v in VrbLst])**(-_sage_const_1 ) for f in CnstrLst]
+    Eq=[f/f.subs([v==1 for v in VrbLst])==f.subs([v==1 for v in VrbLst])^(-1) for f in CnstrLst]
     return multiplicativeConstraintFormatorIIIHM(Eq, VrbLst)
 
 def ConstraintFormatorIII(CnstrLst, VrbLst):
@@ -3275,7 +3396,7 @@ def ConstraintFormatorIII(CnstrLst, VrbLst):
         [ 1.00000000000000 -1.00000000000000]
         sage: b
         [1.00000000000000]
-        [2.00000000000000]       
+        [2.00000000000000]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -3322,8 +3443,8 @@ def ConstraintFormatorIV(CnstrLst, VrbLst):
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
             Tmp=Set(VrbLst).difference(Set([VrbLst[c]])).list()
-            A[r,c]=CnstrLst[r].subs([f==_sage_const_0  for f in Tmp]).coefficient(VrbLst[c])
-    b=-Matrix(len(CnstrLst),_sage_const_1 ,CnstrLst).subs([f==_sage_const_0  for f in VrbLst])
+            A[r,c]=CnstrLst[r].subs([f==0 for f in Tmp]).coefficient(VrbLst[c])
+    b=-Matrix(len(CnstrLst),1,CnstrLst).subs([f==0 for f in VrbLst])
     return [A,b]
 
 def ConstraintFormatorIVHM(CnstrLst, VrbLst):
@@ -3362,8 +3483,8 @@ def ConstraintFormatorIVHM(CnstrLst, VrbLst):
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
             Tmp=Set(VrbLst).difference(Set([VrbLst[c]])).list()
-            A[r,c]=CnstrLst[r].subs([f==_sage_const_0  for f in Tmp]).coefficient(VrbLst[c])
-    b=-HM(len(CnstrLst),_sage_const_1 ,CnstrLst).subs([f==_sage_const_0  for f in VrbLst])
+            A[r,c]=CnstrLst[r].subs([f==0 for f in Tmp]).coefficient(VrbLst[c])
+    b=-HM(len(CnstrLst),1,CnstrLst).subs([f==0 for f in VrbLst])
     return [A,b]
 
 def MonomialConstraintFormator(L, X, MnL, Y):
@@ -3401,21 +3522,21 @@ def MonomialConstraintFormator(L, X, MnL, Y):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Obtaining the right hand side vector b
-    tb=Matrix(SR,len(L),_sage_const_1 ,[-f.subs([v==_sage_const_0  for v in X]) for f in L])
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
     L2=copy(L)
     # Updating the list to remove the constant terms
     for i in range(len(L)):
-        L2[i]=L2[i]+tb[i,_sage_const_0 ]
+        L2[i]=L2[i]+tb[i,0]
     # Performing the monomial substitution
     Eq=[]; Hy=HM([MnL,Y])
-    cnt=_sage_const_0 
+    cnt=0
     for g in L2:
         TmpL=[]
         for o in g.operands():
-            for j in range(Hy.n(_sage_const_1 )):
-                if (o/Hy[_sage_const_0 ,j]).is_constant():
-                    TmpL.append((o/Hy[_sage_const_0 ,j])*Hy[_sage_const_1 ,j]);break
-        Eq.append(sum(TmpL)==tb[cnt,_sage_const_0 ]); cnt=cnt+_sage_const_1  
+            for j in range(Hy.n(1)):
+                if (o/Hy[0,j]).is_constant():
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorII(Eq, Y)
 
@@ -3456,22 +3577,22 @@ def MonomialConstraintFormatorII(L, X, MnL, Y):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Obtaining the right hand side vector b
-    tb=Matrix(SR,len(L),_sage_const_1 ,[-f.subs([v==_sage_const_0  for v in X]) for f in L])
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
     L2=copy(L)
     # Updating the list to remove the constant terms
     for i in range(len(L)):
-        L2[i]=L2[i]+tb[i,_sage_const_0 ]
+        L2[i]=L2[i]+tb[i,0]
     # Performing the monomial substitution
     Eq=[]; Hy=HM([MnL,Y])
-    cnt=_sage_const_0 
+    cnt=0
     for g in L2:
         TmpL=[]
         for o in g.operands():
-            for j in range(Hy.n(_sage_const_1 )):
+            for j in range(Hy.n(1)):
                 #if (o/Hy[0,j]).is_constant():
-                if Set([(o/Hy[_sage_const_0 ,j]).degree(v) for v in X]).list()==[_sage_const_0 ]:
-                    TmpL.append((o/Hy[_sage_const_0 ,j])*Hy[_sage_const_1 ,j]);break
-        Eq.append(sum(TmpL)==tb[cnt,_sage_const_0 ]); cnt=cnt+_sage_const_1  
+                if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorII(Eq, Y)
 
@@ -3505,30 +3626,30 @@ def MonomialConstraintFormatorIII(L, X, MnL, Y):
         [                 2*0^y1*0^y2 - 3*0^y4 + 2]
         [     38*0^y1*0^y2 + 18*0^y3 - 11*0^y4 + 8]
         [  506*0^y1*0^y2 - 112*0^y3 - 121*0^y4 + 8]
-        [5852*0^y1*0^y2 - 202*0^y3 - 1099*0^y4 + 8]        
+        [5852*0^y1*0^y2 - 202*0^y3 - 1099*0^y4 + 8]
 
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Obtaining the right hand side vector b
-    tb=Matrix(SR,len(L),_sage_const_1 ,[-f.subs([v==_sage_const_0  for v in X]) for f in L])
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
     L2=copy(L)
     # Updating the list to remove the constant terms
     for i in range(len(L)):
-        L2[i]=L2[i]+tb[i,_sage_const_0 ]
+        L2[i]=L2[i]+tb[i,0]
     # Performing the monomial substitution
     Eq=[]; Hy=HM([MnL,Y])
-    cnt=_sage_const_0 
+    cnt=0
     for g in L2:
         TmpL=[]
         for o in g.operands():
-            for j in range(Hy.n(_sage_const_1 )):
+            for j in range(Hy.n(1)):
                 #if (o/Hy[0,j]).is_constant():
                 #if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
-                if Set([(o/Hy[_sage_const_0 ,j]).diff(v)/((o/Hy[_sage_const_0 ,j]).subs(v==_sage_const_1 )) for v in X]).list()==[_sage_const_0 ]:
-                    TmpL.append((o/Hy[_sage_const_0 ,j])*Hy[_sage_const_1 ,j]);break
-        Eq.append(sum(TmpL)==tb[cnt,_sage_const_0 ]); cnt=cnt+_sage_const_1  
+                if Set([(o/Hy[0,j]).diff(v)/((o/Hy[0,j]).subs(v==1)) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorII(Eq, Y)
 
@@ -3569,21 +3690,21 @@ def MonomialConstraintFormatorHM(L, X, MnL, Y):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Obtaining the right hand side vector b
-    tb=Matrix(SR,len(L),_sage_const_1 ,[-f.subs([v==_sage_const_0  for v in X]) for f in L])
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
     L2=copy(L)
     # Updating the list to remove the constant terms
     for i in range(len(L)):
-        L2[i]=L2[i]+tb[i,_sage_const_0 ]
+        L2[i]=L2[i]+tb[i,0]
     # Performing the monomial substitution
     Eq=[]; Hy=HM([MnL,Y])
-    cnt=_sage_const_0 
+    cnt=0
     for g in L2:
         TmpL=[]
         for o in g.operands():
-            for j in range(Hy.n(_sage_const_1 )):
-                if (o/Hy[_sage_const_0 ,j]).is_constant():
-                    TmpL.append((o/Hy[_sage_const_0 ,j])*Hy[_sage_const_1 ,j]);break
-        Eq.append(sum(TmpL)==tb[cnt,_sage_const_0 ]); cnt=cnt+_sage_const_1  
+            for j in range(Hy.n(1)):
+                if (o/Hy[0,j]).is_constant():
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorHM(Eq, Y)
 
@@ -3625,22 +3746,22 @@ def MonomialConstraintFormatorHMII(L, X, MnL, Y):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Obtaining the right hand side vector b
-    tb=Matrix(SR,len(L),_sage_const_1 ,[-f.subs([v==_sage_const_0  for v in X]) for f in L])
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
     L2=copy(L)
     # Updating the list to remove the constant terms
     for i in range(len(L)):
-        L2[i]=L2[i]+tb[i,_sage_const_0 ]
+        L2[i]=L2[i]+tb[i,0]
     # Performing the monomial substitution
     Eq=[]; Hy=HM([MnL,Y])
-    cnt=_sage_const_0 
+    cnt=0
     for g in L2:
         TmpL=[]
         for o in g.operands():
-            for j in range(Hy.n(_sage_const_1 )):
+            for j in range(Hy.n(1)):
                 #if (o/Hy[0,j]).is_constant():
-                if Set([(o/Hy[_sage_const_0 ,j]).degree(v) for v in X]).list()==[_sage_const_0 ]:
-                    TmpL.append((o/Hy[_sage_const_0 ,j])*Hy[_sage_const_1 ,j]);break
-        Eq.append(sum(TmpL)==tb[cnt,_sage_const_0 ]); cnt=cnt+_sage_const_1  
+                if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorHM(Eq, Y)
 
@@ -3682,23 +3803,23 @@ def MonomialConstraintFormatorHMIII(L, X, MnL, Y):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Obtaining the right hand side vector b
-    tb=Matrix(SR,len(L),_sage_const_1 ,[-f.subs([v==_sage_const_0  for v in X]) for f in L])
+    tb=Matrix(SR,len(L),1,[-f.subs([v==0 for v in X]) for f in L])
     L2=copy(L)
     # Updating the list to remove the constant terms
     for i in range(len(L)):
-        L2[i]=L2[i]+tb[i,_sage_const_0 ]
+        L2[i]=L2[i]+tb[i,0]
     # Performing the monomial substitution
     Eq=[]; Hy=HM([MnL,Y])
-    cnt=_sage_const_0 
+    cnt=0
     for g in L2:
         TmpL=[]
         for o in g.operands():
-            for j in range(Hy.n(_sage_const_1 )):
+            for j in range(Hy.n(1)):
                 #if (o/Hy[0,j]).is_constant():
                 #if Set([(o/Hy[0,j]).degree(v) for v in X]).list()==[0]:
-                if Set([(o/Hy[_sage_const_0 ,j]).diff(v)/((o/Hy[_sage_const_0 ,j]).subs(v==_sage_const_1 )) for v in X]).list()==[_sage_const_0 ]:
-                    TmpL.append((o/Hy[_sage_const_0 ,j])*Hy[_sage_const_1 ,j]);break
-        Eq.append(sum(TmpL)==tb[cnt,_sage_const_0 ]); cnt=cnt+_sage_const_1  
+                if Set([(o/Hy[0,j]).diff(v)/((o/Hy[0,j]).subs(v==1)) for v in X]).list()==[0]:
+                    TmpL.append((o/Hy[0,j])*Hy[1,j]);break
+        Eq.append(sum(TmpL)==tb[cnt,0]); cnt=cnt+1 
     # Ready to use the generic Constraint formator
     return ConstraintFormatorHM(Eq, Y)
 
@@ -3736,10 +3857,10 @@ def exponentialConstraintFormatorHM(CnstrLst, VrbLst):
     """
     # Initializing the Matrix
     A=HM(len(CnstrLst),len(VrbLst),'zero')
-    b=HM(len(CnstrLst), _sage_const_1 , [eq.rhs() for eq in CnstrLst])
+    b=HM(len(CnstrLst), 1, [eq.rhs() for eq in CnstrLst])
     for r in range(len(CnstrLst)):
         for c in range(len(VrbLst)):
-            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==_sage_const_1 )
+            A[r,c]=((CnstrLst[r]).lhs().diff(VrbLst[c])/(CnstrLst[r]).lhs()).subs(VrbLst[c]==1)
     return [A.elementwise_base_exponent(e),b]
 
 def exponentialConstraintFormatorHMII(CnstrLst, VrbLst):
@@ -3775,7 +3896,7 @@ def exponentialConstraintFormatorHMII(CnstrLst, VrbLst):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the equations
-    Eq=[f/f.subs([v==_sage_const_0  for v in VrbLst])==f.subs([v==_sage_const_0  for v in VrbLst])**(-_sage_const_1 ) for f in CnstrLst]
+    Eq=[f/f.subs([v==0 for v in VrbLst])==f.subs([v==0 for v in VrbLst])^(-1) for f in CnstrLst]
     return exponentialConstraintFormatorHM(Eq, VrbLst)
 
 def Companion_matrix(p,vrbl):
@@ -3788,29 +3909,28 @@ def Companion_matrix(p,vrbl):
 
     ::
 
-        sage: x=var('x')
-        sage: A=Companion_matrix(sum(HM(5,'a').list()[k]*x^(k) for k in range(5)),x);A.characteristic_polynomial()
+        sage: x=var('x'); p=sum(HM(5,'a').list()[k]*x^(k) for k in range(5))
+        sage: A=Companion_matrix(p,x); A.characteristic_polynomial()
         x^4 + a3/a4*x^3 + a2/a4*x^2 + a1/a4*x + a0/a4
 
     AUTHORS:
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl):
-        dg=p.degree(vrbl)
-        if dg>_sage_const_1 :
+        dg=Integer(p.degree(vrbl))
+        if dg>1:
             # Initialization of the matrix
-            A=Matrix(SR,HM(dg,dg,'zero').listHM())
+            A=HM(dg,dg,'zero').matrix()
             # Filling up the matrix
-            #A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
-            A[_sage_const_0 ,dg-_sage_const_1 ]=-p.subs(dict([(vrbl,_sage_const_0 )]))/(p.diff(vrbl, dg)/factorial(dg))
-            for i in range(_sage_const_1 ,dg):
+            A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/(p.diff(vrbl, dg)/factorial(dg))
+            for i in range(1,dg):
                 #A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
-                A[i,dg-_sage_const_1 ]=-(p.diff(vrbl,i).subs(vrbl==_sage_const_0 )/factorial(i))/(p.diff(vrbl,dg).subs(vrbl==_sage_const_0 )/factorial(dg))
-                A[i,i-_sage_const_1 ]=_sage_const_1 
+                A[i,dg-1]=-(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))/(p.diff(vrbl,dg).subs(vrbl==0)/factorial(dg))
+                A[i,i-1]=1
             return A
-        elif dg==_sage_const_1 :
+        elif dg==1:
             #return Matrix(SR,1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
-            return Matrix(SR,_sage_const_1 ,_sage_const_1 ,[p.subs(dict([(vrbl,_sage_const_0 )]))/(diff(p,vrbl).subs(vrbl==_sage_const_0 ))])
+            return Matrix(SR,1,1,[p.subs(dict([(vrbl,0)]))/(diff(p,vrbl).subs(vrbl==0))])
         else:
             raise ValueError, "Must be of degree at least 1."
     else:
@@ -3834,21 +3954,21 @@ def CompanionHM(p,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl):
-        dg=p.degree(vrbl)
-        if dg>_sage_const_1 :
+        dg=Integer(p.degree(vrbl))
+        if dg>1:
             # Initialization of the matrix
             A=HM(dg,dg,'zero')
             # Filling up the matrix
             #A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl^dg)
-            A[_sage_const_0 ,dg-_sage_const_1 ]=-p.subs(dict([(vrbl,_sage_const_0 )]))/(p.diff(vrbl, dg)/factorial(dg))
-            for i in range(_sage_const_1 ,dg):
+            A[0,dg-1]=-p.subs(dict([(vrbl,0)]))/(p.diff(vrbl, dg)/factorial(dg))
+            for i in range(1,dg):
                 #A[i,dg-1]=-p.coefficient(vrbl^(i))/p.coefficient(vrbl^dg)
-                A[i,dg-_sage_const_1 ]=-(p.diff(vrbl,i).subs(vrbl==_sage_const_0 )/factorial(i))/(p.diff(vrbl,dg).subs(vrbl==_sage_const_0 )/factorial(dg))
-                A[i,i-_sage_const_1 ]=_sage_const_1 
+                A[i,dg-1]=-(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))/(p.diff(vrbl,dg).subs(vrbl==0)/factorial(dg))
+                A[i,i-1]=1
             return A
-        elif dg==_sage_const_1 :
+        elif dg==1:
             #return HM(1,1,[p.subs(dict([(vrbl,0)]))/p.coefficient(vrbl)])
-            return HM(_sage_const_1 ,_sage_const_1 ,[p.subs(dict([(vrbl,_sage_const_0 )]))/(diff(p,vrbl).subs(vrbl==_sage_const_0 ))])
+            return HM(1,1,[p.subs(dict([(vrbl,0)]))/(diff(p,vrbl).subs(vrbl==0))])
         else:
             raise ValueError, "Must be of degree at least 1."
     else:
@@ -3873,24 +3993,24 @@ def Sylvester_matrix(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
         # Initialization of the matrix
-        A=Matrix(SR,HM(dp+dq,dp+dq,'zero').listHM())
+        A=HM(dp+dq,dp+dq,'zero').matrix()
         # Filling up the matrix
-        cp=_sage_const_0 
+        cp=0
         for i in range(dq):
             for j in range(dp):
                 #A[i,cp+j]=p.coefficient(vrbl^(dp-j))
-                A[i,cp+j]=p.diff(vrbl,(dp-j)).subs(vrbl==_sage_const_0 )/factorial(dp-j)
-            A[i,cp+dp]=p.subs(dict([(vrbl,_sage_const_0 )]))
-            cp=cp+_sage_const_1 
-        cq=_sage_const_0 
+                A[i,cp+j]=p.diff(vrbl,Integer(dp-j)).subs(vrbl==0)/factorial(dp-j)
+            A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
+            cp=cp+1
+        cq=0
         for i in range(dp):
             for j in range(dq):
                 #A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
-                A[dq+i,cq+j]=q.diff(vrbl,(dq-j)).subs(vrbl==_sage_const_0 )/factorial(dq-j)
-            A[dq+i,cq+dq]=q.subs(dict([(vrbl,_sage_const_0 )]))
-            cq=cq+_sage_const_1 
+                A[dq+i,cq+j]=q.diff(vrbl,Integer(dq-j)).subs(vrbl==0)/factorial(dq-j)
+            A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
+            cq=cq+1
         return A
     else:
         raise ValueError, "The inputs must both be polynomials in the input variable."
@@ -3915,24 +4035,24 @@ def SylvesterHM(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
         # Initialization of the second order hypermatrix
         A=HM(dp+dq,dp+dq,'zero')
         # Filling up the matrix
-        cp=_sage_const_0 
+        cp=0
         for i in range(dq):
             for j in range(dp):
                 #A[i,cp+j]=p.coefficient(vrbl^(dp-j))
-                A[i,cp+j]=p.diff(vrbl,(dp-j)).subs(vrbl==_sage_const_0 )/factorial(dp-j)
-            A[i,cp+dp]=p.subs(dict([(vrbl,_sage_const_0 )]))
-            cp=cp+_sage_const_1 
-        cq=_sage_const_0 
+                A[i,cp+j]=p.diff(vrbl,Integer(dp-j)).subs(vrbl==0)/factorial(dp-j)
+            A[i,cp+dp]=p.subs(dict([(vrbl,0)]))
+            cp=cp+1
+        cq=0
         for i in range(dp):
             for j in range(dq):
                 #A[dq+i,cq+j]=q.coefficient(vrbl^(dq-j))
-                A[dq+i,cq+j]=q.diff(vrbl,(dq-j)).subs(vrbl==_sage_const_0 )/factorial(dq-j)
-            A[dq+i,cq+dq]=q.subs(dict([(vrbl,_sage_const_0 )]))
-            cq=cq+_sage_const_1 
+                A[dq+i,cq+j]=q.diff(vrbl,Integer(dq-j)).subs(vrbl==0)/factorial(dq-j)
+            A[dq+i,cq+dq]=q.subs(dict([(vrbl,0)]))
+            cq=cq+1
         return A
     else:
         raise ValueError, "The inputs must both be polynomials in the input variable."
@@ -3975,8 +4095,8 @@ def Gmatrix(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
-        if dp >= _sage_const_1  and dq >= _sage_const_1 :
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
+        if dp >= 1 and dq >= 1:
             return identity_matrix(dq).tensor_product(Companion_matrix(p,vrbl))-(Companion_matrix(q,vrbl)).tensor_product(identity_matrix(dp))
         else:
             raise ValueError, "Both inputs must be of degree at least 2."
@@ -4002,9 +4122,9 @@ def GmatrixHM(p,q,vrbl):
     - Edinah K. Gnang
     """
     if p.is_polynomial(vrbl) and q.is_polynomial(vrbl):
-        dp=p.degree(vrbl); dq=q.degree(vrbl)
-        if dp >= _sage_const_1  and dq >= _sage_const_1 :
-            return HM(_sage_const_2 ,dq,'kronecker').tensor_product(CompanionHM(p,vrbl))-(CompanionHM(q,vrbl)).tensor_product(HM(_sage_const_2 ,dp,'kronecker'))
+        dp=Integer(p.degree(vrbl)); dq=Integer(q.degree(vrbl))
+        if dp >= 1 and dq >= 1:
+            return HM(2,dq,'kronecker').tensor_product(CompanionHM(p,vrbl))-(CompanionHM(q,vrbl)).tensor_product(HM(2,dp,'kronecker'))
         else:
             raise ValueError, "Both inputs must be of degree at least 2."
     else:
@@ -4031,12 +4151,12 @@ def substitute_matrix(p, vrbl, A):
     - Edinah K. Gnang
     """
     if A.nrows() == A.ncols():
-        T=p.subs(vrbl == _sage_const_0 )*identity_matrix(A.nrows())
-        d=p.degree(vrbl)
-        for i in rg(_sage_const_1 ,d+_sage_const_1 ):
+        T=p.subs(vrbl == 0)*identity_matrix(A.nrows())
+        d=Integer(p.degree(vrbl))
+        for i in rg(1,d+1):
             #T=T+(A^i)*p.coefficient(vrbl^i)
             #T=T+(A^Integer(i))*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
-            T=T+(A**i)*(p.diff(vrbl,i).subs(vrbl==_sage_const_0 )/factorial(i))
+            T=T+(A^i)*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
         return T
     else:
         raise ValueError, "Must be a polynomial in the input variable."
@@ -4046,6 +4166,7 @@ def substituteHM(p, vrbl, A):
     The functions takes as input a polynomial p,
     a variable vrbl, and a hypermatrix A of order 2.
     The function outputs the polynomial in the variable.
+
 
     EXAMPLES:
 
@@ -4061,11 +4182,11 @@ def substituteHM(p, vrbl, A):
     - Edinah K. Gnang
     """
     if A.nrows()==A.ncols():
-        d=p.degree(vrbl)
-        T = p.subs(vrbl==_sage_const_0 )*HM(_sage_const_2 ,A.nrows(),'kronecker')
-        for i in rg(_sage_const_1 ,d+_sage_const_1 ):
+        d=Integer(p.degree(vrbl))
+        T = p.subs(vrbl==0)*HM(2,A.nrows(),'kronecker')
+        for i in rg(1,d+1):
             #T=T+(A^Integer(i))*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
-            T=T+(A**i)*(p.diff(vrbl,i).subs(vrbl==_sage_const_0 )/factorial(i))
+            T=T+(A^i)*(p.diff(vrbl,i).subs(vrbl==0)/factorial(i))
         return T
     else:
         raise ValueError, "Must be a polynomial in the input variable."
@@ -4115,9 +4236,9 @@ def OuterHypermatrixInversePair(U, V):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if U.n(_sage_const_1 )==U.n(_sage_const_2 ) and V.n(_sage_const_0 )==V.n(_sage_const_2 ) and U.n(_sage_const_1 )==V.n(_sage_const_0 ) and U.order()==_sage_const_3  and V.order()==_sage_const_3 :
+    if U.n(1)==U.n(2) and V.n(0)==V.n(2) and U.n(1)==V.n(0) and U.order()==3 and V.order()==3:
         # Initialization of the size parameter
-        sz0=U.n(_sage_const_0 ); sz1=V.n(_sage_const_1 ); sz2=U.n(_sage_const_2 )
+        sz0=U.n(0); sz1=V.n(1); sz2=U.n(2)
         # Initialization of the container matrix
         M = Matrix(SR,HM(sz0*sz1*sz2, sz0*sz1*sz2, 'zero').listHM())
         for i in range(sz0):
@@ -4126,23 +4247,23 @@ def OuterHypermatrixInversePair(U, V):
                     for t in range(sz2):
                         M[i*sz1*sz2+j*sz2+k, i*sz1*sz2+j*sz2+t]=U[i,t,k]*V[t,j,k]
         # Initialization of the coefficient HM
-        Ha=HM(sz0*sz1, sz0*sz1, [HM(sz2,sz2,'zero') for ij in range((sz0*sz1)**_sage_const_2 )])
+        Ha=HM(sz0*sz1, sz0*sz1, [HM(sz2,sz2,'zero') for ij in range((sz0*sz1)^2)])
         for ij in range(sz0*sz1):
             Ha[ij, ij]=HM(sz2, sz2, M[ij*sz2:ij*sz2+sz2, ij*sz2:ij*sz2+sz2].transpose().list())
         # Initialization of the RHS
-        Hb=HM(sz0*sz1, _sage_const_1 , [HM(_sage_const_2 ,sz2,'kronecker') for ij in range(sz0*sz1)])
+        Hb=HM(sz0*sz1, 1, [HM(2,sz2,'kronecker') for ij in range(sz0*sz1)])
         # Computing the matrix pseudo inverse
         [A,b]=gauss_jordan_eliminationHM(Ha, Hb)
         # Filling up the solution with the result
         B=HM(M.nrows(), M.ncols(), 'zero').matrix()
         for ij in range(sz0*sz1):
-            B[sz2*ij:sz2*ij+sz2, sz2*ij:sz2*ij+sz2]=b[ij,_sage_const_0 ].simplify_full().matrix()
+            B[sz2*ij:sz2*ij+sz2, sz2*ij:sz2*ij+sz2]=b[ij,0].simplify_full().matrix()
         # Initializing the multiplicative constraints.
-        X=HM(U.n(_sage_const_0 ), U.n(_sage_const_1 ), U.n(_sage_const_2 ), 'x'); Y=HM(V.n(_sage_const_0 ), V.n(_sage_const_1 ), V.n(_sage_const_2 ), 'y')
+        X=HM(U.n(0), U.n(1), U.n(2), 'x'); Y=HM(V.n(0), V.n(1), V.n(2), 'y')
         Eq=[X[i,s,t]*Y[s,j,t]==B[i*sz1*sz2+j*sz2+t,i*sz1*sz2+j*sz2+s] for i in range(sz0) for j in range(sz1) for s in range(sz2) for t in range(sz2)]
         # Formating the constraints
         [A,b]=multiplicativeConstraintFormator(Eq, X.list()+Y.list())
-        Mx=Matrix(SR, A.ncols(), _sage_const_1 , X.list()+Y.list())
+        Mx=Matrix(SR, A.ncols(), 1, X.list()+Y.list())
         return [[multiplicative_linear_solver(A,b,Mx,Mx), X, Y], multiplicative_gauss_jordan_eliminationII(A,b)]
     else:
         raise ValueError, "The input hypermatrices must be cubical third order hypermatrices of the same sizes."
@@ -4176,9 +4297,9 @@ def InnerHypermatrixInversePair(X, Y):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if X.n(_sage_const_1 )==X.n(_sage_const_2 ) and Y.n(_sage_const_0 )==Y.n(_sage_const_2 ) and X.n(_sage_const_1 )==Y.n(_sage_const_0 ) and X.order()==_sage_const_3  and Y.order()==_sage_const_3 :
+    if X.n(1)==X.n(2) and Y.n(0)==Y.n(2) and X.n(1)==Y.n(0) and X.order()==3 and Y.order()==3:
         # Initialization of the size parameter
-        sz0=X.n(_sage_const_0 ); sz1=Y.n(_sage_const_1 ); sz2=Y.n(_sage_const_2 )
+        sz0=X.n(0); sz1=Y.n(1); sz2=Y.n(2)
         # Initialization of the container matrix
         M = Matrix(SR,HM(sz0*sz1*sz2, sz0*sz1*sz2, 'zero').listHM())
         for i in range(sz0):
@@ -4187,23 +4308,23 @@ def InnerHypermatrixInversePair(X, Y):
                     for t in range(sz2):
                         M[i*sz1*sz2+j*sz2+t,sz1*sz2*i+sz2*j+s]=X[i,s,t]*Y[s,j,t]
         # Initialization of the coefficient HM
-        Ha=HM(sz0*sz1, sz0*sz1, [HM(sz2,sz2,'zero') for ij in range((sz0*sz1)**_sage_const_2 )])
+        Ha=HM(sz0*sz1, sz0*sz1, [HM(sz2,sz2,'zero') for ij in range((sz0*sz1)^2)])
         for ij in range(sz0*sz1):
             Ha[ij, ij]=HM(sz2, sz2, M[ij*sz2:ij*sz2+sz2, ij*sz2:ij*sz2+sz2].transpose().list())
         # Initialization of the RHS
-        Hb=HM(sz0*sz1, _sage_const_1 , [HM(_sage_const_2 ,sz2,'kronecker') for ij in range(sz0*sz1)])
+        Hb=HM(sz0*sz1, 1, [HM(2,sz2,'kronecker') for ij in range(sz0*sz1)])
         # Computing the matrix pseudo inverse
         [A,b]=gauss_jordan_eliminationHM(Ha, Hb)
         # Filling up the solution with the result
         B=HM(M.nrows(), M.ncols(), 'zero').matrix()
         for ij in range(sz0*sz1):
-            B[sz2*ij:sz2*ij+sz2, sz2*ij:sz2*ij+sz2]=b[ij,_sage_const_0 ].simplify_full().matrix()
+            B[sz2*ij:sz2*ij+sz2, sz2*ij:sz2*ij+sz2]=b[ij,0].simplify_full().matrix()
         # Initializing the multiplicative constraints.
-        U=HM(X.n(_sage_const_0 ),X.n(_sage_const_1 ),X.n(_sage_const_2 ),'u'); V=HM(Y.n(_sage_const_0 ),Y.n(_sage_const_1 ),Y.n(_sage_const_2 ),'v')
+        U=HM(X.n(0),X.n(1),X.n(2),'u'); V=HM(Y.n(0),Y.n(1),Y.n(2),'v')
         Eq=[U[i,t,k]*V[t,j,k]==B[i*sz1*sz2+j*sz2+k,i*sz1*sz2+j*sz2+t] for i in range(sz0) for j in range(sz1) for k in range(sz2) for t in range(sz2)]
         # Formating the constraints
         [A,b]=multiplicativeConstraintFormator(Eq, U.list()+V.list())
-        Mx=Matrix(SR, A.ncols(), _sage_const_1 , U.list()+V.list())
+        Mx=Matrix(SR, A.ncols(), 1, U.list()+V.list())
         return [[multiplicative_linear_solver(A,b,Mx,Mx), U, V], multiplicative_gauss_jordan_eliminationII(A,b)]
     else:
         raise ValueError, "The input hypermatrices must be cubical third order hypermatrices of the same sizes."
@@ -4242,12 +4363,12 @@ def HypermatrixPseudoInversePairs(A,B):
     for i in range(sz):
         for j in range(sz):
             for k in range(sz):
-                R1[i][j][k] = exp(sln[i*sz**_sage_const_2 +j*sz**_sage_const_1 +k*sz**_sage_const_0 ,_sage_const_0 ])
+                R1[i][j][k] = exp(sln[i*sz^2+j*sz^1+k*sz^0,0])
     R2 = HypermatrixGenerateAllZero(sz, sz, sz)
     for i in range(sz):
         for j in range(sz):
             for k in range(sz):
-                R2[i][j][k] = exp(sln[sz**_sage_const_3 +i*sz**_sage_const_2 +j*sz**_sage_const_1 +k*sz**_sage_const_0 ,_sage_const_0 ])
+                R2[i][j][k] = exp(sln[sz^3+i*sz^2+j*sz^1+k*sz^0,0])
     return [R1,R2]
 
 def CountCompositions(n):
@@ -4265,10 +4386,10 @@ def CountCompositions(n):
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
     """
-    if n == _sage_const_1  :
-        return _sage_const_1 
+    if n == 1 :
+        return 1
     else :
-        return sum([CountCompositions(i)*CountCompositions(j)*CountCompositions(n-i-j) for i in range(_sage_const_1 ,n,_sage_const_2 ) for j in range(_sage_const_1 ,n-i,_sage_const_2 )])
+        return sum([CountCompositions(i)*CountCompositions(j)*CountCompositions(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
 
 def GeneralHypermatrixProduct(*args):
     """
@@ -4299,16 +4420,16 @@ def GeneralHypermatrixProduct(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(args)<_sage_const_2 :
+        if len(args)<2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= _sage_const_2 :
-            Rh[tuple(entry)]=sum([prod([args[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(args)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(args))):])] for s in range(len(args)-_sage_const_2 )]+[args[len(args)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(args)-_sage_const_1 ]+[t])]]+[args[len(args)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]]) for t in range((args[_sage_const_0 ]).n(_sage_const_1 ))])
+        elif len(args) >= 2:
+            Rh[tuple(entry)]=sum([prod([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
 
 # Defining a shorter function call for the hypermatrix product implemented above.
@@ -4354,35 +4475,35 @@ def GeneralHypermatrixProductB(*args):
     - Edinah K. Gnang
     """
     # Initialization of the list specifying the dimensions of the output
-    l = [(args[i]).n(i) for i in range(len(args)-_sage_const_1 )]
+    l = [(args[i]).n(i) for i in range(len(args)-1)]
     # Initializing the input for generating a symbolic hypermatrix
     inpts = l+['zero']
     # Initialization of the hypermatrix
     Rh = HM(*inpts)
     # Initializing the background hypermatrix
-    B = (args[len(args)-_sage_const_1 ]).transpose(args[len(args)-_sage_const_1 ].order()-_sage_const_1 )
-    args = tuple([args[id] for id in range(len(args)-_sage_const_1 )])
+    B = (args[len(args)-1]).transpose(args[len(args)-1].order()-1)
+    args = tuple([args[id] for id in range(len(args)-1)])
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # Computing the Hypermatrix product
-        if len(args) < _sage_const_2 :
+        if len(args) < 2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= _sage_const_2 :
-            Rh[tuple(entry)] = _sage_const_0 
+        elif len(args) >= 2:
+            Rh[tuple(entry)] = 0
             l2 = [B.n(sz) for sz in range(B.order())]
             for j in range(prod(l2)):
                 # Turning the index j into an hypermatrix array location using the decimal encoding trick
-                entry2 = [Integer(mod(j,l2[_sage_const_0 ]))]
-                sm2 = Integer(mod(j,l2[_sage_const_0 ]))
-                for z in range(len(l2)-_sage_const_1 ):
-                    entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[_sage_const_0 :z+_sage_const_1 ])),l2[z+_sage_const_1 ])))
-                    sm2 = sm2+prod(l2[_sage_const_0 :z+_sage_const_1 ])*entry2[len(entry2)-_sage_const_1 ]
-                Rh[tuple(entry)] = Rh[tuple(entry)]+prod([args[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(args)))]+[entry2[ Integer(mod(s+_sage_const_1 ,len(args))) ]]+entry[Integer(mod(s+_sage_const_2 ,len(args))):])] for s in range(len(args)-_sage_const_2 )]+[args[len(args)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(entry)-_sage_const_1 ]+[entry2[len(entry2)-_sage_const_1 ]])]]+[args[len(args)-_sage_const_1 ][tuple([entry2[_sage_const_0 ]]+entry[_sage_const_1 :])]])*B[tuple(entry2)]
+                entry2 = [Integer(mod(j,l2[0]))]
+                sm2 = Integer(mod(j,l2[0]))
+                for z in range(len(l2)-1):
+                    entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[0:z+1])),l2[z+1])))
+                    sm2 = sm2+prod(l2[0:z+1])*entry2[len(entry2)-1]
+                Rh[tuple(entry)] = Rh[tuple(entry)]+prod([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[entry2[ Integer(mod(s+1,len(args))) ]]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(entry)-1]+[entry2[len(entry2)-1]])]]+[args[len(args)-1][tuple([entry2[0]]+entry[1:])]])*B[tuple(entry2)]
     return Rh
 
 def ProdB(*args):
@@ -4433,16 +4554,16 @@ def GeneralHypermatrixLogProduct(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(args)<_sage_const_2 :
+        if len(args)<2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= _sage_const_2 :
-            Rh[tuple(entry)]=sum([sum([args[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(args)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(args))):])] for s in range(len(args)-_sage_const_2 )]+[args[len(args)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(args)-_sage_const_1 ]+[t])]]+[args[len(args)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]]) for t in range((args[_sage_const_0 ]).n(_sage_const_1 ))])
+        elif len(args) >= 2:
+            Rh[tuple(entry)]=sum([sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
 
 def GeneralHypermatrixBlockProduct(*args):
@@ -4479,16 +4600,16 @@ def GeneralHypermatrixBlockProduct(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(args)<_sage_const_2 :
+        if len(args)<2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= _sage_const_2 :
-            Rh[tuple(entry)]=sum([apply(Prod,[args[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(args)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(args))):])] for s in range(len(args)-_sage_const_2 )]+[args[len(args)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(args)-_sage_const_1 ]+[t])]]+[args[len(args)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]]) for t in range((args[_sage_const_0 ]).n(_sage_const_1 ))])
+        elif len(args) >= 2:
+            Rh[tuple(entry)]=sum([apply(Prod,[args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
 
 def BlockProd(*args):
@@ -4579,16 +4700,16 @@ def GeneralHypermatrixProductII(Lh, Op, F):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(Lh)<_sage_const_2 :
+        if len(Lh)<2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(Lh) >= _sage_const_2 :
-            Rh[tuple(entry)]=apply(Op, [[apply(F, [[Lh[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(Lh)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(Lh))):])] for s in range(len(Lh)-_sage_const_2 )]+[Lh[len(Lh)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(Lh)-_sage_const_1 ]+[t])]]+[Lh[len(Lh)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]]]) for t in range((Lh[_sage_const_0 ]).n(_sage_const_1 ))]])
+        elif len(Lh) >= 2:
+            Rh[tuple(entry)]=apply(Op, [[apply(F, [[Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]]]) for t in range((Lh[0]).n(1))]])
     return Rh
 
 def GeneralHypermatrixProductIII(Lh, Op, Lv):
@@ -4638,16 +4759,16 @@ def GeneralHypermatrixProductIII(Lh, Op, Lv):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(Lh)<_sage_const_2 :
+        if len(Lh)<2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(Lh) >= _sage_const_2 :
-            Rh[tuple(entry)]=apply(Op, [ [([Lh[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(Lh)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(Lh))):])] for s in range(len(Lh)-_sage_const_2 )]+[Lh[len(Lh)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(Lh)-_sage_const_1 ]+[t])]]+[Lh[len(Lh)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]])[_sage_const_0 ].subs([Lv[z-_sage_const_1 ]==([Lh[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(Lh)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(Lh))):])] for s in range(len(Lh)-_sage_const_2 )]+[Lh[len(Lh)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(Lh)-_sage_const_1 ]+[t])]]+[Lh[len(Lh)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]])[z] for z in rg(_sage_const_1 ,len(Lh))]) for t in range((Lh[_sage_const_0 ]).n(_sage_const_1 ))] ])
+        elif len(Lh) >= 2:
+            Rh[tuple(entry)]=apply(Op, [ [([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[0].subs([Lv[z-1]==([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[z] for z in rg(1,len(Lh))]) for t in range((Lh[0]).n(1))] ])
     return Rh
 
 def GProd(Lh, Op, Lv):
@@ -4709,7 +4830,7 @@ def GeneralHypermatrixCyclicPermute(A):
     """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
-    l = l[_sage_const_1 :]+[l[_sage_const_0 ]]
+    l = l[1:]+[l[0]]
     # Initializing the input for generating a symbolic hypermatrix
     inpts = l+['zero']
     # Initialization of the hypermatrix
@@ -4717,13 +4838,13 @@ def GeneralHypermatrixCyclicPermute(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # Performing the transpose
-        Rh[tuple(entry)]=A[tuple([entry[len(entry)-_sage_const_1 ]]+entry[:len(entry)-_sage_const_1 ])]
+        Rh[tuple(entry)]=A[tuple([entry[len(entry)-1]]+entry[:len(entry)-1])]
     return Rh
 
 def GeneralHypermatrixScale(A,s):
@@ -4751,11 +4872,11 @@ def GeneralHypermatrixScale(A,s):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=s*A[tuple(entry)]
     return Rh
 
@@ -4784,15 +4905,15 @@ def GeneralHypermatrixExponent(A,s):
     Rh = HM(*inpts)
     # Main loop performing the computations of the entries
     for i in range(prod(l)):
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         if A[tuple(entry)].is_zero():
-            Rh[tuple(entry)] = _sage_const_0 
+            Rh[tuple(entry)] = 0
         else:
-            Rh[tuple(entry)] = (A[tuple(entry)])**s
+            Rh[tuple(entry)] = (A[tuple(entry)])^s
     return Rh
 
 def GeneralHypermatrixBaseExponent(A,s):
@@ -4822,12 +4943,12 @@ def GeneralHypermatrixBaseExponent(A,s):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        Rh[tuple(entry)]=s**(A[tuple(entry)])
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=s^(A[tuple(entry)])
     return Rh
 
 def GeneralHypermatrixLogarithm(A,s=e):
@@ -4857,11 +4978,11 @@ def GeneralHypermatrixLogarithm(A,s=e):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=log(A[tuple(entry)],s).canonicalize_radical()
     return Rh
 
@@ -4895,13 +5016,13 @@ def GeneralHypermatrixApplyMap(A, phi):
     Rh = HM(*inpts)
     # Main loop performing the computations of the entries
     for i in range(prod(l)):
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         if A[tuple(entry)].is_zero():
-            Rh[tuple(entry)] = _sage_const_0 
+            Rh[tuple(entry)] = 0
         else:
             Rh[tuple(entry)] = phi(A[tuple(entry)])
     return Rh
@@ -4933,11 +5054,11 @@ def GeneralHypermatrixConjugate(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=conjugate(A[tuple(entry)])
     return Rh
 
@@ -4969,11 +5090,11 @@ def GeneralHypermatrixExpand(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=(A[tuple(entry)]).expand()
     return Rh
 
@@ -5008,11 +5129,11 @@ def GeneralHypermatrixFactor(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=(A[tuple(entry)]).factor()
     return Rh
 
@@ -5042,12 +5163,12 @@ def GeneralHypermatrixSimplifyFull(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        if type(Integer(_sage_const_0 )) != type(A[tuple(entry)]):
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if type(Integer(0)) != type(A[tuple(entry)]):
             Rh[tuple(entry)]=(A[tuple(entry)]).simplify_full()
         else:
             Rh[tuple(entry)]=A[tuple(entry)]
@@ -5062,15 +5183,14 @@ def GeneralHypermatrixSimplify(A):
 
     ::
 
-        sage: x,y=var('x,y'); ((x+y)^2*HM(2,2,2,'one')).simplify_full()
-        [[[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]], [[x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2], [x^2 + 2*x*y + y^2, x^2 + 2*x*y + y^2]]]
+        sage: x,y=var('x,y'); GeneralHypermatrixSimplify((x+y)^2*HM(2,2,2,'one'))
+        [[[(x + y)^2, (x + y)^2], [(x + y)^2, (x + y)^2]], [[(x + y)^2, (x + y)^2], [(x + y)^2, (x + y)^2]]]
  
 
     AUTHORS:
 
     - Edinah K. Gnang
     """
-
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -5080,12 +5200,12 @@ def GeneralHypermatrixSimplify(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        if type(Integer(_sage_const_0 )) != type(A[tuple(entry)]):
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if type(Integer(0)) != type(A[tuple(entry)]):
             Rh[tuple(entry)]=(A[tuple(entry)]).simplify()
         else:
             Rh[tuple(entry)]=A[tuple(entry)]
@@ -5118,12 +5238,12 @@ def GeneralHypermatrixCanonicalizeRadical(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        if type(Integer(_sage_const_0 )) != type(A[tuple(entry)]):
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if type(Integer(0)) != type(A[tuple(entry)]):
             Rh[tuple(entry)]=(A[tuple(entry)]).canonicalize_radical()
         else:
             Rh[tuple(entry)]=A[tuple(entry)]
@@ -5157,11 +5277,11 @@ def GeneralHypermatrixNumerical(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=N(A[tuple(entry)])
     return Rh
 
@@ -5192,11 +5312,11 @@ def GeneralHypermatrixSubstitute(A, Dct):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=(A[tuple(entry)]).subs(Dct)
     return Rh
 
@@ -5228,11 +5348,11 @@ def GeneralHypermatrixSubstituteN(A, Dct):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=N((A[tuple(entry)]).subs(Dct))
     return Rh
 
@@ -5268,11 +5388,11 @@ def GeneralHypermatrixSubstituteII(A, *args, **kwds):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=(A[tuple(entry)]).subs(*args, **kwds)
     return Rh
 
@@ -5299,11 +5419,11 @@ def GeneralHypermatrixCopy(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
@@ -5330,11 +5450,11 @@ def GeneralHypermatrixAppendIndex(A,indx):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=var(str(A[tuple(entry)])+str(indx))
     return Rh
 
@@ -5353,9 +5473,9 @@ def List2Hypermatrix(*args):
     - Edinah K. Gnang
     """
     # Initialization of the list specifying the dimensions of the output
-    l = args[:-_sage_const_1 ]
+    l = args[:-1]
     # Initialization of the list
-    Lst =args[-_sage_const_1 ]
+    Lst =args[-1]
     # Initializing the input for generating a symbolic hypermatrix
     inpts = [j for j in l]+['zero']
     # Initialization of the hypermatrix
@@ -5363,11 +5483,11 @@ def List2Hypermatrix(*args):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=Lst[i]
     return Rh
 
@@ -5388,7 +5508,7 @@ def GeneralHypermatrixAdd(A,B):
     - Edinah K. Gnang
     """
     # The if statement bellow address the sum function
-    if B == _sage_const_0 :
+    if B == 0:
         tl = [A.n(i) for i in range(A.order())]+['zero']
         B = HM(*tl)
     # Initialization of the list specifying the dimensions of the output
@@ -5396,7 +5516,7 @@ def GeneralHypermatrixAdd(A,B):
     s = [B.n(i) for i in range(B.order())]
     # Testing the dimensions 
     x = var('x')
-    if(sum([l[i]*x**i for i in range(len(l))])==sum([s[i]*x**i for i in range(len(s))])):
+    if(sum([l[i]*x^i for i in range(len(l))])==sum([s[i]*x^i for i in range(len(s))])):
         # Initializing the input for generating a symbolic hypermatrix
         inpts = l+['zero']
         # Initialization of the hypermatrix
@@ -5404,11 +5524,11 @@ def GeneralHypermatrixAdd(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             Rh[tuple(entry)]=A[tuple(entry)]+B[tuple(entry)]
         return Rh
     else:
@@ -5436,7 +5556,7 @@ def GeneralHypermatrixHadamardProduct(A,B):
     s = [B.n(i) for i in range(B.order())]
     # Testing the dimensions 
     x = var('x')
-    if(sum([l[i]*x**i for i in range(len(l))])==sum([s[i]*x**i for i in range(len(s))])):
+    if(sum([l[i]*x^i for i in range(len(l))])==sum([s[i]*x^i for i in range(len(s))])):
         # Initializing the input for generating a symbolic hypermatrix
         inpts = l+['zero']
         # Initialization of the hypermatrix
@@ -5444,11 +5564,11 @@ def GeneralHypermatrixHadamardProduct(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             Rh[tuple(entry)]=A[tuple(entry)]*B[tuple(entry)]
         return Rh
     else:
@@ -5475,7 +5595,7 @@ def GeneralHypermatrixHadamardExponent(A,B):
     s = [B.n(i) for i in range(B.order())]
     # Testing the dimensions 
     x = var('x')
-    if(sum([l[i]*x**i for i in range(len(l))])==sum([s[i]*x**i for i in range(len(s))])):
+    if(sum([l[i]*x^i for i in range(len(l))])==sum([s[i]*x^i for i in range(len(s))])):
         # Initializing the input for generating a symbolic hypermatrix
         inpts = l+['zero']
         # Initialization of the hypermatrix
@@ -5483,12 +5603,12 @@ def GeneralHypermatrixHadamardExponent(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-            Rh[tuple(entry)]=A[tuple(entry)]**B[tuple(entry)]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)]=A[tuple(entry)]^B[tuple(entry)]
         return Rh
     else:
         raise ValueError, "The Dimensions of the input hypermatrices must match."
@@ -5519,13 +5639,13 @@ def GeneralHypermatrixKroneckerDelta(od, sz):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        if len(Set(entry)) == _sage_const_1 :
-            Rh[tuple(entry)] = _sage_const_1 
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if len(Set(entry)) == 1:
+            Rh[tuple(entry)] = 1
     return Rh
 
 def GeneralHypermatrixMainDiag(od, Lv):
@@ -5555,18 +5675,18 @@ def GeneralHypermatrixMainDiag(od, Lv):
     # Initialization of the hypermatrix
     Rh = HM(*inpts)
     # Initializing the index
-    Indx=_sage_const_0 
+    Indx=0
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        if len(Set(entry)) == _sage_const_1 :
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if len(Set(entry)) == 1:
             Rh[tuple(entry)] = Lv[Indx]
-            Indx=Indx+_sage_const_1 
+            Indx=Indx+1
     return Rh
 
 def GeneralHypermatrixKroneckerDeltaL(od, sz):
@@ -5597,13 +5717,13 @@ def GeneralHypermatrixKroneckerDeltaL(od, sz):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             if Set(entry).list() == [t]:
-                Rh[tuple(entry)] = _sage_const_1 
+                Rh[tuple(entry)] = 1
         L.append(Rh)
     return L
 
@@ -5628,7 +5748,7 @@ def GeneralUncorrelatedHypermatrixTupleU(od):
     # Initialization the alphabet list
     AlphaB = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
     # Initializing the hypermatrix
-    LQ = [apply(HM,[_sage_const_2  for i in range(od)]+[AlphaB[j]]).elementwise_base_exponent(e) for j in range(od)]
+    LQ = [apply(HM,[2 for i in range(od)]+[AlphaB[j]]).elementwise_base_exponent(e) for j in range(od)]
     # Initilizing the list of variable
     VrbLst = []
     for Q in LQ:
@@ -5636,17 +5756,17 @@ def GeneralUncorrelatedHypermatrixTupleU(od):
     # Computing the product
     Eq = apply(GeneralHypermatrixProduct, [Q for Q in LQ])
     # Writting up the constraints
-    LeQ = (Eq.list())[_sage_const_1 :_sage_const_2 **od-_sage_const_1 ]
+    LeQ = (Eq.list())[1:2^od-1]
     # Filling up the linear constraints
     CnstrLst= [] 
     for f in LeQ:
-        CnstrLst.append(ln((f.operands())[_sage_const_0 ]).canonicalize_radical()-I*pi-ln((f.operands())[_sage_const_1 ]).canonicalize_radical()==_sage_const_0 )
+        CnstrLst.append(ln((f.operands())[0]).canonicalize_radical()-I*pi-ln((f.operands())[1]).canonicalize_radical()==0)
     # Directly solving the constraints
     Sl = solve(CnstrLst, VrbLst)
     # Setting up the list for the dictionary
-    Dct = [(eq.lhs(),exp(eq.rhs())) for eq in Sl[_sage_const_0 ]]
+    Dct = [(eq.lhs(),exp(eq.rhs())) for eq in Sl[0]]
     # Returning the uncorrelated tuplets
-    return [apply(HM, [_sage_const_2  for i in range(od)]+[AlphaB[j]]).subs(dict(Dct)) for j in range(od)]
+    return [apply(HM, [2 for i in range(od)]+[AlphaB[j]]).subs(dict(Dct)) for j in range(od)]
 
 def GeneralUncorrelatedHypermatrixTuple(od):
     """
@@ -5668,18 +5788,18 @@ def GeneralUncorrelatedHypermatrixTuple(od):
     # Initializing the unormalized tuples
     L = GeneralUncorrelatedHypermatrixTupleU(od)
     Tp= apply(GeneralHypermatrixProduct, [h for h in L])
-    Q = L[_sage_const_0 ].copy()
+    Q = L[0].copy()
     # first row to normalize 
-    entry = [_sage_const_0  for i in range(Q.order())]
-    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([_sage_const_0  for i in range(Q.order())])]
-    entry[_sage_const_1 ] = _sage_const_1 
-    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([_sage_const_0  for i in range(Q.order())])]
+    entry = [0 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([0 for i in range(Q.order())])]
+    entry[1] = 1
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([0 for i in range(Q.order())])]
     # last row to normalize 
-    entry = [_sage_const_1  for i in range(Q.order())]
-    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([_sage_const_1  for i in range(Q.order())])]
-    entry[_sage_const_1 ] = _sage_const_0 
-    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([_sage_const_1  for i in range(Q.order())])]
-    return [Q]+[L[i] for i in range(_sage_const_1 ,len(L))]
+    entry = [1 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([1 for i in range(Q.order())])]
+    entry[1] = 0
+    Q[tuple(entry)]=Q[tuple(entry)]/Tp[tuple([1 for i in range(Q.order())])]
+    return [Q]+[L[i] for i in range(1,len(L))]
 
 def GeneralOrthogonalHypermatrixU(od):
     """
@@ -5701,35 +5821,35 @@ def GeneralOrthogonalHypermatrixU(od):
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
     # Initializing the hypermatrix
-    Q=apply(HM,[_sage_const_2  for i in range(od)]+['q'])
+    Q=apply(HM,[2 for i in range(od)]+['q'])
     # Initilizing the list of variable
     VrbLst=Q.list()
     # Reinitializing of Q by exponentiation 
     Q=Q.elementwise_base_exponent(e)
     # Computing the product
-    Eq=apply(GeneralHypermatrixProduct, [Q.transpose(j) for j in range(od,_sage_const_0 ,-_sage_const_1 )])
+    Eq=apply(GeneralHypermatrixProduct, [Q.transpose(j) for j in range(od,0,-1)])
     # Writting up the constraints
     LeQ=(Set(Eq.list())).list()
     # Removing the normalization constraints
-    LeQ.remove(e**(od*var('q'+''.join(['0' for i in range(od)])))+e**(od*var('q01'+''.join(['0' for i in range(od-_sage_const_2 )]))))
-    LeQ.remove( e**(od*var('q10'+''.join(['1' for i in range(od-_sage_const_2 )])))+e**(od*var('q'+''.join(['1' for i in range(od)]))))
+    LeQ.remove(e^(od*var('q'+''.join(['0' for i in range(od)])))+e^(od*var('q01'+''.join(['0' for i in range(od-2)]))))
+    LeQ.remove( e^(od*var('q10'+''.join(['1' for i in range(od-2)])))+e^(od*var('q'+''.join(['1' for i in range(od)]))))
     # Filling up the linear constraints
     CnstrLst= [] 
     for f in LeQ:
-        CnstrLst.append(ln((f.operands())[_sage_const_0 ]).canonicalize_radical()-I*pi-ln((f.operands())[_sage_const_1 ]).canonicalize_radical()==_sage_const_0 )
+        CnstrLst.append(ln((f.operands())[0]).canonicalize_radical()-I*pi-ln((f.operands())[1]).canonicalize_radical()==0)
     # Directly solving the constraints
     Sl = solve(CnstrLst,VrbLst)
     # Main loop performing the substitution of the entries
-    Lr = [var('r'+str(i)) for i in range(_sage_const_1 ,_sage_const_2 **od+_sage_const_1 )]
+    Lr = [var('r'+str(i)) for i in range(1,2^od+1)]
     l = [Q.n(i) for i in range(Q.order())]
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[_sage_const_0 ]))).canonicalize_radical()
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).canonicalize_radical()
     return Q
 
 def GeneralOrthogonalHypermatrix(od):
@@ -5750,52 +5870,52 @@ def GeneralOrthogonalHypermatrix(od):
 
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
-    if od == _sage_const_2 :
-        nrm = sqrt(exp(_sage_const_2 *var('r1'))+exp(_sage_const_2 *var('r2')))
+    if od == 2:
+        nrm = sqrt(exp(2*var('r1'))+exp(2*var('r2')))
         return HM([[exp(var('r1'))/nrm, exp(var('r2'))/nrm],[-exp(var('r2'))/nrm, exp(var('r1'))/nrm]])
     else :
         # Initializing the hypermatrix
-        Q = apply(HM,[_sage_const_2  for i in range(od)]+['q'])
+        Q = apply(HM,[2 for i in range(od)]+['q'])
         # Initilizing the list of variable
         VrbLst = Q.list()
         # Reinitializing of Q by exponentiation 
         Q = Q.elementwise_base_exponent(e)
         # Computing the product
-        Eq = apply(GeneralHypermatrixProduct, [Q.transpose(j) for j in range(od,_sage_const_0 ,-_sage_const_1 )])
+        Eq = apply(GeneralHypermatrixProduct, [Q.transpose(j) for j in range(od,0,-1)])
         # Writting up the constraints
         LeQ = (Set(Eq.list())).list()
         # Removing the normalization constraints
-        LeQ.remove(e**(od*var('q'+''.join(['0' for i in range(od)])))+ e**(od*var('q01'+''.join(['0' for i in range(od-_sage_const_2 )]))))
-        LeQ.remove( e**(od*var('q10'+''.join(['1' for i in range(od-_sage_const_2 )])))+ e**(od*var('q'+''.join(['1' for i in range(od)]))))
+        LeQ.remove(e^(od*var('q'+''.join(['0' for i in range(od)])))+ e^(od*var('q01'+''.join(['0' for i in range(od-2)]))))
+        LeQ.remove( e^(od*var('q10'+''.join(['1' for i in range(od-2)])))+ e^(od*var('q'+''.join(['1' for i in range(od)]))))
         # Filling up the linear constraints
         CnstrLst= [] 
         for f in LeQ:
-            CnstrLst.append(ln((f.operands())[_sage_const_0 ]).canonicalize_radical()-I*pi-ln((f.operands())[_sage_const_1 ]).canonicalize_radical()==_sage_const_0 )
+            CnstrLst.append(ln((f.operands())[0]).canonicalize_radical()-I*pi-ln((f.operands())[1]).canonicalize_radical()==0)
         # Directly solving the constraints
         Sl = solve(CnstrLst,VrbLst)
         # Main loop performing the substitution of the entries
-        Lr = [var('r'+str(i)) for i in range(_sage_const_1 ,_sage_const_2 **od+_sage_const_1 )]
+        Lr = [var('r'+str(i)) for i in range(1,2^od+1)]
         l = [Q.n(i) for i in range(Q.order())]
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-            Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[_sage_const_0 ]))).canonicalize_radical()
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Q[tuple(entry)]=Q[tuple(entry)].subs(dict(map(lambda eq: (eq.lhs(),eq.rhs()), Sl[0]))).canonicalize_radical()
         # Initialization of the output hypermatrix
         U = GeneralHypermatrixCopy(Q)
         # first row to normalize 
-        entry = [_sage_const_0  for i in range(Q.order())]
-        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[_sage_const_0 ]]+[j]+entry[_sage_const_2 :])]**Q.order() for j in range(_sage_const_2 ) ])**(_sage_const_1 /Q.order())
-        entry[_sage_const_1 ] = _sage_const_1 
-        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[_sage_const_0 ]]+[j]+entry[_sage_const_2 :])]**Q.order() for j in range(_sage_const_2 ) ])**(_sage_const_1 /Q.order())
+        entry = [0 for i in range(Q.order())]
+        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
+        entry[1] = 1
+        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
         # last row to normalize 
-        entry = [_sage_const_1  for i in range(Q.order())]
-        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[_sage_const_0 ]]+[j]+entry[_sage_const_2 :])]**Q.order() for j in range(_sage_const_2 ) ])**(_sage_const_1 /Q.order())
-        entry[_sage_const_1 ] = _sage_const_0 
-        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[_sage_const_0 ]]+[j]+entry[_sage_const_2 :])]**Q.order() for j in range(_sage_const_2 ) ])**(_sage_const_1 /Q.order())
+        entry = [1 for i in range(Q.order())]
+        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
+        entry[1] = 0
+        U[tuple(entry)]=Q[tuple(entry)]/sum([ Q[tuple([entry[0]]+[j]+entry[2:])]^Q.order() for j in range(2) ])^(1/Q.order())
     return U
 
 def GeneralUnitaryHypermatrixU(od):
@@ -5820,38 +5940,38 @@ def GeneralUnitaryHypermatrixU(od):
     # Initializing the variable playing the role of sqrt(-1)
     z=var('z')
     # Initializing the real part and the imaginary part
-    X=apply(HM,[_sage_const_2  for i in range(od)]+['x']); Y=apply(HM,[_sage_const_2  for i in range(od)]+['y'])
+    X=apply(HM,[2 for i in range(od)]+['x']); Y=apply(HM,[2 for i in range(od)]+['y'])
     # Initialization of the list
     Lh = [(X+z*Y).elementwise_base_exponent(e), (X-z*Y).elementwise_base_exponent(e)]
     # Computation of the Product.
-    B = apply(Prod,[Lh[Integer(mod(i,_sage_const_2 ))].transpose(i) for i in range(od,_sage_const_0 ,-_sage_const_1 )])
-    B[tuple([_sage_const_0  for i in range(od)])]=_sage_const_0 ; B[tuple([_sage_const_1  for i in range(od)])]=_sage_const_0 
+    B = apply(Prod,[Lh[Integer(mod(i,2))].transpose(i) for i in range(od,0,-1)])
+    B[tuple([0 for i in range(od)])]=0; B[tuple([1 for i in range(od)])]=0
     # Initializing the list
     L=Set(B.list()).list()
     # Removing the normalization constraints
-    L.remove(_sage_const_0 )
+    L.remove(0)
     # Initialization of the variables.
     Vrbls =X.list()+Y.list() 
     # Initialization of the non homogeneous equations
-    Eq =[(log((l.operands())[_sage_const_0 ])).simplify_log().subs(z=_sage_const_0 ) - (log((l.operands())[_sage_const_1 ])).simplify_log().subs(z=_sage_const_0 ) == _sage_const_0  for l in L]+[(log((l.operands())[_sage_const_0 ])).simplify_log().coefficient(z) - (log((l.operands())[_sage_const_1 ])).simplify_log().coefficient(z)==pi for l in L]
+    Eq =[(log((l.operands())[0])).simplify_log().subs(z=0) - (log((l.operands())[1])).simplify_log().subs(z=0) == 0 for l in L]+[(log((l.operands())[0])).simplify_log().coefficient(z) - (log((l.operands())[1])).simplify_log().coefficient(z)==pi for l in L]
     # Calling the constraint formator
     [A,b]=ConstraintFormatorII(Eq,Vrbls)
     # Setting the signs right
     V = A.kernel().basis()
-    for i in range(Integer(len(V)/_sage_const_2 ),len(V)):
+    for i in range(Integer(len(V)/2),len(V)):
         # Initilization of the index locators
-        c1=-_sage_const_1 ; c2=-_sage_const_1 
+        c1=-1; c2=-1
         for j in range(len(V[i])):
-            if V[i][j] == _sage_const_1  and c1 == -_sage_const_1 :
+            if V[i][j] == 1 and c1 == -1:
                 c1=j
-            elif V[i][j] == _sage_const_1  and c1 != -_sage_const_1 :
+            elif V[i][j] == 1 and c1 != -1:
                 c2=j
                 break
-        b[c2,_sage_const_0 ] = -b[c2,_sage_const_0 ]
+        b[c2,0] = -b[c2,0]
     # Rewriting the system
-    Eq = [(A*Matrix(SR,len(Vrbls),_sage_const_1 ,Vrbls))[i,_sage_const_0 ]==b[i,_sage_const_0 ] for i in range(A.nrows())]
+    Eq = [(A*Matrix(SR,len(Vrbls),1,Vrbls))[i,0]==b[i,0] for i in range(A.nrows())]
     # Computing the Homogeneous solution
-    Sln = solve(Eq,Vrbls)[_sage_const_0 ]
+    Sln = solve(Eq,Vrbls)[0]
     X = X.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
     Y = Y.subs(dict([(s.lhs(),s.rhs()) for s in Sln]))
     # Final result
@@ -5875,23 +5995,23 @@ def GeneralUnitaryHypermatrix(od):
     - Edinah K. Gnang
     """
     Lh=GeneralUnitaryHypermatrixU(od)
-    Tp=apply(Prod,[Lh[Integer(mod(i,_sage_const_2 ))].transpose(i) for i in range(od,_sage_const_0 ,-_sage_const_1 )])
-    Q =Lh[_sage_const_0 ].copy()
-    Qc=Lh[_sage_const_1 ].copy()
+    Tp=apply(Prod,[Lh[Integer(mod(i,2))].transpose(i) for i in range(od,0,-1)])
+    Q =Lh[0].copy()
+    Qc=Lh[1].copy()
     # first row to normalize 
-    entry=[_sage_const_0  for i in range(Q.order())]
-    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([_sage_const_0  for i in range(Q.order())])])**(_sage_const_1 /od)
-    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([_sage_const_0  for i in range(Q.order())])])**(_sage_const_1 /od)
-    entry[_sage_const_1 ]=_sage_const_1 
-    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([_sage_const_0  for i in range(Q.order())])])**(_sage_const_1 /od)
-    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([_sage_const_0  for i in range(Q.order())])])**(_sage_const_1 /od)
+    entry=[0 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
+    entry[1]=1
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([0 for i in range(Q.order())])])^(1/od)
     # last row to normalize 
-    entry=[_sage_const_1  for i in range(Q.order())]
-    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([_sage_const_1  for i in range(Q.order())])])**(_sage_const_1 /od)
-    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([_sage_const_1  for i in range(Q.order())])])**(_sage_const_1 /od)
-    entry[_sage_const_1 ]=_sage_const_0 
-    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([_sage_const_1  for i in range(Q.order())])])**(_sage_const_1 /od)
-    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([_sage_const_1  for i in range(Q.order())])])**(_sage_const_1 /od)
+    entry=[1 for i in range(Q.order())]
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
+    entry[1]=0
+    Q[tuple(entry)]=Q[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
+    Qc[tuple(entry)]=Qc[tuple(entry)]/(Tp[tuple([1 for i in range(Q.order())])])^(1/od)
     # Final result
     return [Q,Qc]
 
@@ -5925,17 +6045,17 @@ def GeneralHypermatrixReduce(A, VrbL, Rlts):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # Initialization of the function
         f=(A[tuple(entry)]).expand()
         # performing the reduction
         for v in range(len(VrbL)):
-            for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-_sage_const_1 ,-_sage_const_1 ):
-                f=expand(fast_reduce(f,[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]**d)])) 
+            for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
         Rh[tuple(entry)]=f
     return Rh
 
@@ -5957,18 +6077,18 @@ def DFT_image_resizer(sz, dm):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if Integer(mod(sz,dm)) == _sage_const_0 :
+    if Integer(mod(sz,dm)) == 0:
         # Initializing the identity matrix of the appropriate size
         Idm = identity_matrix(Integer(sz/dm))
         # Computing the Kronecker product with the hadamard 2x2 matrix
-        Rs = Idm.tensor_product(Matrix(SR, dm, dm, [exp(I*_sage_const_2 *pi*u*v/dm) for u in range(dm) for v in range(dm)]))
+        Rs = Idm.tensor_product(Matrix(SR, dm, dm, [exp(I*2*pi*u*v/dm) for u in range(dm) for v in range(dm)]))
         # Permuting the colum of the matrix in order to put the resized
         # image in the top left corner of the image
-        for i in range(_sage_const_1 ,Integer(sz/dm)):
+        for i in range(1,Integer(sz/dm)):
             tmp = Rs[:,i]
             Rs[:,i] = Rs[:,dm*i]
             Rs[:,dm*i] = tmp
-        return [HM([[(Rs[i,:]).list() for i in range(sz)] for j in range(_sage_const_3 )]).transpose(), HM([[((Rs.transpose())[i,:]).list() for i in range(sz)] for j in range(_sage_const_3 )]).transpose()]
+        return [HM([[(Rs[i,:]).list() for i in range(sz)] for j in range(3)]).transpose(), HM([[((Rs.transpose())[i,:]).list() for i in range(sz)] for j in range(3)]).transpose()]
     else:
         print 'Dimension mismatch !!'  
 
@@ -5987,34 +6107,34 @@ def channel_product(A,B):
     AUTHORS:
     - Edinah K. Gnang
     """
-    P0 = HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),'zero')
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
-            P0[i,j]=A[i,j,_sage_const_0 ]
-    P1 = HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),'zero')
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
-            P1[i,j]=A[i,j,_sage_const_1 ]
-    P2 = HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),'zero')
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
-            P2[i,j]=A[i,j,_sage_const_2 ]
-    Q0 = HM(B.n(_sage_const_0 ),B.n(_sage_const_1 ),'zero')
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
-            Q0[i,j]=B[i,j,_sage_const_0 ]
-    Q1 = HM(B.n(_sage_const_0 ),B.n(_sage_const_1 ),'zero')
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
-            Q1[i,j]=B[i,j,_sage_const_1 ]
-    Q2 = HM(B.n(_sage_const_0 ),B.n(_sage_const_1 ),'zero')
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
-            Q2[i,j]=B[i,j,_sage_const_2 ]
+    P0 = HM(A.n(0),A.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            P0[i,j]=A[i,j,0]
+    P1 = HM(A.n(0),A.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            P1[i,j]=A[i,j,1]
+    P2 = HM(A.n(0),A.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            P2[i,j]=A[i,j,2]
+    Q0 = HM(B.n(0),B.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            Q0[i,j]=B[i,j,0]
+    Q1 = HM(B.n(0),B.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            Q1[i,j]=B[i,j,1]
+    Q2 = HM(B.n(0),B.n(1),'zero')
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            Q2[i,j]=B[i,j,2]
     R0 = Matrix(SR,P0.listHM())*Matrix(SR,Q0.listHM())
     R1 = Matrix(SR,P1.listHM())*Matrix(SR,Q1.listHM())
     R2 = Matrix(SR,P2.listHM())*Matrix(SR,Q2.listHM())
-    return HM([[(R0[i,:]).list() for i in range(A.n(_sage_const_1 ))],[(R1[i,:]).list() for i in range(A.n(_sage_const_1 ))],[(R2[i,:]).list() for i in range(A.n(_sage_const_1 ))]]).transpose()
+    return HM([[(R0[i,:]).list() for i in range(A.n(1))],[(R1[i,:]).list() for i in range(A.n(1))],[(R2[i,:]).list() for i in range(A.n(1))]]).transpose()
 
 def Matrix2HM(A):
     """
@@ -6052,7 +6172,7 @@ def Deter(A):
     """
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
-    return sum([Permutation([p[i]+_sage_const_1  for i in range(len(p))]).signature()*prod([A[k,p[k]] for k in range(A.nrows())]) for p in P])
+    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([A[k,p[k]] for k in range(A.nrows())]) for p in P])
 
 def DeterHadamard(A):
     """
@@ -6073,7 +6193,7 @@ def DeterHadamard(A):
     """
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
-    return sum([Permutation([p[i]+_sage_const_1  for i in range(len(p))]).signature()*list_elementwise_product([A[k,p[k]] for k in range(A.nrows())]) for p in P])
+    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*list_elementwise_product([A[k,p[k]] for k in range(A.nrows())]) for p in P])
 
 def ThirdOrderDeter(H):
     """
@@ -6095,18 +6215,18 @@ def ThirdOrderDeter(H):
     - To Do: Implement a faster and more generic version.
     """
     # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==_sage_const_1  and H.order()==_sage_const_3 :
+    if len(Set(H.dimensions()).list())==1 and H.order()==3:
         # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(_sage_const_0 ),H.n(_sage_const_0 ),[var('x'+str(i)+str(j)) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
+        A=HM(H.n(0),H.n(0),[var('x'+str(i)+str(j)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the mnemonique polynomial
         P=Permutations(range(A.nrows()))
-        L=expand(Deter(A)*prod([sum([sqrt(g**_sage_const_2 ).canonicalize_radical() for g in Deter(A.elementwise_exponent(j)).operands()]) for j in range(_sage_const_2 ,_sage_const_1 +A.n(_sage_const_0 ))])).operands()
+        L=expand(Deter(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in Deter(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         # Computing the polynomial
-        f=sum([l for l in L if len((l**_sage_const_2 ).operands())==(H.n(_sage_const_0 ))**_sage_const_2 ])
+        f=sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
         # Loop performing the umbral expression
-        for k in range(H.n(_sage_const_0 ),_sage_const_0 ,-_sage_const_1 ):
-            f=fast_reduce(f,[var('x'+str(i)+str(j))**k for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))],[var('a'+str(i)+str(j)+str(k)) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-_sage_const_1 ,j-_sage_const_1 ,k-_sage_const_1 ]) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))]))
+        for k in range(H.n(0),0,-1):
+            f=fast_reduce(f,[var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-1,j-1,k-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
@@ -6146,21 +6266,21 @@ def MeanApproximation(T):
     - Edinah K. Gnang
     """
     # Initialization of the Slices.
-    Ha = HM(T.n(_sage_const_0 ), _sage_const_1      , T.n(_sage_const_2 ), 'zero')
-    Hb = HM(T.n(_sage_const_0 ), T.n(_sage_const_1 ), _sage_const_1 ,      'zero')
-    Hc = HM(_sage_const_1      , T.n(_sage_const_1 ), T.n(_sage_const_2 ), 'zero')
+    Ha = HM(T.n(0), 1     , T.n(2), 'zero')
+    Hb = HM(T.n(0), T.n(1), 1,      'zero')
+    Hc = HM(1     , T.n(1), T.n(2), 'zero')
     # Computing the mean of row depth slice
     for u in range(Ha.nrows()):
         for v in range(Ha.ndpts()):
-            Ha[u,_sage_const_0 ,v] = mean([T[u,i,v] for i in range(T.ncols())])
+            Ha[u,0,v] = mean([T[u,i,v] for i in range(T.ncols())])
     # Computing the mean row column slice
     for u in range(Hb.nrows()):
         for v in range(Hb.ncols()):
-            Hb[u,v,_sage_const_0 ] = mean([T[u,v,i] for i in range(T.ndpts())])
+            Hb[u,v,0] = mean([T[u,v,i] for i in range(T.ndpts())])
     # Computing the mean column depth slice
     for u in range(Hc.ncols()):
         for v in range(Hc.ndpts()):
-            Hc[_sage_const_0 ,u,v] = mean([T[i,u,v] for i in range(T.nrows())])
+            Hc[0,u,v] = mean([T[i,u,v] for i in range(T.nrows())])
     # Computing the outer-product of the mean slices.
     return [Ha, Hb, Hc]
 
@@ -6188,15 +6308,15 @@ def ZeroPadding(A):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
-def GenerateUnitLpNormVector(n,p = _sage_const_2 ,indx=_sage_const_0 ):
+def GenerateUnitLpNormVector(n,p = 2,indx=0):
     """
     outputs a unit lp norm vector.
 
@@ -6211,17 +6331,17 @@ def GenerateUnitLpNormVector(n,p = _sage_const_2 ,indx=_sage_const_0 ):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if n == _sage_const_1 :
-        return [_sage_const_1 ]
+    if n == 1:
+        return [1]
     else :
         X = []
-        X.append(cos(var('t'+str(indx)))**(_sage_const_2 /p))
-        for i in range(_sage_const_1 ,n-_sage_const_1 ):
-            X.append((prod([sin(var('t'+str(j+indx))) for j in range(i)])*cos(var('t'+str(i+indx))))**(_sage_const_2 /p))
-        X.append((prod([sin(var('t'+str(j+indx))) for j in range(n-_sage_const_1 )]))**(_sage_const_2 /p))
+        X.append(cos(var('t'+str(indx)))^(2/p))
+        for i in range(1,n-1):
+            X.append((prod([sin(var('t'+str(j+indx))) for j in range(i)])*cos(var('t'+str(i+indx))))^(2/p))
+        X.append((prod([sin(var('t'+str(j+indx))) for j in range(n-1)]))^(2/p))
         return X
 
-def ProbabilityMatrix(n, xi=_sage_const_0 ):
+def ProbabilityMatrix(n, xi=0):
     """
     outputs the symbolic parametrization of a doubly stochastic matrix
 
@@ -6241,33 +6361,33 @@ def ProbabilityMatrix(n, xi=_sage_const_0 ):
     M = Matrix(SR, zero_matrix(n,n))
     # Initialixzing the variable index
     indx=xi
-    for c in range(n-_sage_const_1 ):
+    for c in range(n-1):
         # Initializing the probability vector associated with the row c
-        La = GenerateUnitLpNormVector(n-c,_sage_const_1 ,indx)
+        La = GenerateUnitLpNormVector(n-c,1,indx)
         # Updating the variable index
-        indx = indx+len(La)-_sage_const_1 
+        indx = indx+len(La)-1
         # Initializing the probability vector associated with the column c
-        Lb = GenerateUnitLpNormVector(n-c-_sage_const_1 ,_sage_const_1 ,indx)
+        Lb = GenerateUnitLpNormVector(n-c-1,1,indx)
         # Updating the variable index
-        indx = indx+len(Lb)-_sage_const_1 
+        indx = indx+len(Lb)-1
         # Loop which fills up the Matrix
         for i in range(c, c+len(La)):
-            if c > _sage_const_0 :
+            if c > 0:
                 # Filling up the row c of the Matrix M
-                M[c,i] = (_sage_const_1 -sum([M[c,j] for j in range(c)]))*La[i-c]
+                M[c,i] = (1-sum([M[c,j] for j in range(c)]))*La[i-c]
                 if i > c:
                     # Filling up the column c of the Matrix M
-                    M[i,c] = (_sage_const_1 -sum([M[j,c] for j in range(c+_sage_const_1 )]))*Lb[i-c-_sage_const_1 ]
+                    M[i,c] = (1-sum([M[j,c] for j in range(c+1)]))*Lb[i-c-1]
             else:
                 # Filling up the row c of the Matrix M
                 M[c,i] = La[i-c]
                 if i > c:
                     # Filling up the column c of the Matrix M
-                    M[i,c] = (_sage_const_1 -sum([M[j,c] for j in range(c+_sage_const_1 )]))*Lb[i-c-_sage_const_1 ]
-    M[n-_sage_const_1 ,n-_sage_const_1 ]=_sage_const_1 -sum([M[j,n-_sage_const_1 ] for j in range(n-_sage_const_1 )])
+                    M[i,c] = (1-sum([M[j,c] for j in range(c+1)]))*Lb[i-c-1]
+    M[n-1,n-1]=1-sum([M[j,n-1] for j in range(n-1)])
     return M
 
-def ProbabilityHM(sz, xi=_sage_const_0 ):
+def ProbabilityHM(sz, xi=0):
     """
     outputs the symbolic parametrization of a doubly stochastic matrix
 
@@ -6288,33 +6408,33 @@ def ProbabilityHM(sz, xi=_sage_const_0 ):
     M = HM(sz,sz, 'zero')
     # Initialixzing the variable index
     indx=xi
-    for c in rg(sz-_sage_const_1 ):
+    for c in rg(sz-1):
         # Initializing the probability vector associated with the row c
-        La = GenerateUnitLpNormVector(sz-c,_sage_const_1 ,indx)
+        La = GenerateUnitLpNormVector(sz-c,1,indx)
         # Updating the variable index
-        indx = indx+len(La)-_sage_const_1 
+        indx = indx+len(La)-1
         # Initializing the probability vector associated with the column c
-        Lb = GenerateUnitLpNormVector(sz-c-_sage_const_1 ,_sage_const_1 ,indx)
+        Lb = GenerateUnitLpNormVector(sz-c-1,1,indx)
         # Updating the variable index
-        indx = indx+len(Lb)-_sage_const_1 
+        indx = indx+len(Lb)-1
         # Loop which fills up the Matrix
         for i in range(c, c+len(La)):
-            if c > _sage_const_0 :
+            if c > 0:
                 # Filling up the row c of the Matrix M
-                M[c,i] = (_sage_const_1 -sum([M[c,j] for j in rg(c)]))*La[i-c]
+                M[c,i] = (1-sum([M[c,j] for j in rg(c)]))*La[i-c]
                 if i > c:
                     # Filling up the column c of the Matrix M
-                    M[i,c] = (_sage_const_1 -sum([M[j,c] for j in rg(c+_sage_const_1 )]))*Lb[i-c-_sage_const_1 ]
+                    M[i,c] = (1-sum([M[j,c] for j in rg(c+1)]))*Lb[i-c-1]
             else:
                 # Filling up the row c of the Matrix M
                 M[c,i] = La[i-c]
                 if i > c:
                     # Filling up the column c of the Matrix M
-                    M[i,c] = (_sage_const_1 -sum([M[j,c] for j in rg(c+_sage_const_1 )]))*Lb[i-c-_sage_const_1 ]
-    M[sz-_sage_const_1 ,sz-_sage_const_1 ]=_sage_const_1 -sum([M[j,sz-_sage_const_1 ] for j in rg(sz-_sage_const_1 )])
+                    M[i,c] = (1-sum([M[j,c] for j in rg(c+1)]))*Lb[i-c-1]
+    M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in rg(sz-1)])
     return M
 
-def ProbabilitySymMatrix(n, xi=_sage_const_0 ):
+def ProbabilitySymMatrix(n, xi=0):
     """
     outputs the symbolic parametrization of a symetric doubly stochastic matrix
 
@@ -6335,16 +6455,16 @@ def ProbabilitySymMatrix(n, xi=_sage_const_0 ):
     M = Matrix(SR, zero_matrix(n,n))
     # Initialixzing the variable index
     indx=xi
-    for c in range(n-_sage_const_1 ):
+    for c in range(n-1):
         # Initializing the probability vector associated with the row c
-        La = GenerateUnitLpNormVector(n-c,_sage_const_1 ,indx)
+        La = GenerateUnitLpNormVector(n-c,1,indx)
         # Updating the variable index
-        indx = indx+len(La)-_sage_const_1 
+        indx = indx+len(La)-1
         # Loop which fills up the Matrix
         for i in range(c, c+len(La)):
-            if c > _sage_const_0 :
+            if c > 0:
                 # Filling up the row c of the Matrix M
-                M[c,i] = (_sage_const_1 -sum([M[c,j] for j in range(c)]))*La[i-c]
+                M[c,i] = (1-sum([M[c,j] for j in range(c)]))*La[i-c]
                 if i > c:
                     # Filling up the column c of the Matrix M
                     M[i,c] = M[c,i] 
@@ -6354,10 +6474,10 @@ def ProbabilitySymMatrix(n, xi=_sage_const_0 ):
                 if i > c:
                     # Filling up the column c of the Matrix M
                     M[i,c] = M[c,i]
-    M[n-_sage_const_1 ,n-_sage_const_1 ]=_sage_const_1 -sum([M[j,n-_sage_const_1 ] for j in range(n-_sage_const_1 )])
+    M[n-1,n-1]=1-sum([M[j,n-1] for j in range(n-1)])
     return M
 
-def ProbabilitySymHM(sz, xi=_sage_const_0 ):
+def ProbabilitySymHM(sz, xi=0):
     """
     outputs the symbolic parametrization of a symetric doubly stochastic matrix
 
@@ -6379,16 +6499,16 @@ def ProbabilitySymHM(sz, xi=_sage_const_0 ):
     M = HM(sz, sz, 'zero')
     # Initialixzing the variable index
     indx=xi
-    for c in rg(sz-_sage_const_1 ):
+    for c in rg(sz-1):
         # Initializing the probability vector associated with the row c
-        La = GenerateUnitLpNormVector(sz-c,_sage_const_1 ,indx)
+        La = GenerateUnitLpNormVector(sz-c,1,indx)
         # Updating the variable index
-        indx = indx+len(La)-_sage_const_1 
+        indx = indx+len(La)-1
         # Loop which fills up the Matrix
         for i in range(c, c+len(La)):
-            if c > _sage_const_0 :
+            if c > 0:
                 # Filling up the row c of the Matrix M
-                M[c,i] = (_sage_const_1 -sum([M[c,j] for j in range(c)]))*La[i-c]
+                M[c,i] = (1-sum([M[c,j] for j in range(c)]))*La[i-c]
                 if i > c:
                     # Filling up the column c of the Matrix M
                     M[i,c] = M[c,i] 
@@ -6398,7 +6518,7 @@ def ProbabilitySymHM(sz, xi=_sage_const_0 ):
                 if i > c:
                     # Filling up the column c of the Matrix M
                     M[i,c] = M[c,i]
-    M[sz-_sage_const_1 ,sz-_sage_const_1 ]=_sage_const_1 -sum([M[j,sz-_sage_const_1 ] for j in range(sz-_sage_const_1 )])
+    M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in range(sz-1)])
     return M
 
 def GenerateRandomOneZeroHM(sz, k):
@@ -6417,19 +6537,19 @@ def GenerateRandomOneZeroHM(sz, k):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if type(k)==type(_sage_const_2 ) and k > _sage_const_0  :
+    if type(k)==type(2) and k > 0 :
         # Initialization of the set of powers of 2
-        S=Set([_sage_const_2 **i for i in rg(sz)])
+        S=Set([2^i for i in rg(sz)])
         # Initialization of the list of integers
         L=[sum(s) for s in S.subsets(k)]
         # Chosing uniformly at random a memeber of L
-        if len(L)==_sage_const_0  :
+        if len(L)==0 :
             return HM(sz,'zero').list()
         else :
-            rn=L[randint(_sage_const_0 ,len(L)-_sage_const_1 )]
+            rn=L[randint(0,len(L)-1)]
             # obtaining the bits of the chose number
             bL=rn.bits()
-            return bL+[_sage_const_0  for i in rg(len(bL),sz)]
+            return bL+[0 for i in rg(len(bL),sz)]
     else :
         return HM(sz,'zero').list()
 
@@ -6462,33 +6582,33 @@ def Random_d_regular_adjacencyHM(sz, d):
     - Edinah K. Gnang
     """
     # Initializing the matrix to be filled
-    M = HM(sz,sz, 'zero'); M[sz-_sage_const_1 ,sz-_sage_const_1 ]=_sage_const_1 
+    M = HM(sz,sz, 'zero'); M[sz-1,sz-1]=1
     # List of regular graph on 2 vertices
-    while M[sz-_sage_const_1 ,sz-_sage_const_1 ]!=_sage_const_0  or (M*HM(sz,_sage_const_1 ,'one')).list() != (HM(_sage_const_1 ,sz,'one')*M).list():
-        for c in rg(sz-_sage_const_1 ):
+    while M[sz-1,sz-1]!=0 or (M*HM(sz,1,'one')).list() != (HM(1,sz,'one')*M).list():
+        for c in rg(sz-1):
             # Initializing the vector associated with the row c
-            La = [_sage_const_0 ]+GenerateRandomOneZeroHM(sz-c-_sage_const_1 ,d-sum(M[c,j] for j in rg(c)))
+            La = [0]+GenerateRandomOneZeroHM(sz-c-1,d-sum(M[c,j] for j in rg(c)))
             # Initializing the vector associated with the column c
-            if sz-c-_sage_const_2  > _sage_const_0 :
-                Lb = [_sage_const_0 ]+GenerateRandomOneZeroHM(sz-c-_sage_const_2 ,d-sum(M[j,c] for j in rg(c+_sage_const_1 )))
-            elif sz-c-_sage_const_2  == _sage_const_0 :
-                Lb=[_sage_const_0 ]
+            if sz-c-2 > 0:
+                Lb = [0]+GenerateRandomOneZeroHM(sz-c-2,d-sum(M[j,c] for j in rg(c+1)))
+            elif sz-c-2 == 0:
+                Lb=[0]
             # Loop which fills up the Matrix
             for i in range(c, c+len(La)):
-                if c > _sage_const_0 :
+                if c > 0:
                     # Filling up the row c of the Matrix M
                     M[c,i] = La[i-c]
                     if i > c:
                         # Filling up the column c of the Matrix M
-                        M[i,c] = Lb[i-c-_sage_const_1 ]
+                        M[i,c] = Lb[i-c-1]
                 else:
                     # Filling up the row c of the Matrix M
                     M[c,i] = La[i-c]
                     if i > c:
                         # Filling up the column c of the Matrix M
-                        M[i,c] = Lb[i-c-_sage_const_1 ]
-        M[sz-_sage_const_1 ,sz-_sage_const_1 ]=d-sum([M[j,sz-_sage_const_1 ] for j in rg(sz-_sage_const_1 )])
-    return [M, HM(sz,sz,'one')-M-HM(_sage_const_2 ,sz,'kronecker')]
+                        M[i,c] = Lb[i-c-1]
+        M[sz-1,sz-1]=d-sum([M[j,sz-1] for j in rg(sz-1)])
+    return [M, HM(sz,sz,'one')-M-HM(2,sz,'kronecker')]
 
 def BipInflateHM(sz):
     """
@@ -6521,10 +6641,10 @@ def BipInflateHM(sz):
     AUTHORS:
     - Edinah K. Gnang, James Murphy
     """
-    if Integer(mod(sz,_sage_const_2 ))==_sage_const_1 :
-        d=Integer((sz-_sage_const_1 )/_sage_const_2 )
+    if Integer(mod(sz,2))==1:
+        d=Integer((sz-1)/2)
         [A,B]=Random_d_regular_adjacencyHM(sz, d)
-        return HM([[_sage_const_0 ,_sage_const_1 ],[_sage_const_0 ,_sage_const_0 ]]).tensor_product(A)+HM([[_sage_const_0 ,_sage_const_0 ],[_sage_const_1 ,_sage_const_0 ]]).tensor_product(B)
+        return HM([[0,1],[0,0]]).tensor_product(A)+HM([[0,0],[1,0]]).tensor_product(B)
     else:
         raise ValueError, "The number of vertices must be odd"
 
@@ -6564,12 +6684,12 @@ def HypermatrixPseudoInversePairsII(A,B):
     for i in range(sz):
         for j in range(sz):
             for k in range(sz):
-                R1[i,j,k] = exp(sln[i*sz**_sage_const_2 +j*sz**_sage_const_1 +k*sz**_sage_const_0 ,_sage_const_0 ])
+                R1[i,j,k] = exp(sln[i*sz^2+j*sz^1+k*sz^0,0])
     R2 = HM(sz, sz, sz,'zero')
     for i in range(sz):
         for j in range(sz):
             for k in range(sz):
-                R2[i,j,k] = exp(sln[sz**_sage_const_3 +i*sz**_sage_const_2 +j*sz**_sage_const_1 +k*sz**_sage_const_0 ,_sage_const_0 ])
+                R2[i,j,k] = exp(sln[sz^3+i*sz^2+j*sz^1+k*sz^0,0])
     return [R1,R2]
 
 def HypermatrixPseudoInversePairsUnsplit(A,B):
@@ -6610,12 +6730,12 @@ def HypermatrixPseudoInversePairsUnsplit(A,B):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-        XY[tuple(entry)]=sln[i][_sage_const_0 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        XY[tuple(entry)]=sln[i][0]
     return XY
 
 def HypermatrixPseudoInversePairAction(T, A, B):
@@ -6656,7 +6776,7 @@ def GenerateRandomHypermatrix(*l):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if prod(list(l)) != _sage_const_0 :
+    if prod(list(l)) != 0:
         # Initializing the input for generating a symbolic hypermatrix
         inpts = list(l)+['zero']
         # Initialization of the hypermatrix
@@ -6664,11 +6784,11 @@ def GenerateRandomHypermatrix(*l):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             Rh[tuple(entry)]=random()
         return Rh
     else :
@@ -6688,7 +6808,7 @@ def GenerateRandomIntegerHypermatrix(*l):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if prod(list(l)) != _sage_const_0 :
+    if prod(list(l)) != 0:
         # Initializing the input for generating a symbolic hypermatrix
         inpts = list(l)+['zero']
         # Initialization of the hypermatrix
@@ -6696,11 +6816,11 @@ def GenerateRandomIntegerHypermatrix(*l):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             Rh[tuple(entry)]=ZZ.random_element()
         return Rh
     else :
@@ -6720,7 +6840,7 @@ def GenerateRandomBinaryHypermatrix(*l):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if prod(list(l)) != _sage_const_0 :
+    if prod(list(l)) != 0:
         # Initializing the input for generating a symbolic hypermatrix
         inpts = list(l)+['zero']
         # Initialization of the hypermatrix
@@ -6728,12 +6848,12 @@ def GenerateRandomBinaryHypermatrix(*l):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-            Rh[tuple(entry)]=Integer(mod(ZZ.random_element(),_sage_const_2 ))
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)]=Integer(mod(ZZ.random_element(),2))
         return Rh
     else :
         raise ValueError, "The Dimensions must all be non-zero."
@@ -6754,31 +6874,31 @@ def GeneralStochasticHypermatrix(t, od):
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski
     """
-    if od < _sage_const_2  and type(od)==type(_sage_const_1 ):
+    if od < 2 and type(od)==type(1):
         raise ValueError, "The order must be greater or equal to 2."
-    elif od == _sage_const_2 :
-        return HM([[cos(t)**_sage_const_2 , sin(t)**_sage_const_2 ], [sin(t)**_sage_const_2 , cos(t)**_sage_const_2 ]])
-    elif od > _sage_const_2  and type(od) == type(_sage_const_1 ):
-        dms = [_sage_const_2 ,_sage_const_2 ]
-        B = GeneralStochasticHypermatrix(t,_sage_const_2 )
-        for z in range(_sage_const_2 ,od):
+    elif od == 2:
+        return HM([[cos(t)^2, sin(t)^2], [sin(t)^2, cos(t)^2]])
+    elif od > 2 and type(od) == type(1):
+        dms = [2,2]
+        B = GeneralStochasticHypermatrix(t,2)
+        for z in range(2,od):
             A = B 
-            dms.append(_sage_const_2 ) 
+            dms.append(2) 
             B = apply(HM, dms+['zero'])
             l = [A.n(i) for i in range(A.order())]
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry = [Integer(mod(i,l[_sage_const_0 ]))]
-                sm = Integer(mod(i,l[_sage_const_0 ]))
-                for k in range(len(l)-_sage_const_1 ):
-                    entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                    sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-                B[tuple(entry+[_sage_const_0 ])]=A[tuple(entry)]
-                if A[tuple(entry)] == cos(t)**_sage_const_2 :
-                    B[tuple(entry+[_sage_const_1 ])]=sin(t)**_sage_const_2 
+                entry = [Integer(mod(i,l[0]))]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                B[tuple(entry+[0])]=A[tuple(entry)]
+                if A[tuple(entry)] == cos(t)^2:
+                    B[tuple(entry+[1])]=sin(t)^2
                 else :
-                    B[tuple(entry+[_sage_const_1 ])]=cos(t)**_sage_const_2 
+                    B[tuple(entry+[1])]=cos(t)^2
         return B
     else :
         raise ValueError, "The order must be a positive integer"
@@ -6798,12 +6918,12 @@ def SecondOrderSliceKroneckerProduct(Ha, Hb):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix
-    Hc = HM(Ha.n(_sage_const_0 )*Hb.n(_sage_const_0 ), Ha.n(_sage_const_1 )*Hb.n(_sage_const_1 ), 'zero')
-    for i0 in range(Ha.n(_sage_const_0 )):
-        for i1 in range(Ha.n(_sage_const_1 )):
-            for j0 in range(Hb.n(_sage_const_0 )):
-                for j1 in range(Hb.n(_sage_const_1 )):
-                    Hc[Hb.n(_sage_const_0 )*i0+j0,Hb.n(_sage_const_1 )*i1+j1]=Ha[i0,i1]*Hb[j0,j1]
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for j0 in range(Hb.n(0)):
+                for j1 in range(Hb.n(1)):
+                    Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1]=Ha[i0,i1]*Hb[j0,j1]
     return Hc
 
 def ThirdOrderSliceKroneckerProduct(Ha, Hb):
@@ -6815,7 +6935,7 @@ def ThirdOrderSliceKroneckerProduct(Ha, Hb):
     ::
 
         sage: ThirdOrderSliceKroneckerProduct(HM(2,2,2,'a'),HM(3,3,3,'b'))
-        [[[a000*b000, a000*b001, a000*b002, a001*b000, a001*b001, a001*b002], [a000*b010, a000*b011, a000*b012, a001*b010, a001*b011, a001*b012], [a000*b020, a000*b021, a000*b022, a001*b020, a001*b021, a001*b022], [a010*b000, a010*b001, a010*b002, a011*b000, a011*b001, a011*b002], [a010*b010, a010*b011, a010*b012, a011*b010, a011*b011, a011*b012], [a010*b020, a010*b021, a010*b022, a011*b020, a011*b021, a011*b022]], [[a000*b100, a000*b101, a000*b102, a001*b100, a001*b101, a001*b102], [a000*b110, a000*b111, a000*b112, a001*b110, a001*b111, a001*b112], [a000*b120, a000*b121, a000*b122, a001*b120, a001*b121, a001*b122], [a010*b100, a010*b101, a010*b102, a011*b100, a011*b101, a011*b102], [a010*b110, a010*b111, a010*b112, a011*b110, a011*b111, a011*b112], [a010*b120, a010*b121, a010*b122, a011*b120, a011*b121, a011*b122]], [[a000*b200, a000*b201, a000*b202, a001*b200, a001*b201, a001*b202], [a000*b210, a000*b211, a000*b212, a001*b210, a001*b211, a001*b212], [a000*b220, a000*b221, a000*b222, a001*b220, a001*b221, a001*b222], [a010*b200, a010*b201, a010*b202, a011*b200, a011*b201, a011*b202], [a010*b210, a010*b211, a010*b212, a011*b210, a011*b211, a011*b212], [a010*b220, a010*b221, a010*b222, a011*b220, a011*b221, a011*b222]], [[a100*b000, a100*b001, a100*b002, a101*b000, a101*b001, a101*b002], [a100*b010, a100*b011, a100*b012, a101*b010, a101*b011, a101*b012], [a100*b020, a100*b021, a100*b022, a101*b020, a101*b021, a101*b022], [a110*b000, a110*b001, a110*b002, a111*b000, a111*b001, a111*b002], [a110*b010, a110*b011, a110*b012, a111*b010, a111*b011, a111*b012], [a110*b020, a110*b021, a110*b022, a111*b020, a111*b021, a111*b022]], [[a100*b100, a100*b101, a100*b102, a101*b100, a101*b101, a101*b102], [a100*b110, a100*b111, a100*b112, a101*b110, a101*b111, a101*b112], [a100*b120, a100*b121, a100*b122, a101*b120, a101*b121, a101*b122], [a110*b100, a110*b101, a110*b102, a111*b100, a111*b101, a111*b102], [a110*b110, a110*b111, a110*b112, a111*b110, a111*b111, a111*b112], [a110*b120, a110*b121, a110*b122, a111*b120, a111*b121, a111*b122]], [[a100*b200, a100*b201, a100*b202, a101*b200, a101*b201, a101*b202], [a100*b210, a100*b211, a100*b212, a101*b210, a101*b211, a101*b212], [a100*b220, a100*b221, a100*b222, a101*b220, a101*b221, a101*b222], [a110*b200, a110*b201, a110*b202, a111*b200, a111*b201, a111*b202], [a110*b210, a110*b211, a110*b212, a111*b210, a111*b211, a111*b212], [a110*b220, a110*b221, a110*b222, a111*b220, a111*b221, a111*b222]]] 
+        [[[a000*b000, a000*b001, a000*b002, a001*b000, a001*b001, a001*b002], [a000*b010, a000*b011, a000*b012, a001*b010, a001*b011, a001*b012], [a000*b020, a000*b021, a000*b022, a001*b020, a001*b021, a001*b022], [a010*b000, a010*b001, a010*b002, a011*b000, a011*b001, a011*b002], [a010*b010, a010*b011, a010*b012, a011*b010, a011*b011, a011*b012], [a010*b020, a010*b021, a010*b022, a011*b020, a011*b021, a011*b022]], [[a000*b100, a000*b101, a000*b102, a001*b100, a001*b101, a001*b102], [a000*b110, a000*b111, a000*b112, a001*b110, a001*b111, a001*b112], [a000*b120, a000*b121, a000*b122, a001*b120, a001*b121, a001*b122], [a010*b100, a010*b101, a010*b102, a011*b100, a011*b101, a011*b102], [a010*b110, a010*b111, a010*b112, a011*b110, a011*b111, a011*b112], [a010*b120, a010*b121, a010*b122, a011*b120, a011*b121, a011*b122]], [[a000*b200, a000*b201, a000*b202, a001*b200, a001*b201, a001*b202], [a000*b210, a000*b211, a000*b212, a001*b210, a001*b211, a001*b212], [a000*b220, a000*b221, a000*b222, a001*b220, a001*b221, a001*b222], [a010*b200, a010*b201, a010*b202, a011*b200, a011*b201, a011*b202], [a010*b210, a010*b211, a010*b212, a011*b210, a011*b211, a011*b212], [a010*b220, a010*b221, a010*b222, a011*b220, a011*b221, a011*b222]], [[a100*b000, a100*b001, a100*b002, a101*b000, a101*b001, a101*b002], [a100*b010, a100*b011, a100*b012, a101*b010, a101*b011, a101*b012], [a100*b020, a100*b021, a100*b022, a101*b020, a101*b021, a101*b022], [a110*b000, a110*b001, a110*b002, a111*b000, a111*b001, a111*b002], [a110*b010, a110*b011, a110*b012, a111*b010, a111*b011, a111*b012], [a110*b020, a110*b021, a110*b022, a111*b020, a111*b021, a111*b022]], [[a100*b100, a100*b101, a100*b102, a101*b100, a101*b101, a101*b102], [a100*b110, a100*b111, a100*b112, a101*b110, a101*b111, a101*b112], [a100*b120, a100*b121, a100*b122, a101*b120, a101*b121, a101*b122], [a110*b100, a110*b101, a110*b102, a111*b100, a111*b101, a111*b102], [a110*b110, a110*b111, a110*b112, a111*b110, a111*b111, a111*b112], [a110*b120, a110*b121, a110*b122, a111*b120, a111*b121, a111*b122]], [[a100*b200, a100*b201, a100*b202, a101*b200, a101*b201, a101*b202], [a100*b210, a100*b211, a100*b212, a101*b210, a101*b211, a101*b212], [a100*b220, a100*b221, a100*b222, a101*b220, a101*b221, a101*b222], [a110*b200, a110*b201, a110*b202, a111*b200, a111*b201, a111*b202], [a110*b210, a110*b211, a110*b212, a111*b210, a111*b211, a111*b212], [a110*b220, a110*b221, a110*b222, a111*b220, a111*b221, a111*b222]]]
 
 
     AUTHORS:
@@ -6823,14 +6943,14 @@ def ThirdOrderSliceKroneckerProduct(Ha, Hb):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix
-    Hc = HM(Ha.n(_sage_const_0 )*Hb.n(_sage_const_0 ), Ha.n(_sage_const_1 )*Hb.n(_sage_const_1 ), Ha.n(_sage_const_2 )*Hb.n(_sage_const_2 ), 'zero')
-    for i0 in range(Ha.n(_sage_const_0 )):
-        for i1 in range(Ha.n(_sage_const_1 )):
-            for i2 in range(Ha.n(_sage_const_2 )):
-                for j0 in range(Hb.n(_sage_const_0 )):
-                    for j1 in range(Hb.n(_sage_const_1 )):
-                        for j2 in range(Hb.n(_sage_const_2 )):
-                            Hc[Hb.n(_sage_const_0 )*i0+j0, Hb.n(_sage_const_1 )*i1+j1, Hb.n(_sage_const_2 )*i2+j2]=Ha[i0,i1,i2]*Hb[j0,j1,j2]
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for j0 in range(Hb.n(0)):
+                    for j1 in range(Hb.n(1)):
+                        for j2 in range(Hb.n(2)):
+                            Hc[Hb.n(0)*i0+j0, Hb.n(1)*i1+j1, Hb.n(2)*i2+j2]=Ha[i0,i1,i2]*Hb[j0,j1,j2]
     return Hc
 
 def FourthOrderSliceKroneckerProduct(Ha, Hb):
@@ -6849,16 +6969,16 @@ def FourthOrderSliceKroneckerProduct(Ha, Hb):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix
-    Hc = HM(Ha.n(_sage_const_0 )*Hb.n(_sage_const_0 ), Ha.n(_sage_const_1 )*Hb.n(_sage_const_1 ), Ha.n(_sage_const_2 )*Hb.n(_sage_const_2 ), Ha.n(_sage_const_3 )*Hb.n(_sage_const_3 ) , 'zero')
-    for i0 in range(Ha.n(_sage_const_0 )):
-        for i1 in range(Ha.n(_sage_const_1 )):
-            for i2 in range(Ha.n(_sage_const_2 )):
-                for i3 in range(Ha.n(_sage_const_3 )):
-                    for j0 in range(Hb.n(_sage_const_0 )):
-                        for j1 in range(Hb.n(_sage_const_1 )):
-                            for j2 in range(Hb.n(_sage_const_2 )):
-                                for j3 in range(Hb.n(_sage_const_3 )):
-                                    Hc[Hb.n(_sage_const_0 )*i0+j0,Hb.n(_sage_const_1 )*i1+j1,Hb.n(_sage_const_2 )*i2+j2,Hb.n(_sage_const_3 )*i3+j3]=Ha[i0,i1,i2,i3]*Hb[j0,j1,j2,j3]
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), Ha.n(3)*Hb.n(3) , 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for i3 in range(Ha.n(3)):
+                    for j0 in range(Hb.n(0)):
+                        for j1 in range(Hb.n(1)):
+                            for j2 in range(Hb.n(2)):
+                                for j3 in range(Hb.n(3)):
+                                    Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1,Hb.n(2)*i2+j2,Hb.n(3)*i3+j3]=Ha[i0,i1,i2,i3]*Hb[j0,j1,j2,j3]
     return Hc
 
 def FifthOrderSliceKroneckerProduct(Ha, Hb):
@@ -6878,18 +6998,18 @@ def FifthOrderSliceKroneckerProduct(Ha, Hb):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix
-    Hc = HM(Ha.n(_sage_const_0 )*Hb.n(_sage_const_0 ), Ha.n(_sage_const_1 )*Hb.n(_sage_const_1 ), Ha.n(_sage_const_2 )*Hb.n(_sage_const_2 ), Ha.n(_sage_const_3 )*Hb.n(_sage_const_3 ), Ha.n(_sage_const_4 )*Hb.n(_sage_const_4 ), 'zero')
-    for i0 in range(Ha.n(_sage_const_0 )):
-        for i1 in range(Ha.n(_sage_const_1 )):
-            for i2 in range(Ha.n(_sage_const_2 )):
-                for i3 in range(Ha.n(_sage_const_3 )):
-                    for i4 in range(Ha.n(_sage_const_4 )):
-                        for j0 in range(Hb.n(_sage_const_0 )):
-                            for j1 in range(Hb.n(_sage_const_1 )):
-                                for j2 in range(Hb.n(_sage_const_2 )):
-                                    for j3 in range(Hb.n(_sage_const_3 )):
-                                        for j4 in range(Hb.n(_sage_const_4 )):
-                                            Hc[Hb.n(_sage_const_0 )*i0+j0,Hb.n(_sage_const_1 )*i1+j1,Hb.n(_sage_const_2 )*i2+j2,Hb.n(_sage_const_3 )*i3+j3,Hb.n(_sage_const_4 )*i4+j4]=Ha[i0,i1,i2,i3,i4]*Hb[j0,j1,j2,j3,j4]
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), Ha.n(3)*Hb.n(3), Ha.n(4)*Hb.n(4), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for i3 in range(Ha.n(3)):
+                    for i4 in range(Ha.n(4)):
+                        for j0 in range(Hb.n(0)):
+                            for j1 in range(Hb.n(1)):
+                                for j2 in range(Hb.n(2)):
+                                    for j3 in range(Hb.n(3)):
+                                        for j4 in range(Hb.n(4)):
+                                            Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1,Hb.n(2)*i2+j2,Hb.n(3)*i3+j3,Hb.n(4)*i4+j4]=Ha[i0,i1,i2,i3,i4]*Hb[j0,j1,j2,j3,j4]
     return Hc
 
 def SixthOrderSliceKroneckerProduct(Ha, Hb):
@@ -6908,20 +7028,20 @@ def SixthOrderSliceKroneckerProduct(Ha, Hb):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix
-    Hc = HM(Ha.n(_sage_const_0 )*Hb.n(_sage_const_0 ), Ha.n(_sage_const_1 )*Hb.n(_sage_const_1 ), Ha.n(_sage_const_2 )*Hb.n(_sage_const_2 ), Ha.n(_sage_const_3 )*Hb.n(_sage_const_3 ), Ha.n(_sage_const_4 )*Hb.n(_sage_const_4 ), Ha.n(_sage_const_5 )*Hb.n(_sage_const_5 ), 'zero')
-    for i0 in range(Ha.n(_sage_const_0 )):
-        for i1 in range(Ha.n(_sage_const_1 )):
-            for i2 in range(Ha.n(_sage_const_2 )):
-                for i3 in range(Ha.n(_sage_const_3 )):
-                    for i4 in range(Ha.n(_sage_const_4 )):
-                        for i5 in range(Ha.n(_sage_const_5 )):
-                            for j0 in range(Hb.n(_sage_const_0 )):
-                                for j1 in range(Hb.n(_sage_const_1 )):
-                                    for j2 in range(Hb.n(_sage_const_2 )):
-                                        for j3 in range(Hb.n(_sage_const_3 )):
-                                            for j4 in range(Hb.n(_sage_const_4 )):
-                                                for j5 in range(Hb.n(_sage_const_5 )):
-                                                    Hc[Hb.n(_sage_const_0 )*i0+j0,Hb.n(_sage_const_1 )*i1+j1,Hb.n(_sage_const_2 )*i2+j2,Hb.n(_sage_const_3 )*i3+j3,Hb.n(_sage_const_4 )*i4+j4,Hb.n(_sage_const_5 )*i5+j5]=Ha[i0,i1,i2,i3,i4,i5]*Hb[j0,j1,j2,j3,j4,j5]
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), Ha.n(3)*Hb.n(3), Ha.n(4)*Hb.n(4), Ha.n(5)*Hb.n(5), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for i3 in range(Ha.n(3)):
+                    for i4 in range(Ha.n(4)):
+                        for i5 in range(Ha.n(5)):
+                            for j0 in range(Hb.n(0)):
+                                for j1 in range(Hb.n(1)):
+                                    for j2 in range(Hb.n(2)):
+                                        for j3 in range(Hb.n(3)):
+                                            for j4 in range(Hb.n(4)):
+                                                for j5 in range(Hb.n(5)):
+                                                    Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1,Hb.n(2)*i2+j2,Hb.n(3)*i3+j3,Hb.n(4)*i4+j4,Hb.n(5)*i5+j5]=Ha[i0,i1,i2,i3,i4,i5]*Hb[j0,j1,j2,j3,j4,j5]
     return Hc
 
 def SeventhOrderSliceKroneckerProduct(Ha, Hb):
@@ -6933,27 +7053,29 @@ def SeventhOrderSliceKroneckerProduct(Ha, Hb):
     ::
 
         sage: A=SeventhOrderSliceKroneckerProduct(HM(2,2,2,2,2,2,2,'a'),HM(2,2,2,2,2,2,2,'b'))
+        sage: A.dimensions()
+        [4, 4, 4, 4, 4, 4, 4]
 
     AUTHORS:
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix
-    Hc = HM(Ha.n(_sage_const_0 )*Hb.n(_sage_const_0 ), Ha.n(_sage_const_1 )*Hb.n(_sage_const_1 ), Ha.n(_sage_const_2 )*Hb.n(_sage_const_2 ), Ha.n(_sage_const_3 )*Hb.n(_sage_const_3 ), Ha.n(_sage_const_4 )*Hb.n(_sage_const_4 ), Ha.n(_sage_const_5 )*Hb.n(_sage_const_5 ), Ha.n(_sage_const_6 )*Hb.n(_sage_const_6 ), 'zero')
-    for i0 in range(Ha.n(_sage_const_0 )):
-        for i1 in range(Ha.n(_sage_const_1 )):
-            for i2 in range(Ha.n(_sage_const_2 )):
-                for i3 in range(Ha.n(_sage_const_3 )):
-                    for i4 in range(Ha.n(_sage_const_4 )):
-                        for i5 in range(Ha.n(_sage_const_5 )):
-                            for i6 in range(Ha.n(_sage_const_6 )):
-                                for j0 in range(Hb.n(_sage_const_0 )):
-                                    for j1 in range(Hb.n(_sage_const_1 )):
-                                        for j2 in range(Hb.n(_sage_const_2 )):
-                                            for j3 in range(Hb.n(_sage_const_3 )):
-                                                for j4 in range(Hb.n(_sage_const_4 )):
-                                                    for j5 in range(Hb.n(_sage_const_5 )):
-                                                        for j6 in range(Hb.n(_sage_const_6 )):
-                                                            Hc[Hb.n(_sage_const_0 )*i0+j0,Hb.n(_sage_const_1 )*i1+j1,Hb.n(_sage_const_2 )*i2+j2,Hb.n(_sage_const_3 )*i3+j3,Hb.n(_sage_const_4 )*i4+j4,Hb.n(_sage_const_5 )*i5+j5,Hb.n(_sage_const_6 )*i6+j6]=Ha[i0,i1,i2,i3,i4,i5,i6]*Hb[j0,j1,j2,j3,j4,j5,j6]
+    Hc = HM(Ha.n(0)*Hb.n(0), Ha.n(1)*Hb.n(1), Ha.n(2)*Hb.n(2), Ha.n(3)*Hb.n(3), Ha.n(4)*Hb.n(4), Ha.n(5)*Hb.n(5), Ha.n(6)*Hb.n(6), 'zero')
+    for i0 in range(Ha.n(0)):
+        for i1 in range(Ha.n(1)):
+            for i2 in range(Ha.n(2)):
+                for i3 in range(Ha.n(3)):
+                    for i4 in range(Ha.n(4)):
+                        for i5 in range(Ha.n(5)):
+                            for i6 in range(Ha.n(6)):
+                                for j0 in range(Hb.n(0)):
+                                    for j1 in range(Hb.n(1)):
+                                        for j2 in range(Hb.n(2)):
+                                            for j3 in range(Hb.n(3)):
+                                                for j4 in range(Hb.n(4)):
+                                                    for j5 in range(Hb.n(5)):
+                                                        for j6 in range(Hb.n(6)):
+                                                            Hc[Hb.n(0)*i0+j0,Hb.n(1)*i1+j1,Hb.n(2)*i2+j2,Hb.n(3)*i3+j3,Hb.n(4)*i4+j4,Hb.n(5)*i5+j5,Hb.n(6)*i6+j6]=Ha[i0,i1,i2,i3,i4,i5,i6]*Hb[j0,j1,j2,j3,j4,j5,j6]
     return Hc
 
 def HypermatrixSliceKroneckerPower(U,n):
@@ -6967,11 +7089,12 @@ def HypermatrixSliceKroneckerPower(U,n):
         sage: HypermatrixSliceKroneckerPower(HM(2,2,'a'),2)
         [[a00^2, a00*a01, a00*a01, a01^2], [a00*a10, a00*a11, a01*a10, a01*a11], [a00*a10, a01*a10, a00*a11, a01*a11], [a10^2, a10*a11, a10*a11, a11^2]]
 
+
     AUTHORS:
     - Edinah K. Gnang
     """
     T = U.copy()
-    for i in range(n-_sage_const_1 ):
+    for i in range(n-1):
         T = T.tensor_product(U)
     return T
 
@@ -6990,53 +7113,53 @@ def ThirdOrderHypermatrixKroneckerSum(A,B):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if A.order()==B.order() and A.order()==_sage_const_3 :
+    if A.order()==B.order() and A.order()==3:
         # Initializing the hypermatrix
-        T = HM(A.n(_sage_const_0 )+B.n(_sage_const_0 ), A.n(_sage_const_1 )+B.n(_sage_const_1 ), A.n(_sage_const_2 )+B.n(_sage_const_2 ), 'zero')
+        T = HM(A.n(0)+B.n(0), A.n(1)+B.n(1), A.n(2)+B.n(2), 'zero')
         # Loop filling up the top part of the hypermatrix
-        for i in range(A.n(_sage_const_0 )):
-            for j in range(A.n(_sage_const_1 )):
-                for k in range(A.n(_sage_const_2 )):
+        for i in range(A.n(0)):
+            for j in range(A.n(1)):
+                for k in range(A.n(2)):
                     T[i,j,k]=A[i,j,k]
         # Loop filling up the bottom part of the hypermatrix
-        for i in range(B.n(_sage_const_0 )):
-            for j in range(B.n(_sage_const_1 )):
-                for k in range(B.n(_sage_const_2 )):
-                    T[A.n(_sage_const_0 )+i,A.n(_sage_const_1 )+j,A.n(_sage_const_2 )+k] = B[i,j,k]
+        for i in range(B.n(0)):
+            for j in range(B.n(1)):
+                for k in range(B.n(2)):
+                    T[A.n(0)+i,A.n(1)+j,A.n(2)+k] = B[i,j,k]
         return T
-    elif A.order()==B.order() and A.order()==_sage_const_4 :
+    elif A.order()==B.order() and A.order()==4:
         # Initializing the hypermatrix
-        T=HM(A.n(_sage_const_0 )+B.n(_sage_const_0 ), A.n(_sage_const_1 )+B.n(_sage_const_1 ), A.n(_sage_const_2 )+B.n(_sage_const_2 ), A.n(_sage_const_3 )+B.n(_sage_const_3 ), 'zero')
+        T=HM(A.n(0)+B.n(0), A.n(1)+B.n(1), A.n(2)+B.n(2), A.n(3)+B.n(3), 'zero')
         # Loop filling up the top part of the hypermatrix
-        for i in range(A.n(_sage_const_0 )):
-            for j in range(A.n(_sage_const_1 )):
-                for k in range(A.n(_sage_const_2 )):
-                    for l in range(A.n(_sage_const_3 )):
+        for i in range(A.n(0)):
+            for j in range(A.n(1)):
+                for k in range(A.n(2)):
+                    for l in range(A.n(3)):
                         T[i,j,k,l]=A[i,j,k,l]
         # Loop filling up the bottom part of the hypermatrix
-        for i in range(B.n(_sage_const_0 )):
-            for j in range(B.n(_sage_const_1 )):
-                for k in range(B.n(_sage_const_2 )):
-                    for l in range(B.n(_sage_const_3 )):
-                        T[A.n(_sage_const_0 )+i,A.n(_sage_const_1 )+j,A.n(_sage_const_2 )+k,A.n(_sage_const_3 )+l]=B[i,j,k,l]
+        for i in range(B.n(0)):
+            for j in range(B.n(1)):
+                for k in range(B.n(2)):
+                    for l in range(B.n(3)):
+                        T[A.n(0)+i,A.n(1)+j,A.n(2)+k,A.n(3)+l]=B[i,j,k,l]
         return T
-    elif A.order()==B.order() and A.order()==_sage_const_5 :
+    elif A.order()==B.order() and A.order()==5:
         # Initializing the hypermatrix
-        T=HM(A.n(_sage_const_0 )+B.n(_sage_const_0 ), A.n(_sage_const_1 )+B.n(_sage_const_1 ), A.n(_sage_const_2 )+B.n(_sage_const_2 ), A.n(_sage_const_3 )+B.n(_sage_const_3 ), A.n(_sage_const_4 )+B.n(_sage_const_4 ), 'zero')
+        T=HM(A.n(0)+B.n(0), A.n(1)+B.n(1), A.n(2)+B.n(2), A.n(3)+B.n(3), A.n(4)+B.n(4), 'zero')
         # Loop filling up the top part of the hypermatrix
-        for i in range(A.n(_sage_const_0 )):
-            for j in range(A.n(_sage_const_1 )):
-                for k in range(A.n(_sage_const_2 )):
-                    for l in range(A.n(_sage_const_3 )):
-                        for m in range(A.n(_sage_const_4 )):
+        for i in range(A.n(0)):
+            for j in range(A.n(1)):
+                for k in range(A.n(2)):
+                    for l in range(A.n(3)):
+                        for m in range(A.n(4)):
                             T[i,j,k,l,m]=A[i,j,k,l,m]
         # Loop filling up the bottom part of the hypermatrix
-        for i in range(B.n(_sage_const_0 )):
-            for j in range(B.n(_sage_const_1 )):
-                for k in range(B.n(_sage_const_2 )):
-                    for l in range(B.n(_sage_const_3 )):
-                        for m in range(B.n(_sage_const_4 )):
-                            T[A.n(_sage_const_0 )+i,A.n(_sage_const_1 )+j,A.n(_sage_const_2 )+k,A.n(_sage_const_3 )+l,A.n(_sage_const_4 )+m]=B[i,j,k,l,m]
+        for i in range(B.n(0)):
+            for j in range(B.n(1)):
+                for k in range(B.n(2)):
+                    for l in range(B.n(3)):
+                        for m in range(B.n(4)):
+                            T[A.n(0)+i,A.n(1)+j,A.n(2)+k,A.n(3)+l,A.n(4)+m]=B[i,j,k,l,m]
         return T
     else:
         raise ValueError, "The order of the input hypermatrices must match and be equal to 3."
@@ -7063,22 +7186,22 @@ def GeneralHypermatrixKroneckerSum(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(la)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,la[_sage_const_0 ]))]
-            sm = Integer(mod(i,la[_sage_const_0 ]))
-            for k in range(len(la)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(la[_sage_const_0 :k+_sage_const_1 ])),la[k+_sage_const_1 ])))
-                sm = sm+prod(la[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(i,la[0]))]
+            sm = Integer(mod(i,la[0]))
+            for k in range(len(la)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(la[0:k+1])),la[k+1])))
+                sm = sm+prod(la[0:k+1])*entry[len(entry)-1]
             T[tuple(entry)]=A[tuple(entry)]
         # Initialization of the list specifying the dimensions of B
         lb = [B.n(j) for j in range(A.order())]
         # Main loop performing the transposition of the entries
         for j in range(prod(lb)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(j,lb[_sage_const_0 ]))]
-            sm = Integer(mod(j,lb[_sage_const_0 ]))
-            for k in range(len(lb)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((j-sm)/prod(lb[_sage_const_0 :k+_sage_const_1 ])),lb[k+_sage_const_1 ])))
-                sm = sm+prod(lb[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+            entry = [Integer(mod(j,lb[0]))]
+            sm = Integer(mod(j,lb[0]))
+            for k in range(len(lb)-1):
+                entry.append(Integer(mod(Integer((j-sm)/prod(lb[0:k+1])),lb[k+1])))
+                sm = sm+prod(lb[0:k+1])*entry[len(entry)-1]
             T[tuple((Matrix(ZZ,entry)+Matrix(ZZ,A.dimensions())).list())]=B[tuple(entry)]
         return T
     else:
@@ -7107,19 +7230,19 @@ def GeneralHypermatrixKroneckerProduct(A,B):
         # Main loop performing the transposition of the entries
         for i in range(prod(la)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entrya = [Integer(mod(i,la[_sage_const_0 ]))]
-            sma = Integer(mod(i,la[_sage_const_0 ]))
-            for ka in range(len(la)-_sage_const_1 ):
-                entrya.append(Integer(mod(Integer((i-sma)/prod(la[_sage_const_0 :ka+_sage_const_1 ])),la[ka+_sage_const_1 ])))
-                sma = sma+prod(la[_sage_const_0 :ka+_sage_const_1 ])*entrya[len(entrya)-_sage_const_1 ]
+            entrya = [Integer(mod(i,la[0]))]
+            sma = Integer(mod(i,la[0]))
+            for ka in range(len(la)-1):
+                entrya.append(Integer(mod(Integer((i-sma)/prod(la[0:ka+1])),la[ka+1])))
+                sma = sma+prod(la[0:ka+1])*entrya[len(entrya)-1]
             # Main loop performing the transposition of the entries
             for j in range(prod(lb)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entryb = [Integer(mod(j,lb[_sage_const_0 ]))]
-                smb = Integer(mod(j,lb[_sage_const_0 ]))
-                for kb in range(len(lb)-_sage_const_1 ):
-                    entryb.append(Integer(mod(Integer((j-smb)/prod(lb[_sage_const_0 :kb+_sage_const_1 ])),lb[kb+_sage_const_1 ])))
-                    smb = smb+prod(lb[_sage_const_0 :kb+_sage_const_1 ])*entryb[len(entryb)-_sage_const_1 ]
+                entryb = [Integer(mod(j,lb[0]))]
+                smb = Integer(mod(j,lb[0]))
+                for kb in range(len(lb)-1):
+                    entryb.append(Integer(mod(Integer((j-smb)/prod(lb[0:kb+1])),lb[kb+1])))
+                    smb = smb+prod(lb[0:kb+1])*entryb[len(entryb)-1]
                 T[tuple([lb[z]*Integer(entrya[z])+Integer(entryb[z]) for z in range(A.order())])]=A[tuple(entrya)]*B[tuple(entryb)]
         return T
     else:
@@ -7174,7 +7297,7 @@ def T2P(expr):
 
     """
     s = str(expr)
-    return ((((s.replace("[","")).replace("]","")).replace(",","")).replace("'","")).replace(" ","")[::-_sage_const_1 ].replace('-1','m')
+    return ((((s.replace("[","")).replace("]","")).replace(",","")).replace("'","")).replace(" ","")[::-1].replace('-1','m')
 
 def RollLD(L):
     """
@@ -7200,10 +7323,10 @@ def RollLD(L):
 
     """
     N = sum(L)
-    r = randint(_sage_const_1 ,N)
+    r = randint(1,N)
     for i in rg(len(L)):
-        if sum(L[:i+_sage_const_1 ]) >= r:
-            return _sage_const_1 +i
+        if sum(L[:i+1]) >= r:
+            return 1+i
 
 @cached_function
 def FaT(n):
@@ -7227,11 +7350,11 @@ def FaT(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return [_sage_const_1 ]
+    if n == 1:
+        return [1]
     else :
         gu = []
-        for i in range(_sage_const_1 ,n):
+        for i in range(1,n):
             gu = gu + [['+', g1, g2] for g1 in FaT(i) for g2 in FaT(n-i)]
         return gu
 
@@ -7306,10 +7429,10 @@ def Ca(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return _sage_const_1 
+    if n == 1:
+        return 1
     else :
-        return sum([Ca(i)*Ca(n-i) for i in range(_sage_const_1 ,n)])
+        return sum([Ca(i)*Ca(n-i) for i in range(1,n)])
 
 @cached_function
 def LopFaT(n):
@@ -7333,11 +7456,11 @@ def LopFaT(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return [_sage_const_1 ]
+    if n == 1:
+        return [1]
     else :
         gu = []
-        for i in range(_sage_const_1 , _sage_const_1 +floor(n/_sage_const_2 )):
+        for i in range(1, 1+floor(n/2)):
             gu = gu + [['+', g1, g2] for g1 in LopFaT(n-i) for g2 in LopFaT(i)]
         return gu
 
@@ -7362,10 +7485,10 @@ def LopCa(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return _sage_const_1 
+    if n == 1:
+        return 1
     else :
-        return sum([LopCa(i)*LopCa(n-i) for i in range(_sage_const_1 ,_sage_const_1 +floor(n/_sage_const_2 ))])
+        return sum([LopCa(i)*LopCa(n-i) for i in range(1,1+floor(n/2))])
 
 def RaFaT(n):
     """
@@ -7387,11 +7510,11 @@ def RaFaT(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return _sage_const_1 
+    if n == 1:
+        return 1
     else :
         # Rolling the Loaded Die.
-        j = RollLD([Ca(i)*Ca(n-i) for i in range(_sage_const_1 ,n+_sage_const_1 )])
+        j = RollLD([Ca(i)*Ca(n-i) for i in range(1,n+1)])
         return ['+', RaFaT(j), RaFaT(n-j)]
 
 def RaFaPre(n):
@@ -7404,8 +7527,8 @@ def RaFaPre(n):
 
     ::
 
-        sage: RaFaPre(3)
-        '+1+11'
+        sage: RaFaPre(2)
+        '+11'
 
 
     AUTHORS:
@@ -7453,8 +7576,8 @@ def RaLopFaT(n):
 
     ::
 
-        sage: RaLopFaT(3)
-        ['+', ['+', 1, 1], 1]
+        sage: RaLopFaT(2)
+        ['+', 1, 1]
 
 
     AUTHORS:
@@ -7464,11 +7587,11 @@ def RaLopFaT(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return _sage_const_1 
+    if n == 1:
+        return 1
     else:
         # Rolling the Loaded Die.
-        j = RollLD([LopCa(i)*LopCa(n-i) for i in range(_sage_const_1 ,_sage_const_2 +floor(n/_sage_const_2 ))])
+        j = RollLD([LopCa(i)*LopCa(n-i) for i in range(1,2+floor(n/2))])
         return ['+', RaLopFaT(n-j), RaLopFaT(j)]
 
 def RaLopFaPre(n):
@@ -7483,8 +7606,8 @@ def RaLopFaPre(n):
 
     ::
 
-        sage: RaLopFaPre(3)
-        '++111'
+        sage: RaLopFaPre(2)
+        '+11'
 
 
     AUTHORS:
@@ -7508,8 +7631,8 @@ def RaLopFaP(n):
 
     ::
 
-        sage: RaLopFaP(3)
-        '111++'
+        sage: RaLopFaP(2)
+        '11+'
 
 
     AUTHORS:
@@ -7533,8 +7656,8 @@ def LopFaPre(n):
 
     ::
 
-        sage: LopFaPre(3)
-        ['++111']
+        sage: LopFaPre(2)
+        ['+11']
 
 
     AUTHORS:
@@ -7558,8 +7681,8 @@ def LopFaP(n):
 
     ::
 
-        sage: LopFaP(3)
-        ['111++']
+        sage: LopFaP(2)
+        ['11+']
 
 
     AUTHORS:
@@ -7583,8 +7706,8 @@ def FamTa(n):
 
     ::
 
-        sage: FamTa(3)
-        [['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+        sage: FamTa(2)
+        [['+', 1, 1]]
 
 
     AUTHORS:
@@ -7594,11 +7717,11 @@ def FamTa(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return [_sage_const_1 ]
+    if n == 1:
+        return [1]
     else :
         gu = []
-        for i in range(_sage_const_1 ,n):
+        for i in range(1,n):
             gu = gu + [['+', g1, g2] for g1 in FamT(i) for g2 in FamT(n-i)]
         return gu
 
@@ -7626,12 +7749,12 @@ def FamTm(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return []
     else :
         gu = []
-        for i in range(_sage_const_2 ,_sage_const_1 +floor(n/_sage_const_2 )):
-            if mod(n,i) == _sage_const_0 :
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i) == 0:
                 gu = gu + [['*', g1, g2] for g1 in FamT(i) for g2 in FamT(n/i)]
         return gu
 
@@ -7681,10 +7804,10 @@ def Cama(n):
     - Try to implement faster version of this procedure
 
     """
-    if n==_sage_const_1 :
-        return _sage_const_1 
+    if n==1:
+        return 1
     else:
-        return sum([Cam(i)*Cam(n-i) for i in range(_sage_const_1 ,n)])
+        return sum([Cam(i)*Cam(n-i) for i in range(1,n)])
 
 @cached_function
 def Camm(n):
@@ -7708,7 +7831,7 @@ def Camm(n):
     - Try to implement faster version of this procedure
 
     """
-    return sum([Cam(i)*Cam(n/i) for i in range(_sage_const_2 ,_sage_const_1 +floor(n/_sage_const_2 )) if mod(n,i)==_sage_const_0 ])
+    return sum([Cam(i)*Cam(n/i) for i in range(2,1+floor(n/2)) if mod(n,i)==0])
 
 @cached_function
 def Cam(n):
@@ -7757,10 +7880,10 @@ def RaFamTa(n):
     - Try to implement faster version of this procedure
 
     """
-    if n==_sage_const_1 :
-        return _sage_const_1 
+    if n==1:
+        return 1
     else:
-        j = RollLD([Cam(i)*Cam(n-i) for i in range(_sage_const_1 ,n)])
+        j = RollLD([Cam(i)*Cam(n-i) for i in range(1,n)])
         return ['+', RaFamT(j), RaFamT(n-j)]
 
 def RaFamTm(n):
@@ -7775,8 +7898,8 @@ def RaFamTm(n):
 
     ::
 
-        sage: RaFamT(2)
-        ['+', 1, 1]
+        sage: RaFamTm(4)
+        ['*', ['+', 1, 1], ['+', 1, 1]]
 
 
     AUTHORS:
@@ -7789,12 +7912,12 @@ def RaFamTm(n):
     if not is_prime(n):
         lu = []
         L  = []
-        for i in range(_sage_const_2 ,_sage_const_1 +floor(n/_sage_const_2 )):
-            if mod(n,i)==_sage_const_0 :
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i)==0:
                 lu.append(i)
                 L.append(Cam(i)*Cam(n/i))
         j = RollLD(L)
-        return ['*', RaFamT(lu[j-_sage_const_1 ]), RaFamT(n/lu[j-_sage_const_1 ])]
+        return ['*', RaFamT(lu[j-1]), RaFamT(n/lu[j-1])]
 
 def RaFamT(n):
     """
@@ -7819,11 +7942,11 @@ def RaFamT(n):
     - Try to implement faster version of this procedure
 
     """
-    if n==_sage_const_1 :
-        return _sage_const_1 
+    if n==1:
+        return 1
     else:
         i = RollLD([Cama(n),Camm(n)])
-        if i==_sage_const_1 :
+        if i==1:
             return RaFamTa(n)
         else :
             return RaFamTm(n)
@@ -7892,8 +8015,8 @@ def RaFamP(n):
 
     ::
 
-        sage: RaFamP(6)
-        '11+1+11+1++'
+        sage: RaFamP(2)
+        '11+'
 
 
     AUTHORS:
@@ -7917,8 +8040,8 @@ def RaFamPre(n):
 
     ::
 
-        sage: RaFamPre(6)
-        '++1+11+1+11'
+        sage: RaFamPre(2)
+        '+11'
 
 
     AUTHORS:
@@ -7954,11 +8077,11 @@ def FameTa(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return [_sage_const_1 ]
+    if n == 1:
+        return [1]
     else:
         gu = []
-        for i in range(_sage_const_1 ,n):
+        for i in range(1,n):
             gu = gu + [['+', g1, g2] for g1 in FameT(i) for g2 in FameT(n-i)]
         return gu
 
@@ -7990,12 +8113,12 @@ def FameTm(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return []
     else :
         gu = []
-        for i in range(_sage_const_2 ,_sage_const_1 +floor(n/_sage_const_2 )):
-            if mod(n,i) == _sage_const_0 :
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i) == 0:
                 gu = gu + [['*', g1, g2] for g1 in FameT(i) for g2 in FameT(n/i)]
         return gu
 
@@ -8024,13 +8147,13 @@ def FameTe(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return []
     else :
         gu = []
-        for i in range(_sage_const_2 ,_sage_const_2 +floor(log(n)/log(_sage_const_2 ))):
-            if floor(n**(_sage_const_1 /i)) == ceil(n**(_sage_const_1 /i)):
-                gu = gu + [['^', g1, g2] for g1 in FameT(i) for g2 in FameT(n**(_sage_const_1 /i))]
+        for i in range(2,2+floor(log(n)/log(2))):
+            if floor(n^(1/i)) == ceil(n^(1/i)):
+                gu = gu + [['^', g1, g2] for g1 in FameT(i) for g2 in FameT(n^(1/i))]
         return gu
 
 @cached_function
@@ -8081,10 +8204,10 @@ def Camea(n):
     - Try to implement faster version of this procedure
 
     """
-    if n==_sage_const_1 :
-        return _sage_const_1 
+    if n==1:
+        return 1
     else:
-        return sum([Came(i)*Came(n-i) for i in range(_sage_const_1 ,n)])
+        return sum([Came(i)*Came(n-i) for i in range(1,n)])
 
 @cached_function
 def Camem(n):
@@ -8108,7 +8231,7 @@ def Camem(n):
     - Try to implement faster version of this procedure
 
     """
-    return sum([Came(i)*Came(n/i) for i in range(_sage_const_2 ,_sage_const_1 +floor(n/_sage_const_2 )) if mod(n,i)==_sage_const_0 ])
+    return sum([Came(i)*Came(n/i) for i in range(2,1+floor(n/2)) if mod(n,i)==0])
 
 @cached_function
 def Camee(n):
@@ -8132,7 +8255,7 @@ def Camee(n):
     - Try to implement faster version of this procedure
 
     """
-    return sum([Came(i)*Came(n**(_sage_const_1 /i)) for i in range(_sage_const_2 ,_sage_const_2 +floor(log(n)/log(_sage_const_2 ))) if floor(n**(_sage_const_1 /i)) == ceil(n**(_sage_const_1 /i))])
+    return sum([Came(i)*Came(n^(1/i)) for i in range(2,2+floor(log(n)/log(2))) if floor(n^(1/i)) == ceil(n^(1/i))])
 
 @cached_function
 def Came(n):
@@ -8185,10 +8308,10 @@ def RaFameTa(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return _sage_const_1 
+    if n == 1:
+        return 1
     else:
-        j = RollLD([Came(i)*Came(n-i) for i in range(_sage_const_1 ,n)])
+        j = RollLD([Came(i)*Came(n-i) for i in range(1,n)])
         return ['+', RaFameT(j), RaFameT(n-j)]
         
 def RaFameTm(n):
@@ -8218,12 +8341,12 @@ def RaFameTm(n):
     if not is_prime(n):
         lu = []
         L  = []
-        for i in range(_sage_const_2 ,_sage_const_1 +floor(n/_sage_const_2 )):
-            if mod(n,i)==_sage_const_0 :
+        for i in range(2,1+floor(n/2)):
+            if mod(n,i)==0:
                 lu.append(i)
                 L.append(Came(i)*Came(n/i))
         j = RollLD(L)
-        return ['*', RaFameT(lu[j-_sage_const_1 ]), RaFameT(n/lu[j-_sage_const_1 ])]
+        return ['*', RaFameT(lu[j-1]), RaFameT(n/lu[j-1])]
 
 def RaFameTe(n):
     """
@@ -8238,8 +8361,8 @@ def RaFameTe(n):
 
     ::
 
-        sage: RaFameTe(27)
-        ['^', ['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]]
+        sage: RaFameTe(4)
+        ['^', ['+', 1, 1], ['+', 1, 1]]
 
 
     AUTHORS:
@@ -8249,15 +8372,15 @@ def RaFameTe(n):
     - Try to implement faster version of this procedure
 
     """
-    if not is_prime(n) and n>_sage_const_1 :
+    if not is_prime(n) and n>1:
         lu = []
         L  = []
-        for i in range(_sage_const_2 ,_sage_const_1 +floor(n/_sage_const_2 )):
-            if floor(n**(_sage_const_1 /i)) == ceil(n**(_sage_const_1 /i)):
+        for i in range(2,1+floor(n/2)):
+            if floor(n^(1/i)) == ceil(n^(1/i)):
                 lu.append(i)
-                L.append(Came(i)*Came(n**(_sage_const_1 /i)))
+                L.append(Came(i)*Came(n^(1/i)))
         j = RollLD(L)
-        return ['^', RaFameT( n**(_sage_const_1 /lu[j-_sage_const_1 ]) ), RaFameT(lu[j-_sage_const_1 ])]
+        return ['^', RaFameT( n^(1/lu[j-1]) ), RaFameT(lu[j-1])]
 
 def RaFameT(n):
     """
@@ -8282,13 +8405,13 @@ def RaFameT(n):
     - Try to implement faster version of this procedure
 
     """
-    if n==_sage_const_1 :
-        return _sage_const_1 
+    if n==1:
+        return 1
     else:
         i = RollLD([Camea(n),Camem(n),Camee(n)])
-        if i==_sage_const_1 :
+        if i==1:
             return RaFameTa(n)
-        elif i==_sage_const_2 :
+        elif i==2:
             return RaFameTm(n)
         else :
             return RaFameTe(n)
@@ -8362,12 +8485,12 @@ def Tsize(T):
     - Try to implement faster version of this procedure
 
     """
-    if T==_sage_const_1 :
-        return _sage_const_1 
-    elif T==-_sage_const_1 :
-        return _sage_const_1 
+    if T==1:
+        return 1
+    elif T==-1:
+        return 1
     else:
-        return _sage_const_1 +Tsize(T[_sage_const_1 ])+Tsize(T[_sage_const_2 ])
+        return 1+Tsize(T[1])+Tsize(T[2])
 
 @cached_function
 def ShortestTame(n):
@@ -8392,37 +8515,37 @@ def ShortestTame(n):
     - Try to implement faster version of this procedure
 
     """
-    if n==_sage_const_1 :
-        return [_sage_const_1 ,_sage_const_1 ]
+    if n==1:
+        return [1,1]
     else:
         aluf = []
-        si = _sage_const_2 *n
-        for i in range(_sage_const_1 ,n):
+        si = 2*n
+        for i in range(1,n):
             T1 = ShortestTame(i)
             T2 = ShortestTame(n-i)
-            if (T1[_sage_const_0 ]+T2[_sage_const_0 ]+_sage_const_1 ) < si:
-                si = T1[_sage_const_0 ]+T2[_sage_const_0 ]+_sage_const_1 
-                if EvalT(T1[_sage_const_1 ]) <= EvalT(T2[_sage_const_1 ]):
-                    aluf = ['+', T1[_sage_const_1 ], T2[_sage_const_1 ]]
+            if (T1[0]+T2[0]+1) < si:
+                si = T1[0]+T2[0]+1
+                if EvalT(T1[1]) <= EvalT(T2[1]):
+                    aluf = ['+', T1[1], T2[1]]
                 else:
-                    aluf = ['+', T2[_sage_const_1 ], T1[_sage_const_1 ]]
-        for i in range(_sage_const_2 ,floor(n/_sage_const_2 )):
-            if mod(n,i)==_sage_const_0 :
+                    aluf = ['+', T2[1], T1[1]]
+        for i in range(2,floor(n/2)):
+            if mod(n,i)==0:
                 T1 = ShortestTame(i)
                 T2 = ShortestTame(n/i)
-                if (T1[_sage_const_0 ]+T2[_sage_const_0 ]+_sage_const_1 ) < si:
-                    si = T1[_sage_const_0 ]+T2[_sage_const_0 ]+_sage_const_1 
-                    if EvalT(T1[_sage_const_1 ]) <= EvalT(T2[_sage_const_1 ]):
-                        aluf = ['*', T1[_sage_const_1 ], T2[_sage_const_1 ]]
+                if (T1[0]+T2[0]+1) < si:
+                    si = T1[0]+T2[0]+1
+                    if EvalT(T1[1]) <= EvalT(T2[1]):
+                        aluf = ['*', T1[1], T2[1]]
                     else:
-                        aluf = ['*', T2[_sage_const_1 ], T1[_sage_const_1 ]]
-        for i in range(_sage_const_2 ,_sage_const_2 +floor(log(n)/log(_sage_const_2 ))):
-            if floor(n**(_sage_const_1 /i)) == ceil(n**(_sage_const_1 /i)):
-                T1 = ShortestTame(n**(_sage_const_1 /i))
+                        aluf = ['*', T2[1], T1[1]]
+        for i in range(2,2+floor(log(n)/log(2))):
+            if floor(n^(1/i)) == ceil(n^(1/i)):
+                T1 = ShortestTame(n^(1/i))
                 T2 = ShortestTame(i)
-                if (T1[_sage_const_0 ]+T2[_sage_const_0 ]+_sage_const_1 ) < si:
-                    si = T1[_sage_const_0 ]+T2[_sage_const_0 ]+_sage_const_1 
-                    aluf = ['^', T1[_sage_const_1 ], T2[_sage_const_1 ]]
+                if (T1[0]+T2[0]+1) < si:
+                    si = T1[0]+T2[0]+1
+                    aluf = ['^', T1[1], T2[1]]
         return [si, aluf]
 
 @cached_function
@@ -8447,7 +8570,7 @@ def ShortestTameList(n):
 
     """
     # Obtaining the minimal size
-    si=ShortestTame(n)[_sage_const_0 ]
+    si=ShortestTame(n)[0]
     return [f for f in FameT(n) if Tsize(f)==si]
 
 def get_permutation(la,lb):
@@ -8522,17 +8645,17 @@ def NaiveZetaT(nbit):
     """
 
     # Initial conditions
-    Pk = [['+',_sage_const_1 ,_sage_const_1 ]]
-    Nk = [_sage_const_1 ] + Pk
-    for it in range(_sage_const_1 ,nbit):
+    Pk = [['+',1,1]]
+    Nk = [1] + Pk
+    for it in range(1,nbit):
         L = []
         for p in Pk:
             if L == []:
-                L = [_sage_const_1 ] + [p] + [['^',p,Nk[i]] for i in range(_sage_const_1 ,len(Nk))]
+                L = [1] + [p] + [['^',p,Nk[i]] for i in range(1,len(Nk))]
 
             else:
-                Lp = [p] + [['^',p,Nk[i]] for i in range(_sage_const_1 ,len(Nk))]
-                L  = L + [['*',L[i],n] for i in range(_sage_const_1 ,len(L)) for n in Lp] + Lp
+                Lp = [p] + [['^',p,Nk[i]] for i in range(1,len(Nk))]
+                L  = L + [['*',L[i],n] for i in range(1,len(L)) for n in Lp] + Lp
 
         # Sorting the list
         Va = [EvalT(l) for l in L]
@@ -8543,19 +8666,19 @@ def NaiveZetaT(nbit):
         Nk = permute(L, perm)
         # Set completion
         l = len(Nk)
-        i = _sage_const_0 
-        while i < l-_sage_const_1 :
-            if EvalT(Nk[i+_sage_const_1 ]) - EvalT(Nk[i]) == _sage_const_2  :
-                Pk.append(['+',_sage_const_1 ,Nk[i]])
-                Nk.insert(i+_sage_const_1 , ['+',_sage_const_1 ,Nk[i]])
-                l = l+_sage_const_1 
+        i = 0
+        while i < l-1:
+            if EvalT(Nk[i+1]) - EvalT(Nk[i]) == 2 :
+                Pk.append(['+',1,Nk[i]])
+                Nk.insert(i+1, ['+',1,Nk[i]])
+                l = l+1
             else:
-                i = i+_sage_const_1 
+                i = i+1
     return [Pk, Nk]
 
 
 @cached_function
-def Goodstein(number_of_iterations=_sage_const_1 ):
+def Goodstein(number_of_iterations=1):
     """
     Produces the set of symbolic expressions associated with the
     the first canonical form. In all the expressions the symbolic
@@ -8573,30 +8696,30 @@ def Goodstein(number_of_iterations=_sage_const_1 ):
     - To Do: 
     """
     # Initial condition of Initial set
-    Ng0 = [_sage_const_1 , x]
+    Ng0 = [1, x]
     # Main loop performing the iteration
     for iteration in range(number_of_iterations):
         # Implementation of the set recurrence
-        Ng0 = [_sage_const_1 ] + [x**n for n in Ng0]
+        Ng0 = [1] + [x^n for n in Ng0]
         # Initialization of a buffer list Ng1
         # which will store updates to Ng0
         Ng1 = []
         for n in Set(Ng0).subsets():
-            if n.cardinality() > _sage_const_0 :
+            if n.cardinality() > 0:
                 Ng1.append(sum(n))
         Ng0 = list(Ng1)
     Nf = []
     for i in range(len(Ng0)):
         Nf.append([])
     for i in range(len(Nf)):
-        Nf[(Ng0[i]).subs(x=_sage_const_2 )-_sage_const_1 ].append(Ng0[i])
+        Nf[(Ng0[i]).subs(x=2)-1].append(Ng0[i])
     Ng0=[]
     for i in range(len(Nf)):
-        Ng0.append(Nf[i][_sage_const_0 ])
+        Ng0.append(Nf[i][0])
     return Ng0
 
 @cached_function
-def GoodsteinT(number_of_iterations=_sage_const_1 ):
+def GoodsteinT(number_of_iterations=1):
     """
     Produces Tree associated with Goodstein Trees.
 
@@ -8616,22 +8739,22 @@ def GoodsteinT(number_of_iterations=_sage_const_1 ):
     - To Do: 
     """
     # Initial condition of Initial set
-    Ng0 = [_sage_const_1 , ['+',_sage_const_1 ,_sage_const_1 ]]
+    Ng0 = [1, ['+',1,1]]
     # Main loop performing the iteration
     for iteration in range(number_of_iterations):
         # Implementation of the set recurrence
         Tmp = copy(Ng0)
-        Tmp.pop(_sage_const_0 )
-        Ng0 = [_sage_const_1 ] + [['+',_sage_const_1 ,_sage_const_1 ]] + [['^',['+',_sage_const_1 ,_sage_const_1 ], m] for m in Tmp]
+        Tmp.pop(0)
+        Ng0 = [1] + [['+',1,1]] + [['^',['+',1,1], m] for m in Tmp]
         # Initialization of a buffer list Ng1
         # which will store updates to Ng0
         Ng1 = []
         for n in Set(range(len(Ng0))).subsets():
-            if n.cardinality() == _sage_const_1 :
-                Ng1.append(Ng0[n[_sage_const_0 ]])
-            elif n.cardinality() > _sage_const_1 :
-                T = Ng0[n[_sage_const_0 ]]
-                for j in range(_sage_const_1 ,n.cardinality()):
+            if n.cardinality() == 1:
+                Ng1.append(Ng0[n[0]])
+            elif n.cardinality() > 1:
+                T = Ng0[n[0]]
+                for j in range(1,n.cardinality()):
                     T = ['+', T, Ng0[n[j]]]
                 Ng1.append(T)
         Ng0 = copy(Ng1)
@@ -8640,10 +8763,10 @@ def GoodsteinT(number_of_iterations=_sage_const_1 ):
     for i in range(len(Ng0)):
         Nf.append([])
     for i in range(len(Nf)):
-        Nf[EvalT(Ng0[i])-_sage_const_1 ].append(Ng0[i])
+        Nf[EvalT(Ng0[i])-1].append(Ng0[i])
     Ng0=[]
     for i in range(len(Nf)):
-        Ng0.append(Nf[i][_sage_const_0 ])
+        Ng0.append(Nf[i][0])
     return Ng0
 
 
@@ -8662,7 +8785,7 @@ def list_eval(L):
     - Edinah K. Gnang
     - To Do: 
     """
-    return [i.substitute(x=_sage_const_2 ) for i in L]
+    return [i.substitute(x=2) for i in L]
 
 def get_permutation(la,lb):
     """
@@ -8738,23 +8861,23 @@ def base2expansion(n):
     """
     x = var('x')
     # polynomial
-    p = _sage_const_0 
-    k = _sage_const_2 
-    if n == _sage_const_1 :
-        return _sage_const_1 
-    elif n > _sage_const_1 :
+    p = 0
+    k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
         while k < n:
-            k = k**_sage_const_2 
+            k = k^2
         if k == n:
-            return x**(log(k,_sage_const_2 ))
+            return x^(log(k,2))
         elif k > n:
             k = sqrt(k)
             while k < n:
-                k = _sage_const_2 *k
+                k = 2*k
                 if k == n:
-                    return x**(log(k,_sage_const_2 ))
+                    return x^(log(k,2))
                 elif k > n:
-                    p = x**(floor(log(k/_sage_const_2 ,_sage_const_2 ))) + base2expansion(n-k/_sage_const_2 )
+                    p = x^(floor(log(k/2,2))) + base2expansion(n-k/2)
     return p
 
 @cached_function
@@ -8777,22 +8900,22 @@ def base2expansionT(n):
     """
     x = var('x')
     # polynomial
-    p = _sage_const_0 ; k = _sage_const_2 
-    if n == _sage_const_1 :
-        return _sage_const_1 
-    elif n > _sage_const_1 :
+    p = 0; k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
         while k < n:
-            k = k**_sage_const_2 
+            k = k^2
         if k == n:
-            return ['^',['+',_sage_const_1 ,_sage_const_1 ],log(k,_sage_const_2 )]
+            return ['^',['+',1,1],log(k,2)]
         elif k > n:
             k = sqrt(k)
             while k < n:
-                k = _sage_const_2 *k
+                k = 2*k
                 if k == n:
-                    return ['^',['+',_sage_const_1 ,_sage_const_1 ],log(k,_sage_const_2 )]
+                    return ['^',['+',1,1],log(k,2)]
                 elif k > n:
-                    p = ['+',['^',['+',_sage_const_1 ,_sage_const_1 ],(floor(log(k/_sage_const_2 ,_sage_const_2 )))],base2expansionT(n-k/_sage_const_2 )]
+                    p = ['+',['^',['+',1,1],(floor(log(k/2,2)))],base2expansionT(n-k/2)]
     return p
 
 @cached_function
@@ -8805,7 +8928,7 @@ def recurse_base2expansion(n):
     however it should be noted that it's a horrible idea
     to use this function to compute the recursive encoding
     for a list of consecutive integer the number of recursive
-    call is unmanageabl
+    call is unmanageable
     
     ::
 
@@ -8817,22 +8940,22 @@ def recurse_base2expansion(n):
     - Edinah K. Gnang
     -  
     """
-    p = _sage_const_0 ; k = _sage_const_2 
-    if n == _sage_const_1 :
-        return _sage_const_1 
-    elif n > _sage_const_1 :
+    p = 0; k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
         while k < n:
-            k = k**_sage_const_2 
+            k = k^2
         if k == n:
-            return x**recurse_base2expansion(log(k,_sage_const_2 ))
+            return x^recurse_base2expansion(log(k,2))
         elif k > n:
             k = sqrt(k)
             while k < n:
-                k = _sage_const_2 *k
+                k = 2*k
                 if k == n:
-                    return x**recurse_base2expansion(log(k,_sage_const_2 ))
+                    return x^recurse_base2expansion(log(k,2))
                 elif k > n:
-                    p = x**recurse_base2expansion(floor(log(k/_sage_const_2 ,_sage_const_2 ))) + recurse_base2expansion(n-k/_sage_const_2 )
+                    p = x^recurse_base2expansion(floor(log(k/2,2))) + recurse_base2expansion(n-k/2)
     return p
 
 @cached_function
@@ -8852,26 +8975,27 @@ def recurse_base2expansionT(n):
         sage: recurse_base2expansionT(2)
         ['^', ['+', 1, 1], 1]
 
+
     AUTHORS:
     - Edinah K. Gnang
     -  
     """
-    p = _sage_const_0 ; k = _sage_const_2 
-    if n == _sage_const_1 :
-        return _sage_const_1 
-    elif n > _sage_const_1 :
+    p = 0; k = 2
+    if n == 1:
+        return 1
+    elif n > 1:
         while k < n:
-            k = k**_sage_const_2 
+            k = k^2
         if k == n:
-            return ['^',['+',_sage_const_1 ,_sage_const_1 ],recurse_base2expansionT(log(k,_sage_const_2 ))]
+            return ['^',['+',1,1],recurse_base2expansionT(log(k,2))]
         elif k > n:
             k = sqrt(k)
             while k < n:
-                k = _sage_const_2 *k
+                k = 2*k
                 if k == n:
-                    return ['^',['+',_sage_const_1 ,_sage_const_1 ],recurse_base2expansionT(log(k,_sage_const_2 ))]
+                    return ['^',['+',1,1],recurse_base2expansionT(log(k,2))]
                 elif k > n:
-                    p = ['+',['^',['+',_sage_const_1 ,_sage_const_1 ],recurse_base2expansionT(floor(log(k/_sage_const_2 ,_sage_const_2 )))],recurse_base2expansionT(n-k/_sage_const_2 )]
+                    p = ['+',['^',['+',1,1],recurse_base2expansionT(floor(log(k/2,2)))],recurse_base2expansionT(n-k/2)]
     return p
 
 @cached_function
@@ -8896,12 +9020,12 @@ def Fa3T(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1 :
-        return [_sage_const_1 ]
+    if n == 1:
+        return [1]
     else :
         gu = []
-        for i in range(_sage_const_1 ,n,_sage_const_2 ):
-            for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
                 gu = gu + [['+', g1, g2, g3] for g1 in Fa3T(i) for g2 in Fa3T(j) for g3 in Fa3T(n-i-j)]
         return gu
 
@@ -8927,10 +9051,10 @@ def Ca3(n):
     - Try to implement faster version of this procedure
 
     """
-    if n == _sage_const_1  :
-        return _sage_const_1 
+    if n == 1 :
+        return 1
     else :
-        return sum([Ca3(i)*Ca3(j)*Ca3(n-i-j) for i in range(_sage_const_1 ,n,_sage_const_2 ) for j in range(_sage_const_1 ,n-i,_sage_const_2 )])
+        return sum([Ca3(i)*Ca3(j)*Ca3(n-i-j) for i in range(1,n,2) for j in range(1,n-i,2)])
 
 def Zeta(nbitr):
     """
@@ -8957,20 +9081,20 @@ def Zeta(nbitr):
     # Pr corresponds to the initial list of primes
     Pr = [x]
     # Nu corresponds to the initial list of integer
-    NuC  = [_sage_const_1 ,x]; TNuC = [_sage_const_1 ,x]
+    NuC  = [1,x]; TNuC = [1,x]
     # Initializing the upper and lower bound
-    upr_bnd = _sage_const_2 **_sage_const_2 ; lwr_bnd = _sage_const_2 
+    upr_bnd = 2^2; lwr_bnd = 2
     # Computing the set recurrence
     for itr in range(nbitr):
-        for jtr in range(log(upr_bnd,_sage_const_2 )-log(lwr_bnd,_sage_const_2 )):
-            TpNu = [_sage_const_1 ]
+        for jtr in range(log(upr_bnd,2)-log(lwr_bnd,2)):
+            TpNu = [1]
             for p in Pr:
-                TpNu=TpNu+[m*pn for m in TpNu for pn in [p**n for n in NuC if (p**n).subs(x=_sage_const_2 )<=_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr+_sage_const_1 )] if (m*pn).subs(x=_sage_const_2 )<=_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr+_sage_const_1 )]
+                TpNu=TpNu+[m*pn for m in TpNu for pn in [p^n for n in NuC if (p^n).subs(x=2)<=2^(log(lwr_bnd,2)+jtr+1)] if (m*pn).subs(x=2)<=2^(log(lwr_bnd,2)+jtr+1)]
             # Keeping only the elements within the range of the upper and lower bound
-            Nu = [f for f in TpNu if (_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr)<f.subs(x=_sage_const_2 ) and f.subs(x=_sage_const_2 )<=_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr+_sage_const_1 ))]
-            print 'The current iteration will uncover '+str(_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr+_sage_const_1 )-_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr)-len(Nu))+' new primes in the range ['+str(_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr))+', '+str(_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr+_sage_const_1 ))+']'
+            Nu = [f for f in TpNu if (2^(log(lwr_bnd,2)+jtr)<f.subs(x=2) and f.subs(x=2)<=2^(log(lwr_bnd,2)+jtr+1))]
+            print 'The current iteration will uncover '+str(2^(N(log(lwr_bnd,2))+jtr+1)-2^(N(log(lwr_bnd,2))+jtr)-len(Nu))+' new primes in the range ['+str(2^(N(log(lwr_bnd,2))+jtr))+', '+str(2^(N(log(lwr_bnd,2))+jtr+1))+']'
             # Obtaining the corresponding sorted integer list
-            la = [f.subs(x=_sage_const_2 ) for f in Nu]; lb = copy(la); lb.sort()
+            la = [f.subs(x=2) for f in Nu]; lb = copy(la); lb.sort()
             # Obtaining the sorting permutation
             perm = []
             for i1 in range(len(la)):
@@ -8983,19 +9107,19 @@ def Zeta(nbitr):
             # Computing the set completion
             TNuC = TNuC + Nu
             l = len(TNuC)
-            i = _sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr-_sage_const_1 )
-            while i<l-_sage_const_1 :
-                if(TNuC[i+_sage_const_1 ].subs(x=_sage_const_2 )-TNuC[i].subs(x=_sage_const_2 )==_sage_const_2 ):
-                    Pr.append(TNuC[i]+_sage_const_1 )
-                    TNuC.insert(i+_sage_const_1 ,TNuC[i]+_sage_const_1 )
-                    l=l+_sage_const_1 
+            i = 2^(log(lwr_bnd,2)+jtr-1)
+            while i<l-1:
+                if(TNuC[i+1].subs(x=2)-TNuC[i].subs(x=2)==2):
+                    Pr.append(TNuC[i]+1)
+                    TNuC.insert(i+1,TNuC[i]+1)
+                    l=l+1
                 else:
-                    i=i+_sage_const_1 
+                    i=i+1
         # Updating the list of integers
         NuC = TNuC
         # Updating the upper and lower bound
         lwr_bnd = upr_bnd
-        upr_bnd = _sage_const_2 **upr_bnd
+        upr_bnd = 2^upr_bnd
     return [Pr,NuC]        
 
 @cached_function
@@ -9022,22 +9146,22 @@ def ZetaT(nbitr):
 
     """
     # Pr corresponds to the initial list of primes
-    Pr = [ ['+',_sage_const_1 ,_sage_const_1 ] ]
+    Pr = [ ['+',1,1] ]
     # Nu corresponds to the initial list of integer
-    NuC  = [_sage_const_1 ] + Pr
-    TNuC = [_sage_const_1 ] + Pr
+    NuC  = [1] + Pr
+    TNuC = [1] + Pr
     # Initializing the upper and lower bound
-    upr_bnd = _sage_const_2 **_sage_const_2 
-    lwr_bnd = _sage_const_2 
+    upr_bnd = 2^2
+    lwr_bnd = 2
     # Computing the set recurrence
     for itr in range(nbitr):
-        for jtr in range(log(upr_bnd,_sage_const_2 )-log(lwr_bnd,_sage_const_2 )):
-            TpNu = [_sage_const_1 ]
+        for jtr in range(log(upr_bnd,2)-log(lwr_bnd,2)):
+            TpNu = [1]
             for p in Pr:
-                TpNu = TpNu+[pn for pn in [['^',p,n] for n in NuC if EvalT(['^',p,n])<=_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr+_sage_const_1 )]]+[['*',m,pn] for m in TpNu[_sage_const_1 :] for pn in [['^',p,n] for n in NuC if EvalT(['^',p,n])<=_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr+_sage_const_1 )]  if EvalT(['*',m,pn])<=_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr+_sage_const_1 )]
+                TpNu = TpNu+[pn for pn in [['^',p,n] for n in NuC if EvalT(['^',p,n])<=2^(log(lwr_bnd,2)+jtr+1)]]+[['*',m,pn] for m in TpNu[1:] for pn in [['^',p,n] for n in NuC if EvalT(['^',p,n])<=2^(log(lwr_bnd,2)+jtr+1)]  if EvalT(['*',m,pn])<=2^(log(lwr_bnd,2)+jtr+1)]
             # Keeping only the elements within the range of the upper and lower bound
-            Nu = [f for f in TpNu if (_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr)<EvalT(f) and EvalT(f)<=_sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr+_sage_const_1 ))] 
-            print 'The current iteration will uncover '+str(_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr+_sage_const_1 )-_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr)-len(Nu))+' new primes in the range ['+str(_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr))+', '+str(_sage_const_2 **(N(log(lwr_bnd,_sage_const_2 ))+jtr+_sage_const_1 ))+']'
+            Nu = [f for f in TpNu if (2^(log(lwr_bnd,2)+jtr)<EvalT(f) and EvalT(f)<=2^(log(lwr_bnd,2)+jtr+1))] 
+            print 'The current iteration will uncover '+str(2^(N(log(lwr_bnd,2))+jtr+1)-2^(N(log(lwr_bnd,2))+jtr)-len(Nu))+' new primes in the range ['+str(2^(N(log(lwr_bnd,2))+jtr))+', '+str(2^(N(log(lwr_bnd,2))+jtr+1))+']'
             # Obtaining the corresponding sorted integer list
             la = [EvalT(f) for f in Nu]; lb = copy(la); lb.sort()
             # Obtaining the sorting permutation
@@ -9052,19 +9176,19 @@ def ZetaT(nbitr):
             # Perfoming the set completion
             TNuC = TNuC + Nu
             l = len(TNuC)
-            i = _sage_const_2 **(log(lwr_bnd,_sage_const_2 )+jtr-_sage_const_1 )
-            while i<l-_sage_const_1 :
-                if(EvalT(TNuC[i+_sage_const_1 ])-EvalT(TNuC[i])==_sage_const_2 ):
-                    Pr.append(['+',_sage_const_1 ,TNuC[i]])
-                    TNuC.insert(i+_sage_const_1 ,['+',_sage_const_1 ,TNuC[i]])
-                    l=l+_sage_const_1 
+            i = 2^(log(lwr_bnd,2)+jtr-1)
+            while i<l-1:
+                if(EvalT(TNuC[i+1])-EvalT(TNuC[i])==2):
+                    Pr.append(['+',1,TNuC[i]])
+                    TNuC.insert(i+1,['+',1,TNuC[i]])
+                    l=l+1
                 else:
-                    i=i+_sage_const_1 
+                    i=i+1
         # Updating the list of integers
         NuC = TNuC
         # Updating the upper and lower bound
         lwr_bnd = upr_bnd
-        upr_bnd = _sage_const_2 **upr_bnd
+        upr_bnd = 2^upr_bnd
     return [Pr,NuC]        
 
 def Horner(nbitr):
@@ -9084,15 +9208,15 @@ def Horner(nbitr):
 
     """
     x = var('x')
-    Nk  = [_sage_const_1 , x, _sage_const_1 +x, x**x]
+    Nk  = [1, x, 1+x, x^x]
     # Initialization of the lists
-    LEk = [x**x]; LOk = [_sage_const_1 +x]; LPk = [x, x**x]
+    LEk = [x^x]; LOk = [1+x]; LPk = [x, x^x]
     # Main loop computing the encoding
     for i in range(nbitr):
         # Updating the list
-        LEkp1 = [lp*lo for lp in LPk for lo in LOk] + [x**m for m in LEk+LOk]
-        LOkp1 = [n+_sage_const_1  for n in LEk]
-        LPkp1 = LPk + [x**m for m in LEk+LOk]
+        LEkp1 = [lp*lo for lp in LPk for lo in LOk] + [x^m for m in LEk+LOk]
+        LOkp1 = [n+1 for n in LEk]
+        LPkp1 = LPk + [x^m for m in LEk+LOk]
         # The New replaces the old
         Nk = Nk + LEkp1+LOkp1
         LEk = LEkp1; LOk = LOkp1; LPk = LPkp1
@@ -9124,17 +9248,17 @@ def HornerT(nbitr):
 
     """
     # Initial set
-    Nk  = [ _sage_const_1 , ['+',_sage_const_1 ,_sage_const_1 ], ['+',_sage_const_1 ,['+',_sage_const_1 ,_sage_const_1 ]], ['^',['+',_sage_const_1 ,_sage_const_1 ],['+',_sage_const_1 ,_sage_const_1 ]] ]
+    Nk  = [ 1, ['+',1,1], ['+',1,['+',1,1]], ['^',['+',1,1],['+',1,1]] ]
     # Initialization of the lists
-    LEk = [ ['^',['+',_sage_const_1 ,_sage_const_1 ],['+',_sage_const_1 ,_sage_const_1 ]] ]
-    LOk = [ ['+',_sage_const_1 ,['+',_sage_const_1 ,_sage_const_1 ]] ]
-    LPk = [ ['+',_sage_const_1 ,_sage_const_1 ], ['^',['+',_sage_const_1 ,_sage_const_1 ],['+',_sage_const_1 ,_sage_const_1 ]] ]
+    LEk = [ ['^',['+',1,1],['+',1,1]] ]
+    LOk = [ ['+',1,['+',1,1]] ]
+    LPk = [ ['+',1,1], ['^',['+',1,1],['+',1,1]] ]
     # Main loop computing the recursive horner encoding
     for i in range(nbitr):
         # Updating the list
-        LEkp1 = [['*',lp,lo] for lp in LPk for lo in LOk] + [['^',['+',_sage_const_1 ,_sage_const_1 ],m] for m in LEk+LOk]
-        LOkp1 = [['+',_sage_const_1 ,n] for n in LEk]
-        LPkp1 = LPk + [['^',['+',_sage_const_1 ,_sage_const_1 ],m] for m in LEk+LOk]
+        LEkp1 = [['*',lp,lo] for lp in LPk for lo in LOk] + [['^',['+',1,1],m] for m in LEk+LOk]
+        LOkp1 = [['+',1,n] for n in LEk]
+        LPkp1 = LPk + [['^',['+',1,1],m] for m in LEk+LOk]
         # The New replaces the old
         Nk = Nk+LEkp1+LOkp1
         LEk = LEkp1; LOk = LOkp1; LPk = LPkp1
@@ -9154,16 +9278,16 @@ def EvalT(T):
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
     """
-    if T == _sage_const_1 :
-        return _sage_const_1 
-    elif T == -_sage_const_1 :
-        return -_sage_const_1 
-    elif T[_sage_const_0 ] == '+':
-        return EvalT(T[_sage_const_1 ]) + EvalT(T[_sage_const_2 ])
-    elif T[_sage_const_0 ] == '*':
-        return EvalT(T[_sage_const_1 ]) * EvalT(T[_sage_const_2 ])
-    elif T[_sage_const_0 ] == '^':
-        return EvalT(T[_sage_const_1 ]) ** EvalT(T[_sage_const_2 ])
+    if T == 1:
+        return 1
+    elif T == -1:
+        return -1
+    elif T[0] == '+':
+        return EvalT(T[1]) + EvalT(T[2])
+    elif T[0] == '*':
+        return EvalT(T[1]) * EvalT(T[2])
+    elif T[0] == '^':
+        return EvalT(T[1]) ^ EvalT(T[2])
     else:
         print 'IMPROPER INPUT !!!'
 
@@ -9186,17 +9310,17 @@ def MonotoneFormula(n):
     - Try to implement faster version of this procedure
 
     """
-    if n<=_sage_const_3 :
-        return [[], [_sage_const_1 ], [], []]
-    elif n>_sage_const_3 :
+    if n<=3:
+        return [[], [1], [], []]
+    elif n>3:
         # Initialization of the list of formula.
-        A=[[], [_sage_const_1 ]] + [[] for t in range(n-_sage_const_1 )]
+        A=[[], [1]] + [[] for t in range(n-1)]
         # Main loop.
-        for sz in range(_sage_const_3 ,n+_sage_const_1 ):
+        for sz in range(3,n+1):
             # Initialization of the fifth entry
             for o in ['+', '*', '^']:
-                for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                        A[sz]=A[sz]+[[o,s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 )]
+                for i in range(1,sz-1):
+                        A[sz]=A[sz]+[[o,s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0)]
         return A 
 
 @cached_function
@@ -9218,20 +9342,20 @@ def ReducedMonotoneFormula(n):
     - Try to implement faster version of this procedure
 
     """
-    if n<=_sage_const_3 :
-        return [[], [_sage_const_1 ], [], []]
-    elif n>_sage_const_3 :
+    if n<=3:
+        return [[], [1], [], []]
+    elif n>3:
         # Initialization of the list of formula.
-        A=[[], [_sage_const_1 ]] + [[] for t in range(n-_sage_const_1 )]
+        A=[[], [1]] + [[] for t in range(n-1)]
         # Main loop.
-        for sz in range(_sage_const_3 ,n+_sage_const_1 ):
+        for sz in range(3,n+1):
             # Initialization of the fifth entry
-            for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 ) and not EvalT(s).is_zero() and not EvalT(t).is_zero() and not EvalT(['+',s,t]).is_zero()]
-            for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 ) and EvalT(s)!=_sage_const_1  and EvalT(t)!=_sage_const_1  and EvalT(['*',s,t])!=_sage_const_1 ]
-            for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 ) and EvalT(s)!=_sage_const_1  and EvalT(t)!=_sage_const_1  and EvalT(['^',s,t])!=_sage_const_1 ]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and not EvalT(s).is_zero() and not EvalT(t).is_zero() and not EvalT(['+',s,t]).is_zero()]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['*',s,t])!=1]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['^',s,t])!=1]
         return A
 
 def ReducedMonotoneFormulaSets(sz):
@@ -9256,14 +9380,14 @@ def ReducedMonotoneFormulaSets(sz):
     Lt=ReducedMonotoneFormula(sz)
     # Filling up the result list
     Rslt=[]
-    for n in range(sz+_sage_const_1 ):
-        L=[]; i=_sage_const_0 
+    for n in range(sz+1):
+        L=[]; i=0
         while i<len(Lt[n]):
             L.append(Lt[n][i])
-            i=i+_sage_const_1 
+            i=i+1
         Rslt.append(Set([EvalT(L[i]) for i in range(len(L))]))
     # Cleaning up the list
-    for i in range(_sage_const_1 ,len(Rslt)):
+    for i in range(1,len(Rslt)):
         for j in range(i):
             Rslt[i]=Rslt[i].difference(Rslt[j])
     return Rslt
@@ -9287,17 +9411,17 @@ def NonMonotoneFormula(n):
     - Try to implement faster version of this procedure
 
     """
-    if n<=_sage_const_3 :
-        return [[], [_sage_const_1 ,-_sage_const_1 ], [], []]
-    elif n>_sage_const_3 :
+    if n<=3:
+        return [[], [1,-1], [], []]
+    elif n>3:
         # Initialization of the list of formula.
-        A=[[], [_sage_const_1 ,-_sage_const_1 ]] + [[] for t in range(n-_sage_const_1 )]
+        A=[[], [1,-1]] + [[] for t in range(n-1)]
         # Main loop.
-        for sz in range(_sage_const_3 ,n+_sage_const_1 ):
+        for sz in range(3,n+1):
             # Initialization of the fifth entry
             for o in ['+', '*', '^']:
-                for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                        A[sz]=A[sz]+[[o,s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 )]
+                for i in range(1,sz-1):
+                        A[sz]=A[sz]+[[o,s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0)]
         return A
 
 @cached_function
@@ -9319,20 +9443,20 @@ def ReducedNonMonotoneFormula(n):
     - Try to implement faster version of this procedure
 
     """
-    if n<=_sage_const_3 :
-        return [[], [_sage_const_1 ,-_sage_const_1 ], [], []]
-    elif n>_sage_const_3 :
+    if n<=3:
+        return [[], [1,-1], [], []]
+    elif n>3:
         # Initialization of the list of formula.
-        A=[[], [_sage_const_1 ,-_sage_const_1 ]] + [[] for t in range(n-_sage_const_1 )]
+        A=[[], [1,-1]] + [[] for t in range(n-1)]
         # Main loop.
-        for sz in range(_sage_const_3 ,n+_sage_const_1 ):
+        for sz in range(3,n+1):
             # Initialization of the fifth entry
-            for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 ) and not EvalT(s).is_zero() and not EvalT(t).is_zero() and not EvalT(['+',s,t]).is_zero()]
-            for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 ) and EvalT(s)!=_sage_const_1  and EvalT(t)!=_sage_const_1  and EvalT(['*',s,t])!=_sage_const_1 ]
-            for i in range(_sage_const_1 ,sz-_sage_const_1 ):
-                A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-_sage_const_1 ] if (len(A[i])>_sage_const_0 ) and (len(A[sz-i-_sage_const_1 ])>_sage_const_0 ) and EvalT(s)!=_sage_const_1  and EvalT(t)!=_sage_const_1  and EvalT(['^',s,t])!=_sage_const_1 ]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and not EvalT(s).is_zero() and not EvalT(t).is_zero() and not EvalT(['+',s,t]).is_zero()]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['*',s,t])!=1]
+            for i in range(1,sz-1):
+                A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['^',s,t])!=1]
         return A
 
 def ReducedNonMonotoneFormulaSets(sz):
@@ -9357,14 +9481,14 @@ def ReducedNonMonotoneFormulaSets(sz):
     Lt=ReducedNonMonotoneFormula(sz)
     # Filling up the result list
     Rslt=[]
-    for n in range(sz+_sage_const_1 ):
-        L=[]; i=_sage_const_0 
+    for n in range(sz+1):
+        L=[]; i=0
         while i<len(Lt[n]):
             L.append(Lt[n][i])
-            i=i+_sage_const_1 
+            i=i+1
         Rslt.append(Set([EvalT(L[i]) for i in range(len(L))]))
     # Cleaning up the list
-    for i in range(_sage_const_1 ,len(Rslt)):
+    for i in range(1,len(Rslt)):
         for j in range(i):
             Rslt[i]=Rslt[i].difference(Rslt[j])
     return Rslt
@@ -9389,36 +9513,36 @@ def GeneralDualHypermatrixProductB(*args):
     - Edinah K. Gnang
     """
     # Initialization of the list specifying the dimensions of the output
-    l = [(args[i]).n(i) for i in range(len(args)-_sage_const_1 )]
+    l = [(args[i]).n(i) for i in range(len(args)-1)]
     # Initializing the input for generating a symbolic hypermatrix
     inpts = l+['zero']
     # Initialization of the hypermatrix
     Rh = HM(*inpts)
     # Main loop performing the assignement
     # Initializing the background hypermatrix
-    B = (args[len(args)-_sage_const_1 ]).transpose(args[len(args)-_sage_const_1 ].order()-_sage_const_1 )
-    args = tuple([args[id] for id in range(len(args)-_sage_const_1 )])
+    B = (args[len(args)-1]).transpose(args[len(args)-1].order()-1)
+    args = tuple([args[id] for id in range(len(args)-1)])
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(args) < _sage_const_2 :
+        if len(args) < 2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= _sage_const_2 :
-            Rh[tuple(entry)] = _sage_const_0 
+        elif len(args) >= 2:
+            Rh[tuple(entry)] = 0
             l2 = [B.n(sz) for sz in range(B.order())]
             for j in range(prod(l2)):
                 # Turning the index j into an hypermatrix array location using the decimal encoding trick
-                entry2 = [Integer(mod(j,l2[_sage_const_0 ]))]
-                sm2 = Integer(mod(j,l2[_sage_const_0 ]))
-                for z in range(len(l2)-_sage_const_1 ):
-                    entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[_sage_const_0 :z+_sage_const_1 ])),l2[z+_sage_const_1 ])))
-                    sm2 = sm2+prod(l2[_sage_const_0 :z+_sage_const_1 ])*entry2[len(entry2)-_sage_const_1 ]
-                Rh[tuple(entry)] = Rh[tuple(entry)]+prod([args[s][tuple(entry2[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(args)))]+[entry[Integer(mod(s+_sage_const_1 ,len(args)))]]+entry2[Integer(mod(s+_sage_const_2 ,len(args))):])] for s in range(len(args)-_sage_const_2 )]+[args[len(args)-_sage_const_2 ][tuple(entry2[_sage_const_0 :len(entry2)-_sage_const_1 ]+[entry[len(entry2)-_sage_const_1 ]])]]+[args[len(args)-_sage_const_1 ][tuple([entry[_sage_const_0 ]]+entry2[_sage_const_1 :])]])*B[tuple(entry2)]
+                entry2 = [Integer(mod(j,l2[0]))]
+                sm2 = Integer(mod(j,l2[0]))
+                for z in range(len(l2)-1):
+                    entry2.append(Integer(mod(Integer((j-sm2)/prod(l2[0:z+1])),l2[z+1])))
+                    sm2 = sm2+prod(l2[0:z+1])*entry2[len(entry2)-1]
+                Rh[tuple(entry)] = Rh[tuple(entry)]+prod([args[s][tuple(entry2[0:Integer(mod(s+1,len(args)))]+[entry[Integer(mod(s+1,len(args)))]]+entry2[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry2[0:len(entry2)-1]+[entry[len(entry2)-1]])]]+[args[len(args)-1][tuple([entry[0]]+entry2[1:])]])*B[tuple(entry2)]
     return Rh
 
 def PathAdjcencyHypermatrix(A, pthl):
@@ -9435,11 +9559,11 @@ def PathAdjcencyHypermatrix(A, pthl):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if A.order() == _sage_const_2  and pthl == _sage_const_1 :
+    if A.order() == 2 and pthl == 1:
         return A
-    elif A.order() == _sage_const_2  and pthl > _sage_const_1 :
+    elif A.order() == 2 and pthl > 1:
         # Initializing the number of vertices in the graph.
-        sz = max(A.n(_sage_const_0 ), A.n(_sage_const_1 ))
+        sz = max(A.n(0), A.n(1))
         # Initialization of the list specifying the dimensions of the output
         l = [sz for i in range(pthl)] 
         # Initializing the input for generating a symbolic hypermatrix
@@ -9449,12 +9573,12 @@ def PathAdjcencyHypermatrix(A, pthl):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-            Rh[tuple(entry)] = prod([A[tuple([entry[i],entry[i+_sage_const_1 ]])] for i in range(pthl-_sage_const_1 )])
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)] = prod([A[tuple([entry[i],entry[i+1]])] for i in range(pthl-1)])
     else:
         raise ValueError, "Input hypermatrix must be order 2 and the path length must be an integer greater then 0"
     return Rh
@@ -9478,9 +9602,9 @@ def  GeneralHypermatrixCayleyHamiltonB(A, t):
     # Initializing the hypermatrix order.
     od = A.order()
     # Verifying that the input hypermatrix is cubic
-    if len(Set([A.n(i) for i in range(od)]).list()) == _sage_const_1 :
+    if len(Set([A.n(i) for i in range(od)]).list()) == 1:
         # initial conditions for the recurrence.
-        A0 = GeneralHypermatrixKroneckerDelta(od, A.n(_sage_const_0 ))
+        A0 = GeneralHypermatrixKroneckerDelta(od, A.n(0))
         A1 = A
         # Initializing the list assoaciated with the first two rows of the output matrix
         L = [A0.list(), A1.list()]
@@ -9564,16 +9688,16 @@ def SecondOrderHyperdeterminant(H):
     - To Do: 
     """
     # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==_sage_const_1  and H.order()==_sage_const_2 :
+    if len(Set(H.dimensions()).list())==1 and H.order()==2:
         # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(_sage_const_0 ),_sage_const_1 ,[var('x'+str(i)) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
-        L=expand(prod([A[u,_sage_const_0 ]-A[v,_sage_const_0 ] for u in range(_sage_const_1 ,A.nrows()) for v in range(u)])*prod([A[i,_sage_const_0 ] for i in range(A.nrows())])).operands()
+        A=HM(H.n(0),1,[var('x'+str(i)) for i in range(1,1+H.n(0))])
+        L=expand(prod([A[u,0]-A[v,0] for u in range(1,A.nrows()) for v in range(u)])*prod([A[i,0] for i in range(A.nrows())])).operands()
         # Computing the polynomial
         f=sum(L)
         # Loop performing the umbral expression
-        for k in range(H.n(_sage_const_0 ),_sage_const_0 ,-_sage_const_1 ):
-            f=fast_reduce(f,[var('x'+str(i))**k for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))],[var('a'+str(i)+str(k)) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
-        return f.subs(dict([(var('a'+str(i)+str(k)),H[i-_sage_const_1 ,k-_sage_const_1 ]) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))]))
+        for k in range(H.n(0),0,-1):
+            f=fast_reduce(f,[var('x'+str(i))^k for i in range(1,1+H.n(0))],[var('a'+str(i)+str(k)) for i in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(k)),H[i-1,k-1]) for i in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The matrix must be square."
@@ -9598,17 +9722,17 @@ def ThirdOrderHyperdeterminant(H):
     - To Do: Implement a faster and more generic version.
     """
     # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==_sage_const_1  and H.order()==_sage_const_3 :
+    if len(Set(H.dimensions()).list())==1 and H.order()==3:
         # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(_sage_const_0 ),H.n(_sage_const_0 ),[var('x'+str(i)+str(j)) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
+        A=HM(H.n(0),H.n(0),[var('x'+str(i)+str(j)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the mnemonique polynomial
-        L=expand(SecondOrderHyperdeterminant(A)*prod([sum([sqrt(g**_sage_const_2 ).canonicalize_radical() for g in SecondOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(_sage_const_2 ,_sage_const_1 +A.n(_sage_const_0 ))])).operands()
+        L=expand(SecondOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in SecondOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         # Computing the polynomial
-        f=sum([l for l in L if len((l**_sage_const_2 ).operands())==(H.n(_sage_const_0 ))**_sage_const_2 ])
+        f=sum([l for l in L if len((l^2).operands())==(H.n(0))^2])
         # Loop performing the umbral expression
-        for k in range(H.n(_sage_const_0 ),_sage_const_0 ,-_sage_const_1 ):
-            f=fast_reduce(f,[var('x'+str(i)+str(j))**k for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))],[var('a'+str(i)+str(j)+str(k)) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-_sage_const_1 ,j-_sage_const_1 ,k-_sage_const_1 ]) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))]))
+        for k in range(H.n(0),0,-1):
+            f=fast_reduce(f,[var('x'+str(i)+str(j))^k for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)),H[i-1,j-1,k-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))]))
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a third order cube hypermatrix."
@@ -9631,17 +9755,17 @@ def FourthOrderHyperdeterminant(H):
     - To Do: 
     """
     # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==_sage_const_1  and H.order()==_sage_const_4 :
+    if len(Set(H.dimensions()).list())==1 and H.order()==4:
         # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(_sage_const_0 ),H.n(_sage_const_0 ),H.n(_sage_const_0 ), [var('x'+str(i)+str(j)+str(k)) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
+        A=HM(H.n(0),H.n(0),H.n(0), [var('x'+str(i)+str(j)+str(k)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
-        L=expand(ThirdOrderHyperdeterminant(A)*prod([sum([sqrt(g**_sage_const_2 ).canonicalize_radical() for g in ThirdOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(_sage_const_2 ,_sage_const_1 +A.n(_sage_const_0 ))])).operands()
+        L=expand(ThirdOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in ThirdOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
         # Computing the polynomial
-        f = sum([l for l in L if len((l**_sage_const_2 ).operands())==(H.n(_sage_const_0 ))**_sage_const_3 ])
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^3])
         # Loop performing the umbral expression
-        for l in range(H.n(_sage_const_0 ),_sage_const_0 ,-_sage_const_1 ):
-            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k))**l for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))],[var('a'+str(i)+str(j)+str(k)+str(l)) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)),H[i-_sage_const_1 ,j-_sage_const_1 ,k-_sage_const_1 ,l-_sage_const_1 ]) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))]))
+        for l in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k))^l for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)),H[i-1,j-1,k-1,l-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))]))
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a fourth order hypercube hypermatrix."
@@ -9663,16 +9787,16 @@ def FifthOrderHyperdeterminant(H):
     - To Do: 
     """
     # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==_sage_const_1  and H.order()==_sage_const_5 :
+    if len(Set(H.dimensions()).list())==1 and H.order()==5:
         # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(_sage_const_0 ),H.n(_sage_const_0 ),H.n(_sage_const_0 ),H.n(_sage_const_0 ),[var('x'+str(i)+str(j)+str(k)+str(l)) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
+        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
-        L = expand(FourthOrderHyperdeterminant(A)*prod([sum([sqrt(g**_sage_const_2 ).canonicalize_radical() for g in FourthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(_sage_const_2 ,_sage_const_1 +A.n(_sage_const_0 ))])).operands()
-        f = sum([l for l in L if len((l**_sage_const_2 ).operands())==(H.n(_sage_const_0 ))**_sage_const_4 ])
+        L = expand(FourthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FourthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^4])
         # Loop performing the umbral expression
-        for m in range(H.n(_sage_const_0 ),_sage_const_0 ,-_sage_const_1 ):
-            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l))**m for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)),H[i-_sage_const_1 ,j-_sage_const_1 ,k-_sage_const_1 ,l-_sage_const_1 ,m-_sage_const_1 ]) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for m in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))]))
+        for m in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l))^m for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)),H[i-1,j-1,k-1,l-1,m-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))]))
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a fifth order hypercube hypermatrix."
@@ -9695,16 +9819,16 @@ def SixthOrderHyperdeterminant(H):
     - To Do: 
     """
     # Testing to see that the hypermatrix is indeed a cube
-    if len(Set(H.dimensions()).list())==_sage_const_1  and H.order()==_sage_const_6 :
+    if len(Set(H.dimensions()).list())==1 and H.order()==6:
         # Initializing the matrix for the mnemonic construction
-        A=HM(H.n(_sage_const_0 ),H.n(_sage_const_0 ),H.n(_sage_const_0 ),H.n(_sage_const_0 ),H.n(_sage_const_0 ),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
+        A=HM(H.n(0),H.n(0),H.n(0),H.n(0),H.n(0),[var('x'+str(i)+str(j)+str(k)+str(l)+str(m)) for m in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for i in range(1,1+H.n(0))])
         # Computing the polynomial
-        L = expand(FifthOrderHyperdeterminant(A)*prod([sum([sqrt(g**_sage_const_2 ).canonicalize_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(_sage_const_2 ,_sage_const_1 +A.n(_sage_const_0 ))])).operands()
-        f = sum([l for l in L if len((l**_sage_const_2 ).operands())==(H.n(_sage_const_0 ))**_sage_const_5 ])
+        L = expand(FifthOrderHyperdeterminant(A)*prod([sum([sqrt(g^2).canonicalize_radical() for g in FifthOrderHyperdeterminant(A.elementwise_exponent(j)).operands()]) for j in range(2,1+A.n(0))])).operands()
+        f = sum([l for l in L if len((l^2).operands())==(H.n(0))^5])
         # Loop performing the umbral expression
-        for p in range(H.n(_sage_const_0 ),_sage_const_0 ,-_sage_const_1 ):
-            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l)+str(m))**p for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for m in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for m in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))])
-        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)),H[i-_sage_const_1 ,j-_sage_const_1 ,k-_sage_const_1 ,l-_sage_const_1 ,m-_sage_const_1 ,p-_sage_const_1 ]) for i in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for j in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for k in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for l in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for m in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 )) for p in range(_sage_const_1 ,_sage_const_1 +H.n(_sage_const_0 ))]))
+        for p in range(H.n(0),0,-1):
+            f = fast_reduce(f,[var('x'+str(i)+str(j)+str(k)+str(l)+str(m))^p for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))],[var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0))])
+        return f.subs(dict([(var('a'+str(i)+str(j)+str(k)+str(l)+str(m)+str(p)),H[i-1,j-1,k-1,l-1,m-1,p-1]) for i in range(1,1+H.n(0)) for j in range(1,1+H.n(0)) for k in range(1,1+H.n(0)) for l in range(1,1+H.n(0)) for m in range(1,1+H.n(0)) for p in range(1,1+H.n(0))]))
     else :
         # Print an error message indicating that the matrix must be a cube.
         raise ValueError, "The hypermatrix must be a sixth order hypercube hypermatrix."
@@ -9727,7 +9851,7 @@ def general_side_length_2_det(A):
     - Edinah K. Gnang
     - To Do: 
     """
-    if A.is_cubical() and A.n(_sage_const_0 )==_sage_const_2 :
+    if A.is_cubical() and A.n(0)==2:
         # Initialization of the list specifying the dimensions of the output
         l = [A.n(i) for i in range(A.order())]
         # Initializing the input for generating a symbolic hypermatrix
@@ -9738,12 +9862,12 @@ def general_side_length_2_det(A):
         # Main loop performing the transposition of the entries
         for i in range(prod(l)):
             # Turning the index i into an hypermatrix array location using the decimal encoding trick
-            entry = [Integer(mod(i,l[_sage_const_0 ]))]
-            sm = Integer(mod(i,l[_sage_const_0 ]))
-            for k in range(len(l)-_sage_const_1 ):
-                entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
-            if Integer(mod(sum(entry),_sage_const_2 )) == _sage_const_0 :
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            if Integer(mod(sum(entry),2)) == 0:
                 Leven.append(A[tuple(entry)])
             else:
                 Lodd.append(A[tuple(entry)])
@@ -9768,60 +9892,60 @@ def DodgsonCondensation(A):
     - Edinah K. Gnang
     - To Do: 
     """
-    if A.is_cubical() and A.n(_sage_const_0 )>_sage_const_2 :
+    if A.is_cubical() and A.n(0)>2:
         # Initializing the copy
         Bold=A.copy()
-        Bnew=apply(HM,[i-_sage_const_1  for i in Bold.dimensions()]+['zero'])
-        Temp=apply(HM,[i-_sage_const_2  for i in Bold.dimensions()]+['zero'])
-        while Bnew.n(_sage_const_0 )>_sage_const_1 :
+        Bnew=apply(HM,[i-1 for i in Bold.dimensions()]+['zero'])
+        Temp=apply(HM,[i-2 for i in Bold.dimensions()]+['zero'])
+        while Bnew.n(0)>1:
             # Filling up Bnew
             l=Bnew.dimensions()
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry=[Integer(mod(i,l[_sage_const_0 ]))]
-                sm=Integer(mod(i,l[_sage_const_0 ]))
-                for k in range(len(l)-_sage_const_1 ):
-                    entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                    sm=sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+                entry=[Integer(mod(i,l[0]))]
+                sm=Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
                 # Initialization of the summand
                 Bl=[]
-                l2=[_sage_const_2  for j in range(A.order())]
+                l2=[2 for j in range(A.order())]
                 for j in range(prod(l2)):
-                    ent=[Integer(mod(j,l2[_sage_const_0 ]))]
-                    ms=Integer(mod(j,l2[_sage_const_0 ]))
-                    for t in range(len(l2)-_sage_const_1 ):
-                        ent.append(Integer(mod(Integer((j-ms)/prod(l2[_sage_const_0 :t+_sage_const_1 ])),l2[t+_sage_const_1 ])))
-                        ms=ms+prod(l2[_sage_const_0 :t+_sage_const_1 ])*ent[len(ent)-_sage_const_1 ]
+                    ent=[Integer(mod(j,l2[0]))]
+                    ms=Integer(mod(j,l2[0]))
+                    for t in range(len(l2)-1):
+                        ent.append(Integer(mod(Integer((j-ms)/prod(l2[0:t+1])),l2[t+1])))
+                        ms=ms+prod(l2[0:t+1])*ent[len(ent)-1]
                     Bl.append((Matrix(ZZ,entry)+Matrix(ZZ,ent)).list())
-                Bnew[tuple(entry)]=general_side_length_2_det(apply(HM,[_sage_const_2  for j in range(A.order())]+[[Bold[tuple(entry2)] for entry2 in Bl ]]))
+                Bnew[tuple(entry)]=general_side_length_2_det(apply(HM,[2 for j in range(A.order())]+[[Bold[tuple(entry2)] for entry2 in Bl ]]))
             # Filling up Temp
-            Temp=apply(HM,[i-_sage_const_2  for i in Bold.dimensions()]+['zero'])
+            Temp=apply(HM,[i-2 for i in Bold.dimensions()]+['zero'])
             l=Temp.dimensions()
             # Main loop performing the transposition of the entries
             for i in range(prod(l)):
                 # Turning the index i into an hypermatrix array location using the decimal encoding trick
-                entry = [Integer(mod(i,l[_sage_const_0 ]))]
-                sm = Integer(mod(i,l[_sage_const_0 ]))
-                for k in range(len(l)-_sage_const_1 ):
-                    entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-                    sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+                entry = [Integer(mod(i,l[0]))]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
                 # Initialization of the summand
                 Bl=[]
-                l2=[_sage_const_2  for j in range(A.order())]
+                l2=[2 for j in range(A.order())]
                 for j in range(prod(l2)):
-                    ent=[Integer(mod(j,l2[_sage_const_0 ]))]
-                    ms=Integer(mod(j,l2[_sage_const_0 ]))
-                    for t in range(len(l2)-_sage_const_1 ):
-                        ent.append(Integer(mod(Integer((j-ms)/prod(l2[_sage_const_0 :t+_sage_const_1 ])),l2[t+_sage_const_1 ])))
-                        ms = ms+prod(l2[_sage_const_0 :t+_sage_const_1 ])*ent[len(ent)-_sage_const_1 ]
+                    ent=[Integer(mod(j,l2[0]))]
+                    ms=Integer(mod(j,l2[0]))
+                    for t in range(len(l2)-1):
+                        ent.append(Integer(mod(Integer((j-ms)/prod(l2[0:t+1])),l2[t+1])))
+                        ms = ms+prod(l2[0:t+1])*ent[len(ent)-1]
                     Bl.append((Matrix(ZZ,entry)+Matrix(ZZ,ent)).list())
-                Temp[tuple(entry)]=general_side_length_2_det(apply(HM,[_sage_const_2  for j in range(A.order())]+[[Bnew[tuple(entry2)] for entry2 in Bl ]]))/Bold[tuple((Matrix(ZZ,entry)+ones_matrix(_sage_const_1 ,len(entry))).list())]
+                Temp[tuple(entry)]=general_side_length_2_det(apply(HM,[2 for j in range(A.order())]+[[Bnew[tuple(entry2)] for entry2 in Bl ]]))/Bold[tuple((Matrix(ZZ,entry)+ones_matrix(1,len(entry))).list())]
             # Performing the update
-            if Temp.n(_sage_const_0 )>_sage_const_0 :
+            if Temp.n(0)>0:
                 Bold=Bnew.copy()
                 Bnew=Temp.copy()
-        return (Temp.list())[_sage_const_0 ]
+        return (Temp.list())[0]
     else:
         raise ValueError, "The input hypermatrix must be hypercubic of size 2"
 
@@ -9844,28 +9968,28 @@ def GeneralHyperdeterminantExpression(od,sz):
     - To Do: Implement a faster and more generic version.
     """
     # Testing to see that the hypermatrix is indeed a cube
-    if od==_sage_const_2 :
+    if od==2:
         return HM(sz,sz,'x','shift').det()
-    elif od>_sage_const_2 :
+    elif od>2:
         # Initializing the base case of the recursion
         A=HM(sz,sz,'x','shift').copy()
         # Computing the matrix determinant and permanent pair
-        Ldtm=[Deter(A)]+[Per(A.elementwise_exponent(j)) for j in range(_sage_const_2 ,_sage_const_1 +sz)]
+        Ldtm=[Deter(A)]+[Per(A.elementwise_exponent(j)) for j in range(2,1+sz)]
         # Main loop performing the recursion computation
-        for o in range(_sage_const_2 ,od):
+        for o in range(2,od):
             # ReInitialization of the Hypermatrix A
             A=apply(HM,[sz for i in range(o)]+['x']+['shift']).copy()
             # Computing the mnemonique polynomial
             L=expand(prod(Ldtm)).operands()
             # Computing the polynomial
-            f=sum([l for l in L if len((l**_sage_const_2 ).operands())==prod(A.dimensions())])
+            f=sum([l for l in L if len((l^2).operands())==prod(A.dimensions())])
             # Loop performing the umbral transformation
-            for k in range(sz,_sage_const_0 ,-_sage_const_1 ):
+            for k in range(sz,0,-1):
                 f=fast_reduce(f,A.elementwise_exponent(k).list(), apply(HM,[sz for i in range(o)]+['a']+['shift']).append_index(k).list())
-            B=apply(HM,[sz for i in range(o+_sage_const_1 )]+['x']+['shift']).copy()
-            L1=apply(HM,[sz for i in range(o+_sage_const_1 )]+['x']+['shift']).list();L2=apply(HM,[sz for i in range(o+_sage_const_1 )]+['a']+['shift']).list()
+            B=apply(HM,[sz for i in range(o+1)]+['x']+['shift']).copy()
+            L1=apply(HM,[sz for i in range(o+1)]+['x']+['shift']).list();L2=apply(HM,[sz for i in range(o+1)]+['a']+['shift']).list()
             f=f.subs(dict([(L2[i],L1[i]) for i in range(len(L1))]))
-            Ldtm=[f]+[sum([sqrt(g**_sage_const_2 ).canonicalize_radical() for g in f.operands()]).subs(dict([(B.list()[i],B.elementwise_exponent(j).list()[i]) for i in range(prod(B.dimensions()))])) for j in range(_sage_const_2 ,_sage_const_1 +sz)]
+            Ldtm=[f]+[sum([sqrt(g^2).canonicalize_radical() for g in f.operands()]).subs(dict([(B.list()[i],B.elementwise_exponent(j).list()[i]) for i in range(prod(B.dimensions()))])) for j in range(2,1+sz)]
         return f
 
 def GeneralHyperdeterminant(H):
@@ -9887,9 +10011,9 @@ def GeneralHyperdeterminant(H):
     - To Do: Implement a faster and more generic version.
     """
     if H.is_cubical(): 
-        f=GeneralHyperdeterminantExpression(H.order(),H.n(_sage_const_0 ))
+        f=GeneralHyperdeterminantExpression(H.order(),H.n(0))
         Lh=H.list()
-        Lx=apply(HM,[H.n(_sage_const_0 ) for i in range(H.order())]+['x']+['shift']).list()
+        Lx=apply(HM,[H.n(0) for i in range(H.order())]+['x']+['shift']).list()
         return f.subs(dict([(Lx[i],Lh[i]) for i in range(len(Lh))]))
     else:
         raise ValueError, "The hypermatrix must be cubical."
@@ -9913,13 +10037,13 @@ def LatinHypermatrixList(od,sz):
     """
     # Initialization of the hyperdeterminant expression.
     Dt=GeneralHyperdeterminant(apply(HM,[sz for i in range(od)]+['x']))
-    Lt = [sqrt(tm**_sage_const_2 ).canonicalize_radical() for tm in Dt.operands()]
+    Lt = [sqrt(tm^2).canonicalize_radical() for tm in Dt.operands()]
     Sa = Set(apply(HM,[sz for i in range(od)]+['x']).list())
     L = []
     for f in Lt:
         Tmp=apply(HM,[sz for i in range(od)]+['x'])
         Lsf=Sa.difference(Set(f.operands()))
-        L.append(Tmp.subs(dict([(g,_sage_const_0 ) for g in Lsf])))
+        L.append(Tmp.subs(dict([(g,0) for g in Lsf])))
     return L
 
 def GeneralHypermatrixRank1Parametrization(sz,od):
@@ -9944,13 +10068,13 @@ def GeneralHypermatrixRank1Parametrization(sz,od):
     # Initialization the alphabet list
     AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
     # Initializing the list of hypermatrices
-    L=[apply(HM,[sz for i in range(j)]+[_sage_const_1 ]+[sz for i in range(j+_sage_const_1 ,od)]+[AlphaB[j]]) for j in range(_sage_const_1 ,od)+[_sage_const_0 ]]
+    L=[apply(HM,[sz for i in range(j)]+[1]+[sz for i in range(j+1,od)]+[AlphaB[j]]) for j in range(1,od)+[0]]
     # Initilizing the list of variable
     VrbLst=[]
     for Q in L:
         VrbLst = VrbLst+Q.list()
     Eq=apply(Prod, [Q for Q in L])
-    CnstrLst=[eq==_sage_const_1  for eq in Eq.list()]
+    CnstrLst=[eq==1 for eq in Eq.list()]
     [A,b]=multiplicativeConstraintFormator(CnstrLst, VrbLst)
     return A
 
@@ -9971,14 +10095,14 @@ def SecondOrderHadamardBlockU(l):
     - Edinah K. Gnang
     - To Do: 
     """
-    bns = l.str(_sage_const_2 )
-    Szl = [(_sage_const_2 **(len(bns)-_sage_const_1 -i),bns[i]) for i in range(len(bns)) if bns[i]!='0']
-    H = Matrix(QQ,hadamard_matrix(Szl[_sage_const_0 ][_sage_const_0 ]))
-    for i in range(_sage_const_1 ,len(Szl)):
-        if Szl[i][_sage_const_0 ]==_sage_const_1 :
-            H = H.block_sum(Matrix(QQ,_sage_const_1 ,_sage_const_1 ,[_sage_const_1 ]))
+    bns = l.str(2)
+    Szl = [(2^(len(bns)-1-i),bns[i]) for i in range(len(bns)) if bns[i]!='0']
+    H = Matrix(QQ,hadamard_matrix(Szl[0][0]))
+    for i in range(1,len(Szl)):
+        if Szl[i][0]==1:
+            H = H.block_sum(Matrix(QQ,1,1,[1]))
         else:
-            H = H.block_sum(Matrix(QQ,hadamard_matrix(Szl[i][_sage_const_0 ])))
+            H = H.block_sum(Matrix(QQ,hadamard_matrix(Szl[i][0])))
     return HM(l,l,H.list())
 
 def SecondOrderHadamardBlock(l):
@@ -9998,14 +10122,14 @@ def SecondOrderHadamardBlock(l):
     - Edinah K. Gnang
     - To Do: 
     """
-    bns = l.str(_sage_const_2 )
-    Szl = [(_sage_const_2 **(len(bns)-_sage_const_1 -i),bns[i]) for i in range(len(bns)) if bns[i]!='0']
-    H = (_sage_const_1 /sqrt(Szl[_sage_const_0 ][_sage_const_0 ]))*Matrix(QQ,hadamard_matrix(Szl[_sage_const_0 ][_sage_const_0 ]))
-    for i in range(_sage_const_1 ,len(Szl)):
-        if Szl[i][_sage_const_0 ]==_sage_const_1 :
-            H = H.block_sum(Matrix(QQ,_sage_const_1 ,_sage_const_1 ,[_sage_const_1 ]))
+    bns = l.str(2)
+    Szl = [(2^(len(bns)-1-i),bns[i]) for i in range(len(bns)) if bns[i]!='0']
+    H = (1/sqrt(Szl[0][0]))*Matrix(QQ,hadamard_matrix(Szl[0][0]))
+    for i in range(1,len(Szl)):
+        if Szl[i][0]==1:
+            H = H.block_sum(Matrix(QQ,1,1,[1]))
         else:
-            H = H.block_sum((_sage_const_1 /sqrt(Szl[i][_sage_const_0 ]))*Matrix(QQ,hadamard_matrix(Szl[i][_sage_const_0 ])))
+            H = H.block_sum((1/sqrt(Szl[i][0]))*Matrix(QQ,hadamard_matrix(Szl[i][0])))
     return HM(l,l,H.list())
 
 def ThirdOrderHadamardBlockU(l):
@@ -10026,19 +10150,19 @@ def ThirdOrderHadamardBlockU(l):
     - To Do: 
     """
     # Initializing the 2x2x2 hadamard Hypermatrix.
-    Hd = HM([[[_sage_const_1 , _sage_const_1 ], [_sage_const_1 , _sage_const_1 ]], [[-_sage_const_1 , _sage_const_1 ], [_sage_const_1 , _sage_const_1 ]]]) 
+    Hd = HM([[[1, 1], [1, 1]], [[-1, 1], [1, 1]]]) 
     # Obtaining the binary encoding of the input integer
-    bns = l.str(_sage_const_2 )
-    Szl = [len(bns)-_sage_const_1 -i for i in range(len(bns)) if bns[i] != '0']
-    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > _sage_const_0 ]
-    H = Lh[_sage_const_0 ]
-    if Integer(mod(l,_sage_const_2 )) == _sage_const_0 :
-        for i in range(_sage_const_1 ,len(Lh)):
+    bns = l.str(2)
+    Szl = [len(bns)-1-i for i in range(len(bns)) if bns[i] != '0']
+    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > 0]
+    H = Lh[0]
+    if Integer(mod(l,2)) == 0:
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
     else :
-        for i in range(_sage_const_1 ,len(Lh)):
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
-        H = H.block_sum(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) 
+        H = H.block_sum(HM(1,1,1,'one')) 
     return H
 
 def ThirdOrderHadamardBlock(l):
@@ -10058,19 +10182,19 @@ def ThirdOrderHadamardBlock(l):
     - To Do: 
     """
     # Initializing the 2x2x2 hadamard Hypermatrix.
-    Hd = (_sage_const_1 /_sage_const_2 )**(_sage_const_1 /_sage_const_3 )*HM([[[_sage_const_1 , _sage_const_1 ], [_sage_const_1 , _sage_const_1 ]], [[-_sage_const_1 , _sage_const_1 ], [_sage_const_1 , _sage_const_1 ]]]) 
+    Hd = (1/2)^(1/3)*HM([[[1, 1], [1, 1]], [[-1, 1], [1, 1]]]) 
     # Obtaining the binary encoding of the input integer
-    bns = l.str(_sage_const_2 )
-    Szl = [len(bns)-_sage_const_1 -i for i in range(len(bns)) if bns[i] != '0']
-    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > _sage_const_0 ]
-    H = Lh[_sage_const_0 ]
-    if Integer(mod(l,_sage_const_2 )) == _sage_const_0 :
-        for i in range(_sage_const_1 ,len(Lh)):
+    bns = l.str(2)
+    Szl = [len(bns)-1-i for i in range(len(bns)) if bns[i] != '0']
+    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > 0]
+    H = Lh[0]
+    if Integer(mod(l,2)) == 0:
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
     else :
-        for i in range(_sage_const_1 ,len(Lh)):
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
-        H = H.block_sum(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) 
+        H = H.block_sum(HM(1,1,1,'one')) 
     return H
 
 def FifthOrderHadamardBlockU(l):
@@ -10091,19 +10215,19 @@ def FifthOrderHadamardBlockU(l):
     - To Do: 
     """
     # Initializing the 2x2x2x2x2 hadamard hypermatrix.
-    Hd=HM([[[[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]],[[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]]],[[[[_sage_const_1 ,_sage_const_1 ],[-_sage_const_1 ,-_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]],[[[-_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]]]])
+    Hd=HM([[[[[1,1],[1,1]],[[1,1],[1,1]]],[[[1,1],[1,1]],[[1,1],[1,1]]]],[[[[1,1],[-1,-1]],[[1,1],[1,1]]],[[[-1,1],[1,1]],[[1,1],[1,1]]]]])
     # Obtaining the binary encoding of the input integer
-    bns = l.str(_sage_const_2 )
-    Szl = [len(bns)-_sage_const_1 -i for i in range(len(bns)) if bns[i] != '0']
-    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > _sage_const_0 ]
-    H = Lh[_sage_const_0 ]
-    if Integer(mod(l,_sage_const_2 ))==_sage_const_0 :
-        for i in range(_sage_const_1 ,len(Lh)):
+    bns = l.str(2)
+    Szl = [len(bns)-1-i for i in range(len(bns)) if bns[i] != '0']
+    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > 0]
+    H = Lh[0]
+    if Integer(mod(l,2))==0:
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
     else :
-        for i in range(_sage_const_1 ,len(Lh)):
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
-        H = H.block_sum(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) 
+        H = H.block_sum(HM(1,1,1,1,1,'one')) 
     return H
 
 def FifthOrderHadamardBlock(l):
@@ -10124,19 +10248,19 @@ def FifthOrderHadamardBlock(l):
     - To Do: 
     """
     # Initializing the 2x2x2x2x2 hadamard Hypermatrix.
-    Hd = (_sage_const_1 /_sage_const_2 )**(_sage_const_1 /_sage_const_5 )*HM([[[[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]],[[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]]],[[[[_sage_const_1 ,_sage_const_1 ],[-_sage_const_1 ,-_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]],[[[-_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]],[[_sage_const_1 ,_sage_const_1 ],[_sage_const_1 ,_sage_const_1 ]]]]])
+    Hd = (1/2)^(1/5)*HM([[[[[1,1],[1,1]],[[1,1],[1,1]]],[[[1,1],[1,1]],[[1,1],[1,1]]]],[[[[1,1],[-1,-1]],[[1,1],[1,1]]],[[[-1,1],[1,1]],[[1,1],[1,1]]]]])
     # Obtaining the binary encoding of the input integer
-    bns = l.str(_sage_const_2 )
-    Szl = [len(bns)-_sage_const_1 -i for i in range(len(bns)) if bns[i] != '0']
-    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > _sage_const_0 ]
-    H = Lh[_sage_const_0 ]
-    if Integer(mod(l,_sage_const_2 )) == _sage_const_0 :
-        for i in range(_sage_const_1 ,len(Lh)):
+    bns = l.str(2)
+    Szl = [len(bns)-1-i for i in range(len(bns)) if bns[i] != '0']
+    Lh = [HypermatrixSliceKroneckerPower(Hd, i) for i in Szl if i > 0]
+    H = Lh[0]
+    if Integer(mod(l,2)) == 0:
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
     else :
-        for i in range(_sage_const_1 ,len(Lh)):
+        for i in range(1,len(Lh)):
             H = H.block_sum(Lh[i])
-        H = H.block_sum(HM(_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,_sage_const_1 ,'one')) 
+        H = H.block_sum(HM(1,1,1,1,1,'one')) 
     return H
 
 def RandomTransposition(n):
@@ -10149,15 +10273,15 @@ def RandomTransposition(n):
  
     ::
 
-        sage: RandomTransposition(3)
-        [1, 0, 2] 
+        sage: min(RandomTransposition(3))
+        0 
 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
     # Initialization of the vector
-    p = (ellipsis_range(_sage_const_0  ,Ellipsis, n-_sage_const_1 ))
+    p = [0 .. n-1]
     idx = ZZ.random_element(n)
     jdx = idx
     # avoiding the trivial transposition
@@ -10183,14 +10307,14 @@ def RandomColumnSlicePermutation(H):
     - Edinah K. Gnang
     - To Do: 
     """
-    sz = H.n(_sage_const_2 )
-    for i in range(Integer(ceil(sqrt(sz)))+_sage_const_1 ):
+    sz = H.n(2)
+    for i in range(Integer(ceil(sqrt(sz)))+1):
         # Initialization of the permutation
         P = HypermatrixPermutation(RandomTransposition(sz))
         H = Prod(H, HM(P), HM(P).transpose())
     return H
 
-def ThirdOrderHypermatrixResolutionPartition(U, V, W, Ha, Hb, Hc, NbPrts=_sage_const_2 ):
+def ThirdOrderHypermatrixResolutionPartition(U, V, W, Ha, Hb, Hc, NbPrts=2):
     """
     outputs the spliting of a third order hypermatrix into the pieces
     as suggested by the resolution of identity. The first three input
@@ -10213,26 +10337,26 @@ def ThirdOrderHypermatrixResolutionPartition(U, V, W, Ha, Hb, Hc, NbPrts=_sage_c
     - To Do: 
     """
     L = []
-    for i in range(U.n(_sage_const_1 )):
+    for i in range(U.n(1)):
         # Filling up the slice
-        Tp0 = HM(U.n(_sage_const_0 ), _sage_const_1 , U.n(_sage_const_2 ), 'zero')
-        for u in range(Tp0.n(_sage_const_0 )):
-            for w in range(Tp0.n(_sage_const_2 )):
-                Tp0[u,_sage_const_0 ,w] = U[u,i,w]
+        Tp0 = HM(U.n(0), 1, U.n(2), 'zero')
+        for u in range(Tp0.n(0)):
+            for w in range(Tp0.n(2)):
+                Tp0[u,0,w] = U[u,i,w]
         # Filling up the slice
-        Tp1 = HM(V.n(_sage_const_0 ), V.n(_sage_const_1 ), _sage_const_1 , 'zero')
-        for u in range(Tp1.n(_sage_const_0 )):
-            for v in range(Tp1.n(_sage_const_1 )):
-                Tp1[u,v,_sage_const_0 ] = V[u,v,i]
+        Tp1 = HM(V.n(0), V.n(1), 1, 'zero')
+        for u in range(Tp1.n(0)):
+            for v in range(Tp1.n(1)):
+                Tp1[u,v,0] = V[u,v,i]
         # Filling up the slice
-        Tp2 = HM(_sage_const_1 , W.n(_sage_const_1 ), W.n(_sage_const_2 ), 'zero')
-        for v in range(Tp2.n(_sage_const_1 )):
-            for w in range(Tp2.n(_sage_const_2 )):
-                Tp2[_sage_const_0 ,v,w] = W[i,v,w]
+        Tp2 = HM(1, W.n(1), W.n(2), 'zero')
+        for v in range(Tp2.n(1)):
+            for w in range(Tp2.n(2)):
+                Tp2[0,v,w] = W[i,v,w]
         # Appending the components to the list
         L.append(Prod(Tp0, Tp1, Tp2))
     if len(L)>NbPrts:
-        return [ProdB(Ha,Hb,Hc,sum(L[j*NbPrts:min((j+_sage_const_1 )*NbPrts,len(L))])) for j in range(ceil(len(L)/NbPrts))]
+        return [ProdB(Ha,Hb,Hc,sum(L[j*NbPrts:min((j+1)*NbPrts,len(L))])) for j in range(ceil(len(L)/NbPrts))]
     else:
         return [ProdB(Ha,Hb,Hc,L[j]) for j in range(len(L))]
 
@@ -10260,31 +10384,31 @@ def FourthOrderHypermatrixResolutionPartition(Q, U, V, W, Ha, Hb, Hc, Hd):
     - To Do: 
     """
     L = []
-    for i in range(Q.n(_sage_const_1 )):
+    for i in range(Q.n(1)):
         # Filling up the slice
-        Tp0 = HM(Q.n(_sage_const_0 ), _sage_const_1 , Q.n(_sage_const_2 ), Q.n(_sage_const_3 ), 'zero')
-        for q in range(Tp0.n(_sage_const_0 )):
-            for v in range(Tp0.n(_sage_const_2 )):
-                for w in range(Tp0.n(_sage_const_3 )):
-                    Tp0[q,_sage_const_0 ,v,w] = Q[q,i,v,w]
+        Tp0 = HM(Q.n(0), 1, Q.n(2), Q.n(3), 'zero')
+        for q in range(Tp0.n(0)):
+            for v in range(Tp0.n(2)):
+                for w in range(Tp0.n(3)):
+                    Tp0[q,0,v,w] = Q[q,i,v,w]
         # Filling up the slice
-        Tp1 = HM(U.n(_sage_const_0 ), U.n(_sage_const_1 ), _sage_const_1 , U.n(_sage_const_3 ), 'zero')
-        for q in range(Tp1.n(_sage_const_0 )):
-            for u in range(Tp1.n(_sage_const_1 )):
-                for w in range(Tp1.n(_sage_const_3 )):
-                    Tp1[q,u,_sage_const_0 ,w] = U[q,u,i,w]
+        Tp1 = HM(U.n(0), U.n(1), 1, U.n(3), 'zero')
+        for q in range(Tp1.n(0)):
+            for u in range(Tp1.n(1)):
+                for w in range(Tp1.n(3)):
+                    Tp1[q,u,0,w] = U[q,u,i,w]
         # Filling up the slice
-        Tp2 = HM(V.n(_sage_const_0 ), V.n(_sage_const_1 ), V.n(_sage_const_2 ), _sage_const_1 , 'zero')
-        for q in range(Tp2.n(_sage_const_0 )):
-            for u in range(Tp2.n(_sage_const_1 )):
-                for v in range(Tp2.n(_sage_const_2 )):
-                    Tp2[q,u,v,_sage_const_0 ] = V[q,u,v,i]
+        Tp2 = HM(V.n(0), V.n(1), V.n(2), 1, 'zero')
+        for q in range(Tp2.n(0)):
+            for u in range(Tp2.n(1)):
+                for v in range(Tp2.n(2)):
+                    Tp2[q,u,v,0] = V[q,u,v,i]
         # Filling up the slice
-        Tp3 = HM(_sage_const_1 , W.n(_sage_const_1 ), W.n(_sage_const_2 ), W.n(_sage_const_3 ), 'zero')
-        for u in range(Tp3.n(_sage_const_1 )):
-            for v in range(Tp3.n(_sage_const_2 )):
-                for w in range(Tp3.n(_sage_const_3 )):
-                    Tp3[_sage_const_0 ,u,v,w] = W[i,u,v,w]
+        Tp3 = HM(1, W.n(1), W.n(2), W.n(3), 'zero')
+        for u in range(Tp3.n(1)):
+            for v in range(Tp3.n(2)):
+                for w in range(Tp3.n(3)):
+                    Tp3[0,u,v,w] = W[i,u,v,w]
         # Appending the components to the list
         L.append(ProdB(Ha, Hb, Hc, Hd, Prod(Tp0, Tp1, Tp2, Tp3)))
     return L
@@ -10311,32 +10435,32 @@ def CanonicalThirdOrderHypermatrixFactors(A):
     # Initialization of the size parameters
     sz = A.dimensions()
     # Initializing the list of column vectors
-    e_i=[identity_matrix(sz[_sage_const_0 ])[:,i] for i in range(sz[_sage_const_0 ])]
-    e_j=[identity_matrix(sz[_sage_const_1 ])[:,j] for j in range(sz[_sage_const_1 ])]
-    e_k=[identity_matrix(sz[_sage_const_2 ])[:,k] for k in range(sz[_sage_const_2 ])]
+    e_i=[identity_matrix(sz[0])[:,i] for i in range(sz[0])]
+    e_j=[identity_matrix(sz[1])[:,j] for j in range(sz[1])]
+    e_k=[identity_matrix(sz[2])[:,k] for k in range(sz[2])]
     # Initializing the first hypermatrix
-    T0 = HM(sz[_sage_const_0 ],prod(sz),sz[_sage_const_2 ],'zero')
+    T0 = HM(sz[0],prod(sz),sz[2],'zero')
     # Initializing the second hypermatrix
-    T1 = HM(sz[_sage_const_0 ],sz[_sage_const_1 ],prod(sz),'zero')
+    T1 = HM(sz[0],sz[1],prod(sz),'zero')
     # Filling up of the third hypermatrix
-    T2 = HM(prod(sz),sz[_sage_const_1 ],sz[_sage_const_2 ],'zero')
-    cnt = _sage_const_0 
+    T2 = HM(prod(sz),sz[1],sz[2],'zero')
+    cnt = 0
     for i in range(len(e_i)):
         for j in range(len(e_j)):
             for k in range(len(e_k)):
                 M0 = e_i[i]*e_k[k].transpose()
                 M1 = e_i[i]*e_j[j].transpose()
                 M2 = e_j[j]*e_k[k].transpose()
-                for r in range(sz[_sage_const_0 ]):
-                    for d in range(sz[_sage_const_2 ]):
-                        T0[r,cnt,d]=(A[i,j,k])**(_sage_const_1 /_sage_const_3 )*M0[r,d]
-                for r in range(sz[_sage_const_0 ]):
-                    for c in range(sz[_sage_const_1 ]):
-                        T1[r,c,cnt]=(A[i,j,k])**(_sage_const_1 /_sage_const_3 )*M1[r,c]
-                for c in range(sz[_sage_const_1 ]):
-                    for d in range(sz[_sage_const_2 ]):
-                        T2[cnt,c,d]=(A[i,j,k])**(_sage_const_1 /_sage_const_3 )*M2[c,d]
-                cnt = cnt+_sage_const_1 
+                for r in range(sz[0]):
+                    for d in range(sz[2]):
+                        T0[r,cnt,d]=(A[i,j,k])^(1/3)*M0[r,d]
+                for r in range(sz[0]):
+                    for c in range(sz[1]):
+                        T1[r,c,cnt]=(A[i,j,k])^(1/3)*M1[r,c]
+                for c in range(sz[1]):
+                    for d in range(sz[2]):
+                        T2[cnt,c,d]=(A[i,j,k])^(1/3)*M2[c,d]
+                cnt = cnt+1
     return [T0,T1,T2]
 
 
@@ -10368,16 +10492,16 @@ def GeneralHypermatrixLogProductTermList(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(args)<_sage_const_2 :
+        if len(args)<2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= _sage_const_2 :
-            Rh = Rh + [sum([args[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(args)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(args))):])] for s in range(len(args)-_sage_const_2 )] + [args[len(args)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(args)-_sage_const_1 ]+[t])]]+[args[len(args)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]]) for t in range((args[_sage_const_0 ]).n(_sage_const_1 ))]
+        elif len(args) >= 2:
+            Rh = Rh + [sum([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)] + [args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))]
     return Rh
 
 def BlockSweep(A,k):
@@ -10402,10 +10526,10 @@ def BlockSweep(A,k):
     - Edinah K. Gnang and Jeanine Gnang
     """
     # Initialization of the hypermatrix B
-    B=HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ), [apply(HM,H.dimensions()+['zero']) for H in A.list()])
+    B=HM(A.n(0),A.n(1), [apply(HM,H.dimensions()+['zero']) for H in A.list()])
     B[k,k] = -A[k,k].inverse()
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
             if i != k:
                 B[i,k]= A[i,k]*A[k,k].inverse()
             if j != k:
@@ -10472,59 +10596,59 @@ def SweepHM(A,k):
     - Edinah K. Gnang
     """
     # Checking that the input hypermatrix is of order 2
-    if A.is_cubical() and A[k,k].is_cubical() and A.order()==_sage_const_2 :
+    if A.is_cubical() and A[k,k].is_cubical() and A.order()==2:
         # Initializing the hypermatrix U
-        U=HM(A.n(_sage_const_0 ),_sage_const_2 ,_sage_const_1 ,[HM(A[i,j].n(_sage_const_0 ),A[i,j].n(_sage_const_1 ),'zero') for z in range(_sage_const_1 ) for j in range(_sage_const_2 ) for i in range(A.n(_sage_const_0 ))])
-        for i in range(A.n(_sage_const_0 )):
+        U=HM(A.n(0),2,1,[HM(A[i,j].n(0),A[i,j].n(1),'zero') for z in range(1) for j in range(2) for i in range(A.n(0))])
+        for i in range(A.n(0)):
             if i!=k:
-                U[i,_sage_const_0 ,_sage_const_0 ]=HM(_sage_const_2 ,A[i,k].n(_sage_const_0 ),'kronecker')
-                U[i,_sage_const_1 ,_sage_const_0 ]=A[i,k]
+                U[i,0,0]=HM(2,A[i,k].n(0),'kronecker')
+                U[i,1,0]=A[i,k]
             if i==k:
-                U[i,_sage_const_0 ,_sage_const_0 ]=HM(A[k,k].n(_sage_const_1 ),A[k,k].n(_sage_const_0 ),'zero')
-                U[i,_sage_const_1 ,_sage_const_0 ]=HM(_sage_const_2 ,A[k,k].n(_sage_const_0 ),'kronecker')
+                U[i,0,0]=HM(A[k,k].n(1),A[k,k].n(0),'zero')
+                U[i,1,0]=HM(2,A[k,k].n(0),'kronecker')
         # Initializing the hypermatrix W        
-        W=HM(_sage_const_2 ,A.n(_sage_const_1 ),_sage_const_1 ,[HM(A[i,j].n(_sage_const_1 ),A[i,j].n(_sage_const_0 ),'zero') for z in range(_sage_const_1 ) for j in range(A.n(_sage_const_1 )) for i in range(_sage_const_2 )])
-        for j in range(A.n(_sage_const_1 )):
+        W=HM(2,A.n(1),1,[HM(A[i,j].n(1),A[i,j].n(0),'zero') for z in range(1) for j in range(A.n(1)) for i in range(2)])
+        for j in range(A.n(1)):
             if j!=k:
-                W[_sage_const_0 ,j,_sage_const_0 ]=HM(_sage_const_2 ,A[k,j].n(_sage_const_1 ),'kronecker')
-                W[_sage_const_1 ,j,_sage_const_0 ]=A[k,j]
+                W[0,j,0]=HM(2,A[k,j].n(1),'kronecker')
+                W[1,j,0]=A[k,j]
             if j==k:
-                W[_sage_const_0 ,j,_sage_const_0 ]=HM(A[k,k].n(_sage_const_1 ),A[k,k].n(_sage_const_0 ),'zero')
-                W[_sage_const_1 ,j,_sage_const_0 ]=HM(_sage_const_2 ,A[k,k].n(_sage_const_0 ),'kronecker')
+                W[0,j,0]=HM(A[k,k].n(1),A[k,k].n(0),'zero')
+                W[1,j,0]=HM(2,A[k,k].n(0),'kronecker')
         # Computing the inverse of the entry A[k,k]
-        if A[k,k].dimensions()==[_sage_const_1 ,_sage_const_1 ]:
+        if A[k,k].dimensions()==[1,1]:
             AkkI=A[k,k].inverse()
         else:
             # Part of the code responsible for computing the inverse by sweeping
             AkkI=A[k,k].copy()
-            Tmp=HM(AkkI.n(_sage_const_0 ),AkkI.n(_sage_const_1 ),'zero')
-            for t in range(AkkI.n(_sage_const_0 )):
-                Tmp[t,t]=-(AkkI[t,t])**(-_sage_const_1 )
-                for u in range(Tmp.n(_sage_const_0 )):
-                    for v in range(Tmp.n(_sage_const_1 )):
+            Tmp=HM(AkkI.n(0),AkkI.n(1),'zero')
+            for t in range(AkkI.n(0)):
+                Tmp[t,t]=-(AkkI[t,t])^(-1)
+                for u in range(Tmp.n(0)):
+                    for v in range(Tmp.n(1)):
                         if u!=t:
-                            Tmp[u,t]=AkkI[u,t]*(AkkI[t,t]**(-_sage_const_1 ))
+                            Tmp[u,t]=AkkI[u,t]*(AkkI[t,t]^(-1))
                         if v!=t:
-                            Tmp[t,v]=(AkkI[t,t]**(-_sage_const_1 ))*AkkI[t,v]
+                            Tmp[t,v]=(AkkI[t,t]^(-1))*AkkI[t,v]
                         if u!=t and t!=v:
-                            Tmp[u,v]=AkkI[u,v]-AkkI[u,t]*(AkkI[t,t]**(-_sage_const_1 ))*AkkI[t,v]
+                            Tmp[u,v]=AkkI[u,v]-AkkI[u,t]*(AkkI[t,t]^(-1))*AkkI[t,v]
                 AkkI=Tmp.copy()
             AkkI=-AkkI.copy()
         # Initialization of the hypermatrix V
-        V=HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),_sage_const_2 ,[HM(A[i,j].n(_sage_const_0 ),A[i,j].n(_sage_const_1 ),'zero') for k in range(_sage_const_2 ) for j in range(A.n(_sage_const_1 )) for i in range(A.n(_sage_const_0 ))])
-        for i in range(V.n(_sage_const_0 )):
-            for j in range(V.n(_sage_const_1 )):
-                V[i,j,_sage_const_0 ]=A[i,j]
+        V=HM(A.n(0),A.n(1),2,[HM(A[i,j].n(0),A[i,j].n(1),'zero') for k in range(2) for j in range(A.n(1)) for i in range(A.n(0))])
+        for i in range(V.n(0)):
+            for j in range(V.n(1)):
+                V[i,j,0]=A[i,j]
                 if i==k and j==k:
-                    V[i,j,_sage_const_1 ]=-AkkI
+                    V[i,j,1]=-AkkI
                 if i==k and j!=k:
-                    V[i,j,_sage_const_1 ]=AkkI
+                    V[i,j,1]=AkkI
                 if i!=k and j==k:
-                    V[i,j,_sage_const_1 ]=AkkI
+                    V[i,j,1]=AkkI
                 if i!=k and j!=k:
-                    V[i,j,_sage_const_1 ]=-AkkI
+                    V[i,j,1]=-AkkI
         # Returning the BM product.
-        return [U,V,W,HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),Prod(U,V,W).list())]
+        return [U,V,W,HM(A.n(0),A.n(1),Prod(U,V,W).list())]
     else:
         raise ValueError, "Expected square second order hypermatrix with square diagonal blocks"
 
@@ -10550,33 +10674,33 @@ def gaussian_elimination(Cf, rs):
     """
     A=copy(Cf); b=copy(rs)
     # Initialization of the row and column index
-    i = _sage_const_0 ; j = _sage_const_0 ;
+    i = 0; j = 0;
     while i < A.nrows() and j < A.ncols():
-        while (A[i:,j]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         if (A[i:,:].is_zero()) == False:
             while (A[i,j]).is_zero(): 
                 Ta=A[i:,:]
                 Tb=b[i:,:]
                 # Initializing the cyclic shift permutation matrix
                 Id=identity_matrix(Ta.nrows())
-                P=sum([Id[:,k]*Id[Integer(mod(k+_sage_const_1 ,Ta.nrows())),:] for k in range(Ta.nrows())])
+                P=sum([Id[:,k]*Id[Integer(mod(k+1,Ta.nrows())),:] for k in range(Ta.nrows())])
                 Ta=P*Ta; Tb=P*Tb
                 A[i:,:]=Ta
                 b[i:,:]=Tb
             # Performing the row operations.
-            b[i,:]=(_sage_const_1 /A[i,j])*b[i,:]
-            A[i,:]=(_sage_const_1 /A[i,j])*A[i,:]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            b[i,:]=(1/A[i,j])*b[i,:]
+            A[i,:]=(1/A[i,j])*A[i,:]
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
                 if A[r,:].is_zero():
-                    r=r+_sage_const_1 
+                    r=r+1
                 else:
                     b[r,:]=-A[r,j]*b[i,:]+b[r,:]
                     A[r,:]=-A[r,j]*A[i,:]+A[r,:]
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A,b]
 
 def gaussian_eliminationHM(Cf, rs):
@@ -10624,56 +10748,56 @@ def gaussian_eliminationHM(Cf, rs):
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy(); b=rs.copy()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
         #while (A[i:,j]).is_zero() and j < A.ncols()-1:
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         #if (A[i:,:].is_zero())==False:
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
                 #Ta=A[i:,:]
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 #Tb=b[i:,:]
-                Tb=HM(b.n(_sage_const_0 )-i, b.n(_sage_const_1 ), [b[i0,j0] for j0 in range(b.n(_sage_const_1 )) for i0 in range(i,b.n(_sage_const_0 ))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 #Id=identity_matrix(Ta.nrows())
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
+                Id=HM(2, Ta.n(0), 'kronecker')
                 #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
                 #A[i:,:]=Ta
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
                 #b[i:,:]=Tb
-                for i0 in range(Tb.n(_sage_const_0 )):
-                    for j0 in range(Tb.n(_sage_const_1 )):
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
             #b[i,:]=(1/A[i,j])*b[i,:]
-            for j0 in range(b.n(_sage_const_1 )):
-                b[i,j0]=(cf1**(-_sage_const_1 ))*b[i,j0]
+            for j0 in range(b.n(1)):
+                b[i,j0]=(cf1^(-1))*b[i,j0]
             #A[i,:]=(1/A[i,j])*A[i,:]
-            for j0 in range(A.n(_sage_const_1 )):
-                A[i,j0]=(cf1**(-_sage_const_1 ))*A[i,j0]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for j0 in range(A.n(1)):
+                A[i,j0]=(cf1^(-1))*A[i,j0]
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
                     # Initialization of the coefficient
                     cf2=A[r,j]
                     #b[r,:]=-A[r,j]*b[i,:]+b[r,:]
-                    for j0 in range(b.n(_sage_const_1 )):
+                    for j0 in range(b.n(1)):
                         b[r,j0]=-cf2*b[i,j0]+b[r,j0]
                     #A[r,:]=-A[r,j]*A[i,:]+A[r,:]
-                    for j0 in range(A.n(_sage_const_1 )):
+                    for j0 in range(A.n(1)):
                         A[r,j0]=-cf2*A[i,j0]+A[r,j0]
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A,b]
 
 def gaussian_eliminationHMII(Cf, rs):
@@ -10713,40 +10837,40 @@ def gaussian_eliminationHMII(Cf, rs):
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy(); b=rs.copy()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
-                Tb=HM(b.n(_sage_const_0 )-i, b.n(_sage_const_1 ), [b[i0,j0] for j0 in range(b.n(_sage_const_1 )) for i0 in range(i,b.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
-                for i0 in range(Tb.n(_sage_const_0 )):
-                    for j0 in range(Tb.n(_sage_const_1 )):
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
                     # Initialization of the coefficient
                     cf2=A[r,j]
-                    for j0 in range(b.n(_sage_const_1 )):
+                    for j0 in range(b.n(1)):
                         b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
-                    for j0 in range(A.n(_sage_const_1 )):
+                    for j0 in range(A.n(1)):
                         A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A,b]
 
 def gaussian_eliminationHMIII(Cf, rs):
@@ -10789,41 +10913,41 @@ def gaussian_eliminationHMIII(Cf, rs):
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy(); b=rs.copy()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
-                Tb=HM(b.n(_sage_const_0 )-i, b.n(_sage_const_1 ), [b[i0,j0] for j0 in range(b.n(_sage_const_1 )) for i0 in range(i,b.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
-                for i0 in range(Tb.n(_sage_const_0 )):
-                    for j0 in range(Tb.n(_sage_const_1 )):
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
-            if A.n(_sage_const_0 )-i-_sage_const_1  > _sage_const_0  and not (HM(A.n(_sage_const_0 )-i-_sage_const_1 , _sage_const_1 , [A[i0,j] for i0 in range(i+_sage_const_1 ,A.n(_sage_const_0 ))]).is_zero() and j <= A.ncols()-_sage_const_1 ):
+            if A.n(0)-i-1 > 0 and not (HM(A.n(0)-i-1, 1, [A[i0,j] for i0 in range(i+1,A.n(0))]).is_zero() and j <= A.ncols()-1):
                 # Performing the row operations.
                 cf1=A[i,j]
-                for r in range(i+_sage_const_1 ,A.nrows()):
+                for r in range(i+1,A.nrows()):
                     # Taking care of the zero row
-                    if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                        r=r+_sage_const_1 
+                    if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                        r=r+1
                     else:
                         # Initialization of the coefficient
                         cf2=A[r,j]
-                        for j0 in range(b.n(_sage_const_1 )):
-                            b[r,j0]=-(cf2*cf1**(-_sage_const_1 ))*b[i,j0]+b[r,j0]
-                        for j0 in range(A.n(_sage_const_1 )):
-                            A[r,j0]=-(cf2*cf1**(-_sage_const_1 ))*A[i,j0]+A[r,j0]
+                        for j0 in range(b.n(1)):
+                            b[r,j0]=-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]
+                        for j0 in range(A.n(1)):
+                            A[r,j0]=-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A,b]
 
 def gaussian_eliminationHMIV(Cf):
@@ -10859,38 +10983,38 @@ def gaussian_eliminationHMIV(Cf):
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
                     # Initialization of the coefficient
                     cf2=A[r,j]
-                    if r==j+_sage_const_1 :
-                        for j0 in range(j,A.n(_sage_const_1 )):
+                    if r==j+1:
+                        for j0 in range(j,A.n(1)):
                             A[r,j0]=-cf2*A[i,j0]+cf1*A[r,j0]
                     else:
-                        for j0 in range(j,A.n(_sage_const_1 )):
+                        for j0 in range(j,A.n(1)):
                             A[r,j0]=(-cf2*A[i,j0]+cf1*A[r,j0])/cf1
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return A
 
 def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
@@ -10927,52 +11051,52 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy(); b=rs.copy()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
-                Tb=HM(b.n(_sage_const_0 )-i, b.n(_sage_const_1 ), [b[i0,j0] for j0 in range(b.n(_sage_const_1 )) for i0 in range(i,b.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
-                for i0 in range(Tb.n(_sage_const_0 )):
-                    for j0 in range(Tb.n(_sage_const_1 )):
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
                     # Initialization of the coefficient
                     cf2=A[r,j]
-                    for j0 in range(b.n(_sage_const_1 )):
+                    for j0 in range(b.n(1)):
                         # Performing the reduction
                         #b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
                         f=expand(cf2*b[i,j0]-cf1*b[r,j0])
                         for v in range(len(VrbL)):
-                            for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-_sage_const_1 ,-_sage_const_1 ):
-                                f=expand(fast_reduce(f,[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]**d)])) 
+                            for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
                         b[r,j0]=f
-                    for j0 in range(A.n(_sage_const_1 )):
+                    for j0 in range(A.n(1)):
                         # Performing the reduction
                         #A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
                         g=expand(cf2*A[i,j0]-cf1*A[r,j0])
                         for v in range(len(VrbL)):
-                            for d in range(g.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-_sage_const_1 ,-_sage_const_1 ):
-                                g=expand(fast_reduce(g,[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]**d)]))
+                            for d in range(g.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                g=expand(fast_reduce(g,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)]))
                         A[r,j0]=g
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A,b]
 
 def gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts):
@@ -11027,46 +11151,166 @@ def gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts):
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
                     # Initialization of the coefficient
                     cf2=A[r,j]
-                    if r==j+_sage_const_1 :
-                        for j0 in range(j,A.n(_sage_const_1 )):
+                    if r==j+1:
+                        for j0 in range(j,A.n(1)):
                             # Performing the reduction
                             f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
                             for v in range(len(VrbL)):
                                 #f=f.maxima_methods().divide(Rlts[v])[1]
-                                for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-_sage_const_1 ,-_sage_const_1 ):
-                                    f=expand(fast_reduce(f,[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]**d)])) 
+                                for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                    f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
                             A[r,j0]=f
                     else:
-                        for j0 in range(j,A.n(_sage_const_1 )):
+                        for j0 in range(j,A.n(1)):
                             # Performing the reduction
                             g=expand((-cf2*A[i,j0]+cf1*A[r,j0])/cf1)
                             A[r,j0]=g
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
+    return A
+
+def gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, RltsII):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
+    The algorithm perform the reduction assuming that the the leading term in each relations
+    is a monic powers in a distinct variable as illustrated in the example bellow.
+    The computation is perform in such a way that the last diagonal entry holds the determinant
+    of the whole matrix it is also true that each diagonal entry corresponds to the determinant
+    of the corresponding top diagonal block of the matrix. Note that the relation in Rlts are
+    assumed to be univariate leading term. This implementaion also gets the sign right for the
+    determinant. This implementation is considerably more efficient then the previous one above
+    because the extra multiplicative factor is kept minimal.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: x1, x2=var('x1, x2')
+        sage: Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]])
+        sage: VrbL=[x1, x2]
+        sage: Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
+        sage: A=gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, Rlts)
+        sage: A.printHM()
+        [:, :]=
+        [         -2   -2*x1 + 3]
+        [          0 -12*x1 + 12]
+        sage: od=2; sz=3 # Initialization of the order and size parameter
+        sage: A=HM(od,sz,'a','sym'); X=HM(sz,sz,[x^(sz^abs(j-i)) for j in rg(sz) for i in rg(sz)])
+        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
+        sage: for i in rg(sz):
+        ....:     for j in rg(sz):
+        ....:         if i < j:
+        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
+        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
+        ....:             clidx=clidx+1
+        ....:
+        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
+        sage: M=(HM(od,[x*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
+        sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
+        sage: Rh=gaussian_elimination_ReductionHMIII(M,[x],[x^(1+d)],[x^(1+d)])
+        sage: Rh[1,1]
+        a00*a01*a02*x^13 + a00*a02*a12*x^13 + a00*a01*a12*x^7
+        sage: od=2; sz=4 # Initialization of the order and size parameter
+        sage: Lx=var_list('x',sz) # Initialization of the list of vraiables
+        sage: A=HM(od,sz,'a','sym') # Initialization of the adjacency matrix
+        sage: X=HM(sz,sz,[Lx[abs(i-j)] for j in rg(sz) for i in rg(sz)]) # initialization of the edge weight matrix
+        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
+        sage: for i in rg(sz):
+        ....:     for j in rg(sz):
+        ....:         if i < j:
+        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
+        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
+        ....:             clidx=clidx+1
+        ....:
+        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
+        sage: M=(HM(od,[Lx[0]*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
+        sage: d0=3; d1=2; Rh=gaussian_elimination_ReductionHMIII(M,Lx,[v^d0 for v in Lx],[v^d1 for v in Lx])
+        sage: Rh[sz-2,sz-2]
+        a00*a01*a02*a03*x0*x1*x2*x3 + a00*a02*a03*a12*x0*x1*x2*x3 + a00*a03*a12*a13*x0*x1*x2*x3 + a00*a03*a13*a23*x0*x1*x2*x3
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]
+                    if r==j+1 and r!=A.n(0)-1:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
+                            for v in range(len(VrbL)):
+                                #f=f.maxima_methods().divide(Rlts[v])[1]
+                                for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                    f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+                            A[r,j0]=f
+                    elif r==j+1 and r==A.n(0)-1:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
+                            for v in range(len(VrbL)):
+                                #f=f.maxima_methods().divide(Rlts[v])[1]
+                                for d in range(f.degree(VrbL[v])-RltsII[v].degree(VrbL[v]),-1,-1):
+                                    f=expand(fast_reduce(f,[VrbL[v]^(d+RltsII[v].degree(VrbL[v]))],[VrbL[v]^(d+RltsII[v].degree(VrbL[v]))-expand(RltsII[v]*VrbL[v]^d)])) 
+                            A[r,j0]=f
+                    else:
+                        for j0 in range(j,A.n(1)):
+                            # Performing the reduction
+                            g=expand((-cf2*A[i,j0]+cf1*A[r,j0])/cf1)
+                            A[r,j0]=g
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
     return A
 
 def gauss_jordan_elimination(Cf,rs):
@@ -11092,20 +11336,20 @@ def gauss_jordan_elimination(Cf,rs):
     """
     [A, b] = gaussian_elimination(Cf,rs)
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         if (A[i,:]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
+            for r in range(i-1,-1,-1):
                 b[r,:] = -A[r,j]*b[i,:]+b[r,:]
                 A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
     return [A,b]
 
 def gauss_jordan_eliminationHM(Cf,rs):
@@ -11144,31 +11388,31 @@ def gauss_jordan_eliminationHM(Cf,rs):
     """
     [A, b] = gaussian_eliminationHM(Cf, rs)
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
+            for r in range(i-1,-1,-1):
                 #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
                 #Tb0=HM(1, b.n(1), [b[i,j0] for j0 in range(b.n(1))])
                 #Tb1=HM(1, b.n(1), [b[r,j0] for j0 in range(b.n(1))])
-                Trb=-HM(_sage_const_1 , b.n(_sage_const_1 ), [A[r,j]*b[i,j0] for j0 in range(b.n(_sage_const_1 ))]) + HM(_sage_const_1 , b.n(_sage_const_1 ), [b[r,j0] for j0 in range(b.n(_sage_const_1 ))])
-                for j0 in range(b.n(_sage_const_1 )):
-                    b[r,j0]=Trb[_sage_const_0 ,j0]
+                Trb=-HM(1, b.n(1), [A[r,j]*b[i,j0] for j0 in range(b.n(1))]) + HM(1, b.n(1), [b[r,j0] for j0 in range(b.n(1))])
+                for j0 in range(b.n(1)):
+                    b[r,j0]=Trb[0,j0]
                 #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
                 #Ta0=HM(1, A.n(1), [A[i,j0] for j0 in range(A.n(1))])
                 #Ta1=HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))])
-                Tra=-HM(_sage_const_1 , A.n(_sage_const_1 ), [A[r,j]*A[i,j0] for j0 in range(A.n(_sage_const_1 ))]) + HM(_sage_const_1 , A.n(_sage_const_1 ), [A[r,j0] for j0 in range(A.n(_sage_const_1 ))])
-                for j0 in range(A.n(_sage_const_1 )):
-                    A[r,j0]=Tra[_sage_const_0 ,j0]
-            i=i-_sage_const_1 ; j=_sage_const_0 
+                Tra=-HM(1, A.n(1), [A[r,j]*A[i,j0] for j0 in range(A.n(1))]) + HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))])
+                for j0 in range(A.n(1)):
+                    A[r,j0]=Tra[0,j0]
+            i=i-1; j=0
     return [A,b]
 
 def gauss_jordan_eliminationHMII(Cf,rs):
@@ -11208,27 +11452,27 @@ def gauss_jordan_eliminationHMII(Cf,rs):
     """
     [A, b] = gaussian_eliminationHMII(Cf,rs)
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
             cf1=A[i,j]
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
+            for r in range(i-1,-1,-1):
                 #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
                 cf2=A[r,j]
-                for j0 in range(b.n(_sage_const_1 )):
+                for j0 in range(b.n(1)):
                     b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
                 #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-                for j0 in range(A.n(_sage_const_1 )):
+                for j0 in range(A.n(1)):
                     A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
     return [A,b]
 
 def gauss_jordan_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
@@ -11261,37 +11505,37 @@ def gauss_jordan_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
     """
     [A, b] = gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts)
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
             cf1=A[i,j]
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
+            for r in range(i-1,-1,-1):
                 #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
                 cf2=A[r,j]
-                for j0 in range(b.n(_sage_const_1 )):
+                for j0 in range(b.n(1)):
                     #b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
                     f=expand(cf2*b[i,j0]-cf1*b[r,j0])
                     for v in range(len(VrbL)):
-                        for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-_sage_const_1 ,-_sage_const_1 ):
-                            f=expand(fast_reduce(f,[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]**d)])) 
+                        for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                            f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
                     b[r,j0]=f
                 #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-                for j0 in range(A.n(_sage_const_1 )):
+                for j0 in range(A.n(1)):
                     #A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
                     g=expand(cf2*A[i,j0]-cf1*A[r,j0])
                     for v in range(len(VrbL)):
-                        for d in range(g.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-_sage_const_1 ,-_sage_const_1 ):
-                            g=expand(fast_reduce(g,[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]**(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]**d)]))
+                        for d in range(g.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                            g=expand(fast_reduce(g,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)]))
                     A[r,j0]=g
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
     return [A,b]
 
 def gauss_jordan_eliminationHMIII(Cf,rs):
@@ -11323,30 +11567,30 @@ def gauss_jordan_eliminationHMIII(Cf,rs):
     """
     [A, b] = gaussian_eliminationHMIII(Cf,rs)
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
             cf1=A[i,j]
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
+            for r in range(i-1,-1,-1):
                 #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
                 cf2=A[r,j]
-                for j0 in range(b.n(_sage_const_1 )):
-                    b[r,j0]=-(cf2*cf1**(-_sage_const_1 ))*b[i,j0]+b[r,j0]
+                for j0 in range(b.n(1)):
+                    b[r,j0]=-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]
                 #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-                for j0 in range(A.n(_sage_const_1 )):
-                    A[r,j0]=-(cf2*cf1**(-_sage_const_1 ))*A[i,j0]+A[r,j0]
-            i=i-_sage_const_1 ; j=_sage_const_0 
+                for j0 in range(A.n(1)):
+                    A[r,j0]=-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]
+            i=i-1; j=0
     return [A,b]
 
-def multiplicative_gaussian_elimination(Cf,rs,jndx=_sage_const_0 ):
+def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
     """
     Outputs the row echelon form of the input matrix and the right hand side.
 
@@ -11368,41 +11612,41 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=_sage_const_0 ):
     """
     A = copy(Cf); b = copy(rs)
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 ; indx=jndx; Lst = []
+    i=0; j=0; indx=jndx; Lst = []
     while i<A.nrows() and j<A.ncols():
-        while (A[i:,j]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         if A[i:,:].is_zero()==False:
             while A[i,j].is_zero():
                 Ta=A[i:,:]
                 Tb=b[i:,:]
                 # Initializing the cyclic shift permutation matrix
                 Id=identity_matrix(Ta.nrows())
-                P =sum([Id[:,k]*Id[Integer(mod(k+_sage_const_1 ,Ta.nrows())),:] for k in range(Ta.nrows())])
+                P =sum([Id[:,k]*Id[Integer(mod(k+1,Ta.nrows())),:] for k in range(Ta.nrows())])
                 Ta=P*Ta; Tb=P*Tb
                 A[i:,:]=Ta
                 b[i:,:]=Tb 
             # Performing the row operations.
-            b[i,_sage_const_0 ]=(b[i,_sage_const_0 ]*exp(I*_sage_const_2 *pi*var('k'+str(indx))))**(_sage_const_1 /A[i,j])
-            indx = indx+_sage_const_1 
+            b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
+            indx = indx+1
             Lst.append(A[i,j])
-            A[i,:]=(_sage_const_1 /A[i,j])*A[i,:]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            A[i,:]=(1/A[i,j])*A[i,:]
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
                 if A[r,:].is_zero():
-                    r=r+_sage_const_1 
+                    r=r+1
                 else:
-                    b[r,_sage_const_0 ]=(b[i,_sage_const_0 ]*exp(I*_sage_const_2 *pi*var('k'+str(indx))))**(-A[r,j])*b[r,_sage_const_0 ]
+                    b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
                     if (A[r,j]).is_zero()==False:
-                        indx = indx+_sage_const_1 
+                        indx = indx+1
                         Lst.append(A[r,j])
                     A[r,:]=-A[r,j]*A[i,:]+A[r,:]
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A, b, indx, Lst]
 
-def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=_sage_const_0 ):
+def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
 
@@ -11425,26 +11669,26 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=_sage_const_0 ):
     """
     [A, b, indx, Lst] = multiplicative_gaussian_elimination(Cf,rs,jndx)
     # Initialization of the row and column index
-    i = A.nrows()-_sage_const_1 ; j = _sage_const_0 
-    while i > _sage_const_0  or j > _sage_const_0 :
+    i = A.nrows()-1; j = 0
+    while i > 0 or j > 0:
         if (A[i,:]).is_zero():
             # decrementing the row index and initializing the column index
-            i =i-_sage_const_1 ; j=_sage_const_0 
+            i =i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j=j+_sage_const_1 
+                j=j+1
             # performing row operations
-            for r in range(i-_sage_const_1 , -_sage_const_1 , -_sage_const_1 ):
-                b[r,_sage_const_0 ]=(b[i,_sage_const_0 ]*exp(I*_sage_const_2 *pi*var('k'+str(indx))))**(-A[r,j])*b[r,_sage_const_0 ]
+            for r in range(i-1, -1, -1):
+                b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
                 if (A[r,j]).is_zero()==False:
-                    indx = indx+_sage_const_1 
+                    indx = indx+1
                     Lst.append(A[r,j])
                 A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-            i = i - _sage_const_1 ; j = _sage_const_0 
+            i = i - 1; j = 0
     return [A, b, indx, Lst]
 
-def multiplicative_gaussian_eliminationII(Cf,rs,jndx=_sage_const_0 ):
+def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
     """
     Outputs the row echelon form of the input matrix and the right hand side.
     The solver here differs from the one above in the fact that it assumes
@@ -11471,49 +11715,49 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=_sage_const_0 ):
     """
     A = copy(Cf); b = copy(rs)
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 ; indx=jndx; Lst = []
+    i=0; j=0; indx=jndx; Lst = []
     while i<A.nrows() and j<A.ncols():
-        while (A[i:,j]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while (A[i:,j]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         if A[i:,:].is_zero()==False:
             while A[i,j].is_zero():
                 Ta=A[i:,:]
                 Tb=b[i:,:]
                 # Initializing the cyclic shift permutation matrix
                 Id=identity_matrix(Ta.nrows())
-                P =sum([Id[:,k]*Id[Integer(mod(k+_sage_const_1 ,Ta.nrows())),:] for k in range(Ta.nrows())])
+                P =sum([Id[:,k]*Id[Integer(mod(k+1,Ta.nrows())),:] for k in range(Ta.nrows())])
                 Ta=P*Ta; Tb=P*Tb
                 A[i:,:]=Ta
                 b[i:,:]=Tb 
             # Performing the row operations.
             #if A[i,j]==-1 or A[i,j]==1:
-            if (A[i,j].numerator()==_sage_const_1  or A[i,j].numerator()==-_sage_const_1 ) and A[i,j].denominator().is_integer():
-                b[i,_sage_const_0 ]=b[i,_sage_const_0 ]**(_sage_const_1 /A[i,j])
+            if (A[i,j].numerator()==1 or A[i,j].numerator()==-1) and A[i,j].denominator().is_integer():
+                b[i,0]=b[i,0]^(1/A[i,j])
             else:
-                b[i,_sage_const_0 ]=(b[i,_sage_const_0 ]*exp(I*_sage_const_2 *pi*var('k'+str(indx))))**(_sage_const_1 /A[i,j])
-                indx = indx+_sage_const_1 
+                b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
+                indx = indx+1
                 Lst.append(A[i,j])
-            A[i,:]=(_sage_const_1 /A[i,j])*A[i,:]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            A[i,:]=(1/A[i,j])*A[i,:]
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
                 if A[r,:].is_zero():
-                    r=r+_sage_const_1 
+                    r=r+1
                 else:
                     #if A[r,j]==-1 or A[r,j]==1:
                     if A[r,j].is_integer():
-                        b[r,_sage_const_0 ]=b[i,_sage_const_0 ]**(-A[r,j])*b[r,_sage_const_0 ]
+                        b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
                     else:
-                        b[r,_sage_const_0 ]=(b[i,_sage_const_0 ]*exp(I*_sage_const_2 *pi*var('k'+str(indx))))**(-A[r,j])*b[r,_sage_const_0 ]
+                        b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
                         if (A[r,j]).is_zero()==False:
-                            indx = indx+_sage_const_1 
-                            Lst.append(_sage_const_1 /A[r,j])
+                            indx = indx+1
+                            Lst.append(1/A[r,j])
                     A[r,:]=-A[r,j]*A[i,:]+A[r,:]
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A, b, indx, Lst]
 
-def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=_sage_const_0 ):
+def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
     """
     Outputs the reduced row echelon form of the input matrix and the right hand side.
     The solver here differs from the one above in the fact that it assumes
@@ -11539,27 +11783,27 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=_sage_const_0 ):
     """
     [A, b, indx, Lst] = multiplicative_gaussian_eliminationII(Cf,rs,jndx)
     # Initialization of the row and column index
-    i = A.nrows()-_sage_const_1 ; j = _sage_const_0 
-    while i > _sage_const_0  or j > _sage_const_0 :
+    i = A.nrows()-1; j = 0
+    while i > 0 or j > 0:
         if (A[i,:]).is_zero():
             # decrementing the row index and initializing the column index
-            i =i-_sage_const_1 ; j=_sage_const_0 
+            i =i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j=j+_sage_const_1 
+                j=j+1
             # performing row operations
-            for r in range(i-_sage_const_1 , -_sage_const_1 , -_sage_const_1 ):
+            for r in range(i-1, -1, -1):
                 #if A[r,j]==-1 or A[r,j]==1:
                 if A[r,j].is_integer():
-                    b[r,_sage_const_0 ]=b[i,_sage_const_0 ]**(-A[r,j])*b[r,_sage_const_0 ]
+                    b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
                 else:
-                    b[r,_sage_const_0 ]=(b[i,_sage_const_0 ]*exp(I*_sage_const_2 *pi*var('k'+str(indx))))**(-A[r,j])*b[r,_sage_const_0 ]
+                    b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
                     if (A[r,j]).is_zero()==False:
-                        indx = indx+_sage_const_1 
-                        Lst.append(_sage_const_1 /A[r,j])
+                        indx = indx+1
+                        Lst.append(1/A[r,j])
                 A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-            i = i - _sage_const_1 ; j = _sage_const_0 
+            i = i - 1; j = 0
     return [A, b, indx, Lst]
 
 def multiplicative_matrix_product(A,B):
@@ -11583,7 +11827,7 @@ def multiplicative_matrix_product(A,B):
     Rslt=Matrix(SR,zero_matrix(A.nrows(), B.ncols()))
     for i in range(A.nrows()):
         for k in range(B.ncols()):
-            Rslt[i,k]=prod([B[j,k]**A[i,j] for j in range(A.ncols())])
+            Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
     return Rslt
 
 def multiplicative_matrix_productHM(A,B):
@@ -11608,7 +11852,7 @@ def multiplicative_matrix_productHM(A,B):
     Rslt=HM(A.nrows(), B.ncols(), 'zero')
     for i in range(A.nrows()):
         for k in range(B.ncols()):
-            Rslt[i,k]=prod([B[j,k]**A[i,j] for j in range(A.ncols())])
+            Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
     return Rslt
 
 def mprod(A,B):
@@ -11688,12 +11932,12 @@ def linear_solver(A,b,x,v):
     for i in range(Ap.nrows()):
         if not Ap[i,:].is_zero():
             for j in range(Ap.ncols()):
-                if Ap[i,j]==_sage_const_1 :
+                if Ap[i,j]==1:
                     break
             Pm=Pm+Id1[:,i]*Id2[j,:]
     # Expressing the solutions
     tp1=Pm*x; tp2=bp-(Ap-Pm)*v
-    return [tp1[i,_sage_const_0 ]==tp2[i,_sage_const_0 ] for i in range(tp1.nrows())]
+    return [tp1[i,0]==tp2[i,0] for i in range(tp1.nrows())]
 
 def linear_solverHM(A,b,x,v):
     """
@@ -11720,19 +11964,19 @@ def linear_solverHM(A,b,x,v):
     """
     # Initialization of the reduced echelon form.
     [Ap,bp]=gauss_jordan_eliminationHM(A,b)
-    Id1 = HM(_sage_const_2 , Ap.n(_sage_const_0 ), 'kronecker')
-    Id2 = HM(_sage_const_2 , Ap.n(_sage_const_1 ), 'kronecker')
+    Id1 = HM(2, Ap.n(0), 'kronecker')
+    Id2 = HM(2, Ap.n(1), 'kronecker')
     # Obtainin the list of pivot variables.
-    Pm=HM(Ap.n(_sage_const_0 ), Ap.n(_sage_const_1 ), 'zero')
-    for i in range(Ap.n(_sage_const_0 )):
-        if not HM(_sage_const_1 , Ap.n(_sage_const_1 ), [SR(Ap[i,u]) for u in range(Ap.n(_sage_const_1 ))]).is_zero():
-            for j in range(Ap.n(_sage_const_1 )):
-                if Ap[i,j]==_sage_const_1 :
+    Pm=HM(Ap.n(0), Ap.n(1), 'zero')
+    for i in range(Ap.n(0)):
+        if not HM(1, Ap.n(1), [SR(Ap[i,u]) for u in range(Ap.n(1))]).is_zero():
+            for j in range(Ap.n(1)):
+                if Ap[i,j]==1:
                     break
-            Pm=Pm+HM(Id1.n(_sage_const_0 ), _sage_const_1 , [SR(Id1[s,i]) for s in range(Id1.n(_sage_const_0 ))])*HM(_sage_const_1 ,Id2.n(_sage_const_1 ),[SR(Id2[j,t]) for t in range(Id2.n(_sage_const_1 ))])
+            Pm=Pm+HM(Id1.n(0), 1, [SR(Id1[s,i]) for s in range(Id1.n(0))])*HM(1,Id2.n(1),[SR(Id2[j,t]) for t in range(Id2.n(1))])
     # Expressing the solutions
     tp1=Pm*x; tp2=bp-(Ap-Pm)*v
-    return [tp1[i,_sage_const_0 ]==tp2[i,_sage_const_0 ] for i in range(tp1.n(_sage_const_0 ))]
+    return [tp1[i,0]==tp2[i,0] for i in range(tp1.n(0))]
 
 def default_linear_solver(EqL, Lv, Lf):
     """
@@ -11760,22 +12004,22 @@ def default_linear_solver(EqL, Lv, Lf):
     # Formating the constraints
     [A,b]=ConstraintFormatorHM(EqL,Lv)
     # Initialization of the variable vectors
-    x=HM(A.ncols(), _sage_const_1 , Lv); v=HM(A.ncols(), _sage_const_1 , Lf)
+    x=HM(A.ncols(), 1, Lv); v=HM(A.ncols(), 1, Lf)
     # Initialization of the reduced echelon form.
     [Ap,bp]=gauss_jordan_eliminationHM(A,b)
-    Id1 = HM(_sage_const_2 , Ap.n(_sage_const_0 ), 'kronecker')
-    Id2 = HM(_sage_const_2 , Ap.n(_sage_const_1 ), 'kronecker')
+    Id1 = HM(2, Ap.n(0), 'kronecker')
+    Id2 = HM(2, Ap.n(1), 'kronecker')
     # Obtainin the list of pivot variables.
-    Pm=HM(Ap.n(_sage_const_0 ), Ap.n(_sage_const_1 ), 'zero')
-    for i in range(Ap.n(_sage_const_0 )):
-        if not HM(_sage_const_1 , Ap.n(_sage_const_1 ), [SR(Ap[i,u]) for u in range(Ap.n(_sage_const_1 ))]).is_zero():
-            for j in range(Ap.n(_sage_const_1 )):
-                if Ap[i,j]==_sage_const_1 :
+    Pm=HM(Ap.n(0), Ap.n(1), 'zero')
+    for i in range(Ap.n(0)):
+        if not HM(1, Ap.n(1), [SR(Ap[i,u]) for u in range(Ap.n(1))]).is_zero():
+            for j in range(Ap.n(1)):
+                if Ap[i,j]==1:
                     break
-            Pm=Pm+HM(Id1.n(_sage_const_0 ), _sage_const_1 , [SR(Id1[s,i]) for s in range(Id1.n(_sage_const_0 ))])*HM(_sage_const_1 ,Id2.n(_sage_const_1 ),[SR(Id2[j,t]) for t in range(Id2.n(_sage_const_1 ))])
+            Pm=Pm+HM(Id1.n(0), 1, [SR(Id1[s,i]) for s in range(Id1.n(0))])*HM(1,Id2.n(1),[SR(Id2[j,t]) for t in range(Id2.n(1))])
     # Expressing the solutions
     tp1=Pm*x; tp2=bp-(Ap-Pm)*v
-    return [tp1[i,_sage_const_0 ]==tp2[i,_sage_const_0 ] for i in range(tp1.n(_sage_const_0 ))]
+    return [tp1[i,0]==tp2[i,0] for i in range(tp1.n(0))]
 
 def multiplicative_linear_solver(A,b,x,v):
     """
@@ -11800,7 +12044,7 @@ def multiplicative_linear_solver(A,b,x,v):
     - To Do: 
     """
     # Initialization of the reduced echelon form.
-    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:_sage_const_2 ]
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A,b)[:2]
     Id1=identity_matrix(Ap.nrows())
     Id2=identity_matrix(Ap.ncols())
     # Obtainin the list of pivot variables.
@@ -11808,13 +12052,13 @@ def multiplicative_linear_solver(A,b,x,v):
     for i in range(Ap.nrows()):
         if not Ap[i,:].is_zero():
             for j in range(Ap.ncols()):
-                if Ap[i,j]==_sage_const_1 :
+                if Ap[i,j]==1:
                     break
             Pm=Pm+Id1[:,i]*Id2[j,:]
     # Expressing the solutions
     tp1=multiplicative_matrix_product(Pm,x)
     tp2=multiplicative_matrix_product((Ap-Pm),v)
-    return [tp1[i,_sage_const_0 ]==bp[i,_sage_const_0 ]/tp2[i,_sage_const_0 ] for i in range(tp1.nrows())]
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def multiplicative_linear_solverHM(A,b,x,v):
     """
@@ -11834,12 +12078,13 @@ def multiplicative_linear_solverHM(A,b,x,v):
          x2 == a10*t3/a11,
          1 == a01*a10/(a00*a11)]
 
+
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
     # Initialization of the reduced echelon form.
-    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:_sage_const_2 ]
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:2]
     Id1=identity_matrix(Ap.nrows())
     Id2=identity_matrix(Ap.ncols())
     # Obtainin the list of pivot variables.
@@ -11847,13 +12092,13 @@ def multiplicative_linear_solverHM(A,b,x,v):
     for i in range(Ap.nrows()):
         if not Ap[i,:].is_zero():
             for j in range(Ap.ncols()):
-                if Ap[i,j]==_sage_const_1 :
+                if Ap[i,j]==1:
                     break
             Pm=Pm+Id1[:,i]*Id2[j,:]
     # Expressing the solutions
     tp1=multiplicative_matrix_product(Pm,x)
     tp2=multiplicative_matrix_product((Ap-Pm),v)
-    return [tp1[i,_sage_const_0 ]==bp[i,_sage_const_0 ]/tp2[i,_sage_const_0 ] for i in range(tp1.nrows())]
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def default_multiplicative_linear_solver(EqL, Lv, Lf):
     """
@@ -11883,25 +12128,25 @@ def default_multiplicative_linear_solver(EqL, Lv, Lf):
     # Formatting the constraints
     [A,b]=multiplicativeConstraintFormatorHM(EqL, Lv)
     # Initialization of the variables
-    x=HM(A.ncols(), _sage_const_1 , Lv); v=HM(A.ncols(), _sage_const_1 , Lf)
+    x=HM(A.ncols(), 1, Lv); v=HM(A.ncols(), 1, Lf)
     # Initialization of the reduced echelon form.
-    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:_sage_const_2 ]
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:2]
     #Id1=identity_matrix(Ap.nrows())
-    Id1=HM(_sage_const_2 , Ap.nrows(), 'kronecker')
+    Id1=HM(2, Ap.nrows(), 'kronecker')
     #Id2=identity_matrix(Ap.ncols())
-    Id2=HM(_sage_const_2 , Ap.ncols(), 'kronecker')
+    Id2=HM(2, Ap.ncols(), 'kronecker')
     # Obtainin the list of pivot variables.
     #Pm=Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
     Pm=HM(Ap.nrows(), Ap.ncols(), 'zero')
     for i in range(Ap.nrows()):
         if not Ap[i,:].is_zero():
             for j in range(Ap.ncols()):
-                if Ap[i,j]==_sage_const_1 :
+                if Ap[i,j]==1:
                     break
-            Pm=Pm+HM(Ap.nrows(),_sage_const_1 ,[Id1[f,i] for f in rg(Ap.nrows())])*HM(_sage_const_1 ,Ap.ncols(),[Id2[j,g] for g in rg(Ap.ncols())])
+            Pm=Pm+HM(Ap.nrows(),1,[Id1[f,i] for f in rg(Ap.nrows())])*HM(1,Ap.ncols(),[Id2[j,g] for g in rg(Ap.ncols())])
     # Expressing the solutions
-    tp1=x**Pm; tp2=v**(Matrix2HM(Ap)-Pm)
-    return [tp1[i,_sage_const_0 ]==bp[i,_sage_const_0 ]/tp2[i,_sage_const_0 ] for i in range(tp1.nrows())]
+    tp1=x^Pm; tp2=v^(Matrix2HM(Ap)-Pm)
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def multiplicative_least_square_linear_solver(A,b,x,v):
     """
@@ -11916,17 +12161,18 @@ def multiplicative_least_square_linear_solver(A,b,x,v):
         sage: Mx=Matrix(SR,A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
         sage: Mv=Matrix(SR,A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
         sage: multiplicative_least_square_linear_solver(A,b,Mx,Mv)
-        [x0 == sqrt(a00*a01*e^(2*I*pi*k0))/(sqrt(a00*a10*e^(2*I*pi*k3)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x1 == sqrt(a10*a11*e^(2*I*pi*k1))/(sqrt(a00*a10*e^(2*I*pi*k2)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x2 == a00*a10*t3/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))),
+        [x0 == sqrt(a00*a01)*e^(3/2*I*pi*k0 + 1/2*I*pi*k1 - I*pi*k3)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x1 == sqrt(a10*a11)*e^(1/2*I*pi*k0 + 3/2*I*pi*k1 - I*pi*k2)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x2 == a00*a10*t3*e^(-I*pi*k0 - I*pi*k1)/(sqrt(a00*a01)*sqrt(a10*a11)),
          1 == e^(-2*I*pi*k0 - 2*I*pi*k1)]
+
 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
     # Initialization of the reduced echelon form.
-    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.transpose()*A, multiplicative_matrix_product(A.transpose(),b))[:_sage_const_2 ]
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII(A.transpose()*A, multiplicative_matrix_product(A.transpose(),b))[:2]
     Id1=identity_matrix(Ap.nrows())
     Id2=identity_matrix(Ap.ncols())
     # Obtainin the list of pivot variables.
@@ -11934,13 +12180,13 @@ def multiplicative_least_square_linear_solver(A,b,x,v):
     for i in range(Ap.nrows()):
         if not Ap[i,:].is_zero():
             for j in range(Ap.ncols()):
-                if Ap[i,j]==_sage_const_1 :
+                if Ap[i,j]==1:
                     break
             Pm=Pm+Id1[:,i]*Id2[j,:]
     # Expressing the solutions
     tp1=multiplicative_matrix_product(Pm,x)
     tp2=multiplicative_matrix_product((Ap-Pm),v)
-    return [tp1[i,_sage_const_0 ]==bp[i,_sage_const_0 ]/tp2[i,_sage_const_0 ] for i in range(tp1.nrows())]
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def multiplicative_least_square_linear_solverHM(A,b,x,v):
     """
@@ -11955,17 +12201,18 @@ def multiplicative_least_square_linear_solverHM(A,b,x,v):
         sage: Mx=HM(A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
         sage: Mv=HM(A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
         sage: multiplicative_least_square_linear_solverHM(A,b,Mx,Mv)
-        [x0 == sqrt(a00*a01*e^(2*I*pi*k0))/(sqrt(a00*a10*e^(2*I*pi*k3)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x1 == sqrt(a10*a11*e^(2*I*pi*k1))/(sqrt(a00*a10*e^(2*I*pi*k2)/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))))*t3),
-         x2 == a00*a10*t3/(sqrt(a00*a01*e^(2*I*pi*k0))*sqrt(a10*a11*e^(2*I*pi*k1))),
+        [x0 == sqrt(a00*a01)*e^(3/2*I*pi*k0 + 1/2*I*pi*k1 - I*pi*k3)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x1 == sqrt(a10*a11)*e^(1/2*I*pi*k0 + 3/2*I*pi*k1 - I*pi*k2)/(sqrt(a00*a10/(sqrt(a00*a01)*sqrt(a10*a11)))*t3),
+         x2 == a00*a10*t3*e^(-I*pi*k0 - I*pi*k1)/(sqrt(a00*a01)*sqrt(a10*a11)),
          1 == e^(-2*I*pi*k0 - 2*I*pi*k1)]
+
 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
     # Initialization of the reduced echelon form.
-    [Ap,bp]=multiplicative_gauss_jordan_eliminationII((A.transpose()*A).matrix(), multiplicative_matrix_productHM(A.transpose(),b).matrix())[:_sage_const_2 ]
+    [Ap,bp]=multiplicative_gauss_jordan_eliminationII((A.transpose()*A).matrix(), multiplicative_matrix_productHM(A.transpose(),b).matrix())[:2]
     Id1=identity_matrix(Ap.nrows())
     Id2=identity_matrix(Ap.ncols())
     # Obtainin the list of pivot variables.
@@ -11973,13 +12220,13 @@ def multiplicative_least_square_linear_solverHM(A,b,x,v):
     for i in range(Ap.nrows()):
         if not Ap[i,:].is_zero():
             for j in range(Ap.ncols()):
-                if Ap[i,j]==_sage_const_1 :
+                if Ap[i,j]==1:
                     break
             Pm=Pm+Id1[:,i]*Id2[j,:]
     # Expressing the solutions
     tp1=multiplicative_matrix_product(Pm,x)
     tp2=multiplicative_matrix_product((Ap-Pm),v)
-    return [tp1[i,_sage_const_0 ]==bp[i,_sage_const_0 ]/tp2[i,_sage_const_0 ] for i in range(tp1.nrows())]
+    return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def exponential_linear_solverHM(Ha,b,x,v):
     """
@@ -12003,20 +12250,20 @@ def exponential_linear_solverHM(Ha,b,x,v):
     phi = lambda x: ln(x)
     A = apply(HM, Ha.dimensions()+[ Ha.apply_map(phi).list() ])
     # Initialization of the reduced echelon form.
-    [Ap,bp] = multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:_sage_const_2 ]
+    [Ap,bp] = multiplicative_gauss_jordan_eliminationII(A.matrix(),b.matrix())[:2]
     Id1 = identity_matrix(Ap.nrows()); Id2 = identity_matrix(Ap.ncols())
     # Obtainin the list of pivot variables.
     Pm = Matrix(SR,zero_matrix(Ap.nrows(),Ap.ncols()))
     for i in range(Ap.nrows()):
         if not Ap[i,:].is_zero():
             for j in range(Ap.ncols()):
-                if Ap[i,j] == _sage_const_1 :
+                if Ap[i,j] == 1:
                     break
             Pm = Pm+Id1[:,i]*Id2[j,:]
     # Expressing the solutions
     tp1 = multiplicative_matrix_product(Pm,x)
     tp2 = multiplicative_matrix_product((Ap-Pm),v)
-    return [exp(tp1[i,_sage_const_0 ]) == bp[i,_sage_const_0 ]/tp2[i,_sage_const_0 ] for i in range(tp1.nrows())]
+    return [exp(tp1[i,0]) == bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
 
 def SecondOrderHadamardFactorization(A,B):
     """
@@ -12036,130 +12283,44 @@ def SecondOrderHadamardFactorization(A,B):
     - Edinah K. Gnang
     - To Do: 
     """
-    if A.n(_sage_const_0 )==B.n(_sage_const_1 ) and A.n(_sage_const_1 )==B.n(_sage_const_0 ) and (log(Integer(A.n(_sage_const_0 )),_sage_const_2 )).is_integer():
+    if A.n(0)==B.n(1) and A.n(1)==B.n(0) and (log(Integer(A.n(0)),2)).is_integer():
         # Initializing the hadamard matrix
-        H = SecondOrderHadamardBlockU(Integer(A.n(_sage_const_0 )))
-        L = [GeneralUncorrelatedHypermatrixTuple(_sage_const_2 ) for i in range(log(Integer(A.n(_sage_const_0 )),_sage_const_2 ))]
+        H = SecondOrderHadamardBlockU(Integer(A.n(0)))
+        L = [GeneralUncorrelatedHypermatrixTuple(2) for i in range(log(Integer(A.n(0)),2))]
         # Initializing the temporary hypermatrices.
-        Tp0 = L[_sage_const_0 ][_sage_const_0 ]; Tp1 = L[_sage_const_0 ][_sage_const_1 ]
-        for i in range(_sage_const_1 ,len(L)):
-            Tp0 = Tp0.slicekroneckerproduct(L[i][_sage_const_0 ])
-            Tp1 = Tp1.slicekroneckerproduct(L[i][_sage_const_1 ])
-        Tp0 = sqrt(Tp0.n(_sage_const_0 ))*Tp0
-        Tp1 = sqrt(Tp1.n(_sage_const_0 ))*Tp1
+        Tp0 = L[0][0]; Tp1 = L[0][1]
+        for i in range(1,len(L)):
+            Tp0 = Tp0.slicekroneckerproduct(L[i][0])
+            Tp1 = Tp1.slicekroneckerproduct(L[i][1])
+        Tp0 = sqrt(Tp0.n(0))*Tp0
+        Tp1 = sqrt(Tp1.n(0))*Tp1
         # initializing the extened matrices
-        M0 = HM(A.n(_sage_const_0 ), _sage_const_2 *A.n(_sage_const_0 )-_sage_const_1 , 'zero')
-        for j in range(_sage_const_1 ,A.n(_sage_const_0 )):
-            for i in range(A.n(_sage_const_0 )):
-                M0[i,j-_sage_const_1 ] = H[i,j]
-        for j in range(A.n(_sage_const_0 ), _sage_const_2 *A.n(_sage_const_0 )):
-            for i in range(A.n(_sage_const_0 )):
-                M0[i,j-_sage_const_1 ] = Tp0[i,j-A.n(_sage_const_0 )]
-        M1 = HM(_sage_const_2 *A.n(_sage_const_0 )-_sage_const_1 ,A.n(_sage_const_0 ), 'zero')
-        for j in range(_sage_const_1 ,A.n(_sage_const_0 )):
-            for i in range(A.n(_sage_const_0 )):
-                M1[j-_sage_const_1 ,i] = -H[i,j]
-        for j in range(A.n(_sage_const_0 ), _sage_const_2 *A.n(_sage_const_0 )):
-            for i in range(A.n(_sage_const_0 )):
-                M1[j-_sage_const_1 ,i] = Tp1[j-A.n(_sage_const_0 ),i]
+        M0 = HM(A.n(0), 2*A.n(0)-1, 'zero')
+        for j in range(1,A.n(0)):
+            for i in range(A.n(0)):
+                M0[i,j-1] = H[i,j]
+        for j in range(A.n(0), 2*A.n(0)):
+            for i in range(A.n(0)):
+                M0[i,j-1] = Tp0[i,j-A.n(0)]
+        M1 = HM(2*A.n(0)-1,A.n(0), 'zero')
+        for j in range(1,A.n(0)):
+            for i in range(A.n(0)):
+                M1[j-1,i] = -H[i,j]
+        for j in range(A.n(0), 2*A.n(0)):
+            for i in range(A.n(0)):
+                M1[j-1,i] = Tp1[j-A.n(0),i]
         # Filling up the hypermatrices.
-        U = HM(A.n(_sage_const_0 ), (_sage_const_2 *A.n(_sage_const_0 )-_sage_const_1 )*A.n(_sage_const_1 ),'zero')
-        for i in range(A.n(_sage_const_1 )):
-            for j in range(M0.n(_sage_const_1 )):
-                for k in range(A.n(_sage_const_0 )):
-                    U[k, A.n(_sage_const_1 )*j+i] = A[k,i]*M0[k,j]
-        V = HM((_sage_const_2 *A.n(_sage_const_0 )-_sage_const_1 )*A.n(_sage_const_1 ), A.n(_sage_const_0 ),'zero')
-        for i in range(B.n(_sage_const_0 )):
-            for j in range(M1.n(_sage_const_0 )):
-                for k in range(B.n(_sage_const_1 )):
-                    V[A.n(_sage_const_1 )*j+i,k] = B[i,k]*M1[j,k]
+        U = HM(A.n(0), (2*A.n(0)-1)*A.n(1),'zero')
+        for i in range(A.n(1)):
+            for j in range(M0.n(1)):
+                for k in range(A.n(0)):
+                    U[k, A.n(1)*j+i] = A[k,i]*M0[k,j]
+        V = HM((2*A.n(0)-1)*A.n(1), A.n(0),'zero')
+        for i in range(B.n(0)):
+            for j in range(M1.n(0)):
+                for k in range(B.n(1)):
+                    V[A.n(1)*j+i,k] = B[i,k]*M1[j,k]
         return [U,V]
-    else:
-        # return the error message if the input hypermatrix is cubic
-        raise ValueError, "The input hypermpatrix are of inapropriate sizes"
-
-def ThirdOrderHadamardFactorization(Ha, Hb, Hc):
-    """
-    Outputs the matrix factorization induced by Hadamard third order hypermatrices.
-    The slices of third order matrices involved in outer-product computations must
-    be square and must have sides whose length is a power of 2.   
-
-    EXAMPLES:
- 
-    ::
-
-        sage: [U,V,W]=ThirdOrderHadamardFactorization(HM(4,2,4,'a'),HM(4,4,2,'b'), HM(2,4,4,'c'))
-        sage: Prod(U, V, W).simplify_full()
-        [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101, a002*b000*c002 + a012*b001*c102, a003*b000*c003 + a013*b001*c103], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111, a002*b010*c012 + a012*b011*c112, a003*b010*c013 + a013*b011*c113], [a000*b020*c020 + a010*b021*c120, a001*b020*c021 + a011*b021*c121, a002*b020*c022 + a012*b021*c122, a003*b020*c023 + a013*b021*c123], [a000*b030*c030 + a010*b031*c130, a001*b030*c031 + a011*b031*c131, a002*b030*c032 + a012*b031*c132, a003*b030*c033 + a013*b031*c133]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101, a102*b100*c002 + a112*b101*c102, a103*b100*c003 + a113*b101*c103], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111, a102*b110*c012 + a112*b111*c112, a103*b110*c013 + a113*b111*c113], [a100*b120*c020 + a110*b121*c120, a101*b120*c021 + a111*b121*c121, a102*b120*c022 + a112*b121*c122, a103*b120*c023 + a113*b121*c123], [a100*b130*c030 + a110*b131*c130, a101*b130*c031 + a111*b131*c131, a102*b130*c032 + a112*b131*c132, a103*b130*c033 + a113*b131*c133]], [[a200*b200*c000 + a210*b201*c100, a201*b200*c001 + a211*b201*c101, a202*b200*c002 + a212*b201*c102, a203*b200*c003 + a213*b201*c103], [a200*b210*c010 + a210*b211*c110, a201*b210*c011 + a211*b211*c111, a202*b210*c012 + a212*b211*c112, a203*b210*c013 + a213*b211*c113], [a200*b220*c020 + a210*b221*c120, a201*b220*c021 + a211*b221*c121, a202*b220*c022 + a212*b221*c122, a203*b220*c023 + a213*b221*c123], [a200*b230*c030 + a210*b231*c130, a201*b230*c031 + a211*b231*c131, a202*b230*c032 + a212*b231*c132, a203*b230*c033 + a213*b231*c133]], [[a300*b300*c000 + a310*b301*c100, a301*b300*c001 + a311*b301*c101, a302*b300*c002 + a312*b301*c102, a303*b300*c003 + a313*b301*c103], [a300*b310*c010 + a310*b311*c110, a301*b310*c011 + a311*b311*c111, a302*b310*c012 + a312*b311*c112, a303*b310*c013 + a313*b311*c113], [a300*b320*c020 + a310*b321*c120, a301*b320*c021 + a311*b321*c121, a302*b320*c022 + a312*b321*c122, a303*b320*c023 + a313*b321*c123], [a300*b330*c030 + a310*b331*c130, a301*b330*c031 + a311*b331*c131, a302*b330*c032 + a312*b331*c132, a303*b330*c033 + a313*b331*c133]]]
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    if Ha.n(_sage_const_1 )==Hb.n(_sage_const_2 ) and Hb.n(_sage_const_2 )==Hc.n(_sage_const_0 ) and (log(Integer(Ha.n(_sage_const_0 )),_sage_const_2 )).is_integer():
-        # Initializing the hadamard matrix
-        H = ThirdOrderHadamardBlockU(Integer(Ha.n(_sage_const_0 )))
-        # Initializing the hypermatrices for the slice Kronecker product.
-        L = [GeneralUncorrelatedHypermatrixTuple(_sage_const_3 ) for i in range(log(Integer(Ha.n(_sage_const_0 )),_sage_const_2 ))]
-        # Initializing the temporary hypermatrices.
-        Tp0 = L[_sage_const_0 ][_sage_const_0 ]; Tp1 = L[_sage_const_0 ][_sage_const_1 ]; Tp2 = L[_sage_const_0 ][_sage_const_2 ]
-        # Computing the slice kronecker product
-        for i in range(_sage_const_1 ,len(L)):
-            Tp0 = Tp0.tensor_product(L[i][_sage_const_0 ])
-            Tp1 = Tp1.tensor_product(L[i][_sage_const_1 ])
-            Tp2 = Tp2.tensor_product(L[i][_sage_const_2 ])
-        Tp0 = (Tp0.n(_sage_const_0 ))**(_sage_const_1 /_sage_const_3 )*Tp0
-        Tp1 = (Tp1.n(_sage_const_0 ))**(_sage_const_1 /_sage_const_3 )*Tp1
-        Tp2 = (Tp2.n(_sage_const_0 ))**(_sage_const_1 /_sage_const_3 )*Tp2
-        #print 'Prod(H, H.transpose(2), H.transpose())= ', Prod(H,H.transpose(2),H.transpose())
-        # Initializing the extended third order hypermatrices
-        M0 = HM(Ha.n(_sage_const_0 ), _sage_const_2 *Ha.n(_sage_const_0 )-_sage_const_1 , Ha.n(_sage_const_0 ),'zero')
-        for j in range(Ha.n(_sage_const_0 )-_sage_const_1 ):
-            for k in range(Ha.n(_sage_const_0 )):
-                for i in range(Ha.n(_sage_const_0 )):
-                    M0[i,j,k] = -H[i,j,k]
-        for j in range(Ha.n(_sage_const_0 ), _sage_const_2 *Ha.n(_sage_const_0 )):
-            for k in range(Ha.n(_sage_const_0 )):
-                for i in range(Ha.n(_sage_const_0 )):
-                    M0[i,j-_sage_const_1 ,k] = Tp0[i,j-Ha.n(_sage_const_0 ),k]
-        M1 = HM(Ha.n(_sage_const_0 ), Ha.n(_sage_const_0 ), _sage_const_2 *Ha.n(_sage_const_0 )-_sage_const_1 , 'zero')
-        for j in range(Ha.n(_sage_const_0 )-_sage_const_1 ):
-            for k in range(Ha.n(_sage_const_0 )):
-                for i in range(Ha.n(_sage_const_0 )):
-                    M1[i,k,j] = (H.transpose(_sage_const_2 ))[i,k,j]
-        for j in range(Ha.n(_sage_const_0 ), _sage_const_2 *Ha.n(_sage_const_0 )):
-            for k in range(Ha.n(_sage_const_0 )):
-                for i in range(Ha.n(_sage_const_0 )):
-                    M1[i,k,j-_sage_const_1 ] = Tp1[i,k,j-Ha.n(_sage_const_0 )]
-        M2 = HM(_sage_const_2 *Ha.n(_sage_const_0 )-_sage_const_1 , Ha.n(_sage_const_0 ), Ha.n(_sage_const_0 ),'zero')
-        for j in range(Ha.n(_sage_const_0 )-_sage_const_1 ):
-            for k in range(Ha.n(_sage_const_0 )):
-                for i in range(Ha.n(_sage_const_0 )):
-                    M2[j,i,k] = (H.transpose())[j,i,k]
-        for j in range(Ha.n(_sage_const_0 ), _sage_const_2 *Ha.n(_sage_const_0 )):
-            for k in range(Ha.n(_sage_const_0 )):
-                for i in range(Ha.n(_sage_const_0 )):
-                    M2[j-_sage_const_1 ,i,k] = Tp2[j-Ha.n(_sage_const_0 ),i,k]
-        # Filling up the three thirdhypermatrices to be outputed.
-        U = HM(Ha.n(_sage_const_0 ), (_sage_const_2 *Ha.n(_sage_const_0 )-_sage_const_1 )*Ha.n(_sage_const_1 ), Ha.n(_sage_const_0 ), 'zero')
-        for i in range(Ha.n(_sage_const_1 )):
-            for j in range(M0.n(_sage_const_1 )):
-                for k in range(Ha.n(_sage_const_0 )):
-                    for l in range(Ha.n(_sage_const_2 )):
-                        U[k,Ha.n(_sage_const_1 )*j+i,l] = Ha[k,i,l]*M0[k,j,l]
-        V = HM(Ha.n(_sage_const_0 ), Ha.n(_sage_const_0 ), (_sage_const_2 *Ha.n(_sage_const_0 )-_sage_const_1 )*Ha.n(_sage_const_1 ), 'zero')
-        for i in range(Hb.n(_sage_const_2 )):
-            for j in range(M1.n(_sage_const_2 )):
-                for k in range(Hb.n(_sage_const_0 )):
-                    for l in range(Hb.n(_sage_const_1 )):
-                        V[k,l,Ha.n(_sage_const_1 )*j+i] = Hb[k,l,i]*M1[k,l,j]
-        W = HM((_sage_const_2 *Ha.n(_sage_const_0 )-_sage_const_1 )*Ha.n(_sage_const_1 ), Ha.n(_sage_const_0 ), Ha.n(_sage_const_0 ),'zero')
-        for i in range(Hc.n(_sage_const_0 )):
-            for j in range(M2.n(_sage_const_0 )):
-                for k in range(Hc.n(_sage_const_1 )):
-                    for l in range(Hc.n(_sage_const_2 )):
-                        W[Ha.n(_sage_const_1 )*j+i,k,l] = Hc[i,k,l]*M2[j,k,l]
-        return [U, V, W]
     else:
         # return the error message if the input hypermatrix is cubic
         raise ValueError, "The input hypermpatrix are of inapropriate sizes"
@@ -12184,10 +12345,10 @@ def RealRow_Gram_Schmidt(M):
     Rs = Matrix(SR, zero_matrix(M.nrows(),M.ncols()))
     # Initializing the first vector
     # the implementation assumes that the first vector is non zero
-    Rs[_sage_const_0 ,:]=M[_sage_const_0 ,:]
-    for i in range(_sage_const_1 ,M.nrows()):
+    Rs[0,:]=M[0,:]
+    for i in range(1,M.nrows()):
         v = M[i,:]
-        v = v-sum([(v*Rs[j,:].transpose())[_sage_const_0 ,_sage_const_0 ]/sum(Rs[j,s]**_sage_const_2  for s in range(Rs.ncols()))*Rs[j,:] for j in range(i) if not sum(Rs[j,s]**_sage_const_2  for s in range(Rs.ncols())).is_zero()])
+        v = v-sum([(v*Rs[j,:].transpose())[0,0]/sum(Rs[j,s]^2 for s in range(Rs.ncols()))*Rs[j,:] for j in range(i) if not sum(Rs[j,s]^2 for s in range(Rs.ncols())).is_zero()])
         Rs[i,:] = v
     return Rs
 
@@ -12238,10 +12399,10 @@ def RealRow_Gram_SchmidtHM(Hm):
     Rs = Matrix(SR, zero_matrix(M.nrows(),M.ncols()))
     # Initializing the first vector
     # the implementation assumes that the first vector is non zero
-    Rs[_sage_const_0 ,:]=M[_sage_const_0 ,:]
-    for i in range(_sage_const_1 ,M.nrows()):
+    Rs[0,:]=M[0,:]
+    for i in range(1,M.nrows()):
         v = M[i,:]
-        v = v-sum([(v*Rs[j,:].transpose())[_sage_const_0 ,_sage_const_0 ]/sum(Rs[j,s]**_sage_const_2  for s in range(Rs.ncols()))*Rs[j,:] for j in range(i) if not sum(Rs[j,s]**_sage_const_2  for s in range(Rs.ncols())).is_zero()])
+        v = v-sum([(v*Rs[j,:].transpose())[0,0]/sum(Rs[j,s]^2 for s in range(Rs.ncols()))*Rs[j,:] for j in range(i) if not sum(Rs[j,s]^2 for s in range(Rs.ncols())).is_zero()])
         Rs[i,:] = v
     return HM(M.nrows(),M.ncols(),Rs.transpose().list())
 
@@ -12264,11 +12425,11 @@ def RealColumn_Gram_Schmidt(M):
     Rs = Matrix(SR, zero_matrix(M.nrows(), M.ncols()))
     # This implementation assumes that the first column is a non zero column.
     # Initializing the first vector to a unit vector.
-    Rs[:,_sage_const_0 ]=M[:,_sage_const_0 ]
+    Rs[:,0]=M[:,0]
     # Loop removing the bad components for all the remaining vectors
-    for i in range(_sage_const_1 , M.ncols()):
+    for i in range(1, M.ncols()):
         v = M[:,i]
-        v = v-sum([(v.transpose()*Rs[:,j])[_sage_const_0 ,_sage_const_0 ]/sum(Rs[s,j]**_sage_const_2  for s in range(Rs.nrows()))*Rs[:,j] for j in range(i) if not sum(Rs[s,j]**_sage_const_2  for s in range(Rs.nrows())).is_zero()])
+        v = v-sum([(v.transpose()*Rs[:,j])[0,0]/sum(Rs[s,j]^2 for s in range(Rs.nrows()))*Rs[:,j] for j in range(i) if not sum(Rs[s,j]^2 for s in range(Rs.nrows())).is_zero()])
         Rs[:,i] = v
     return Rs
 
@@ -12315,11 +12476,11 @@ def RealColumn_Gram_SchmidtHM(Hm):
     Rs = Matrix(SR, zero_matrix(M.nrows(), M.ncols()))
     # This implementation assumes that the first column is a non zero column.
     # Initializing the first vector to a unit vector.
-    Rs[:,_sage_const_0 ]=M[:,_sage_const_0 ]
+    Rs[:,0]=M[:,0]
     # Loop removing the bad components for all the remaining vectors
-    for i in range(_sage_const_1 , M.ncols()):
+    for i in range(1, M.ncols()):
         v = M[:,i]
-        v = v-sum([(v.transpose()*Rs[:,j])[_sage_const_0 ,_sage_const_0 ]/sum(Rs[s,j]**_sage_const_2  for s in range(Rs.nrows()))*Rs[:,j] for j in range(i) if not sum(Rs[s,j]**_sage_const_2  for s in range(Rs.nrows())).is_zero()])
+        v = v-sum([(v.transpose()*Rs[:,j])[0,0]/sum(Rs[s,j]^2 for s in range(Rs.nrows()))*Rs[:,j] for j in range(i) if not sum(Rs[s,j]^2 for s in range(Rs.nrows())).is_zero()])
         Rs[:,i] = v
     return HM(M.nrows(), M.ncols(), Rs.transpose().list())
 
@@ -12351,10 +12512,10 @@ def All_RealRow_Gram_Schmidt(M):
         Rs = Matrix(SR, zero_matrix(M.nrows(), M.ncols()))
         # Initialization of the first vector.
         # the implementation assumes that the first vector is non zero
-        Rs[p[_sage_const_0 ],:] = M[p[_sage_const_0 ],:]
-        for i in range(_sage_const_1 ,M.nrows()):
+        Rs[p[0],:] = M[p[0],:]
+        for i in range(1,M.nrows()):
             v = M[p[i],:]
-            v = v-sum([(v*Rs[p[j],:].transpose())[_sage_const_0 ,_sage_const_0 ]/sum(Rs[p[j],s]**_sage_const_2  for s in range(Rs.ncols()))*Rs[p[j],:] for j in range(i) if not sum(Rs[p[j],s]**_sage_const_2  for s in range(Rs.ncols())).is_zero()])
+            v = v-sum([(v*Rs[p[j],:].transpose())[0,0]/sum(Rs[p[j],s]^2 for s in range(Rs.ncols()))*Rs[p[j],:] for j in range(i) if not sum(Rs[p[j],s]^2 for s in range(Rs.ncols())).is_zero()])
             Rs[p[i],:] = v
         L.append(copy(Rs))
     return L
@@ -12388,10 +12549,10 @@ def All_RealColumn_Gram_Schmidt(M):
         Rs = Matrix(SR, zero_matrix(M.nrows(), M.ncols()))
         # Initialization of the first vector.
         # the implementation assumes that the first vector is non zero
-        Rs[p[_sage_const_0 ],:] = M[p[_sage_const_0 ],:]
-        for i in range(_sage_const_1 ,M.nrows()):
+        Rs[p[0],:] = M[p[0],:]
+        for i in range(1,M.nrows()):
             v = M[p[i],:]
-            v = v-sum([(v*Rs[p[j],:].transpose())[_sage_const_0 ,_sage_const_0 ]/sum(Rs[p[j],s]**_sage_const_2  for s in range(Rs.ncols()))*Rs[p[j],:] for j in range(i) if not sum(Rs[p[j],s]**_sage_const_2  for s in range(Rs.ncols())).is_zero()])
+            v = v-sum([(v*Rs[p[j],:].transpose())[0,0]/sum(Rs[p[j],s]^2 for s in range(Rs.ncols()))*Rs[p[j],:] for j in range(i) if not sum(Rs[p[j],s]^2 for s in range(Rs.ncols())).is_zero()])
             Rs[p[i],:] = v
         L.append(copy(Rs).transpose())
     return L
@@ -12423,7 +12584,7 @@ def Nearest_RealRow_Gram_Schmidt(M):
     # Initilization of the list of Permutations
     P = Permutations(range(M.nrows()))
     # Initialization of the current error.
-    cur_err=sum(nt**_sage_const_2  for nt in M.list())
+    cur_err=sum(nt^2 for nt in M.list())
     print "Distance from the zero matrix ",cur_err
     # Initialization of the final matrix
     Q = Matrix(QQ, zero_matrix(M.nrows(), M.ncols()))
@@ -12432,12 +12593,12 @@ def Nearest_RealRow_Gram_Schmidt(M):
         Rs = Matrix(QQ, zero_matrix(M.nrows(), M.ncols()))
         # Initialization of the first vector.
         # the implementation assumes that the first vector is non zero
-        Rs[_sage_const_0 ,:]=M[p[_sage_const_0 ],:]
-        for i in range(_sage_const_1 ,M.nrows()):
+        Rs[0,:]=M[p[0],:]
+        for i in range(1,M.nrows()):
             v=M[p[i],:]
-            v = v-sum([(v*Rs[p[j],:].transpose())[_sage_const_0 ,_sage_const_0 ]/sum(Rs[p[j],s]**_sage_const_2  for s in range(Rs.ncols()))*Rs[p[j],:] for j in range(i) if not sum(Rs[p[j],s]**_sage_const_2  for s in range(Rs.ncols())).is_zero()])
+            v = v-sum([(v*Rs[p[j],:].transpose())[0,0]/sum(Rs[p[j],s]^2 for s in range(Rs.ncols()))*Rs[p[j],:] for j in range(i) if not sum(Rs[p[j],s]^2 for s in range(Rs.ncols())).is_zero()])
             Rs[p[i],:] = v
-        tmp_err=sum(nt**_sage_const_2  for nt in (Rs-M).list())
+        tmp_err=sum(nt^2 for nt in (Rs-M).list())
         print 'The current error for p= '+str(p)+' is '+str(tmp_err)
         if(tmp_err < cur_err):
             cur_err=tmp_err
@@ -12489,17 +12650,17 @@ def GeneralHypermatrixConstrainedOrthogonalization(H, X):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if H.order() > _sage_const_1 :
+    if H.order() > 1:
         # Initializing the order and the size
         od = H.order(); szL = H.dimensions()
         # Constrained Orthogonalization procedure.
-        DltL=GeneralHypermatrixKroneckerDeltaL(od,szL[_sage_const_0 ])
+        DltL=GeneralHypermatrixKroneckerDeltaL(od,szL[0])
         Dlt=sum(DltL)
         # Loop initializing the hypermartrix enrtry list 
         Lx=[]; Lh=[]
-        for t in range(H.n(_sage_const_1 )):
+        for t in range(H.n(1)):
             Lx=Lx+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[X.transpose(od-j) for j in range(od)]+[DltL[t]]))).list()
-            Lh=Lh+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[H.transpose(od-j) for j in range(od)]+[DltL[t]])-(_sage_const_1 /H.n(_sage_const_1 ))*apply(Prod,[H.transpose(od-j) for j in range(od)]))).list()
+            Lh=Lh+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[H.transpose(od-j) for j in range(od)]+[DltL[t]])-(1/H.n(1))*apply(Prod,[H.transpose(od-j) for j in range(od)]))).list()
         # Initialization of the equation
         EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not Lx[i].is_zero()]).list()
         # Formating the constraints
@@ -12509,7 +12670,7 @@ def GeneralHypermatrixConstrainedOrthogonalization(H, X):
             VrbL=Set(X.list()).list()
         [A, b]=multiplicativeConstraintFormator(EqL, VrbL)
         # Initialization of the vector of variables
-        v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+        v=Matrix(SR, A.ncols(), 1, VrbL)
         # returning the solutions to the system obtained via Gauss-Jordan elimination
         return multiplicative_linear_solver(A, b, v, v)
     else :
@@ -12544,17 +12705,17 @@ def GeneralHypermatrixConstrainedOrthogonalizationII(H, X, sz):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if H.order() > _sage_const_1 :
+    if H.order() > 1:
         # Initializing the order and the size
         od = H.order(); szL = H.dimensions()
         # Constrained Orthogonalization procedure.
-        DltL=GeneralHypermatrixKroneckerDeltaL(od,szL[_sage_const_0 ])
+        DltL=GeneralHypermatrixKroneckerDeltaL(od,szL[0])
         Dlt=sum(DltL)
         # Loop initializing the hypermartrix enrtry list 
         Lx=[]; Lh=[]
-        for t in range(H.n(_sage_const_1 )):
+        for t in range(H.n(1)):
             Lx=Lx+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[X.transpose(od-j) for j in range(od)]+[DltL[t]]))).list()
-            Lh=Lh+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[H.transpose(od-j) for j in range(od)]+[DltL[t]])-(_sage_const_1 /sz)*apply(Prod,[H.transpose(od-j) for j in range(od)]))).list()
+            Lh=Lh+((apply(HM,szL+['one'])-Dlt).elementwise_product(apply(ProdB,[H.transpose(od-j) for j in range(od)]+[DltL[t]])-(1/sz)*apply(Prod,[H.transpose(od-j) for j in range(od)]))).list()
         # Initialization of the equation
         EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not (Lx[i].is_zero() and Lh[i].is_zero())]).list()
         # Formating the constraints
@@ -12564,7 +12725,7 @@ def GeneralHypermatrixConstrainedOrthogonalizationII(H, X, sz):
             VrbL=Set(X.list()).list()
         [A, b]=multiplicativeConstraintFormator(EqL, VrbL)
         # Initialization of the vector of variables
-        v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+        v=Matrix(SR, A.ncols(), 1, VrbL)
         # returning the solutions to the system obtained via Gauss-Jordan elimination
         return multiplicative_linear_solver(A, b, v, v)
     else :
@@ -12595,9 +12756,9 @@ def Filmus_GnangConstrainedOrthogonalizationHM(Hm):
     if Hm.is_cubical():
         # Initialization of the parameters
         od = Hm.order()
-        sz = Hm.n(_sage_const_0 )
+        sz = Hm.n(0)
         Sln=GeneralHypermatrixConstrainedOrthogonalizationII(Hm, apply(HM,[sz for i in range(od)]+['x']), sz)
-        return apply(HM,[sz for i in range(od)]+['x']).subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=_sage_const_1  ]))
+        return apply(HM,[sz for i in range(od)]+['x']).subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1 ]))
     else:
         raise ValueError, "Expected a cubical  hypermatrix"
 
@@ -12624,15 +12785,15 @@ def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
     - Edinah K. Gnang
     """
     # Initializing the order and the size
-    od = Hl[_sage_const_0 ].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
     # Constrained Orthogonalization procedure.
-    DltL=GeneralHypermatrixKroneckerDeltaL(od, Hl[_sage_const_0 ].n(_sage_const_1 ))
+    DltL=GeneralHypermatrixKroneckerDeltaL(od, Hl[0].n(1))
     Dlt=sum(DltL)
     # Loop initializing the hypermartrix enrtry list 
     Lx=[]; Lh=[]
-    for t in range(Hl[_sage_const_0 ].n(_sage_const_1 )):
+    for t in range(Hl[0].n(1)):
         Lx=Lx+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(_sage_const_1 /Hl[_sage_const_0 ].n(_sage_const_1 ))*apply(Prod,[H for H in Hl]))).list()
+        Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(1/Hl[0].n(1))*apply(Prod,[H for H in Hl]))).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not Lx[i].is_zero()]).list()
     # Formating the constraints
@@ -12645,7 +12806,7 @@ def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
         VrbL=Set(LstX).list()
     [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
     # Initialization of the vector of variables
-    v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+    v=Matrix(SR, A.ncols(), 1, VrbL)
     # returning the solutions to the system obtained via Gauss-Jordan elimination
     return multiplicative_linear_solver(A, b, v, v)
 
@@ -12672,15 +12833,15 @@ def GeneralHypermatrixConstrainedUncorrelatedTuplesII(Hl, Xl, sz):
     - Edinah K. Gnang
     """
     # Initializing the order and the size
-    od = Hl[_sage_const_0 ].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
     # Constrained Orthogonalization procedure.
-    DltL=GeneralHypermatrixKroneckerDeltaL(od, Hl[_sage_const_0 ].n(_sage_const_1 ))
+    DltL=GeneralHypermatrixKroneckerDeltaL(od, Hl[0].n(1))
     Dlt=sum(DltL)
     # Loop initializing the hypermartrix enrtry list 
     Lx=[]; Lh=[]
-    for t in range(Hl[_sage_const_0 ].n(_sage_const_1 )):
+    for t in range(Hl[0].n(1)):
         Lx=Lx+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(_sage_const_1 /sz)*apply(Prod,[H for H in Hl]))).list()
+        Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(1/sz)*apply(Prod,[H for H in Hl]))).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not (Lx[i].is_zero() and Lh[i].is_zero())]).list()
     # Formating the constraints
@@ -12693,7 +12854,7 @@ def GeneralHypermatrixConstrainedUncorrelatedTuplesII(Hl, Xl, sz):
         VrbL=Set(LstX).list()
     [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
     # Initialization of the vector of variables
-    v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+    v=Matrix(SR, A.ncols(), 1, VrbL)
     # returning the solutions to the system obtained via Gauss-Jordan elimination
     return multiplicative_linear_solver(A, b, v, v)
 
@@ -12722,15 +12883,15 @@ def GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, A):
     - Edinah K. Gnang
     """
     # Initializing the order and the size
-    od = Hl[_sage_const_0 ].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
     # Constrained Orthogonalization procedure.
-    DltL=GeneralHypermatrixKroneckerDeltaL(od,Hl[_sage_const_0 ].n(_sage_const_1 ))
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,Hl[0].n(1))
     Dlt=sum(DltL)
     # Loop initializing the hypermartrix enrtry list 
     Lx=[]; Lh=[]
-    for t in range(Hl[_sage_const_0 ].n(_sage_const_1 )):
+    for t in range(Hl[0].n(1)):
         Lx=Lx+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lh=Lh+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])+(_sage_const_1 /Hl[_sage_const_0 ].n(_sage_const_1 ))*A)).list()
+        Lh=Lh+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])+(1/Hl[0].n(1))*A)).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not Lx[i].is_zero()]).list()
     # Formating the constraints
@@ -12743,7 +12904,7 @@ def GeneralHypermatrixPerturbedUncorrelatedTuples(Hl, Xl, A):
         VrbL=Set(LstX).list()
     [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
     # Initialization of the vector of variables
-    v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+    v=Matrix(SR, A.ncols(), 1, VrbL)
     # returning the solutions to the system obtained via Gauss-Jordan elimination
     return multiplicative_linear_solver(A, b, v, v)
 
@@ -12772,15 +12933,15 @@ def GeneralHypermatrixPerturbedUncorrelatedTuplesII(Hl, Xl, A, sz):
     - Edinah K. Gnang
     """
     # Initializing the order and the size
-    od = Hl[_sage_const_0 ].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
+    od = Hl[0].order(); dimL=[Hl[i].dimensions() for i in range(len(Hl))]
     # Constrained Orthogonalization procedure.
-    DltL=GeneralHypermatrixKroneckerDeltaL(od,Hl[_sage_const_0 ].n(_sage_const_1 ))
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,Hl[0].n(1))
     Dlt=sum(DltL)
     # Loop initializing the hypermartrix enrtry list 
     Lx=[]; Lh=[]
-    for t in range(Hl[_sage_const_0 ].n(_sage_const_1 )):
+    for t in range(Hl[0].n(1)):
         Lx=Lx+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lh=Lh+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])+(_sage_const_1 /sz)*A)).list()
+        Lh=Lh+((apply(HM, dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])+(1/sz)*A)).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not (Lx[i].is_zero() and Lh[i].is_zero())]).list()
     # Formating the constraints
@@ -12793,7 +12954,7 @@ def GeneralHypermatrixPerturbedUncorrelatedTuplesII(Hl, Xl, A, sz):
         VrbL=Set(LstX).list()
     [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
     # Initialization of the vector of variables
-    v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+    v=Matrix(SR, A.ncols(), 1, VrbL)
     # returning the solutions to the system obtained via Gauss-Jordan elimination
     return multiplicative_linear_solver(A, b, v, v) 
 
@@ -12821,11 +12982,11 @@ def TriangulationCompositionStringList(n, c):
 
     - Edinah K. Gnang
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return [c]
     else:
         gu = []
-        for i in range(_sage_const_1 ,n):
+        for i in range(1,n):
             gu = gu+[c+".elementwise_product(Prod("+g1+", "+g2+"))" for g1 in TriangulationCompositionStringList(i,c) for g2 in TriangulationCompositionStringList(n-i,c)]
         return gu
 
@@ -12852,13 +13013,107 @@ def Triangulations(A,Ha,n,sz):
 
     - Edinah K. Gnang
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return [A]
     else:
         gu = []
-        for i in range(_sage_const_1 ,n):
+        for i in range(1,n):
             gu = gu+[Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in Triangulations(A,Ha,i,sz) for g2 in Triangulations(A,Ha,n-i,sz)]
         return gu
+
+def TriangulationsII(A,Ha,n,sz):
+    """
+    Outputs a list of second order hypermatrices each of which have a single nonzero symbolic entry which
+    describes a triangulation of a regular polygon on n vertices. The input matrix is meant to be 
+    upper-triangular matrices. The difference with the implementaiton above is that we do not expand the
+    polynomials. This implementation is well suited for non commuting variables defined over free fields.
+
+     EXAMPLES:
+
+    ::
+
+        sage: sz=4
+        sage: A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+        sage: for i0 in range(1,sz):
+        ....:   for i1 in range(i0):
+        ....:       A[i0,i1]=0
+        sage: L=TriangulationsII(A,A,sz-1,sz)
+        sage: L[0]
+        [[0, 0, 0, a01*a03*a12*a13*a23], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    if n == 1:
+        return [A]
+    else:
+        gu = []
+        for i in range(1,n):
+            gu = gu+[Prod(g1,g2).elementwise_product(Ha) for g1 in TriangulationsII(A,Ha,i,sz) for g2 in TriangulationsII(A,Ha,n-i,sz)]
+        return gu
+
+def generate_triangulation_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which computes triangulation using non-commutative
+    variables. The script starts with a stricly upper-
+    triangular symbolic adjacency matrix whose non-
+    zero entries defined as free variables.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_triangulation_script(4)
+        sage: load('triangulation_4.sage')
+        sage: L[0].printHM()
+        [:, :]=
+        [                  0                   0                   0 a01*a12*a23*a13*a03]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: L[1].printHM()
+        [:, :]=
+        [                  0                   0                   0 a01*a12*a02*a23*a03]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: from subprocess import call
+        sage: call("rm triangulation_4.sage", shell=True)
+        0
+
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrices.
+    A=HM(sz,sz,'a')
+    for i in rg(sz):
+        for j in rg(sz):
+            if i >= j:
+                A[i,j]=0
+    Al=[HM(sz,sz,'a')[i,j] for i in rg(sz) for j in rg(sz) if i<j]
+    # Creating the file name string.
+    filename='triangulation_'+str(sz)+'.sage'
+    # Opening the file
+    f=open(filename,'w')
+    #f.write('# Loading the Hypermatrix Package\n')
+    #f.write("load('./Hypermatrix_Algebra_tst.sage')\n\n")
+    f.write('# Initializing the number of constraints and the number of variableas\n')
+    f.write('sz='+str(sz)+'\n\n')
+    f.write('# Initialization of the variables\n')
+    f.write("La=[HM(sz,sz,'a')[i,j] for i in rg(sz) for j in rg(sz) if i<j]\n")
+    f.write('# Initializing the free variables\n')
+    f.write('F=FreeAlgebra(QQ,len(La),La)\n')
+    f.write('F.<'+str(Al)[1:len(str(Al))-1]+'>=FreeAlgebra(QQ,len(La))\n\n')
+    f.write('# Initialization of the hypermatrices with symbolic variable entries which do not commute\n')
+    f.write('Ha=HM(sz,sz,'+str(A.list())+')\n')
+    f.write('L=TriangulationsII(Ha,Ha,sz-1,sz)')
+    # Closing the file
+    f.close()
 
 def TriangulationGraphsEdgeList(sz):
     """
@@ -12877,17 +13132,17 @@ def TriangulationGraphsEdgeList(sz):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix 
-    A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(_sage_const_2 ,sz,'kronecker'))
-    for i0 in range(_sage_const_1 ,sz):
+    A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,'one')-HM(2,sz,'kronecker'))
+    for i0 in range(1,sz):
         for i1 in range(i0):
-            A[i0,i1]=_sage_const_0 
+            A[i0,i1]=0
     # Computing the list of triangulations
-    L=Triangulations(A,A,sz-_sage_const_1 ,sz)
+    L=Triangulations(A,A,sz-1,sz)
     # Initializing the list which will store triangulations
     # as a list of edges  
     list_of_graphs=[]
     for h in L:
-        list_of_graphs.append((Set(h.list()).list())[_sage_const_1 ].operands())
+        list_of_graphs.append((Set(h.list()).list())[1].operands())
     return list_of_graphs
 
 def TriangulationGraphsAdjacencyMatrix(sz):
@@ -12917,10 +13172,10 @@ def TriangulationGraphsAdjacencyMatrix(sz):
     list_of_graphs=[]
     for l in L:
         Ha=HM(sz,sz,'a'); Ht=HM(sz,sz,'zero')
-        for i in range(_sage_const_1 ,sz):
+        for i in range(1,sz):
             for j in range(i):
                 if Ha[j,i] in l:
-                    Ht[j,i]=_sage_const_1 ; Ht[i,j]=_sage_const_1 
+                    Ht[j,i]=1; Ht[i,j]=1
         # Initialization of the result
         list_of_graphs.append(Matrix(SR,Ht.listHM()))
     return list_of_graphs
@@ -12955,10 +13210,10 @@ def TriangulationGraphsTriangleList(sz):
         for i in range(sz):
             for j in range(sz):
                 if Ha[i,j] not in l:
-                    Ht[i,j]=_sage_const_0 
+                    Ht[i,j]=0
         # Initialization of the result
         Hr=GeneralHypermatrixHadamardProduct(Prod(Ht,Ht),Ht)
-        list_of_graphs.append([f.operands() for f in Set(Hr.list()).difference(Set([_sage_const_0 ])).list()])
+        list_of_graphs.append([f.operands() for f in Set(Hr.list()).difference(Set([0])).list()])
     return list_of_graphs
 
 def TriangulationGraphsDualAdjacencyMatrixList(sz):
@@ -12983,11 +13238,11 @@ def TriangulationGraphsDualAdjacencyMatrixList(sz):
     list_of_graphs=[]
     for l in range(len(L)):
         # Initialization of the temporary adjacency matrix
-        TmpA = Matrix(SR,HM(sz-_sage_const_2 ,sz-_sage_const_2 ,'zero').listHM())
-        for i in range(_sage_const_1 ,len(L[l])):
+        TmpA = Matrix(SR,HM(sz-2,sz-2,'zero').listHM())
+        for i in range(1,len(L[l])):
             for j in range(i):
                 if not Set(L[l][i]).intersection(Set(L[l][j])).is_empty():
-                    TmpA[i,j]=_sage_const_1 ; TmpA[j,i]=_sage_const_1 
+                    TmpA[i,j]=1; TmpA[j,i]=1
         list_of_graphs.append([copy(TmpA),L2[l],L[l]]) 
     return list_of_graphs
 
@@ -13003,10 +13258,10 @@ def Tetrahedralizations(A,B,n,sz):
 
     ::
 
-        sage: sz=4; S=HM(sz,sz,sz,'zero') 
-        sage: for i in range(sz): 
+        sage: sz=4; S=HM(sz,sz,sz,'zero')
+        sage: for i in range(sz):
         ....:   for j in range(sz):
-        ....:       for k in range(sz):       
+        ....:       for k in range(sz):
         ....:           if i<j and j<k:
         ....:               S[i,j,k]=1; S[i,k,j]=1
         sage: A=HM(sz,sz,sz,'a').elementwise_product(S)
@@ -13017,12 +13272,12 @@ def Tetrahedralizations(A,B,n,sz):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return [A]
     else:
         gu = []
-        for i in range(_sage_const_1 ,n,_sage_const_2 ):
-            for j in range(_sage_const_1 ,n-i,_sage_const_2 ):
+        for i in range(1,n,2):
+            for j in range(1,n-i,2):
                 gu=gu+[B.elementwise_product(Prod(g1,g2,g3)).expand() for g1 in Tetrahedralizations(A,B,i,sz) for g2 in Tetrahedralizations(A,B,j,sz) for g3 in Tetrahedralizations(A,B,n-(i+j),sz)]
         return gu
 
@@ -13047,11 +13302,11 @@ def RandomTriangulation(A,Ha,n,sz):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if n == _sage_const_1 :
+    if n == 1:
         return [A]
     else:
         gu = []
-        j = RollLD([Ca(i)*Ca(n-i) for i in range(_sage_const_1 ,n+_sage_const_1 )])
+        j = RollLD([Ca(i)*Ca(n-i) for i in range(1,n+1)])
         return [Ha.elementwise_product(Prod(g1,g2)).expand() for g1 in RandomTriangulation(A,Ha,j,sz) for g2 in RandomTriangulation(A,Ha,n-j,sz)]
 
 def SecondOrderDFT(m,n):
@@ -13079,8 +13334,8 @@ def SecondOrderDFT(m,n):
     - To Do: 
     """
     # Initialization of the hypermatrices
-    Ha=HM(n,m,[exp( I*_sage_const_2 *pi*u*t/m) for t in range(m) for u in range(n)])
-    Hb=HM(m,n,[exp(-I*_sage_const_2 *pi*t*v/m) for v in range(n) for t in range(m)])
+    Ha=HM(n,m,[exp( I*2*pi*u*t/m) for t in range(m) for u in range(n)])
+    Hb=HM(m,n,[exp(-I*2*pi*t*v/m) for v in range(n) for t in range(m)])
     return [Ha, Hb]
 
 def SecondOrderDFT2(n):
@@ -13105,14 +13360,14 @@ def SecondOrderDFT2(n):
     - Edinah K. Gnang
     - To Do: 
     """
-    if n==_sage_const_2 :
+    if n==2:
         # Initialization of the hypermatrices
-        Ha=HM(n,n,[Matrix(SR,_sage_const_1 ,_sage_const_1 ,exp(I*_sage_const_2 *pi*u*t/n)) for t in range(n) for u in range(n)])
-        Hb=HM(n,n,[Matrix(SR,_sage_const_1 ,_sage_const_1 ,exp(I*_sage_const_2 *pi*u*t/n)) for t in range(n) for u in range(n)])
-    elif n>_sage_const_2 :
+        Ha=HM(n,n,[Matrix(SR,1,1,exp(I*2*pi*u*t/n)) for t in range(n) for u in range(n)])
+        Hb=HM(n,n,[Matrix(SR,1,1,exp(I*2*pi*u*t/n)) for t in range(n) for u in range(n)])
+    elif n>2:
         # Initialization of the hypermatrices
-        Ha=HM(n,n,[Matrix(SR,[[cos(_sage_const_2 *pi*u*t/n),-sin(_sage_const_2 *pi*u*t/n)],[ sin(_sage_const_2 *pi*u*t/n),cos(_sage_const_2 *pi*u*t/n)]]) for t in range(n) for u in range(n)])
-        Hb=HM(n,n,[Matrix(SR,[[cos(_sage_const_2 *pi*u*t/n), sin(_sage_const_2 *pi*u*t/n)],[-sin(_sage_const_2 *pi*u*t/n),cos(_sage_const_2 *pi*u*t/n)]]) for t in range(n) for u in range(n)])
+        Ha=HM(n,n,[Matrix(SR,[[cos(2*pi*u*t/n),-sin(2*pi*u*t/n)],[ sin(2*pi*u*t/n),cos(2*pi*u*t/n)]]) for t in range(n) for u in range(n)])
+        Hb=HM(n,n,[Matrix(SR,[[cos(2*pi*u*t/n), sin(2*pi*u*t/n)],[-sin(2*pi*u*t/n),cos(2*pi*u*t/n)]]) for t in range(n) for u in range(n)])
     return [Ha, Hb]
 
 def ThirdOrderDFT(m,n):
@@ -13146,9 +13401,9 @@ def ThirdOrderDFT(m,n):
     - To Do: 
     """
     # Initialization of the hypermatrices
-    Ha=HM(n, m, n, [exp(I*_sage_const_2 *pi*t*(u-w)**_sage_const_2 /m) for w in range(n) for t in range(m) for u in range(n)])
-    Hb=HM(n, n, m, [exp(I*_sage_const_2 *pi*t*(u-v)**_sage_const_2 /m) for t in range(m) for v in range(n) for u in range(n)])
-    Hc=HM(m, n, n, [exp(I*_sage_const_2 *pi*t*(v-w)**_sage_const_2 /m) for w in range(n) for v in range(n) for t in range(m)])
+    Ha=HM(n, m, n, [exp(I*2*pi*t*(u-w)^2/m) for w in range(n) for t in range(m) for u in range(n)])
+    Hb=HM(n, n, m, [exp(I*2*pi*t*(u-v)^2/m) for t in range(m) for v in range(n) for u in range(n)])
+    Hc=HM(m, n, n, [exp(I*2*pi*t*(v-w)^2/m) for w in range(n) for v in range(n) for t in range(m)])
     return [Ha, Hb, Hc]
 
 def ThirdOrderDFT2(n):
@@ -13213,9 +13468,9 @@ def ThirdOrderDFT2(n):
     - To Do: 
     """
     # Initialization of the hypermatrices
-    Ha=HM(n,n,n,[Matrix(SR,[[cos(_sage_const_2 *pi*t*(u-w)**_sage_const_2 /n), -sin(_sage_const_2 *pi*t*(u-w)**_sage_const_2 /n)], [sin(_sage_const_2 *pi*t*(u-w)**_sage_const_2 /n), cos(_sage_const_2 *pi*t*(u-w)**_sage_const_2 /n)]]) for w in range(n) for t in range(n) for u in range(n)])
-    Hb=HM(n,n,n,[Matrix(SR,[[cos(_sage_const_2 *pi*t*(u-v)**_sage_const_2 /n), -sin(_sage_const_2 *pi*t*(u-v)**_sage_const_2 /n)], [sin(_sage_const_2 *pi*t*(u-v)**_sage_const_2 /n), cos(_sage_const_2 *pi*t*(u-v)**_sage_const_2 /n)]]) for t in range(n) for v in range(n) for u in range(n)])
-    Hc=HM(n,n,n,[Matrix(SR,[[cos(_sage_const_2 *pi*t*(v-w)**_sage_const_2 /n), -sin(_sage_const_2 *pi*t*(v-w)**_sage_const_2 /n)], [sin(_sage_const_2 *pi*t*(v-w)**_sage_const_2 /n), cos(_sage_const_2 *pi*t*(v-w)**_sage_const_2 /n)]]) for w in range(n) for v in range(n) for t in range(n)])
+    Ha=HM(n,n,n,[Matrix(SR,[[cos(2*pi*t*(u-w)^2/n), -sin(2*pi*t*(u-w)^2/n)], [sin(2*pi*t*(u-w)^2/n), cos(2*pi*t*(u-w)^2/n)]]) for w in range(n) for t in range(n) for u in range(n)])
+    Hb=HM(n,n,n,[Matrix(SR,[[cos(2*pi*t*(u-v)^2/n), -sin(2*pi*t*(u-v)^2/n)], [sin(2*pi*t*(u-v)^2/n), cos(2*pi*t*(u-v)^2/n)]]) for t in range(n) for v in range(n) for u in range(n)])
+    Hc=HM(n,n,n,[Matrix(SR,[[cos(2*pi*t*(v-w)^2/n), -sin(2*pi*t*(v-w)^2/n)], [sin(2*pi*t*(v-w)^2/n), cos(2*pi*t*(v-w)^2/n)]]) for w in range(n) for v in range(n) for t in range(n)])
     return [Ha, Hb, Hc]
 
 def ThirdOrdercharpoly(A, c):
@@ -13247,30 +13502,30 @@ def ThirdOrdercharpoly(A, c):
     - Edinah K. Gnang
     """
     # Initialization of the list of powers
-    L=[]; Ls=[]; i=_sage_const_0 
-    while len(L) < _sage_const_1 +prod(A.dimensions()):
-        L=L+HypermatrixCayleyHamiltonList(A, _sage_const_2 *i+_sage_const_1 )
-        Ls=Ls+HypermatrixCayleyHamiltonStringList(_sage_const_2 *i+_sage_const_1 , c)
-        i=i+_sage_const_1 
+    L=[]; Ls=[]; i=0
+    while len(L) < 1+prod(A.dimensions()):
+        L=L+HypermatrixCayleyHamiltonList(A, 2*i+1)
+        Ls=Ls+HypermatrixCayleyHamiltonStringList(2*i+1, c)
+        i=i+1
     # Initialization of the boolean variables which assert the status of the search.
     Fnd=False
-    n=_sage_const_1 +prod(A.dimensions())
-    while (not Fnd) and n>_sage_const_1 :
+    n=1+prod(A.dimensions())
+    while (not Fnd) and n>1:
         # Initializing the index variables
         Indx = Set(range(len(L))).subsets(n)
         # Looping through all the subset of the appropriate size.
         for index in Indx:
             M=Matrix(SR, [L[i] for i in index]).transpose()
             #print 'Indexing set =', index
-            if M.rank()==n-_sage_const_1 :
+            if M.rank()==n-1:
                 Fnd=True
                 break
         # Initialization the result
-        if M.rank()==n-_sage_const_1 :
-            b=Matrix(SR, M.nrows(), _sage_const_1 , HM(M.nrows(), _sage_const_1 , 'zero').list())
-            x=Matrix(SR, M.ncols(), _sage_const_1 , [var('x'+str(i)) for i in range(M.ncols())])
-            return [linear_solver(M, b, x, x) ," + ".join([str(x[i,_sage_const_0 ])+'*'+Ls[index[i]] for i in range(M.ncols())])]
-        n=n-_sage_const_1 
+        if M.rank()==n-1:
+            b=Matrix(SR, M.nrows(), 1, HM(M.nrows(), 1, 'zero').list())
+            x=Matrix(SR, M.ncols(), 1, [var('x'+str(i)) for i in range(M.ncols())])
+            return [linear_solver(M, b, x, x) ," + ".join([str(x[i,0])+'*'+Ls[index[i]] for i in range(M.ncols())])]
+        n=n-1
     if Fnd==False:
         return []
  
@@ -13302,7 +13557,7 @@ def llsa(Ha):
     # Initialization of the list of Hypermatrices
     L=[]
     for i in range(Ha.order()):
-        dmt=copy(dm); dmt[Integer(mod(i+_sage_const_1 , Ha.order()))]=_sage_const_1 
+        dmt=copy(dm); dmt[Integer(mod(i+1, Ha.order()))]=1
         L.append(HM(apply(HypermatrixGenerate, dmt+['x'+str(i)+'y'])))
     # Initializing the constraints
     Lh=apply(GeneralHypermatrixLogProduct, L).list(); Rh=Ha.list()
@@ -13316,7 +13571,7 @@ def llsa(Ha):
     # Initializing the least square constraints
     A=Atmp.transpose()*Atmp; b=multiplicative_matrix_product(Atmp.transpose(),btmp)
     # Solving the least square equations
-    Mx=Matrix(SR,A.ncols(),_sage_const_1 ,VrbLst)
+    Mx=Matrix(SR,A.ncols(),1,VrbLst)
     Sln=multiplicative_least_square_linear_solver(A.transpose()*A, multiplicative_matrix_product(A.transpose(),b), Mx, Mx)
     return [[Sln]+L, multiplicative_gauss_jordan_eliminationII(A.transpose()*A, multiplicative_matrix_product(A.transpose(),b))] 
 
@@ -13344,7 +13599,7 @@ def LogarithmicRankOneApproximation(Ha):
     # Initialization of the list of Hypermatrices
     L=[]
     for i in range(Ha.order()):
-        dmt=copy(dm); dmt[Integer(mod(i+_sage_const_1 , Ha.order()))]=_sage_const_1 
+        dmt=copy(dm); dmt[Integer(mod(i+1, Ha.order()))]=1
         L.append(HM(apply(HypermatrixGenerate, dmt+['x'+str(i)+'y'])))
     # Initializing the constraints
     Lh=apply(GeneralHypermatrixLogProduct, L).list(); Rh=Ha.list()
@@ -13356,7 +13611,7 @@ def LogarithmicRankOneApproximation(Ha):
     # Formatting the constraints
     [A, b]=ConstraintFormatorII(CnstrLst, VrbLst)
     # Solving the least square equations
-    Mx=Matrix(SR,A.ncols(),_sage_const_1 ,VrbLst)
+    Mx=Matrix(SR,A.ncols(),1,VrbLst)
     #Sln=multiplicative_linear_solver(A, b, Mx, Mx)
     Sln=multiplicative_least_square_linear_solver(A.transpose()*A, multiplicative_matrix_product(A.transpose(),b), Mx, Mx)
     #return [[Sln]+L, multiplicative_gauss_jordan_eliminationII(A,b)] 
@@ -13406,27 +13661,27 @@ def UncorrelatedSideLength2Triple(c1,c2,c3):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrices.
-    Ha=HM(_sage_const_2 ,_sage_const_2 ,_sage_const_2 ,c1); Hb=HM(_sage_const_2 ,_sage_const_2 ,_sage_const_2 ,c2); Hc=HM(_sage_const_2 ,_sage_const_2 ,_sage_const_2 ,c3)
+    Ha=HM(2,2,2,c1); Hb=HM(2,2,2,c2); Hc=HM(2,2,2,c3)
     # Initialization fo the list of variables.
     VrbLst=Ha.list()+Hb.list()+Hc.list()
     # Initialization of the first list of constraints.
-    CnstrLst1=[Ha[i,_sage_const_0 ,k]+Hb[i,j,_sage_const_0 ]+Hc[_sage_const_0 ,j,k]-Ha[i,_sage_const_1 ,k]-Hb[i,j,_sage_const_1 ]-Hc[_sage_const_1 ,j,k]==-_sage_const_1  for i in range(_sage_const_2 ) for j in range(_sage_const_2 ) for k in range(_sage_const_2 ) if (i!=j or j!=k or i!=k)]
+    CnstrLst1=[Ha[i,0,k]+Hb[i,j,0]+Hc[0,j,k]-Ha[i,1,k]-Hb[i,j,1]-Hc[1,j,k]==-1 for i in range(2) for j in range(2) for k in range(2) if (i!=j or j!=k or i!=k)]
     # Initialization of the second list of constraints.
-    CnstrLst2=[Ha[i,_sage_const_1 ,k]+Hb[i,j,_sage_const_1 ]+Hc[_sage_const_1 ,j,k]-Ha[i,_sage_const_0 ,k]-Hb[i,j,_sage_const_0 ]-Hc[_sage_const_0 ,j,k]==-_sage_const_1  for i in range(_sage_const_2 ) for j in range(_sage_const_2 ) for k in range(_sage_const_2 ) if (i!=j or j!=k or i!=k)]
+    CnstrLst2=[Ha[i,1,k]+Hb[i,j,1]+Hc[1,j,k]-Ha[i,0,k]-Hb[i,j,0]-Hc[0,j,k]==-1 for i in range(2) for j in range(2) for k in range(2) if (i!=j or j!=k or i!=k)]
     # Formating the first set of constraints.
     [A1,b1]=ConstraintFormatorII(CnstrLst1, VrbLst)
-    Mx1=Matrix(SR,A1.ncols(),_sage_const_1 ,VrbLst); Sln1=multiplicative_linear_solver(A1, b1, Mx1, Mx1)
+    Mx1=Matrix(SR,A1.ncols(),1,VrbLst); Sln1=multiplicative_linear_solver(A1, b1, Mx1, Mx1)
     # Formating the second set of constraints.
     [A2,b2]=ConstraintFormatorII(CnstrLst2, VrbLst)
-    Mx2=Matrix(SR,A2.ncols(),_sage_const_1 ,VrbLst); Sln2=multiplicative_linear_solver(A2, b2, Mx2, Mx2)
+    Mx2=Matrix(SR,A2.ncols(),1,VrbLst); Sln2=multiplicative_linear_solver(A2, b2, Mx2, Mx2)
     # Initializing the product
     Htmp=Prod(Ha,Hb,Hc)
     # Initializing the Kroenker delta
-    Kdlt=HM(_sage_const_3 ,_sage_const_2 ,'kronecker')
-    CnstrLst3=[Htmp[i,j,k]==Kdlt[i,j,k] for i in range(_sage_const_2 ) for j in range(_sage_const_2 ) for k in range(_sage_const_2 )]
+    Kdlt=HM(3,2,'kronecker')
+    CnstrLst3=[Htmp[i,j,k]==Kdlt[i,j,k] for i in range(2) for j in range(2) for k in range(2)]
     # Formating the last list of constraints.
     [A3, b3]=ConstraintFormatorII(CnstrLst3, Hc.list())
-    Mx3=Matrix(SR,A3.ncols(),_sage_const_1 ,Hc.list()); Sln3=linear_solver(A3, b3, Mx3, Mx3)
+    Mx3=Matrix(SR,A3.ncols(),1,Hc.list()); Sln3=linear_solver(A3, b3, Mx3, Mx3)
     return [Sln1, Sln2, Sln3]
 
 def GeneralHypermatrixTransform(Hl, X):
@@ -13437,34 +13692,33 @@ def GeneralHypermatrixTransform(Hl, X):
 
     ::
 
-        sage: t=var('t'); Q=HM(2,2,[cos(t),sin(t),-sin(t), cos(t)])
-        sage: Y=GeneralHypermatrixTransform([Q.transpose(),Q], HM(2,1,'x')); Y.canonicalize_radical()
-        [[-x00*cos(t) + x10*sin(t)], [x10*cos(t) + x00*sin(t)]]
+        sage: sz=2; t=var('t'); Q=HM(sz,sz,[cos(t),sin(t),-sin(t), cos(t)])
+        sage: Y=GeneralHypermatrixTransform([Q.transpose(),Q], HM(2,1,var_list('x',sz))); Y.canonicalize_radical()
+        [[-x0*cos(t) + x1*sin(t)], [x1*cos(t) + x0*sin(t)]]
         sage: GeneralHypermatrixTransform([Q.transpose(),Q], Y).canonicalize_radical()
-        [[(cos(t)^2 + sin(t)^2)*x00], [(cos(t)^2 + sin(t)^2)*x10]]
-        sage: x,y=var('x,y'); A=HM(2,2,'a')
-        sage: GeneralHypermatrixTransform([A.transpose(),A], HM(2,1,[x,y])).canonicalize_radical()
-        [[a00*x + a01*y], [a10*x + a11*y]]
-        sage: x,y,a00,a10,a01,a11=var('x,y,a00,a10,a01,a11')
-        sage: P0=HM(2,1,[x,y]); A=HM(2,2,[a00, a10, a01, a11]); B=(a00*a11-a01*a10)^(-1)*HM(2,2,[a11, -a10, -a01, a00])
+        [[(cos(t)^2 + sin(t)^2)*x0], [(cos(t)^2 + sin(t)^2)*x1]]
+        sage: sz=2; A=HM(2,2,'a')
+        sage: GeneralHypermatrixTransform([A.transpose(),A], HM(2,1,var_list('x',sz))).canonicalize_radical()
+        [[a00*x0 + a01*x1], [a10*x0 + a11*x1]]
+        sage: sz=2; P0=HM(sz,1,var_list('x',sz)); A=HM(sz,sz,'a'); B=i2x2(A)
         sage: P1=GeneralHypermatrixTransform([A,B],P0).canonicalize_radical()
         sage: sum(f^2 for f in P1.list()).canonicalize_radical()
-        x^2 + y^2
+        ix0^2 + x1^2
 
 
     AUTHORS:
     - Edinah K. Gnang
     """
     # Initializing the order and the size
-    od = Hl[_sage_const_0 ].order(); sz = Hl[_sage_const_0 ].n(_sage_const_0 )
+    od = Hl[0].order(); sz = Hl[0].n(0)
     # Constrained Orthogonalization procedure.
     DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
     Dlt=sum(DltL)
     # Loop initializing the hypermartrix enrtries
     Ly=[]
     for t in range(sz):
-        Ly.append((apply(ProdB,[X.transpose(i) for i in range(od-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 )]+[apply(ProdB,[H for H in Hl]+[DltL[t]])])).list()[_sage_const_0 ]**(_sage_const_1 /od))
-    return apply(HM,[sz]+[_sage_const_1  for i in range(od-_sage_const_1 )]+[Ly]) 
+        Ly.append((apply(ProdB,[X.transpose(i) for i in range(od-1,-1,-1)]+[apply(ProdB,[H for H in Hl]+[DltL[t]])])).list()[0]^(1/od))
+    return apply(HM,[sz]+[1 for i in range(od-1)]+[Ly]) 
 
 def weighted_hypermatrix_minor(A):
     """
@@ -13480,28 +13734,28 @@ def weighted_hypermatrix_minor(A):
          [[1/2*a00, 0, a02], [0, 0, 0], [a20, 0, 1/2*a22]],
          [[1/2*a00, a01, 0], [a10, 1/2*a11, 0], [0, 0, 0]]]
         sage: sum(L)
-        [[a00, a01, a02], [a10, a11, a12], [a20, a21, a22]] 
+        [[a00, a01, a02], [a10, a11, a12], [a20, a21, a22]]
 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
     # Checking that the matrix is square
-    if A.is_cubical() and A.order()==_sage_const_2  and A.n(_sage_const_0 )>_sage_const_2 :
+    if A.is_cubical() and A.order()==2 and A.n(0)>2:
         # Initialization of the size parameter
-        sz=A.n(_sage_const_0 )
+        sz=A.n(0)
         # Initialization of the Kronecker delta hypermatrices
-        Id=HM(_sage_const_2 ,sz,'kronecker')
+        Id=HM(2,sz,'kronecker')
         # Initialization of the list
-        L=[HM(sz,_sage_const_1 ,[Id[i,t] for i in range(sz)]) for t in range(sz)]
+        L=[HM(sz,1,[Id[i,t] for i in range(sz)]) for t in range(sz)]
         # Initialization of the list of matrices
         MtrL=[]
         for t in range(sz):
-            MtrL.append((sz-_sage_const_2 )**(-_sage_const_1 )*(Prod(sum([L[i] for i in range(sz) if i!=t]),sum([L[i] for i in range(sz) if i!=t]).transpose())-sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))+(sz-_sage_const_1 )**(-_sage_const_1 )*sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))
+            MtrL.append((sz-2)^(-1)*(Prod(sum([L[i] for i in range(sz) if i!=t]),sum([L[i] for i in range(sz) if i!=t]).transpose())-sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))+(sz-1)^(-1)*sum([Prod(L[i],L[i].transpose()) for i in range(sz) if i!=t]))
         return [A.elementwise_product(MtrL[i]) for i in range(sz)]
-    elif A.is_cubical() and A.order()==_sage_const_3  and A.n(_sage_const_0 )>_sage_const_3 :
+    elif A.is_cubical() and A.order()==3 and A.n(0)>3:
         # Initialization of the size parameter
-        sz=A.n(_sage_const_0 )
+        sz=A.n(0)
         # Initialization of the list
         L=[]
         for t in range(sz):
@@ -13512,11 +13766,11 @@ def weighted_hypermatrix_minor(A):
                     for k in range(sz):
                         if i!=t and j!=t and k!=t:
                             if i==j and j==k:
-                                Tp[i,j,k]=A[i,j,k]/(sz-_sage_const_1 )
+                                Tp[i,j,k]=A[i,j,k]/(sz-1)
                             if (i==j and j!=k) or (i==k and i!=j) or (j==k and i!=k):
-                                Tp[i,j,k]=A[i,j,k]/(sz-_sage_const_2 )
+                                Tp[i,j,k]=A[i,j,k]/(sz-2)
                             elif i!=j and i!=k and j!=k:
-                                Tp[i,j,k]=A[i,j,k]/(sz-_sage_const_3 )
+                                Tp[i,j,k]=A[i,j,k]/(sz-3)
             L.append(Tp.copy())
         return L
     else:
@@ -13550,7 +13804,7 @@ def SecondOrderCharpolyI(A, U, mu, nu):
     - To Do: 
     """
     # Checking that the matrix is square and that mu and nu are diagonal matrices
-    if A.is_cubical() and A.order()==_sage_const_2  and (mu.elementwise_exponent(_sage_const_2 )-Prod(mu.transpose(),mu)).is_zero() and (nu.elementwise_exponent(_sage_const_2 )-Prod(nu.transpose(),nu)).is_zero():
+    if A.is_cubical() and A.order()==2 and (mu.elementwise_exponent(2)-Prod(mu.transpose(),mu)).is_zero() and (nu.elementwise_exponent(2)-Prod(nu.transpose(),nu)).is_zero():
         # Initialization of the hypermatrix V
         V=U.inverse().transpose()
         return [Prod(Prod(U,mu),Prod(V,nu).transpose()), (A-Prod(Prod(U,mu),Prod(V,nu).transpose())).det()]
@@ -13581,16 +13835,16 @@ def SecondOrderCharpolyII(A, U, Dg):
     - To Do: 
     """
     # Checking that the matrix is square and that mu and nu are diagonal matrices
-    if A.is_cubical() and A.order() == _sage_const_2  and (Dg.elementwise_exponent(_sage_const_2 )-Prod(Dg.transpose(),Dg)).is_zero():
+    if A.is_cubical() and A.order() == 2 and (Dg.elementwise_exponent(2)-Prod(Dg.transpose(),Dg)).is_zero():
         # Initialization of the hypermatrix V
         V=U.inverse().transpose()
         # Initialization of the Kronecker delta list
-        L=GeneralHypermatrixKroneckerDeltaL(_sage_const_2 ,A.n(_sage_const_0 ))
+        L=GeneralHypermatrixKroneckerDeltaL(2,A.n(0))
         # Initializing the equations
-        Eq=[(A-ProdB(U,Prod(Dg,V.transpose()),L[i])).det()==_sage_const_0  for i in range(A.n(_sage_const_0 ))]
+        Eq=[(A-ProdB(U,Prod(Dg,V.transpose()),L[i])).det()==0 for i in range(A.n(0))]
         # Initializing the list of equations
-        Sln=solve(Eq, [Dg[i,i] for i in range(Dg.n(_sage_const_0 ))])[_sage_const_0 ]
-        return [(A-ProdB(U,Prod(Dg,V.transpose()),L[i])).det() for i in range(A.n(_sage_const_0 ))]+[(A-Prod(U,Prod(Dg,V.transpose()))).det().subs(Sln)]
+        Sln=solve(Eq, [Dg[i,i] for i in range(Dg.n(0))])[0]
+        return [(A-ProdB(U,Prod(Dg,V.transpose()),L[i])).det() for i in range(A.n(0))]+[(A-Prod(U,Prod(Dg,V.transpose()))).det().subs(Sln)]
     else:
         raise ValueError, "Not supported for the input hypermatrices."    
 
@@ -13668,9 +13922,9 @@ def GeneralUncorrelatedComposition(Lu, La, Lf):
     - Edinah K. Gnang
     """
     # Initializing the order paramter
-    od=Lu[_sage_const_0 ].order()
+    od=Lu[0].order()
     # Initializing the size parameter
-    sz=Lu[_sage_const_0 ].n(_sage_const_0 )
+    sz=Lu[0].n(0)
     # Initializing the list of hypermatrices
     DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
     # We seek to solve for Hu,Hv,Hw for input hypermatrices Ha,Hb,Hc, He,Hf,Hg
@@ -13690,7 +13944,7 @@ def GeneralUncorrelatedComposition(Lu, La, Lf):
     # Formating the constraints
     [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
     # Initialization of the vector of variables
-    v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+    v=Matrix(SR, A.ncols(), 1, VrbL)
     # returning the solutions to the system obtained via Gauss-Jordan elimination
     return multiplicative_linear_solver(A, b, v, v)
 
@@ -13717,14 +13971,14 @@ def ThirdOrdeCharpolyI(A, Mu, Mv, Mw):
     - To Do: 
     """
     # Checking that the matrix is square and that mu and nu are diagonal matrices
-    if A.is_cubical() and A.order() == _sage_const_3  and A.n(_sage_const_0 )==_sage_const_2 :
+    if A.is_cubical() and A.order() == 3 and A.n(0)==2:
         # Initializing the hypermatrix B
-        B=HM(A.n(_sage_const_0 ),A.n(_sage_const_1 ),A.n(_sage_const_2 ),'zero')
-        for i in range(A.n(_sage_const_0 )):
-            for j in range(A.n(_sage_const_1 )):
-                for k in range(A.n(_sage_const_2 )):
+        B=HM(A.n(0),A.n(1),A.n(2),'zero')
+        for i in range(A.n(0)):
+            for j in range(A.n(1)):
+                for k in range(A.n(2)):
                     if i==j and j==k:
-                        B[i,j,k]=A[i,j,k]-(Mu[_sage_const_0 ,i]*Mv[_sage_const_0 ,i]*Mw[_sage_const_0 ,i])**_sage_const_2 
+                        B[i,j,k]=A[i,j,k]-(Mu[0,i]*Mv[0,i]*Mw[0,i])^2
                     else:
                         B[i,j,k]=A[i,j,k]
         return B.det()
@@ -13762,9 +14016,9 @@ def ThirdOrdeCharpolyII(A, U, V, W, Du, Dv, Dw):
     - To Do: 
     """
     # Checking that the matrix is square and that mu and nu are diagonal matrices
-    if A.order()==_sage_const_3  and A.n(_sage_const_0 )==_sage_const_2  and (Prod(Du.transpose(),Du.transpose(_sage_const_2 ),Du)-Du.elementwise_exponent(_sage_const_3 )).is_zero() and (Prod(Dv.transpose(),Dv.transpose(_sage_const_2 ),Dv)-Dv.elementwise_exponent(_sage_const_3 )).is_zero() and (Prod(Dw.transpose(),Dw.transpose(_sage_const_2 ),Dw)-Dw.elementwise_exponent(_sage_const_3 )).is_zero():
-        DltL=GeneralHypermatrixKroneckerDeltaL(A.order(),A.n(_sage_const_0 ))
-        return [(A-ProdB(Prod(U,Du,Du.transpose()), Prod(Dv,V,Dv.transpose(_sage_const_2 )), Prod(Dw.transpose(),Dw.transpose(_sage_const_2 ),W), DltL[t])).det() for t in range(_sage_const_2 )]
+    if A.order()==3 and A.n(0)==2 and (Prod(Du.transpose(),Du.transpose(2),Du)-Du.elementwise_exponent(3)).is_zero() and (Prod(Dv.transpose(),Dv.transpose(2),Dv)-Dv.elementwise_exponent(3)).is_zero() and (Prod(Dw.transpose(),Dw.transpose(2),Dw)-Dw.elementwise_exponent(3)).is_zero():
+        DltL=GeneralHypermatrixKroneckerDeltaL(A.order(),A.n(0))
+        return [(A-ProdB(Prod(U,Du,Du.transpose()), Prod(Dv,V,Dv.transpose(2)), Prod(Dw.transpose(),Dw.transpose(2),W), DltL[t])).det() for t in range(2)]
     else:
         raise ValueError, "Not supported for the input hypermatrices."    
 
@@ -13795,18 +14049,18 @@ def Additive_Determinant_Matrix(f, g, t):
     # Initialization of the size parameter
     sz0=f.degree(t); sz1=g.degree(t)
     # Initialization of the companion matrices
-    A=CompanionHM(f,t)-t*HM(_sage_const_2 ,sz0,'kronecker')
-    B=CompanionHM(g,t)-t*HM(_sage_const_2 ,sz1,'kronecker')
-    Tp=HM(sz1,sz0,'zero');Tp[_sage_const_0 ,sz0-_sage_const_1 ]=_sage_const_1 
+    A=CompanionHM(f,t)-t*HM(2,sz0,'kronecker')
+    B=CompanionHM(g,t)-t*HM(2,sz1,'kronecker')
+    Tp=HM(sz1,sz0,'zero');Tp[0,sz0-1]=1
     # Initialization of the first row
-    M00=HM(_sage_const_1 ,_sage_const_1 ,'one'); M01=HM(_sage_const_1 ,sz0,'zero'); M02=HM(_sage_const_1 ,sz1,[B[_sage_const_0 ,j] for j in range(B.n(_sage_const_1 ))])
+    M00=HM(1,1,'one'); M01=HM(1,sz0,'zero'); M02=HM(1,sz1,[B[0,j] for j in range(B.n(1))])
     # Performing the row substitution
-    for j in range(B.n(_sage_const_1 )):
-        B[_sage_const_0 ,j]=HM(_sage_const_2 ,sz1,'kronecker')[sz1-_sage_const_1 ,j]
+    for j in range(B.n(1)):
+        B[0,j]=HM(2,sz1,'kronecker')[sz1-1,j]
     # Initialization of the  second row
-    M10=HM(sz0,_sage_const_1 ,[HM(_sage_const_2 ,sz0,'kronecker')[i,_sage_const_0 ] for i in range(sz0)]); M11=A; M12=HM(sz0,sz1,'zero')
+    M10=HM(sz0,1,[HM(2,sz0,'kronecker')[i,0] for i in range(sz0)]); M11=A; M12=HM(sz0,sz1,'zero')
     # Initialization of the last row
-    M20=HM(sz1,_sage_const_1 ,'zero'); M21=Tp.copy(); M22=B
+    M20=HM(sz1,1,'zero'); M21=Tp.copy(); M22=B
     # Initialization of the hypermatrix
     return HM([[M00,M01,M02],[M10,M11,M12],[M20,M21,M22]])
 
@@ -13833,16 +14087,16 @@ def GeneralHypermatrixRankOnePartition(B, Hl, Xl):
     - Edinah K. Gnang
     """
     # Initialization of the primitive root of unity
-    w=exp(I*_sage_const_2 *pi/Xl[_sage_const_0 ].n(_sage_const_1 ))
+    w=exp(I*2*pi/Xl[0].n(1))
     # Initializing the order
-    od=Xl[_sage_const_0 ].order()
+    od=Xl[0].order()
     # Initialization the Kronecker slice selectors
-    DltL=GeneralHypermatrixKroneckerDeltaL(od, Xl[_sage_const_0 ].n(_sage_const_1 ))
+    DltL=GeneralHypermatrixKroneckerDeltaL(od, Xl[0].n(1))
     # Loop initializing the hypermartrix enrtry lists associaed with constraints 
     Lx=[]; Lh=[]
-    for t in range(Xl[_sage_const_0 ].n(_sage_const_1 )):
+    for t in range(Xl[0].n(1)):
         Lx=Lx+apply(ProdB,[X for X in Xl]+[DltL[t]]).list()
-        Lh=Lh+((_sage_const_1 /Xl[_sage_const_0 ].n(_sage_const_1 ))*sum([B]+[Hl[j]*w**(t*(j+_sage_const_1 )) for j in range(len(Hl))])).list()
+        Lh=Lh+((1/Xl[0].n(1))*sum([B]+[Hl[j]*w^(t*(j+1)) for j in range(len(Hl))])).list()
     # Initialization of the equation
     EqL=[Lx[i]==Lh[i] for i in range(len(Lx))]
     # Formating the constraints
@@ -13855,11 +14109,11 @@ def GeneralHypermatrixRankOnePartition(B, Hl, Xl):
         VrbL=Set(LstX).list()
     [A,b]=multiplicativeConstraintFormator(EqL, VrbL)
     # Initialization of the vector of variables
-    v=Matrix(SR, A.ncols(), _sage_const_1 , VrbL)
+    v=Matrix(SR, A.ncols(), 1, VrbL)
     # computing the solutions to the system obtained via Gauss-Jordan elimination
     Sln=multiplicative_linear_solver(A, b, v, v)
     # returning the polynomial conditions eliminating the variables
-    return [f.rhs().numerator()-f.rhs().denominator() for f in Sln if f.lhs()==_sage_const_1 ]
+    return [f.rhs().numerator()-f.rhs().denominator() for f in Sln if f.lhs()==1]
 
 def Form2TotallySymmetricHypermatrix(f, od, Vrbls):
     """
@@ -13892,11 +14146,11 @@ def Form2TotallySymmetricHypermatrix(f, od, Vrbls):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry=[Integer(mod(i,l[_sage_const_0 ]))]
-        sm=Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm=sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry=[Integer(mod(i,l[0]))]
+        sm=Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=f.diff([Vrbls[v] for v in entry])/factorial(od)
     return Rh
 
@@ -13951,7 +14205,7 @@ def Form2Hypermatrix(f, Vrbls):
     - Edinah K. Gnang
     """
     # Initialization of the size and order parameters
-    od=len(Vrbls); sz=_sage_const_1 +max([f.degree(v) for v in Vrbls])
+    od=len(Vrbls); sz=1+max([f.degree(v) for v in Vrbls])
     # Initialization of the list 
     l=[sz for i in range(od)]
     # Initialization of the hypermatrix 
@@ -13959,16 +14213,16 @@ def Form2Hypermatrix(f, Vrbls):
     # Main loop performing the transposition of the entries
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry=[Integer(mod(i,l[_sage_const_0 ]))]
-        sm=Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm=sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry=[Integer(mod(i,l[0]))]
+        sm=Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
         Tmplst=[]
         for z in range(len(entry)):
             Tmplst=Tmplst+[Vrbls[z],entry[z]]
         #print [factorial(Tmplst[b]) for b in range(1,len(Tmplst),2)]
-        Rh[tuple(entry)]=f.diff(*Tmplst).subs([v==_sage_const_0  for v in Vrbls])/prod(factorial(Tmplst[b]) for b in range(_sage_const_1 ,len(Tmplst),_sage_const_2 ))
+        Rh[tuple(entry)]=f.diff(*Tmplst).subs([v==0 for v in Vrbls])/prod(factorial(Tmplst[b]) for b in range(1,len(Tmplst),2))
     return Rh
 
 def diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
@@ -14086,87 +14340,87 @@ def diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
     - Edinah K. Gnang
     - To Do:
     """
-    if Cf1.n(_sage_const_1 )==Vx.n(_sage_const_2 ) and Vx.n(_sage_const_2 )==Cf2.n(_sage_const_0 ) and Cf1.n(_sage_const_2 )==Cf2.n(_sage_const_2 ) and _sage_const_1 ==Vx.n(_sage_const_0 ) and Vx.n(_sage_const_0 )==Vx.n(_sage_const_1 ):
+    if Cf1.n(1)==Vx.n(2) and Vx.n(2)==Cf2.n(0) and Cf1.n(2)==Cf2.n(2) and 1==Vx.n(0) and Vx.n(0)==Vx.n(1):
         # Initialization of the variable index
-        vindx=_sage_const_0 
+        vindx=0
         # Initializing copies of the input hypermatrices.
         A=Cf1.copy(); X=Vx.copy(); B=Cf2.copy(); C=rs.copy()
         # Initialization of the row and column index
-        i=_sage_const_0 ; j=_sage_const_0 
-        while i < A.n(_sage_const_2 ) and j < A.n(_sage_const_1 ):
-            while (HM(_sage_const_1 ,_sage_const_1 ,A.n(_sage_const_2 )-i,[A[_sage_const_0 ,j,i0] for i0 in range(i,A.n(_sage_const_2 ))]).is_zero() and j < A.n(_sage_const_1 )-_sage_const_1 ) or (HM(_sage_const_1 ,_sage_const_1 ,B.n(_sage_const_0 )-i,[B[j,_sage_const_0 ,i0] for i0 in range(i,B.n(_sage_const_0 ))]).is_zero() and j < B.n(_sage_const_0 )-_sage_const_1 ):
+        i=0; j=0
+        while i < A.n(2) and j < A.n(1):
+            while (HM(1,1,A.n(2)-i,[A[0,j,i0] for i0 in range(i,A.n(2))]).is_zero() and j < A.n(1)-1) or (HM(1,1,B.n(0)-i,[B[j,0,i0] for i0 in range(i,B.n(0))]).is_zero() and j < B.n(0)-1):
                 # Incrementing the column index
-                j=j+_sage_const_1 
-            if (HM(_sage_const_1 ,A.n(_sage_const_1 ),A.n(_sage_const_2 )-i,[A[_sage_const_0 ,j0,i0] for i0 in range(i,A.n(_sage_const_2 )) for j0 in range(A.n(_sage_const_1 ))]).is_zero()==False) and (HM(B.n(_sage_const_0 ),_sage_const_1 ,B.n(_sage_const_2 )-i,[B[j0,_sage_const_0 ,i0] for i0 in range(i,B.n(_sage_const_2 )) for j0 in range(B.n(_sage_const_0 ))]).is_zero()==False) and j < A.n(_sage_const_1 ):
-                while A[_sage_const_0 ,j,i].is_zero() or B[j,_sage_const_0 ,i].is_zero():
+                j=j+1
+            if (HM(1,A.n(1),A.n(2)-i,[A[0,j0,i0] for i0 in range(i,A.n(2)) for j0 in range(A.n(1))]).is_zero()==False) and (HM(B.n(0),1,B.n(2)-i,[B[j0,0,i0] for i0 in range(i,B.n(2)) for j0 in range(B.n(0))]).is_zero()==False) and j < A.n(1):
+                while A[0,j,i].is_zero() or B[j,0,i].is_zero():
                     # Initialization of the matrices
-                    Ta=HM(A.n(_sage_const_2 )-i,A.n(_sage_const_1 ),[A[_sage_const_0 ,j0,i0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_2 ))])
-                    Tb=HM(B.n(_sage_const_2 )-i,B.n(_sage_const_0 ),[B[j0,_sage_const_0 ,i0] for j0 in range(B.n(_sage_const_0 )) for i0 in range(i,B.n(_sage_const_2 ))])
-                    Tc=HM(C.n(_sage_const_2 )-i,_sage_const_1 ,[C[_sage_const_0 ,_sage_const_0 ,i0] for i0 in range(i,C.n(_sage_const_2 ))])
+                    Ta=HM(A.n(2)-i,A.n(1),[A[0,j0,i0] for j0 in range(A.n(1)) for i0 in range(i,A.n(2))])
+                    Tb=HM(B.n(2)-i,B.n(0),[B[j0,0,i0] for j0 in range(B.n(0)) for i0 in range(i,B.n(2))])
+                    Tc=HM(C.n(2)-i,1,[C[0,0,i0] for i0 in range(i,C.n(2))])
                     # Inflating the entries of the identity matrix
-                    idta=HM(_sage_const_2 , A[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ),'kronecker')
-                    Ida=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                    idtb=HM(_sage_const_2 , B[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ),'kronecker')
-                    Idb=HM(_sage_const_2 , Tb.n(_sage_const_0 ), 'kronecker')
-                    for u in range(Ta.n(_sage_const_0 )):
-                        for v in range(Ta.n(_sage_const_1 )):
+                    idta=HM(2, A[0,0,0].n(0),'kronecker')
+                    Ida=HM(2, Ta.n(0), 'kronecker')
+                    idtb=HM(2, B[0,0,0].n(0),'kronecker')
+                    Idb=HM(2, Tb.n(0), 'kronecker')
+                    for u in range(Ta.n(0)):
+                        for v in range(Ta.n(1)):
                             Ida[u,v]=idta*Ida[u,v]
-                    for u in range(Tb.n(_sage_const_0 )):
-                        for v in range(Tb.n(_sage_const_1 )):
+                    for u in range(Tb.n(0)):
+                        for v in range(Tb.n(1)):
                             Idb[u,v]=idtb*Idb[u,v]
                     # Initialization of the cyclic shift permutation matrix
-                    Pa=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Ida[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Ida[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
-                    Pb=sum([HM(Tb.n(_sage_const_0 ),_sage_const_1 ,[Idb[i0,k] for i0 in range(Tb.n(_sage_const_0 ))])*HM(_sage_const_1 ,Tb.n(_sage_const_0 ),[Idb[Integer(mod(k+_sage_const_1 ,Tb.n(_sage_const_0 ))),j0] for j0 in range(Tb.n(_sage_const_0 ))]) for k in range(Tb.n(_sage_const_0 ))])
+                    Pa=sum([HM(Ta.n(0),1,[Ida[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Ida[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                    Pb=sum([HM(Tb.n(0),1,[Idb[i0,k] for i0 in range(Tb.n(0))])*HM(1,Tb.n(0),[Idb[Integer(mod(k+1,Tb.n(0))),j0] for j0 in range(Tb.n(0))]) for k in range(Tb.n(0))])
                     # Performing the shift
                     Ta=Pa*Ta; Tb=Pb*Tb; Tc=Pa*Tc
-                    for i0 in range(Ta.n(_sage_const_0 )):
-                        for j0 in range(Ta.n(_sage_const_1 )):
-                            A[_sage_const_0 ,j0,i+i0]=Ta[i0,j0]
-                    for i0 in range(Ta.n(_sage_const_0 )):
-                        for j0 in range(Ta.n(_sage_const_1 )):
-                            B[j0,_sage_const_0 ,i+i0]=Tb[i0,j0]
-                    for i0 in range(b.n(_sage_const_0 )):
-                        C[_sage_const_0 ,_sage_const_0 ,i+i0]=Tc[i0,_sage_const_0 ]
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            A[0,j0,i+i0]=Ta[i0,j0]
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            B[j0,0,i+i0]=Tb[i0,j0]
+                    for i0 in range(b.n(0)):
+                        C[0,0,i+i0]=Tc[i0,0]
                 # Main part
-                if (A.n(_sage_const_2 )-i-_sage_const_1 >_sage_const_0 ) and not ((HM(_sage_const_1 ,_sage_const_1 ,A.n(_sage_const_2 )-i-_sage_const_1 ,[A[_sage_const_0 ,j,i0] for i0 in range(i+_sage_const_1 ,A.n(_sage_const_2 ))]).is_zero() and j <= A.n(_sage_const_1 )-_sage_const_1 ) and (HM(_sage_const_1 ,_sage_const_1 ,B.n(_sage_const_2 )-i-_sage_const_1 ,[B[j,_sage_const_0 ,i0] for i0 in range(i+_sage_const_1 ,B.n(_sage_const_2 ))]).is_zero() and j <= B.n(_sage_const_0 )-_sage_const_1 )):
+                if (A.n(2)-i-1>0) and not ((HM(1,1,A.n(2)-i-1,[A[0,j,i0] for i0 in range(i+1,A.n(2))]).is_zero() and j <= A.n(1)-1) and (HM(1,1,B.n(2)-i-1,[B[j,0,i0] for i0 in range(i+1,B.n(2))]).is_zero() and j <= B.n(0)-1)):
                     # Performing the row operations.
-                    cf1a = A[_sage_const_0 ,j,i]; cf1b = B[j,_sage_const_0 ,i]
+                    cf1a = A[0,j,i]; cf1b = B[j,0,i]
                     # Backing up the variable prior to the inflation
                     Xold=X.copy()
                     # Updating the variables
-                    for t in range(X.n(_sage_const_2 )):
-                        X[_sage_const_0 ,_sage_const_0 ,t]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(X[_sage_const_0 ,_sage_const_0 ,t])
+                    for t in range(X.n(2)):
+                        X[0,0,t]=HM(2,2,'kronecker').tensor_product(X[0,0,t])
                     # Updating the right hand side
-                    for r in range(i+_sage_const_1 ,A.n(_sage_const_2 )):
+                    for r in range(i+1,A.n(2)):
                         # Taking care of the zero row
-                        if (HM(_sage_const_1 ,A.n(_sage_const_1 ),_sage_const_1 ,[A[_sage_const_0 ,j0,r] for j0 in range(A.n(_sage_const_1 ))]).is_zero()) or (HM(B.n(_sage_const_0 ),_sage_const_1 ,_sage_const_1 ,[B[j0,_sage_const_0 ,r] for j0 in range(B.n(_sage_const_0 ))]).is_zero()):
-                            r=r+_sage_const_1 
+                        if (HM(1,A.n(1),1,[A[0,j0,r] for j0 in range(A.n(1))]).is_zero()) or (HM(B.n(0),1,1,[B[j0,0,r] for j0 in range(B.n(0))]).is_zero()):
+                            r=r+1
                         else:
                             # Initialization of the coefficient
-                            cf2a=A[_sage_const_0 ,j,r]; cf2b=B[j,_sage_const_0 ,r]
+                            cf2a=A[0,j,r]; cf2b=B[j,0,r]
                             # Updating the right hand side.
-                            n0=C[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ); n1=C[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_1 )
+                            n0=C[0,0,0].n(0); n1=C[0,0,0].n(1)
                             U=HM(n0,n1,[var('z'+str(vindx+t)) for t in range(n0*n1)])
                             # Incrementing the free variable index
                             vindx=(n0*n1)+vindx
-                            C[_sage_const_0 ,_sage_const_0 ,r]=(U-cf2a*C[_sage_const_0 ,_sage_const_0 ,i]*cf2b).block_sum(cf1a*C[_sage_const_0 ,_sage_const_0 ,r]*cf1b-U)
+                            C[0,0,r]=(U-cf2a*C[0,0,i]*cf2b).block_sum(cf1a*C[0,0,r]*cf1b-U)
                             # Updating the constraints
-                            for j0 in range(A.n(_sage_const_1 )):
-                                if (-cf2a*A[_sage_const_0 ,j0,i]*Xold[_sage_const_0 ,_sage_const_0 ,j0]*B[j0,_sage_const_0 ,i]*cf2b + cf1a*A[_sage_const_0 ,j0,r]*Xold[_sage_const_0 ,_sage_const_0 ,j0]*B[j0,_sage_const_0 ,r]*cf1b).is_zero():
-                                    A[_sage_const_0 ,j0,r]=HM(_sage_const_2 ,_sage_const_2 ,'zero').tensor_product(A[_sage_const_0 ,j0,r])
-                                    B[j0,_sage_const_0 ,r]=HM(_sage_const_2 ,_sage_const_2 ,'zero').tensor_product(B[j0,_sage_const_0 ,r])
+                            for j0 in range(A.n(1)):
+                                if (-cf2a*A[0,j0,i]*Xold[0,0,j0]*B[j0,0,i]*cf2b + cf1a*A[0,j0,r]*Xold[0,0,j0]*B[j0,0,r]*cf1b).is_zero():
+                                    A[0,j0,r]=HM(2,2,'zero').tensor_product(A[0,j0,r])
+                                    B[j0,0,r]=HM(2,2,'zero').tensor_product(B[j0,0,r])
                                 else:
-                                    A[_sage_const_0 ,j0,r]=(-cf2a*A[_sage_const_0 ,j0,i]).block_sum(cf1a*A[_sage_const_0 ,j0,r])
-                                    B[j0,_sage_const_0 ,r]=( B[j0,_sage_const_0 ,i]*cf2b).block_sum(B[j0,_sage_const_0 ,r]*cf1b)
-                    for r in range(i+_sage_const_1 ):
+                                    A[0,j0,r]=(-cf2a*A[0,j0,i]).block_sum(cf1a*A[0,j0,r])
+                                    B[j0,0,r]=( B[j0,0,i]*cf2b).block_sum(B[j0,0,r]*cf1b)
+                    for r in range(i+1):
                         # Updating the other entries.
-                        for j0 in range(A.n(_sage_const_1 )):
-                            A[_sage_const_0 ,j0,r]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(A[_sage_const_0 ,j0,r])
-                        for j0 in range(B.n(_sage_const_0 )):
-                            B[j0,_sage_const_0 ,r]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(B[j0,_sage_const_0 ,r])
-                        C[_sage_const_0 ,_sage_const_0 ,r]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(C[_sage_const_0 ,_sage_const_0 ,r])
+                        for j0 in range(A.n(1)):
+                            A[0,j0,r]=HM(2,2,'kronecker').tensor_product(A[0,j0,r])
+                        for j0 in range(B.n(0)):
+                            B[j0,0,r]=HM(2,2,'kronecker').tensor_product(B[j0,0,r])
+                        C[0,0,r]=HM(2,2,'kronecker').tensor_product(C[0,0,r])
             # Incrementing the row and column index
-            i=i+_sage_const_1 ; j=j+_sage_const_1 
+            i=i+1; j=j+1
         return [A, X, B, C]
     else:
         raise ValueError, "Incorrect inputs"
@@ -14266,26 +14520,26 @@ def diagonal_coef_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
     """
     [A, X, B, C]=diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
     # Initialization of the row and column index
-    i=A.n(_sage_const_2 )-_sage_const_1 ; j=_sage_const_0 
-    while i > _sage_const_0  or j > _sage_const_0 :
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),_sage_const_1 ,[A[_sage_const_0 ,j0,i] for j0 in range(A.n(_sage_const_1 ))]).is_zero() or HM(B.n(_sage_const_0 ),_sage_const_1 ,_sage_const_1 ,[B[j0,_sage_const_0 ,i] for j0 in range(B.n(_sage_const_0 ))]).is_zero():
+    i=A.n(2)-1; j=0
+    while i > 0 or j > 0:
+        if HM(1,A.n(1),1,[A[0,j0,i] for j0 in range(A.n(1))]).is_zero() or HM(B.n(0),1,1,[B[j0,0,i] for j0 in range(B.n(0))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
-            while A[_sage_const_0 ,j,i].is_zero() or B[j,_sage_const_0 ,i].is_zero():
+            while A[0,j,i].is_zero() or B[j,0,i].is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # Performing row operations
-            cf1a=A[_sage_const_0 ,j,i]; cf1b=B[j,_sage_const_0 ,i]
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
-                cf2a=A[_sage_const_0 ,j,r]; cf2b=B[j,_sage_const_0 ,r]
+            cf1a=A[0,j,i]; cf1b=B[j,0,i]
+            for r in range(i-1,-1,-1):
+                cf2a=A[0,j,r]; cf2b=B[j,0,r]
                 # Updating the right hand side
-                C[_sage_const_0 ,_sage_const_0 ,r]=-cf2a*C[_sage_const_0 ,_sage_const_0 ,i]*cf2b + cf1a*C[_sage_const_0 ,_sage_const_0 ,r]*cf1b
+                C[0,0,r]=-cf2a*C[0,0,i]*cf2b + cf1a*C[0,0,r]*cf1b
                 # Updating the coefficients
-                for j0 in range(A.n(_sage_const_1 )):
-                    A[_sage_const_0 ,j0,r]=-cf2a*A[_sage_const_0 ,j0,i] + cf1a*A[_sage_const_0 ,j0,r]
-                    B[j0,_sage_const_0 ,r]=-B[j0,_sage_const_0 ,i]*cf2b + B[j0,_sage_const_0 ,r]*cf1b
-            i=i-_sage_const_1 ; j=_sage_const_0 
+                for j0 in range(A.n(1)):
+                    A[0,j0,r]=-cf2a*A[0,j0,i] + cf1a*A[0,j0,r]
+                    B[j0,0,r]=-B[j0,0,i]*cf2b + B[j0,0,r]*cf1b
+            i=i-1; j=0
     return [A, X, B, C]
 
 def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
@@ -14416,86 +14670,86 @@ def general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
     - Edinah K. Gnang
     - To Do:
     """
-    if Cf1.n(_sage_const_1 )==Vx.n(_sage_const_2 ) and Vx.n(_sage_const_2 )==Cf2.n(_sage_const_0 ) and Cf1.n(_sage_const_2 )==Cf2.n(_sage_const_2 ) and _sage_const_1 ==Vx.n(_sage_const_0 ) and Vx.n(_sage_const_0 )==Vx.n(_sage_const_1 ):
+    if Cf1.n(1)==Vx.n(2) and Vx.n(2)==Cf2.n(0) and Cf1.n(2)==Cf2.n(2) and 1==Vx.n(0) and Vx.n(0)==Vx.n(1):
         # Initialization of the variable index
-        vindx=_sage_const_0 
+        vindx=0
         # Initializing copies of the input hypermatrices.
         A=Cf1.copy(); X=Vx.copy(); B=Cf2.copy(); C=rs.copy()
         # Initialization of the row and column index
-        i=_sage_const_0 ; j=_sage_const_0 
-        while i < A.n(_sage_const_2 ) and j < A.n(_sage_const_1 ):
-            while (HM(_sage_const_1 ,_sage_const_1 ,A.n(_sage_const_2 )-i,[A[_sage_const_0 ,j,i0] for i0 in range(i,A.n(_sage_const_2 ))]).is_zero() and j < A.n(_sage_const_1 )-_sage_const_1 ) or (HM(_sage_const_1 ,_sage_const_1 ,B.n(_sage_const_2 )-i,[B[j,_sage_const_0 ,i0] for i0 in range(i,B.n(_sage_const_2 ))]).is_zero() and j < B.n(_sage_const_2 )-_sage_const_1 ):
+        i=0; j=0
+        while i < A.n(2) and j < A.n(1):
+            while (HM(1,1,A.n(2)-i,[A[0,j,i0] for i0 in range(i,A.n(2))]).is_zero() and j < A.n(1)-1) or (HM(1,1,B.n(2)-i,[B[j,0,i0] for i0 in range(i,B.n(2))]).is_zero() and j < B.n(2)-1):
                 # Incrementing the column index
-                j=j+_sage_const_1 
-            if (HM(_sage_const_1 ,A.n(_sage_const_1 ),A.n(_sage_const_2 )-i,[A[_sage_const_0 ,j0,i0] for i0 in range(i,A.n(_sage_const_2 )) for j0 in range(A.n(_sage_const_1 ))]).is_zero()==False) and (HM(B.n(_sage_const_0 ),_sage_const_1 ,B.n(_sage_const_2 )-i,[B[j0,_sage_const_0 ,i0] for i0 in range(i,B.n(_sage_const_2 )) for j0 in range(B.n(_sage_const_0 ))]).is_zero()==False) and j < A.n(_sage_const_1 ):
-                while A[_sage_const_0 ,j,i].is_zero() or B[j,_sage_const_0 ,i].is_zero():
+                j=j+1
+            if (HM(1,A.n(1),A.n(2)-i,[A[0,j0,i0] for i0 in range(i,A.n(2)) for j0 in range(A.n(1))]).is_zero()==False) and (HM(B.n(0),1,B.n(2)-i,[B[j0,0,i0] for i0 in range(i,B.n(2)) for j0 in range(B.n(0))]).is_zero()==False) and j < A.n(1):
+                while A[0,j,i].is_zero() or B[j,0,i].is_zero():
                     # Initialization of the matrices
-                    Ta=HM(A.n(_sage_const_2 )-i,A.n(_sage_const_1 ),[A[_sage_const_0 ,j0,i0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_2 ))])
-                    Tb=HM(B.n(_sage_const_2 )-i,B.n(_sage_const_0 ),[B[j0,_sage_const_0 ,i0] for j0 in range(B.n(_sage_const_0 )) for i0 in range(i,B.n(_sage_const_2 ))])
-                    Tc=HM(C.n(_sage_const_2 )-i,_sage_const_1 ,[C[_sage_const_0 ,_sage_const_0 ,i0] for i0 in range(i,C.n(_sage_const_2 ))])
+                    Ta=HM(A.n(2)-i,A.n(1),[A[0,j0,i0] for j0 in range(A.n(1)) for i0 in range(i,A.n(2))])
+                    Tb=HM(B.n(2)-i,B.n(0),[B[j0,0,i0] for j0 in range(B.n(0)) for i0 in range(i,B.n(2))])
+                    Tc=HM(C.n(2)-i,1,[C[0,0,i0] for i0 in range(i,C.n(2))])
                     # Inflating the entries of the identity matrix
-                    idta=HM(_sage_const_2 , A[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ),'kronecker')
-                    Ida=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                    idtb=HM(_sage_const_2 , B[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ),'kronecker')
-                    Idb=HM(_sage_const_2 , Tb.n(_sage_const_0 ), 'kronecker')
-                    for u in range(Ta.n(_sage_const_0 )):
-                        for v in range(Ta.n(_sage_const_1 )):
+                    idta=HM(2, A[0,0,0].n(0),'kronecker')
+                    Ida=HM(2, Ta.n(0), 'kronecker')
+                    idtb=HM(2, B[0,0,0].n(0),'kronecker')
+                    Idb=HM(2, Tb.n(0), 'kronecker')
+                    for u in range(Ta.n(0)):
+                        for v in range(Ta.n(1)):
                             Ida[u,v]=idta*Ida[u,v]
-                    for u in range(Tb.n(_sage_const_0 )):
-                        for v in range(Tb.n(_sage_const_1 )):
+                    for u in range(Tb.n(0)):
+                        for v in range(Tb.n(1)):
                             Idb[u,v]=idtb*Idb[u,v]
                     # Initialization of the cyclic shift permutation matrix
-                    Pa=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Ida[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Ida[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
-                    Pb=sum([HM(Tb.n(_sage_const_0 ),_sage_const_1 ,[Idb[i0,k] for i0 in range(Tb.n(_sage_const_0 ))])*HM(_sage_const_1 ,Tb.n(_sage_const_0 ),[Idb[Integer(mod(k+_sage_const_1 ,Tb.n(_sage_const_0 ))),j0] for j0 in range(Tb.n(_sage_const_0 ))]) for k in range(Tb.n(_sage_const_0 ))])
+                    Pa=sum([HM(Ta.n(0),1,[Ida[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Ida[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                    Pb=sum([HM(Tb.n(0),1,[Idb[i0,k] for i0 in range(Tb.n(0))])*HM(1,Tb.n(0),[Idb[Integer(mod(k+1,Tb.n(0))),j0] for j0 in range(Tb.n(0))]) for k in range(Tb.n(0))])
                     # Performing the shift
                     Ta=Pa*Ta; Tb=Pb*Tb; Tc=Pa*Tc
-                    for i0 in range(Ta.n(_sage_const_0 )):
-                        for j0 in range(Ta.n(_sage_const_1 )):
-                            A[_sage_const_0 ,j0,i+i0]=Ta[i0,j0]
-                    for i0 in range(Ta.n(_sage_const_0 )):
-                        for j0 in range(Ta.n(_sage_const_1 )):
-                            B[j0,_sage_const_0 ,i+i0]=Tb[i0,j0]
-                    for i0 in range(b.n(_sage_const_0 )):
-                        C[_sage_const_0 ,_sage_const_0 ,i+i0]=Tc[i0,_sage_const_0 ]
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            A[0,j0,i+i0]=Ta[i0,j0]
+                    for i0 in range(Ta.n(0)):
+                        for j0 in range(Ta.n(1)):
+                            B[j0,0,i+i0]=Tb[i0,j0]
+                    for i0 in range(b.n(0)):
+                        C[0,0,i+i0]=Tc[i0,0]
                 # Here we mean business
-                if (A.n(_sage_const_2 )-i-_sage_const_1 > _sage_const_0 ) and not ((HM(_sage_const_1 ,_sage_const_1 ,A.n(_sage_const_2 )-i-_sage_const_1 ,[A[_sage_const_0 ,j,i0] for i0 in range(i+_sage_const_1 ,A.n(_sage_const_2 ))]).is_zero() and j <= A.n(_sage_const_1 )-_sage_const_1 ) and (HM(_sage_const_1 ,_sage_const_1 ,B.n(_sage_const_2 )-i-_sage_const_1 ,[B[j,_sage_const_0 ,i0] for i0 in range(i+_sage_const_1 ,B.n(_sage_const_2 ))]).is_zero() and j <= B.n(_sage_const_0 )-_sage_const_1 )):
+                if (A.n(2)-i-1> 0) and not ((HM(1,1,A.n(2)-i-1,[A[0,j,i0] for i0 in range(i+1,A.n(2))]).is_zero() and j <= A.n(1)-1) and (HM(1,1,B.n(2)-i-1,[B[j,0,i0] for i0 in range(i+1,B.n(2))]).is_zero() and j <= B.n(0)-1)):
                     # Performing the row operations.
-                    cf1a = A[_sage_const_0 ,j,i]; cf1b = B[j,_sage_const_0 ,i]
+                    cf1a = A[0,j,i]; cf1b = B[j,0,i]
                     # Backing up the variable prior to the inflation
                     Xold=X.copy()
                     # Updating the variables
-                    for t in range(X.n(_sage_const_2 )):
-                        X[_sage_const_0 ,_sage_const_0 ,t]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(X[_sage_const_0 ,_sage_const_0 ,t])
+                    for t in range(X.n(2)):
+                        X[0,0,t]=HM(2,2,'kronecker').tensor_product(X[0,0,t])
                     # Updating the right hand side
-                    for r in range(i+_sage_const_1 ,A.n(_sage_const_2 )):
+                    for r in range(i+1,A.n(2)):
                         # Taking care of the zero row
-                        if (HM(_sage_const_1 ,A.n(_sage_const_1 ),_sage_const_1 ,[A[_sage_const_0 ,j0,r] for j0 in range(A.n(_sage_const_1 ))]).is_zero()) or (HM(B.n(_sage_const_0 ),_sage_const_1 ,_sage_const_1 ,[B[j0,_sage_const_0 ,r] for j0 in range(B.n(_sage_const_0 ))]).is_zero()):
-                            r=r+_sage_const_1 
+                        if (HM(1,A.n(1),1,[A[0,j0,r] for j0 in range(A.n(1))]).is_zero()) or (HM(B.n(0),1,1,[B[j0,0,r] for j0 in range(B.n(0))]).is_zero()):
+                            r=r+1
                         else:
                             # Initialization of the coefficient
-                            cf2a=A[_sage_const_0 ,j,r]; cf2b=B[j,_sage_const_0 ,r]
+                            cf2a=A[0,j,r]; cf2b=B[j,0,r]
                             # Updating the right hand side.
-                            n0=C[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ); n1=C[_sage_const_0 ,_sage_const_0 ,_sage_const_0 ].n(_sage_const_1 )
+                            n0=C[0,0,0].n(0); n1=C[0,0,0].n(1)
                             U=HM(n0,n1,[var('z'+str(vindx+t)) for t in range(n0*n1)])
                             # Incrementing the free variable index
                             vindx=(n0*n1)+vindx
-                            C[_sage_const_0 ,_sage_const_0 ,r]=(U-(cf2a*cf1a**(-_sage_const_1 ))*C[_sage_const_0 ,_sage_const_0 ,i]*(cf1b**(-_sage_const_1 )*cf2b)).block_sum(C[_sage_const_0 ,_sage_const_0 ,r]-U)
+                            C[0,0,r]=(U-(cf2a*cf1a^(-1))*C[0,0,i]*(cf1b^(-1)*cf2b)).block_sum(C[0,0,r]-U)
                             # Updating the constraints
-                            for j0 in range(A.n(_sage_const_1 )):
-                                if (-cf2a*A[_sage_const_0 ,j0,i]*Xold[_sage_const_0 ,_sage_const_0 ,j0]*B[j0,_sage_const_0 ,i]*cf2b + cf1a*A[_sage_const_0 ,j0,r]*Xold[_sage_const_0 ,_sage_const_0 ,j0]*B[j0,_sage_const_0 ,r]*cf1b).is_zero():
-                                    A[_sage_const_0 ,j0,r]=HM(_sage_const_2 ,_sage_const_2 ,'zero').tensor_product(A[_sage_const_0 ,j0,r])
-                                    B[j0,_sage_const_0 ,r]=HM(_sage_const_2 ,_sage_const_2 ,'zero').tensor_product(B[j0,_sage_const_0 ,r])
+                            for j0 in range(A.n(1)):
+                                if (-cf2a*A[0,j0,i]*Xold[0,0,j0]*B[j0,0,i]*cf2b + cf1a*A[0,j0,r]*Xold[0,0,j0]*B[j0,0,r]*cf1b).is_zero():
+                                    A[0,j0,r]=HM(2,2,'zero').tensor_product(A[0,j0,r])
+                                    B[j0,0,r]=HM(2,2,'zero').tensor_product(B[j0,0,r])
                                 else:
-                                    A[_sage_const_0 ,j0,r]=(-(cf2a*cf1a**(-_sage_const_1 ))*A[_sage_const_0 ,j0,i]).block_sum(A[_sage_const_0 ,j0,r])
-                                    B[j0,_sage_const_0 ,r]=(B[j0,_sage_const_0 ,i]*(cf1b**(-_sage_const_1 )*cf2b)).block_sum(B[j0,_sage_const_0 ,r])
-                    for r in range(i+_sage_const_1 ):
+                                    A[0,j0,r]=(-(cf2a*cf1a^(-1))*A[0,j0,i]).block_sum(A[0,j0,r])
+                                    B[j0,0,r]=(B[j0,0,i]*(cf1b^(-1)*cf2b)).block_sum(B[j0,0,r])
+                    for r in range(i+1):
                         # Updating the other entries.
-                        for j0 in range(A.n(_sage_const_1 )):
-                            A[_sage_const_0 ,j0,r]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(A[_sage_const_0 ,j0,r])
-                            B[j0,_sage_const_0 ,r]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(B[j0,_sage_const_0 ,r])
-                        C[_sage_const_0 ,_sage_const_0 ,r]=HM(_sage_const_2 ,_sage_const_2 ,'kronecker').tensor_product(C[_sage_const_0 ,_sage_const_0 ,r])
+                        for j0 in range(A.n(1)):
+                            A[0,j0,r]=HM(2,2,'kronecker').tensor_product(A[0,j0,r])
+                            B[j0,0,r]=HM(2,2,'kronecker').tensor_product(B[j0,0,r])
+                        C[0,0,r]=HM(2,2,'kronecker').tensor_product(C[0,0,r])
             # Incrementing the row and column index
-            i=i+_sage_const_1 ; j=j+_sage_const_1 
+            i=i+1; j=j+1
         return [A, X, B, C]
     else:
         raise ValueError, "Incorrect inputs"
@@ -14592,30 +14846,30 @@ def general_gauss_jordan_eliminationHM(Cf1, Vx, Cf2, rs):
     """
     [A, X, B, C]=general_gaussian_eliminationHM(Cf1, Vx, Cf2, rs)
     # Initialization of the row and column index
-    i=A.n(_sage_const_2 )-_sage_const_1 ; j=_sage_const_0 
-    while i > _sage_const_0  or j > _sage_const_0 :
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),_sage_const_1 ,[A[_sage_const_0 ,j0,i] for j0 in range(A.n(_sage_const_1 ))]).is_zero() or HM(B.n(_sage_const_0 ),_sage_const_1 ,_sage_const_1 ,[B[j0,_sage_const_0 ,i] for j0 in range(B.n(_sage_const_0 ))]).is_zero():
+    i=A.n(2)-1; j=0
+    while i > 0 or j > 0:
+        if HM(1,A.n(1),1,[A[0,j0,i] for j0 in range(A.n(1))]).is_zero() or HM(B.n(0),1,1,[B[j0,0,i] for j0 in range(B.n(0))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
-            while A[_sage_const_0 ,j,i].is_zero() or B[j,_sage_const_0 ,i].is_zero():
+            while A[0,j,i].is_zero() or B[j,0,i].is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # Performing row operations
-            cf1a=A[_sage_const_0 ,j,i]; cf1b=B[j,_sage_const_0 ,i]
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
-                cf2a=A[_sage_const_0 ,j,r]; cf2b=B[j,_sage_const_0 ,r]
+            cf1a=A[0,j,i]; cf1b=B[j,0,i]
+            for r in range(i-1,-1,-1):
+                cf2a=A[0,j,r]; cf2b=B[j,0,r]
                 # Updating the right hand side
-                C[_sage_const_0 ,_sage_const_0 ,r]=-(cf2a*cf1a**(-_sage_const_1 ))*C[_sage_const_0 ,_sage_const_0 ,i]*(cf1b**(-_sage_const_1 )*cf2b) + C[_sage_const_0 ,_sage_const_0 ,r]
+                C[0,0,r]=-(cf2a*cf1a^(-1))*C[0,0,i]*(cf1b^(-1)*cf2b) + C[0,0,r]
                 # Updating the coefficients
-                for j0 in range(A.n(_sage_const_1 )):
-                    A[_sage_const_0 ,j0,r]=-(cf2a*cf1a**(-_sage_const_1 ))*A[_sage_const_0 ,j0,i] + A[_sage_const_0 ,j0,r]
-                for j0 in range(B.n(_sage_const_0 )):
-                    B[j0,_sage_const_0 ,r]=-B[j0,_sage_const_0 ,i]*(cf1b**(-_sage_const_1 )*cf2b) + B[j0,_sage_const_0 ,r]
-            i=i-_sage_const_1 ; j=_sage_const_0 
+                for j0 in range(A.n(1)):
+                    A[0,j0,r]=-(cf2a*cf1a^(-1))*A[0,j0,i] + A[0,j0,r]
+                for j0 in range(B.n(0)):
+                    B[j0,0,r]=-B[j0,0,i]*(cf1b^(-1)*cf2b) + B[j0,0,r]
+            i=i-1; j=0
     return [A, X, B, C]
 
-def ThirdOrderDepthCyclicShift(A, s=_sage_const_1 ):
+def ThirdOrderDepthCyclicShift(A, s=1):
     """ 
     This function performs a cyclic shift to the order of
     the depth slices of an input third order hypermatrix A.
@@ -14647,10 +14901,10 @@ def ThirdOrderDepthCyclicShift(A, s=_sage_const_1 ):
     """
     # Initialization of the output hypermatrix to be filled
     B = apply(HM, A.dimensions()+['zero'])
-    for i in range(A.n(_sage_const_0 )):
-        for j in range(A.n(_sage_const_1 )):
-            for k in range(A.n(_sage_const_2 )):
-                B[i,j,k]=A[i,j,Integer(mod(k-s,A.n(_sage_const_2 )))]
+    for i in range(A.n(0)):
+        for j in range(A.n(1)):
+            for k in range(A.n(2)):
+                B[i,j,k]=A[i,j,Integer(mod(k-s,A.n(2)))]
     return B
 
 def hadamard_gaussian_eliminationHM(Cf, rs):
@@ -14682,40 +14936,40 @@ def hadamard_gaussian_eliminationHM(Cf, rs):
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy(); b=rs.copy()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
-                Tb=HM(b.n(_sage_const_0 )-i, b.n(_sage_const_1 ), [b[i0,j0] for j0 in range(b.n(_sage_const_1 )) for i0 in range(i,b.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
+                Id=HM(2, Ta.n(0), 'kronecker')
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
-                for i0 in range(Tb.n(_sage_const_0 )):
-                    for j0 in range(Tb.n(_sage_const_1 )):
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
                     # Initialization of the coefficient
                     cf2=A[r,j]
-                    for j0 in range(b.n(_sage_const_1 )):
+                    for j0 in range(b.n(1)):
                         b[r,j0]=cf2.elementwise_product(b[i,j0])-cf1.elementwise_product(b[r,j0])
-                    for j0 in range(A.n(_sage_const_1 )):
+                    for j0 in range(A.n(1)):
                         A[r,j0]=cf2.elementwise_product(A[i,j0])-cf1.elementwise_product(A[r,j0])
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return [A,b]
 
 def hadamard_gauss_jordan_eliminationHM(Cf,rs):
@@ -14745,27 +14999,27 @@ def hadamard_gauss_jordan_eliminationHM(Cf,rs):
     """
     [A, b] = hadamard_gaussian_eliminationHM(Cf,rs)
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
             cf1=A[i,j]
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
+            for r in range(i-1,-1,-1):
                 #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
                 cf2=A[r,j]
-                for j0 in range(b.n(_sage_const_1 )):
+                for j0 in range(b.n(1)):
                     b[r,j0]=cf2.elementwise_product(b[i,j0])-cf1.elementwise_product(b[r,j0])
                 #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
-                for j0 in range(A.n(_sage_const_1 )):
+                for j0 in range(A.n(1)):
                     A[r,j0]=cf2.elementwise_product(A[i,j0])-cf1.elementwise_product(A[r,j0])
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
     return [A,b]
 
 def list_elementwise_product(L):
@@ -14788,8 +15042,8 @@ def list_elementwise_product(L):
     - Edinah K. Gnang
     """
     # Initialization of the hypermatrix
-    Tmp=L[_sage_const_0 ]
-    for h in L[_sage_const_1 :]:
+    Tmp=L[0]
+    for h in L[1:]:
         Tmp=Tmp.elementwise_product(h)  
     return Tmp
 
@@ -14839,16 +15093,16 @@ def GeneralHypermatrixProduct_with_elementwise_product(*args):
     # Main loop performing the assignement
     for i in range(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[_sage_const_0 ]))]
-        sm = Integer(mod(i,l[_sage_const_0 ]))
-        for k in range(len(l)-_sage_const_1 ):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[_sage_const_0 :k+_sage_const_1 ])),l[k+_sage_const_1 ])))
-            sm = sm+prod(l[_sage_const_0 :k+_sage_const_1 ])*entry[len(entry)-_sage_const_1 ]
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         # computing the Hypermatrix product
-        if len(args)<_sage_const_2 :
+        if len(args)<2:
             raise ValueError, "The number of operands must be >= 2"
-        elif len(args) >= _sage_const_2 :
-            Rh[tuple(entry)]=sum([list_elementwise_product([args[s][tuple(entry[_sage_const_0 :Integer(mod(s+_sage_const_1 ,len(args)))]+[t]+entry[Integer(mod(s+_sage_const_2 ,len(args))):])] for s in range(len(args)-_sage_const_2 )]+[args[len(args)-_sage_const_2 ][tuple(entry[_sage_const_0 :len(args)-_sage_const_1 ]+[t])]]+[args[len(args)-_sage_const_1 ][tuple([t]+entry[_sage_const_1 :])]]) for t in range((args[_sage_const_0 ]).n(_sage_const_1 ))])
+        elif len(args) >= 2:
+            Rh[tuple(entry)]=sum([list_elementwise_product([args[s][tuple(entry[0:Integer(mod(s+1,len(args)))]+[t]+entry[Integer(mod(s+2,len(args))):])] for s in range(len(args)-2)]+[args[len(args)-2][tuple(entry[0:len(args)-1]+[t])]]+[args[len(args)-1][tuple([t]+entry[1:])]]) for t in range((args[0]).n(1))])
     return Rh
 
 def hadamard_linear_solverHM(A,b,x,v):
@@ -14895,19 +15149,19 @@ def hadamard_linear_solverHM(A,b,x,v):
     """
     # Initialization of the reduced echelon form.
     [Ap,bp]=hadamard_gauss_jordan_eliminationHM(A,b)
-    Id1=HM(_sage_const_2 ,Ap.n(_sage_const_0 ),'kronecker')
-    for i in range(Id1.n(_sage_const_0 )):
-        for j in range(Id1.n(_sage_const_1 )):
-            Id1[i,j]=HM(_sage_const_2 ,Ap[_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ),'kronecker')*Id1[i,j]
-    Id2=HM(_sage_const_2 ,Ap.n(_sage_const_1 ),'kronecker')
-    for i in range(Id2.n(_sage_const_0 )):
-        for j in range(Id2.n(_sage_const_1 )):
-            Id2[i,j]=HM(_sage_const_2 ,Ap[_sage_const_0 ,_sage_const_0 ].n(_sage_const_1 ),'kronecker')*Id2[i,j]
+    Id1=HM(2,Ap.n(0),'kronecker')
+    for i in range(Id1.n(0)):
+        for j in range(Id1.n(1)):
+            Id1[i,j]=HM(2,Ap[0,0].n(0),'kronecker')*Id1[i,j]
+    Id2=HM(2,Ap.n(1),'kronecker')
+    for i in range(Id2.n(0)):
+        for j in range(Id2.n(1)):
+            Id2[i,j]=HM(2,Ap[0,0].n(1),'kronecker')*Id2[i,j]
     # Obtainin the list of pivot variables.
-    Pm=HM(Ap.n(_sage_const_0 ),Ap.n(_sage_const_1 ),[HM(Ap[_sage_const_0 ,_sage_const_0 ].n(_sage_const_0 ),Ap[_sage_const_0 ,_sage_const_0 ].n(_sage_const_1 ),'zero') for cnt in range(Ap.n(_sage_const_0 )*Ap.n(_sage_const_1 ))])
-    for i in range(Ap.n(_sage_const_0 )):
-        if not HM(_sage_const_1 ,Ap.n(_sage_const_1 ),[Ap[i,u] for u in range(Ap.n(_sage_const_1 ))]).is_zero():
-            for j in range(Ap.n(_sage_const_1 )):
+    Pm=HM(Ap.n(0),Ap.n(1),[HM(Ap[0,0].n(0),Ap[0,0].n(1),'zero') for cnt in range(Ap.n(0)*Ap.n(1))])
+    for i in range(Ap.n(0)):
+        if not HM(1,Ap.n(1),[Ap[i,u] for u in range(Ap.n(1))]).is_zero():
+            for j in range(Ap.n(1)):
                 #if Ap[i,j].is_unit():
                 if not Ap[i,j].is_zero():
                     break
@@ -14916,7 +15170,7 @@ def hadamard_linear_solverHM(A,b,x,v):
     # Expressing the solutions
     tp1=GeneralHypermatrixProduct_with_elementwise_product(Pm,x)
     tp2=bp-GeneralHypermatrixProduct_with_elementwise_product((Ap-Pm),v)
-    return [[tp1[i,_sage_const_0 ],tp2[i,_sage_const_0 ]] for i in range(tp1.n(_sage_const_0 ))]
+    return [[tp1[i,0],tp2[i,0]] for i in range(tp1.n(0))]
 
 def sylvesterian_eliminationHM(PolyLst, VrbLst):
     """
@@ -14953,35 +15207,35 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
     A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
     #A.printHM()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
         #while (A[i:,j]).is_zero() and j < A.ncols()-1:
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         #if (A[i:,:].is_zero())==False:
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
                 #Ta=A[i:,:]
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 #Id=identity_matrix(Ta.nrows())
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
+                Id=HM(2, Ta.n(0), 'kronecker')
                 #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
-                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), _sage_const_1 , CnstrLst)).list()
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
                 #A[i:,:]=Ta
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 , A.n(_sage_const_1 ), [A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
-                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>_sage_const_0  and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                         if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                             CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                             #print 'i=', i,'j=', j,' r=', r
@@ -14989,7 +15243,7 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
                             #degree_matrix(CnstrLst,VrbLst).printHM()
                             A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return CnstrLst
 
 def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
@@ -15021,23 +15275,23 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
     # Initializing the degree matrix.
     A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
-                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>_sage_const_0  and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+            for r in range(i-1,-1,-1):
+                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                     if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                         CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                         A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
     return CnstrLst
 
 def sylvesterian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
@@ -15079,47 +15333,47 @@ def sylvesterian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
     A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
     #A.printHM()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
         #while (A[i:,j]).is_zero() and j < A.ncols()-1:
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         #if (A[i:,:].is_zero())==False:
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
                 #Ta=A[i:,:]
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 #Id=identity_matrix(Ta.nrows())
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
+                Id=HM(2, Ta.n(0), 'kronecker')
                 #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
-                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), _sage_const_1 , CnstrLst)).list()
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
                 #A[i:,:]=Ta
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 , A.n(_sage_const_1 ), [A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
-                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j])) > _sage_const_0  and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j])) > 0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                         #if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                         Cf=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j])
-                        rs=HM(Cf.n(_sage_const_0 ),_sage_const_1 ,'zero')
+                        rs=HM(Cf.n(0),1,'zero')
                         #print prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[0][z,z] for z in range(Cf.n(0)))
-                        if not prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[_sage_const_0 ][z,z] for z in range(Cf.n(_sage_const_0 ))).is_zero():
+                        if not prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[0][z,z] for z in range(Cf.n(0))).is_zero():
                             #CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
-                            CnstrLst[r]=prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[_sage_const_0 ][z,z] for z in range(Cf.n(_sage_const_0 )))
+                            CnstrLst[r]=prod(gaussian_elimination_ReductionHM(Cf, rs, VrbLst, Rlts)[0][z,z] for z in range(Cf.n(0)))
                             #print 'i=', i,'j=', j,' r=', r
                             #print 'CnstrLst=', CnstrLst
                             A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return CnstrLst
 
 def degree_matrix(EqL, VrbL):
@@ -15168,8 +15422,8 @@ def i2x2(A):
     - To Do: 
     """
     return HM([\
-[ A[_sage_const_1 ,_sage_const_1 ]/(A[_sage_const_0 ,_sage_const_0 ]*A[_sage_const_1 ,_sage_const_1 ]-A[_sage_const_0 ,_sage_const_1 ]*A[_sage_const_1 ,_sage_const_0 ]), -A[_sage_const_0 ,_sage_const_1 ]/(A[_sage_const_0 ,_sage_const_0 ]*A[_sage_const_1 ,_sage_const_1 ]-A[_sage_const_0 ,_sage_const_1 ]*A[_sage_const_1 ,_sage_const_0 ])],\
-[-A[_sage_const_1 ,_sage_const_0 ]/(A[_sage_const_0 ,_sage_const_0 ]*A[_sage_const_1 ,_sage_const_1 ]-A[_sage_const_0 ,_sage_const_1 ]*A[_sage_const_1 ,_sage_const_0 ]),  A[_sage_const_0 ,_sage_const_0 ]/(A[_sage_const_0 ,_sage_const_0 ]*A[_sage_const_1 ,_sage_const_1 ]-A[_sage_const_0 ,_sage_const_1 ]*A[_sage_const_1 ,_sage_const_0 ])]])
+[ A[1,1]/(A[0,0]*A[1,1]-A[0,1]*A[1,0]), -A[0,1]/(A[0,0]*A[1,1]-A[0,1]*A[1,0])],\
+[-A[1,0]/(A[0,0]*A[1,1]-A[0,1]*A[1,0]),  A[0,0]/(A[0,0]*A[1,1]-A[0,1]*A[1,0])]])
 
 def LeftRightDiagonalDependence3x3x3(A):
     """
@@ -15202,26 +15456,26 @@ def LeftRightDiagonalDependence3x3x3(A):
     # Initializing the permutations
     P=Permutations(range(sz))
     # Initialization of constraints
-    Eq=[sum(Permutation([p[indx]+_sage_const_1  for indx in range(len(p))]).signature()*\
-    prod([X[i,p[i]]*A[i,k,p[i]] for i in range(sz)]) for p in P)==_sage_const_0  for k in range(sz)]
+    Eq=[sum(Permutation([p[indx]+1 for indx in range(len(p))]).signature()*\
+    prod([X[i,p[i]]*A[i,k,p[i]] for i in range(sz)]) for p in P)==0 for k in range(sz)]
     # Formating the constraints using the first column of X as variables
     [F,g]=ConstraintFormatorHM(Eq, X.list()[-sz:])
     # Obtatining the determinant of the matrix F
     dtF=F.det()
-    # Obtaining the parametrization by solving in the variable X[i,j].
-    v=X[sz-_sage_const_1 , sz-_sage_const_2 ]
-    a0=dtF.subs(v==_sage_const_0 )
-    a1=diff(dtF, v, _sage_const_1 ).subs(v==_sage_const_0 )/factorial(_sage_const_1 )
-    a2=diff(dtF, v, _sage_const_2 ).subs(v==_sage_const_0 )/factorial(_sage_const_2 )
+    # Obtaining the parametrization by solving in the variable X[sz-1, sz-2].
+    v=X[sz-1, sz-2]
+    a0=dtF.subs(v==0)
+    a1=diff(dtF, v, 1).subs(v==0)/factorial(1)
+    a2=diff(dtF, v, 2).subs(v==0)/factorial(2)
     # Initialization of the solution of the quadratic equation
     Sln1=[\
-    v == -_sage_const_1 /_sage_const_2 *( a1 + sqrt(a1**_sage_const_2  - _sage_const_4 *a0*a2) )/a2,\
-    v == -_sage_const_1 /_sage_const_2 *( a1 - sqrt(a1**_sage_const_2  - _sage_const_4 *a0*a2) )/a2]
+    v == -1/2*( a1 + sqrt(a1^2 - 4*a0*a2) )/a2,\
+    v == -1/2*( a1 - sqrt(a1^2 - 4*a0*a2) )/a2]
     # Performing the substitution
-    Fa=F.subs(Sln1[_sage_const_0 ]).matrix()
-    Sln2a=[X[i,sz-_sage_const_1 ]==-(X[sz-_sage_const_1 ,sz-_sage_const_1 ]*i2x2(Fa[:sz-_sage_const_1 ,:sz-_sage_const_1 ]).matrix()*Fa[:sz-_sage_const_1 ,sz-_sage_const_1 ])[i,_sage_const_0 ] for i in range(sz-_sage_const_1 )]+Sln1[:_sage_const_1 ]
-    Fb=F.subs(Sln1[_sage_const_1 ]).matrix()
-    Sln2b=[X[i,sz-_sage_const_1 ]==-(X[sz-_sage_const_1 ,sz-_sage_const_1 ]*i2x2(Fb[:sz-_sage_const_1 ,:sz-_sage_const_1 ]).matrix()*Fb[:sz-_sage_const_1 ,sz-_sage_const_1 ])[i,_sage_const_0 ] for i in range(sz-_sage_const_1 )]+Sln1[_sage_const_1 :]
+    Fa=F.subs(Sln1[0]).matrix()
+    Sln2a=[X[i,sz-1]==-(X[sz-1,sz-1]*i2x2(Fa[:sz-1,:sz-1]).matrix()*Fa[:sz-1,sz-1])[i,0] for i in range(sz-1)]+Sln1[:1]
+    Fb=F.subs(Sln1[1]).matrix()
+    Sln2b=[X[i,sz-1]==-(X[sz-1,sz-1]*i2x2(Fb[:sz-1,:sz-1]).matrix()*Fb[:sz-1,sz-1])[i,0] for i in range(sz-1)]+Sln1[1:]
     # Initialization of the list of Mks 
     Xfa=X.subs(Sln2a)
     Lma=[HM(sz,sz,[Xfa[i,j]*A[i,k,j] for j in range(sz) for i in range(sz)]) for k in range(sz)]
@@ -15229,9 +15483,9 @@ def LeftRightDiagonalDependence3x3x3(A):
     Lmb=[HM(sz,sz,[Xfb[i,j]*A[i,k,j] for j in range(sz) for i in range(sz)]) for k in range(sz)]
     # Initialization of solutions in Y
     Sln3a=[Y[j,k]==\
-    -(Y[sz-_sage_const_1 ,k]*i2x2((Lma[k].matrix())[:sz-_sage_const_1 ,:sz-_sage_const_1 ]).matrix()*(Lma[k].matrix())[:sz-_sage_const_1 ,sz-_sage_const_1 ])[j,_sage_const_0 ] for j in range(sz-_sage_const_1 ) for k in range(sz)]
+    -(Y[sz-1,k]*i2x2((Lma[k].matrix())[:sz-1,:sz-1]).matrix()*(Lma[k].matrix())[:sz-1,sz-1])[j,0] for j in range(sz-1) for k in range(sz)]
     Sln3b=[Y[j,k]==\
-    -(Y[sz-_sage_const_1 ,k]*i2x2((Lmb[k].matrix())[:sz-_sage_const_1 ,:sz-_sage_const_1 ]).matrix()*(Lmb[k].matrix())[:sz-_sage_const_1 ,sz-_sage_const_1 ])[j,_sage_const_0 ] for j in range(sz-_sage_const_1 ) for k in range(sz)]
+    -(Y[sz-1,k]*i2x2((Lmb[k].matrix())[:sz-1,:sz-1]).matrix()*(Lmb[k].matrix())[:sz-1,sz-1])[j,0] for j in range(sz-1) for k in range(sz)]
     Yfa=Y.subs(Sln3a)
     # Final verification
     #Rsa=sum(HM(sz,sz,[Xfa[i,t]*A[i,j,t]*Yfa[t,j] for j in range(sz) for i in range(sz)]) for t in range(sz)).canonicalize_radical()
@@ -15265,11 +15519,11 @@ def Reduced3x3x3CanonicalFactorization(A, Xfa, Yfa, indx):
     - To Do: 
     """
     # Initialization of the size and order parameters
-    sz=_sage_const_3 ; od=_sage_const_3  
+    sz=3; od=3 
     # Checking that the last column of X and the last row of Y have no zero entries
     #print "(HM(2, Xfa.matrix()[:,2].list(),'diag')*HM(2, Yfa.matrix()[2,:].list(),'diag')).det().is_zero() is ",\
     #(HM(2, Xfa.matrix()[:,2].list(),'diag')*HM(2, Yfa.matrix()[2,:].list(),'diag')).det().is_zero()
-    if (HM(_sage_const_2 , Xfa.matrix()[:,_sage_const_2 ].list(),'diag')*HM(_sage_const_2 , Yfa.matrix()[_sage_const_2 ,:].list(),'diag')).det().is_zero():
+    if (HM(2, Xfa.matrix()[:,2].list(),'diag')*HM(2, Yfa.matrix()[2,:].list(),'diag')).det().is_zero():
         raise ValueError, "The input index has zero entries"
     else:
         # A convenien way to Initialize of the identity pairs
@@ -15280,7 +15534,7 @@ def Reduced3x3x3CanonicalFactorization(A, Xfa, Yfa, indx):
         # Updating the last slice Hypermatrix
         for i in range(sz):
             for j in range(sz):
-                Ha[i,j,indx]=_sage_const_0 
+                Ha[i,j,indx]=0
         # Initialization of the left weight coefficient
         XXfa=Xfa.copy()
         for i in range(sz):
@@ -15288,7 +15542,7 @@ def Reduced3x3x3CanonicalFactorization(A, Xfa, Yfa, indx):
                 if j!=indx:
                     XXfa[i,j]=-Xfa[i,j]/Xfa[i,indx]
         for i in range(sz):
-            XXfa[i,indx]=_sage_const_1 
+            XXfa[i,indx]=1
         # Initialization of the right weight coefficient
         YYfa=Yfa.copy()
         for i in range(sz):
@@ -15296,7 +15550,7 @@ def Reduced3x3x3CanonicalFactorization(A, Xfa, Yfa, indx):
                 if i!=indx:
                     YYfa[i,j]=Yfa[i,j]/Yfa[indx,j]
         for j in range(sz):
-            YYfa[indx,j]=_sage_const_1 
+            YYfa[indx,j]=1
         # Updating the slices of U
         for i in range(sz):
             for t in range(sz):
@@ -15305,7 +15559,7 @@ def Reduced3x3x3CanonicalFactorization(A, Xfa, Yfa, indx):
                         U[i,t,k]=XXfa[i,t]*J1[i,indx,k]+J1[i,t,k]
         # Updating the slices of W
         for j in range(sz):
-            for t in range(sz-_sage_const_1 ):
+            for t in range(sz-1):
                 for k in range(sz):
                     if t!=indx:
                         W[t,j,k]=J2[t,j,k]+J2[indx,j,k]*YYfa[t,j]
@@ -15313,9 +15567,9 @@ def Reduced3x3x3CanonicalFactorization(A, Xfa, Yfa, indx):
         #print '\n'
         #(A-Prod(U,Ha,W)).canonicalize_radical().printHM()
         # Obtaining the finall output
-        Uf=HM(sz,sz-_sage_const_1 ,sz,[U[i,j,k] for k in range(sz) for j in range(sz-_sage_const_1 ) for i in range(sz)])
-        Vf=HM(sz,sz,sz-_sage_const_1 ,[A[i,j,k] for k in range(sz-_sage_const_1 ) for j in range(sz) for i in range(sz)])
-        Wf=HM(sz-_sage_const_1 ,sz,sz,[W[i,j,k] for k in range(sz) for j in range(sz) for i in range(sz-_sage_const_1 )])
+        Uf=HM(sz,sz-1,sz,[U[i,j,k] for k in range(sz) for j in range(sz-1) for i in range(sz)])
+        Vf=HM(sz,sz,sz-1,[A[i,j,k] for k in range(sz-1) for j in range(sz) for i in range(sz)])
+        Wf=HM(sz-1,sz,sz,[W[i,j,k] for k in range(sz) for j in range(sz) for i in range(sz-1)])
         #print '\n'
         #(A-Prod(Uf,Vf,Wf)).canonicalize_radical().printHM()
         return [Uf, Vf, Wf]
@@ -15341,24 +15595,24 @@ def Remnant(p, q, vrbl):
     - Edinah K. Gnang
     """
     # Updating the firt input polynomial to make it monic in vrbl
-    p=p/(p.diff(vrbl,p.degree(vrbl)).subs(vrbl==_sage_const_0 )/factorial(p.degree(vrbl)))
+    p=p/(p.diff(vrbl,Integer(p.degree(vrbl))).subs(vrbl==0)/factorial(Integer(p.degree(vrbl))))
     #print 'p=',p
     # Initialization of the list
     L=[]; f=expand(q)
     #print 'Initial f=',f
-    for d in range(f.degree(vrbl)-p.degree(vrbl),-_sage_const_1 ,-_sage_const_1 ):
-        f=expand(fast_reduce(f,[vrbl**(d+p.degree(vrbl))],[vrbl**(d+p.degree(vrbl))-expand(p*vrbl**d)]))
+    for d in range(Integer(f.degree(vrbl)-p.degree(vrbl)),-1,-1):
+        f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
         #print '    f=',f
     L.append(f)
     while len(L) < p.degree(vrbl):
         # Initialization of the update of q
         #f=expand(q*L[len(L)-1])
-        f=expand(vrbl*L[len(L)-_sage_const_1 ])
-        for d in range(f.degree(vrbl)-p.degree(vrbl),-_sage_const_1 ,-_sage_const_1 ):
-            f=expand(fast_reduce(f,[vrbl**(d+p.degree(vrbl))],[vrbl**(d+p.degree(vrbl))-expand(p*vrbl**d)]))
+        f=expand(vrbl*L[len(L)-1])
+        for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+            f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
         L.append(f)
     # Initialisation of the matrix
-    return HM(p.degree(vrbl), p.degree(vrbl),[diff(L[i],vrbl,j).subs(vrbl==_sage_const_0 )/factorial(j) for j in range(p.degree(vrbl)) for i in range(len(L))])
+    return HM(p.degree(vrbl), p.degree(vrbl),[diff(L[i],vrbl,j).subs(vrbl==0)/factorial(j) for j in range(p.degree(vrbl)) for i in range(len(L))])
 
 def RemnantII(p, q, vrbl):
     """
@@ -15381,23 +15635,23 @@ def RemnantII(p, q, vrbl):
     - Edinah K. Gnang
     """
     # Updating the firt input polynomial to make it monic in vrbl
-    p=p/(p.diff(vrbl,p.degree(vrbl)).subs(vrbl==_sage_const_0 )/factorial(p.degree(vrbl)))
+    p=p/(p.diff(vrbl,Integer(p.degree(vrbl))).subs(vrbl==0)/factorial(Integer(p.degree(vrbl))))
     #print 'p=',p
     # Initialization of the list
     L=[]; f=expand(q)
     #print 'Initial f=',f
-    for d in range(f.degree(vrbl)-p.degree(vrbl),-_sage_const_1 ,-_sage_const_1 ):
-        f=expand(fast_reduce(f,[vrbl**(d+p.degree(vrbl))],[vrbl**(d+p.degree(vrbl))-expand(p*vrbl**d)]))
+    for d in range(Integer(f.degree(vrbl)-p.degree(vrbl)),-1,-1):
+        f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
         #print '    f=',f
     L.append(f)
     while len(L) < p.degree(vrbl):
         # Initialization of the update of q
-        f=expand(q*L[len(L)-_sage_const_1 ])
-        for d in range(f.degree(vrbl)-p.degree(vrbl),-_sage_const_1 ,-_sage_const_1 ):
-            f=expand(fast_reduce(f,[vrbl**(d+p.degree(vrbl))],[vrbl**(d+p.degree(vrbl))-expand(p*vrbl**d)]))
+        f=expand(q*L[len(L)-1])
+        for d in range(f.degree(vrbl)-p.degree(vrbl),-1,-1):
+            f=expand(fast_reduce(f,[vrbl^(d+p.degree(vrbl))],[vrbl^(d+p.degree(vrbl))-expand(p*vrbl^d)]))
         L.append(f)
     # Initialisation of the matrix
-    return HM(p.degree(vrbl), p.degree(vrbl),[diff(L[i],vrbl,j).subs(vrbl==_sage_const_0 )/factorial(j) for j in range(p.degree(vrbl)) for i in range(len(L))]) 
+    return HM(p.degree(vrbl), p.degree(vrbl),[diff(L[i],vrbl,j).subs(vrbl==0)/factorial(j) for j in range(p.degree(vrbl)) for i in range(len(L))]) 
 
 def modular_eliminationHM(PolyLst, VrbLst):
     """
@@ -15431,42 +15685,42 @@ def modular_eliminationHM(PolyLst, VrbLst):
     A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
     #A.printHM()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
         #while (A[i:,j]).is_zero() and j < A.ncols()-1:
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         #if (A[i:,:].is_zero())==False:
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
                 #Ta=A[i:,:]
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 #Id=identity_matrix(Ta.nrows())
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
+                Id=HM(2, Ta.n(0), 'kronecker')
                 #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
-                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), _sage_const_1 , CnstrLst)).list()
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
                 #A[i:,:]=Ta
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 , A.n(_sage_const_1 ), [A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
-                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>_sage_const_0  and not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                         if not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                             CnstrLst[r]=Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                             #print 'i=', i,'j=', j,' r=', r
                             #print 'CnstrLst=', CnstrLst
                             A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return CnstrLst
 
 def complete_modular_eliminationHM(PolyLst, VrbLst):
@@ -15507,23 +15761,23 @@ def complete_modular_eliminationHM(PolyLst, VrbLst):
     # Initializing the degree matrix.
     A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
-                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>_sage_const_0  and not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+            for r in range(i-1,-1,-1):
+                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                     if not Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                         CnstrLst[r]=Remnant(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                         A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
     return CnstrLst
 
 def modular_eliminationHMII(PolyLst, VrbLst):
@@ -15558,42 +15812,42 @@ def modular_eliminationHMII(PolyLst, VrbLst):
     A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
     #A.printHM()
     # Initialization of the row and column index
-    i=_sage_const_0 ; j=_sage_const_0 
-    while i < A.n(_sage_const_0 ) and j < A.n(_sage_const_1 ):
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
         #while (A[i:,j]).is_zero() and j < A.ncols()-1:
-        while HM(A.n(_sage_const_0 )-i, _sage_const_1 , [A[i0,j] for i0 in range(i,A.n(_sage_const_0 ))]).is_zero() and j < A.ncols()-_sage_const_1 :
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
-            j=j+_sage_const_1 
+            j=j+1
         #if (A[i:,:].is_zero())==False:
-        if HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))]).is_zero()==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
                 #Ta=A[i:,:]
-                Ta=HM(A.n(_sage_const_0 )-i, A.n(_sage_const_1 ), [A[i0,j0] for j0 in range(A.n(_sage_const_1 )) for i0 in range(i,A.n(_sage_const_0 ))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
                 #Id=identity_matrix(Ta.nrows())
-                Id=HM(_sage_const_2 , Ta.n(_sage_const_0 ), 'kronecker')
+                Id=HM(2, Ta.n(0), 'kronecker')
                 #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                P=sum([HM(Ta.n(_sage_const_0 ),_sage_const_1 ,[Id[i0,k] for i0 in range(Ta.n(_sage_const_0 ))])*HM(_sage_const_1 ,Ta.n(_sage_const_0 ),[Id[Integer(mod(k+_sage_const_1 ,Ta.n(_sage_const_0 ))),j0] for j0 in range(Ta.n(_sage_const_0 ))]) for k in range(Ta.n(_sage_const_0 ))])
-                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), _sage_const_1 , CnstrLst)).list()
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=(P*HM(len(CnstrLst), 1, CnstrLst)).list()
                 #A[i:,:]=Ta
-                for i0 in range(Ta.n(_sage_const_0 )):
-                    for j0 in range(Ta.n(_sage_const_1 )):
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            for r in range(i+_sage_const_1 ,A.nrows()):
+            for r in range(i+1,A.nrows()):
                 # Taking care of the zero row
-                if HM(_sage_const_1 , A.n(_sage_const_1 ), [A[r,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
-                    r=r+_sage_const_1 
+                if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
                 else:
-                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>_sage_const_0  and not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                         if not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                             CnstrLst[r]=RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                             #print 'i=', i,'j=', j,' r=', r
                             #print 'CnstrLst=', CnstrLst
                             A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
         # Incrementing the row and column index.
-        i=i+_sage_const_1 ; j=j+_sage_const_1 
+        i=i+1; j=j+1
     return CnstrLst
 
 def complete_modular_eliminationHMII(PolyLst, VrbLst):
@@ -15635,23 +15889,23 @@ def complete_modular_eliminationHMII(PolyLst, VrbLst):
     # Initializing the degree matrix.
     A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
     # Initialization of the row and column index
-    i=A.nrows()-_sage_const_1 ; j=_sage_const_0 
-    while i>_sage_const_0  or j>_sage_const_0 :
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
         #if (A[i,:]).is_zero():
-        if HM(_sage_const_1 ,A.n(_sage_const_1 ),[A[i,j0] for j0 in range(A.n(_sage_const_1 ))]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
             # decrementing the row index and initializing the column index
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
         else :
             while (A[i,j]).is_zero():
                 # Incrementing the column index
-                j = j + _sage_const_1 
+                j = j + 1
             # performing row operations
-            for r in range(i-_sage_const_1 ,-_sage_const_1 ,-_sage_const_1 ):
-                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>_sage_const_0  and not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+            for r in range(i-1,-1,-1):
+                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                     if not RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
                         CnstrLst[r]=RemnantII(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
                         A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
-            i=i-_sage_const_1 ; j=_sage_const_0 
+            i=i-1; j=0
     return CnstrLst
 
 def outerdeterminant(A, B):
@@ -15677,9 +15931,9 @@ def outerdeterminant(A, B):
     """
     # Initializing the permutations
     P = Permutations(range(A.nrows()))
-    return sum([Permutation([p[i]+_sage_const_1  for i in range(len(p))]).signature()*prod([\
-HM(A.nrows(),_sage_const_1 ,[A[i,p[k]] for i in range(A.nrows())])*\
-HM(_sage_const_1 ,B.ncols(),[B[k,j] for j in range(B.ncols())]) for k in range(A.nrows())]) for p in P])
+    return sum([Permutation([p[i]+1 for i in range(len(p))]).signature()*prod([\
+HM(A.nrows(),1,[A[i,p[k]] for i in range(A.nrows())])*\
+HM(1,B.ncols(),[B[k,j] for j in range(B.ncols())]) for k in range(A.nrows())]) for p in P])
 
 def CC2RR_inflate(A):
     """ 
@@ -15703,12 +15957,12 @@ def CC2RR_inflate(A):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if A.order()==_sage_const_2 :
+    if A.order()==2:
         # Initialization of the matrix
-        B=HM(_sage_const_2 *A.n(_sage_const_0 ), _sage_const_2 *A.n(_sage_const_1 ), 'zero') # Conversion from complex to real
-        for i in range(A.n(_sage_const_0 )):
-            for j in range(A.n(_sage_const_1 )):
-                Tmp=HM(A.n(_sage_const_0 ), A.n(_sage_const_1 ), 'zero'); Tmp[i,j]=_sage_const_1 
+        B=HM(2*A.n(0), 2*A.n(1), 'zero') # Conversion from complex to real
+        for i in range(A.n(0)):
+            for j in range(A.n(1)):
+                Tmp=HM(A.n(0), A.n(1), 'zero'); Tmp[i,j]=1
                 B=B+Tmp.tensor_product(HM([[A[i,j].real(),-A[i,j].imag()],[A[i,j].imag(),A[i,j].real()]]))
         return B
     else:
@@ -15734,13 +15988,13 @@ def RR2CC_deflate(Q):
     AUTHORS:
     - Edinah K. Gnang
     """
-    if Q.order()==_sage_const_2 :
+    if Q.order()==2:
         # Initialization of the matrix
-        U=HM(Q.n(_sage_const_0 )/_sage_const_2 , Q.n(_sage_const_1 )/_sage_const_2 , 'zero') # Conversion from complex to real
-        for i in range(_sage_const_0 , Q.n(_sage_const_0 ), _sage_const_2 ):
-            for j in range(_sage_const_0 , Q.n(_sage_const_1 ), _sage_const_2 ):
-                Tmp=HM(Q.n(_sage_const_0 ), Q.n(_sage_const_1 ), 'zero'); Tmp[i,j]=_sage_const_1 
-                U[i/_sage_const_2 , j/_sage_const_2 ] = Q[i, j]+I*Q[i+_sage_const_1 , j]
+        U=HM(Q.n(0)/2, Q.n(1)/2, 'zero') # Conversion from complex to real
+        for i in range(0, Q.n(0), 2):
+            for j in range(0, Q.n(1), 2):
+                Tmp=HM(Q.n(0), Q.n(1), 'zero'); Tmp[i,j]=1
+                U[i/2, j/2] = Q[i, j]+I*Q[i+1, j]
         return U
     else:
         raise ValueError, "Expected a second order hypermatrix"
@@ -15768,7 +16022,7 @@ def quaternion_2x2_CC_rep(VrbL):
     AUTHORS:
     - Edinah K. Gnang
     """ 
-    return HM(_sage_const_2 ,_sage_const_2 ,[VrbL[_sage_const_1 ][_sage_const_0 ]+I*VrbL[_sage_const_1 ][_sage_const_1 ], -VrbL[_sage_const_0 ][_sage_const_0 ]+I*VrbL[_sage_const_0 ][_sage_const_1 ],  VrbL[_sage_const_0 ][_sage_const_0 ]+I*VrbL[_sage_const_0 ][_sage_const_1 ], VrbL[_sage_const_1 ][_sage_const_0 ]-I*VrbL[_sage_const_1 ][_sage_const_1 ]])
+    return HM(2,2,[VrbL[1][0]+I*VrbL[1][1], -VrbL[0][0]+I*VrbL[0][1],  VrbL[0][0]+I*VrbL[0][1], VrbL[1][0]-I*VrbL[1][1]])
 
 def quaternion_2x2_unit_abs_CC(VrbL): 
     """ 
@@ -15790,7 +16044,7 @@ def quaternion_2x2_unit_abs_CC(VrbL):
     AUTHORS:
     - Edinah K. Gnang
     """ 
-    return HM(_sage_const_2 ,_sage_const_2 ,[VrbL[_sage_const_1 ],-_sage_const_1 /VrbL[_sage_const_0 ],  VrbL[_sage_const_0 ],_sage_const_1 /VrbL[_sage_const_1 ]])
+    return HM(2,2,[VrbL[1],-1/VrbL[0],  VrbL[0],1/VrbL[1]])
 
 def rg(*args): 
     """ 
@@ -15838,10 +16092,10 @@ def multivariate_leading_term(f, Xv, Pp):
     # Initialization of the size parameter
     sz=len(Xv)
     # Expression used for specifying the type of the operation.
-    cst = _sage_const_2 
+    cst = 2
     add = var('x0') + var('x1')
     mul = var('x0') * var('x1')
-    xpo = var('x0') ** var('x1')
+    xpo = var('x0') ^ var('x1')
     if f.operator() == add.operator():
         # Collecting the terms
         L=f.operands()
@@ -15850,7 +16104,7 @@ def multivariate_leading_term(f, Xv, Pp):
         for i in rg(len(L)):
             if L[i].arguments() != ():
                 if (L[i].operator()==mul.operator() or (L[i]).operator()==xpo.operator()):
-                    cst_fctr = _sage_const_1 
+                    cst_fctr = 1
                     lst_i = L[i].operands()
                     for j in rg(len(lst_i)):
                         if lst_i[j].arguments()==():
@@ -15859,12 +16113,12 @@ def multivariate_leading_term(f, Xv, Pp):
                 elif L[i] in Xv:
                     L_strpd.append((L[i], i))
         # Storing the integer and the index associated with the term
-        tmp_value = L_strpd[_sage_const_0 ][_sage_const_0 ].subs([Xv[i]==Pp[i] for i in rg(sz)])
-        idx = L_strpd[_sage_const_0 ][_sage_const_1 ]
+        tmp_value = L_strpd[0][0].subs([Xv[i]==Pp[i] for i in rg(sz)])
+        idx = L_strpd[0][1]
         for k in rg(len(L_strpd)):
-            if L_strpd[k][_sage_const_0 ].subs([Xv[i]==Pp[i] for i in rg(sz)]) > tmp_value:
-                tmp_value = L_strpd[k][_sage_const_0 ].subs([Xv[i]==Pp[i] for i in rg(sz)])
-                idx = L_strpd[k][_sage_const_1 ]
+            if L_strpd[k][0].subs([Xv[i]==Pp[i] for i in rg(sz)]) > tmp_value:
+                tmp_value = L_strpd[k][0].subs([Xv[i]==Pp[i] for i in rg(sz)])
+                idx = L_strpd[k][1]
         return L[idx]
     elif f.operator() == mul.operator():
         return f
@@ -15900,25 +16154,25 @@ def multivariate_division(f, List, Xv, Pp):
     sz=len(Xv)
     # Initializing the output List
     L = []
-    for j in rg(len(List)+_sage_const_1 ):
-        L.append(_sage_const_0 )
+    for j in rg(len(List)+1):
+        L.append(0)
     # Initializing the Polynomial
     p = f
     while not p.is_zero():
-        i = _sage_const_0 
+        i = 0
         division_occured = False
         while (i in rg(len(List))) and (not division_occured):
-            if List[i] == _sage_const_0 :
-                i = i+_sage_const_1 
+            if List[i] == 0:
+                i = i+1
             else:
                 # Getting the Leading term of fi
                 Lt_fi = multivariate_leading_term(List[i], Xv, Pp)
                 # Getting the leading Monomial of fi
-                Lm_fi = Lt_fi/Lt_fi.subs([Xv[j]==_sage_const_1  for j in rg(sz)])
+                Lm_fi = Lt_fi/Lt_fi.subs([Xv[j]==1 for j in rg(sz)])
                 # Getting the Leading term of p
                 Lt_p = multivariate_leading_term(p, Xv, Pp)
                 # Getting the leading Monomial of p
-                Lm_p = Lt_p/Lt_p.subs([Xv[j]==_sage_const_1  for j in rg(sz)])
+                Lm_p = Lt_p/Lt_p.subs([Xv[j]==1 for j in rg(sz)])
                 m_p  = Lm_p.subs([Xv[j]==Pp[j] for j in rg(sz)])
                 m_fi = Lm_fi.subs([Xv[j]==Pp[j] for j in rg(sz)])
                 if gcd(m_p, m_fi) == m_fi or gcd(m_p, m_fi) == -m_fi:
@@ -15926,7 +16180,7 @@ def multivariate_division(f, List, Xv, Pp):
                     p = expand(p - List[i] * Lt_p/Lt_fi)
                     division_occured = True
                 else :
-                    i = i+_sage_const_1 
+                    i = i+1
         if division_occured == False:
             L[len(List)] = L[len(List)] + multivariate_leading_term(p, Xv, Pp)
             p = p - multivariate_leading_term(p, Xv, Pp)
@@ -15958,8 +16212,8 @@ def multivariate_monomial_lcm(t1, t2, Xv, Pp):
     # Initialization of the Prime variable dictionary datastructure
     PpXv = dict([(Pp[i],Xv[i]) for i in rg(sz)])
     # These 2 lines of code get rid of the coefficient of the leading terms
-    m1 = t1/t1.subs([Xv[j]==_sage_const_1  for j in rg(sz)])
-    m2 = t2/t2.subs([Xv[j]==_sage_const_1  for j in rg(sz)])
+    m1 = t1/t1.subs([Xv[j]==1 for j in rg(sz)])
+    m2 = t2/t2.subs([Xv[j]==1 for j in rg(sz)])
     # The following computes the lcm value associated with the monomial we seek
     monomial_lcm_value = lcm(m1.subs([Xv[i]==Pp[i] for i in rg(sz)]), m2.subs([Xv[i]==Pp[i] for i in rg(sz)]))
     # The next section of line of codes recovers the 
@@ -15967,10 +16221,10 @@ def multivariate_monomial_lcm(t1, t2, Xv, Pp):
     prime_factors = factor(Integer(monomial_lcm_value))
     factor_list = list(prime_factors)
     # Initialization of the monomial
-    m = _sage_const_1 
+    m = 1
     for i in rg(len(factor_list)):
         tmp_list = list(factor_list[i])
-        m = m * PpXv[tmp_list[_sage_const_0 ]]**Integer(tmp_list[_sage_const_1 ])
+        m = m * PpXv[tmp_list[0]]^Integer(tmp_list[1])
     return m
 
 def multivariate_S_polynomials(List, Xv, Pp):
@@ -15996,8 +16250,8 @@ def multivariate_S_polynomials(List, Xv, Pp):
     # Initialization of the size parameter
     sz=len(Xv)
     L = []
-    for i in rg(len(List)-_sage_const_1 ):
-        for j in rg(i+_sage_const_1 ,len(List)):
+    for i in rg(len(List)-1):
+        for j in rg(i+1,len(List)):
             Lt_fi = multivariate_leading_term(List[i], Xv, Pp)
             Lt_fj = multivariate_leading_term(List[j], Xv, Pp)
             monomial_lcm = multivariate_monomial_lcm(Lt_fi,Lt_fj, Xv, Pp)
@@ -16031,39 +16285,39 @@ def multivariate_reduce_polynomial(f, Xv, Pp):
     PpXv = dict([(Pp[i],Xv[i]) for i in rg(sz)])
     # Checks to see if there is a constant term 
     # in which case no reduction is needed
-    if not f.subs([Xv[j]==_sage_const_0  for j in rg(sz)]).is_zero():
+    if not f.subs([Xv[j]==0 for j in rg(sz)]).is_zero():
         return f
-    elif f == _sage_const_0 :
+    elif f == 0:
         return f
     else:
         L = list(f.iterator())
         # The next piece of code determines i
         # if the expression is a monomial
-        prd = _sage_const_1 
+        prd = 1
         for j in rg(len(L)):
             prd = prd*L[j]
         if prd == f:
-            return _sage_const_1 
-        elif (len(L) == _sage_const_2 ) and (L[_sage_const_0 ]**L[_sage_const_1 ] == f):
+            return 1
+        elif (len(L) == 2) and (L[0]^L[1] == f):
             return f
         for i in rg(len(L)):
             # The next line of code gets rid of 
             # the coefficients in the list
-            L[i] = L[i]/(L[i].subs([Xv[j]==_sage_const_1  for j in rg(sz)]))
+            L[i] = L[i]/(L[i].subs([Xv[j]==1 for j in rg(sz)]))
             L[i] = Integer(L[i].subs([Xv[j]==Pp[j] for j in rg(sz)]))
         # Computing the greatest common divisior
         cmn_fctr = gcd(L)
-        if cmn_fctr == _sage_const_1  :
+        if cmn_fctr == 1 :
             return f
         else :
             # The next section of line of codes recover the monomial
             # in question from the computed gcd integer.
             prime_factors = factor(cmn_fctr)
             factor_list = list(prime_factors)
-            m = _sage_const_1 
+            m = 1
             for i in rg(len(factor_list)):
                 tmp_list = list(factor_list[i])
-                m = m * PpXv[tmp_list[_sage_const_0 ]]**Integer(tmp_list[_sage_const_1 ])
+                m = m * PpXv[tmp_list[0]]^Integer(tmp_list[1])
             g = expand(f/m)
             return g
 
@@ -16094,7 +16348,7 @@ def prime_induced_grobner_basis(Idl, Xv, Pp):
     I_curr = list()
     for i in rg(len(Idl)):
         I_curr.append(Idl[i])
-    l_old = _sage_const_0 ; l_new = len(I_curr)
+    l_old = 0; l_new = len(I_curr)
     # Boolean variable tracking contradictions
     finished = False
     while l_old != l_new and finished == False:
@@ -16111,13 +16365,13 @@ def prime_induced_grobner_basis(Idl, Xv, Pp):
         l_old = len(I_curr)
         for i in rg(len(S)):
             tmp_list = multivariate_division(S[i], I_curr, Xv, Pp)
-            if tmp_list[len(tmp_list)-_sage_const_1 ]!=_sage_const_0 :
-                I_curr.append(tmp_list[len(tmp_list)-_sage_const_1 ])
+            if tmp_list[len(tmp_list)-1]!=0:
+                I_curr.append(tmp_list[len(tmp_list)-1])
         # Printing the result of the first pass of the Buchberger algorithm.
         #print '\n\n The Current generator for the Ideal is given by'
         for i in rg(len(I_curr)):
             #print I_curr[i]
-            if I_curr[i] == I_curr[i].subs([Xv[j]==_sage_const_0  for j in rg(sz)]) and not I_curr[i].subs([Xv[j]==_sage_const_0  for j in rg(sz)]).is_zero():
+            if I_curr[i] == I_curr[i].subs([Xv[j]==0 for j in rg(sz)]) and not I_curr[i].subs([Xv[j]==0 for j in rg(sz)]).is_zero():
                 finished = True
         # Recording the size of the generator set after the division
         l_new = len(I_curr)
@@ -16166,7 +16420,7 @@ def generate_general_linear_constraints(sz,l):
     f.write("Lb=HM(l,sz,'b').list()\n\n")
     f.write('# Initializing the free variables\n')
     f.write('F=FreeAlgebra(QQ,len(La+Lx+Lb),La+Lx+Lb)\n')
-    f.write('F.<'+str(Al+Xl+Bl)[_sage_const_1 :len(str(Al+Xl+Bl))-_sage_const_1 ]+'>=FreeAlgebra(QQ,len(La+Lx+Lb))\n\n')
+    f.write('F.<'+str(Al+Xl+Bl)[1:len(str(Al+Xl+Bl))-1]+'>=FreeAlgebra(QQ,len(La+Lx+Lb))\n\n')
     f.write('# Initialization of the hypermatrices with symbolic variable entries which do not commute\n')
     f.write('# associated with the map\n')
     f.write('Ha=HM(1,l,sz,HM(sz,l,'+str(Al)+').transpose().list())\n')
@@ -16177,4 +16431,138 @@ def generate_general_linear_constraints(sz,l):
     f.write('Hr.printHM()\n')
     # Closing the file
     f.close()
+
+def SecondOrderSlicer(A, L, strg):
+    """
+    Outputs slices specified by index list L.
+    the last string input is either row or col
+    and determines the slices to be collected
+    into a hypermatrix
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; A=HM(sz,sz,'a')
+        sage: SecondOrderSlicer(A, [0], 'row').printHM()
+        [:, :]=
+        [a00 a01 a02]
+        <BLANKLINE>
+        sage: SecondOrderSlicer(A, [1], 'col').printHM()
+        [:, :]=
+        [a01]
+        [a11]
+        [a21]
+        <BLANKLINE>
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if   strg=='row':
+        return HM(len(L),A.n(1),[A[i,j] for j in rg(A.n(1)) for i in L])
+    elif strg=='col':
+        return HM(A.n(0),len(L),[A[i,j] for j in L for i in rg(A.n(0))])
+    else:
+        raise ValueError, "Expected the string input to be either row or col"
+
+def ThirdOrderSlicer(A, L, strg):
+    """
+    Outputs slices specified by index list L.
+    the last string input is either row, col or dpt
+    and determines the slices to be collected
+    into a hypermatrix
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; A=HM(sz,sz,sz,'a')
+        sage: ThirdOrderSlicer(A, [0], 'row').printHM()
+        [:, :, 0]=
+        [a000 a010 a020]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001 a011 a021]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a002 a012 a022]
+        <BLANKLINE>
+        sage: ThirdOrderSlicer(A, [1], 'col').printHM()
+        [:, :, 0]=
+        [a010]
+        [a110]
+        [a210]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a011]
+        [a111]
+        [a211]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a012]
+        [a112]
+        [a212]
+        <BLANKLINE>
+        sage: ThirdOrderSlicer(A, [2], 'dpt').printHM()
+        [:, :, 0]=
+        [a002 a012 a022]
+        [a102 a112 a122]
+        [a202 a212 a222] 
+        <BLANKLINE>
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if   strg=='row':
+        return HM(len(L),A.n(1),A.n(2),[A[i,j,k] for k in rg(A.n(2)) for j in rg(A.n(1)) for i in L])
+    elif strg=='col':
+        return HM(A.n(0),len(L),A.n(2),[A[i,j,k] for k in rg(A.n(2)) for j in L for i in rg(A.n(0))])
+    elif strg=='dpt':
+        return HM(A.n(0),A.n(1),len(L),[A[i,j,k] for k in L for j in rg(A.n(1)) for i in rg(A.n(0))])
+    else:
+        raise ValueError, "Expected the string input to be either row, col or dpt"
+
+def FourthOrderSlicer(A, L, strg):
+    """
+    Outputs slices specified by index list L.
+    the last string input is either row, col, dpt, tme
+    and determines the slices to be collected into a
+    hypermatrix
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; A=HM(sz, sz, sz, sz, 'a')
+        sage: FourthOrderSlicer(A, [0], 'row')
+        [[[[a0000, a0001], [a0010, a0011]], [[a0100, a0101], [a0110, a0111]]]]
+        sage: FourthOrderSlicer(A, [1], 'col')
+        [[[[a0100, a0101], [a0110, a0111]]], [[[a1100, a1101], [a1110, a1111]]]]
+        sage: FourthOrderSlicer(A, [1], 'dpt')
+        [[[[a0010, a0011]], [[a0110, a0111]]], [[[a1010, a1011]], [[a1110, a1111]]]]
+        sage: FourthOrderSlicer(A, [1], 'tme')
+        [[[[a0001], [a0011]], [[a0101], [a0111]]], [[[a1001], [a1011]], [[a1101], [a1111]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do:
+    """
+    if strg=='row':
+        return HM(len(L), A.n(1), A.n(2), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in rg(A.n(2)) for j in rg(A.n(1)) for i in L])
+    elif strg=='col':
+        return HM(A.n(0), len(L), A.n(2), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in rg(A.n(2)) for j in L for i in rg(A.n(0))])
+    elif strg=='dpt':
+        return HM(A.n(0), A.n(1), len(L), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in L for j in rg(A.n(1)) for i in rg(A.n(0))])
+    elif strg=='tme':
+        return HM(A.n(0), A.n(1), A.n(2), len(L), [A[i,j,k,t] for t in L for k in rg(A.n(2)) for j in rg(A.n(1)) for i in rg(A.n(0))])
+    else:
+        raise ValueError, "Expected the string input to be either row, col, dpt, tme"
 

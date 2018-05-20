@@ -1,8 +1,8 @@
 #*************************************************************************#
-#    Copyright (C) 2015, 2016, 2017 Edinah K.Gnang <kgnang@gmail.com>,    #
-#                          Ori Parzanchevski,                             #
-#                          Yuval Filmus,                                  #
-#                          Doron Zeilberger,                              #
+# Copyright (C) 2015, 2016, 2017, 2018 Edinah K.Gnang <kgnang@gmail.com>, #
+#                                      Ori Parzanchevski,                 #
+#                                      Yuval Filmus,                      #
+#                                      Doron Zeilberger,                  #
 #                                                                         #
 #  Distributed under the terms of the GNU General Public License (GPL)    #
 #                                                                         #
@@ -16518,4 +16518,42 @@ def ThirdOrderSlicer(A, L, strg):
         return HM(A.n(0),A.n(1),len(L),[A[i,j,k] for k in L for j in rg(A.n(1)) for i in rg(A.n(0))])
     else:
         raise ValueError, "Expected the string input to be either row, col or dpt"
+
+def FourthOrderSlicer(A, L, strg):
+    """
+    Outputs slices specified by index list L.
+    the last string input is either row, col, dpt, tme
+    and determines the slices to be collected into a
+    hypermatrix
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; A=HM(sz, sz, sz, sz, 'a')
+        sage: FourthOrderSlicer(A, [0], 'row')
+        [[[[a0000, a0001], [a0010, a0011]], [[a0100, a0101], [a0110, a0111]]]]
+        sage: FourthOrderSlicer(A, [1], 'col')
+        [[[[a0100, a0101], [a0110, a0111]]], [[[a1100, a1101], [a1110, a1111]]]]
+        sage: FourthOrderSlicer(A, [1], 'dpt')
+        [[[[a0010, a0011]], [[a0110, a0111]]], [[[a1010, a1011]], [[a1110, a1111]]]]
+        sage: FourthOrderSlicer(A, [1], 'tme')
+        [[[[a0001], [a0011]], [[a0101], [a0111]]], [[[a1001], [a1011]], [[a1101], [a1111]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do:
+    """
+    if strg=='row':
+        return HM(len(L), A.n(1), A.n(2), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in rg(A.n(2)) for j in rg(A.n(1)) for i in L])
+    elif strg=='col':
+        return HM(A.n(0), len(L), A.n(2), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in rg(A.n(2)) for j in L for i in rg(A.n(0))])
+    elif strg=='dpt':
+        return HM(A.n(0), A.n(1), len(L), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in L for j in rg(A.n(1)) for i in rg(A.n(0))])
+    elif strg=='tme':
+        return HM(A.n(0), A.n(1), A.n(2), len(L), [A[i,j,k,t] for t in L for k in rg(A.n(2)) for j in rg(A.n(1)) for i in rg(A.n(0))])
+    else:
+        raise ValueError, "Expected the string input to be either row, col, dpt, tme"
 

@@ -715,6 +715,42 @@ list of symbolic expressions and one wants to extract a matrix and right hand si
 This can be done as follows
  
  ```python
+sage: sz=2; od=2; X=HM(sz,sz,var_list('x',sz^2)); f=X.det()
+sage: H=Form2TotallySymmetricHypermatrix(f, 2, X.list()); H.printHM()
+[:, :]=
+[   0    0    0  1/2]
+[   0    0 -1/2    0]
+[   0 -1/2    0    0]
+[ 1/2    0    0    0]
+sage: sz=2; od=2; A=HM(sz,sz,'a'); X=HM(od,'x').list()
+sage: Hv0=HM(sz,1,[1,X[0]]); Hv1=HM(sz,1,[1,X[1]])
+sage: f=ProdB(Hv0.transpose(),Hv1,A)[0,0]; f
+a11*x0*x1 + a10*x0 + a01*x1 + a00
+sage: Form2Hypermatrix(f, X).printHM()
+[:, :]=
+[a00 a01]
+[a10 a11]
+sage: sz=2; od=3; A=HM(sz, sz, sz,'a'); X=HM(od, 'x').list()
+sage: Hv0=HM(sz, 1, 1, [1,X[0]]); Hv1=HM(sz, 1, 1, [1,X[1]]); Hv2=HM(sz, 1, 1, [1,X[2]])
+sage: f=ProdB(Hv0.transpose(2), Hv1.transpose(), Hv2, A)[0,0,0]; f
+a111*x0*x1*x2 + a110*x0*x1 + a101*x0*x2 + a011*x1*x2 + a100*x0 + a010*x1 + a001*x2 + a000
+sage: Form2Hypermatrix(f, X).printHM()
+[:, :, 0]=
+[a000 a010]
+[a100 a110]
+<BLANKLINE> 
+[:, :, 1]=
+[a001 a011]
+[a101 a111]
+sage: sz=3; A=HM(sz,sz,'a'); X=var_list('x',2)
+sage: Hv0=HM(sz,1,[X[0]^i for i in range(sz)]); Hv1=HM(sz,1,[X[1]^j for j in range(sz)])
+sage: f=ProdB(Hv0.transpose(),Hv1,A)[0,0]; f
+a22*x0^2*x1^2 + a21*x0^2*x1 + a12*x0*x1^2 + a20*x0^2 + a11*x0*x1 + a02*x1^2 + a10*x0 + a01*x1 + a00
+sage: Form2Hypermatrix(f, X).printHM()
+[:, :]=
+[a00 a01 a02]
+[a10 a11 a12]
+[a20 a21 a22]
 sage: x,y = var('x,y')
 sage: CnstrLst = [x+y==1, x-y==2]
 sage: VrbLst = [x, y]
@@ -725,6 +761,12 @@ sage: A
 sage: b
 [1]
 [2]
+sage: sz=2; EqL=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+sage: default_linear_solver(EqL, var_list('x', 2*sz), var_list('t', 2*sz))
+[x0 == a00 - a10 + a11 - t3,
+ x1 == a11 - t3,
+ x2 == a10 - a11 + t3,
+ 0  == -a00 + a01 + a10 - a11]
 ```
 
 To compute resultant via Sylvester matrix construction we proceed as follows
@@ -752,6 +794,71 @@ To loading a PNG image into a hypermatrix ( warning: very slow !)
 ```python
 sage: A=HM("pic.png")
 ```
+
+The slicer is given by 
+
+```python
+sage: sz=3; A=HM(sz,sz,sz,'a')
+sage: ThirdOrderSlicer(A, [0], 'row').printHM()
+[:, :, 0]=
+[a000 a010 a020]
+<BLANKLINE>
+[:, :, 1]=
+[a001 a011 a021]
+<BLANKLINE>
+[:, :, 2]=
+[a002 a012 a022]
+<BLANKLINE>
+sage: ThirdOrderSlicer(A, [1], 'col').printHM()
+[:, :, 0]=
+[a010]
+[a110]
+[a210]
+<BLANKLINE>
+[:, :, 1]=
+[a011]
+[a111]
+[a211]
+<BLANKLINE>
+[:, :, 2]=
+[a012]
+[a112]
+[a212]
+<BLANKLINE>
+sage: ThirdOrderSlicer(A, [2], 'dpt').printHM()
+[:, :, 0]=
+[a002 a012 a022]
+[a102 a112 a122]
+[a202 a212 a222] 
+<BLANKLINE> 
+```
+
+Code for Discrete Fourier matrices
+
+```python
+sage: [Ha, Hb]=SecondOrderDFT(2,2)
+sage: Ha
+[[1, 1], [1, -1]]
+sage: Hb
+[[1, 1], [1, -1]]
+sage: Prod(Ha,Hb).simplify()
+[[2, 0], [0, 2]]
+sage: [Ha, Hb, Hc]=ThirdOrderDFT(3,2)
+sage: Ha
+[[[1, 1], [1, 1/2*I*sqrt(3) - 1/2], [1, -1/2*I*sqrt(3) - 1/2]], [[1, 1], [1/2*I*sqrt(3) - 1/2, 1], [-1/2*I*sqrt(3) - 1/2, 1]]]
+sage: Hb
+[[[1, 1, 1], [1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2]], [[1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2], [1, 1, 1]]]
+sage: Hc
+[[[1, 1], [1, 1]], [[1, 1/2*I*sqrt(3) - 1/2], [1/2*I*sqrt(3) - 1/2, 1]], [[1, -1/2*I*sqrt(3) - 1/2], [-1/2*I*sqrt(3) - 1/2, 1]]]
+sage: Prod(Ha,Hb,Hc).simplify_full()
+[[[3, 0], [0, 0]], [[0, 0], [0, 3]]]
+sage: [Ha, Hb, Hc]=ThirdOrderDFT(5,5)
+sage: Prod(Ha,Hb,Hc).simplify_full()
+[[[5, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 5, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 5, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 5, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 5]]]
+```
+
+
+
 # Bug report
 
 Please reporting bugs is greatly appreciated.
