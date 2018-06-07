@@ -8,10 +8,10 @@ _sage_const_5 = Integer(5); _sage_const_4 = Integer(4); _sage_const_9 = Integer(
 _sage_const_8 = Integer(8)
 
 #*************************************************************************#
-# Copyright (C) 2015, 2016, 2017, 2018 Edinah K.Gnang <kgnang@gmail.com>, #
-#                                      Ori Parzanchevski,                 #
-#                                      Yuval Filmus,                      #
-#                                      Doron Zeilberger,                  #
+#    Copyright (C) 2015, 2016, 2017 Edinah K.Gnang <kgnang@gmail.com>,    #
+#                          Ori Parzanchevski,                             #
+#                          Yuval Filmus,                                  #
+#                          Doron Zeilberger,                              #
 #                                                                         #
 #  Distributed under the terms of the GNU General Public License (GPL)    #
 #                                                                         #
@@ -777,6 +777,28 @@ class HM:
         - Edinah K. Gnang
         """
         return substituteHM(poly, vrbl, self)
+
+    def substituteInHM(self, vrbl, M):
+        """
+        Procedure for computing substitution into the Hypermatrix 
+        polynomial entries of a given input matrix for the input
+        variable.
+
+
+        EXAMPLES:
+
+        ::
+
+            sage: x = var('x'); Ha=HM(2,1,[x+1,x^2+1])
+            sage: Y=var_list('y',2); rM=Ha.substituteInHM(x,HM(2,2,[Y[0],0,0,Y[1]])); rM
+            [[[[y0 + 1, 0], [0, y1 + 1]]], [[[y0^2 + 1, 0], [0, y1^2 + 1]]]]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixSubstituteInMatrix(self,vrbl,M)
 
     def transpose(self, i=1):
         """
@@ -1784,7 +1806,7 @@ def HypermatrixGenerateAllOne(*args):
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
     if len(args) == 1:
-        return [1 for i in range(args[0])]
+        return [SR(1) for i in range(args[0])]
     return [apply(HypermatrixGenerateAllOne, args[1:] ) for i in range(args[0])]
 
 def HypermatrixGenerateAllZero(*args):
@@ -1804,7 +1826,7 @@ def HypermatrixGenerateAllZero(*args):
     - Edinah K. Gnang, Ori Parzanchevski and Yuval Filmus
     """
     if len(args) == 1:
-        return [0 for i in range(args[0])]
+        return [SR(0) for i in range(args[0])]
     return [apply(HypermatrixGenerateAllZero, args[1:] ) for i in range(args[0])]
 
 def SymHypermatrixGenerate(nr, c):
@@ -15172,7 +15194,7 @@ def hadamard_linear_solverHM(A,b,x,v):
     tp2=bp-GeneralHypermatrixProduct_with_elementwise_product((Ap-Pm),v)
     return [[tp1[i,0],tp2[i,0]] for i in range(tp1.n(0))]
 
-def sylvesterian_eliminationHM(PolyLst, VrbLst):
+def eulerian_eliminationHM(PolyLst, VrbLst):
     """
     Outputs list of contraints whose degree matrix is in row echelon form.
     The general problem of determining the existence of solutions to a
@@ -15186,7 +15208,7 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
 
         sage: sz=3; VrbLst=HM(sz,'x').list(); Ha=HM(sz,sz,'a'); Hb=HM(sz,1,HM(sz,'b').list())
         sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
-        sage: Lf=sylvesterian_eliminationHM(CnstrLst, VrbLst)
+        sage: Lf=eulerian_eliminationHM(CnstrLst, VrbLst)
         sage: Lf
         [a00*x0 + a01*x1 + a02*x2 - b0,
          -(a11*x1 + a12*x2 - b1)*a00 + (a01*x1 + a02*x2 - b0)*a10,
@@ -15246,7 +15268,7 @@ def sylvesterian_eliminationHM(PolyLst, VrbLst):
         i=i+1; j=j+1
     return CnstrLst
 
-def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
+def euler_sylvester_eliminationHM(PolyLst, VrbLst):
     """
     Outputs list of contraints whose degree matrix is in reduced row echelon form.
     The general problem of determining the existence of solutions to a
@@ -15260,7 +15282,7 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
 
         sage: sz=3; VrbLst=HM(sz,'x').list(); Ha=HM(sz,sz,'a'); Hb=HM(sz,1,HM(sz,'b').list())
         sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
-        sage: Lf=sylvester_kronecker_eliminationHM(CnstrLst, VrbLst)
+        sage: Lf=euler_sylvester_eliminationHM(CnstrLst, VrbLst)
         sage: Lf
         [-((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(a00*x0 - b0) + ((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*a02)*(a01*a10 - a00*a11) + (((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*(a02*a10 - a00*a12) - ((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(a10*b0 - a00*b1))*((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*a01,
          ((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*((a11*x1 - b1)*a00 - (a01*x1 - b0)*a10) - ((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*(a02*a10 - a00*a12),
@@ -15271,7 +15293,7 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
     - Edinah K. Gnang
     - To Do: 
     """
-    CnstrLst=copy(sylvesterian_eliminationHM(PolyLst, VrbLst))
+    CnstrLst=copy(eulerian_eliminationHM(PolyLst, VrbLst))
     # Initializing the degree matrix.
     A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
     # Initialization of the row and column index
@@ -15294,7 +15316,7 @@ def sylvester_kronecker_eliminationHM(PolyLst, VrbLst):
             i=i-1; j=0
     return CnstrLst
 
-def sylvesterian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
+def eulerian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
     """
     Outputs list of contraints whose degree matrix is in row echelon form.
     The general problem of determining the existence of solutions to a
@@ -15312,7 +15334,7 @@ def sylvesterian_elimination_reductionHM(PolyLst, VrbLst, Rlts):
         sage: sz=3; VrbLst=var_list('x',sz); f=sum(var_list('a',sz)[k]*x^(k-1) for k in rg(1,sz))
         sage: Rlts=[prod(VrbLst[i]-j for j in rg(sz-1)) for i in rg(sz)]
         sage: CnstrLst=Rlts[:sz-1]+[sum(f.subs(x==VrbLst[k]) for k in rg(sz))]
-        sage: Lf=sylvesterian_elimination_reductionHM(CnstrLst, VrbLst, Rlts)
+        sage: Lf=eulerian_elimination_reductionHM(CnstrLst, VrbLst, Rlts)
         sage: Lf
         [(x0 - 1)*x0,
          (x1 - 1)*x1,
@@ -16565,4 +16587,186 @@ def FourthOrderSlicer(A, L, strg):
         return HM(A.n(0), A.n(1), A.n(2), len(L), [A[i,j,k,t] for t in L for k in rg(A.n(2)) for j in rg(A.n(1)) for i in rg(A.n(0))])
     else:
         raise ValueError, "Expected the string input to be either row, col, dpt, tme"
+
+def KroneckerResultant(L, vrbl, VrbLp, VrbLq):
+    """
+    Takes as input a list of polynomials, a variable,
+    two lists of dummy variables to be used in the linear
+    combinations of constraints and outputs the corresponding
+    Kronecker resultant list of polynomials.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2;La=var_list('a',sz); Lb=var_list('b',sz); Lc=var_list('c',sz)
+        sage: p=expand(prod(x-La[i] for i in rg(sz)))
+        sage: q=expand(prod(x-La[i] for i in rg(floor(sz/2)))*prod(x-Lb[1] for i in rg(floor(sz/2))))
+        sage: h=expand(prod((x-Lc[i]) for i in rg(sz)))
+        sage: L=[p, q, h]
+        sage: Set([factor(v) for v in KroneckerResultant(L, x, var_list('u',len(L)), var_list('v',len(L)))]).list()
+        [-2*(a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
+         (a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
+         (a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
+         -(2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
+         (a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
+         (2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
+         -2*(a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
+         -(a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
+         (a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
+         -(a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1)]
+        sage: var_list('x',4) # Initialization of the list of variables
+        sage: L=[x1 + x2 + x3 - 5, 7*x1*x2 + 4*x3 - 2*x2 - 8, 10*x2+5*x1*x2-2*x2*x3+1]
+        sage: Set([factor(v) for v in KroneckerResultant(L, x1, var_list('u',len(L)), var_list('v',len(L)))]).list()
+        [7*x2^2 + 7*x2*x3 - 33*x2 - 4*x3 + 8,
+         -14*x2^2*x3 + 80*x2^2 - 20*x2*x3 + 47*x2,
+         5*x2^2 + 7*x2*x3 - 35*x2 - 1,
+         14*x2^2*x3 - 80*x2^2 + 20*x2*x3 - 47*x2,
+         -7*x2^2 - 7*x2*x3 + 33*x2 + 4*x3 - 8,
+         -5*x2^2 - 7*x2*x3 + 35*x2 + 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Jonathan Earl
+    """
+    # Initialization of the symbolic linear combination
+    p=expand(sum(L[i]*VrbLp[i] for i in rg(len(L)))); q=expand(sum(L[i]*VrbLq[i] for i in rg(len(L))))
+    # Initialization of the determinant
+    f=expand(SylvesterHM(p, q, vrbl).det())
+    # Initialization of the list of monomial
+    Lm=[mn/mn.subs([v==1 for v in VrbLp+VrbLq]) for mn in f.operands()]
+    return [f.coefficient(mn) for mn in Lm]
+
+def KroneckerResultantII(L, vrbl, VrbLp, VrbLq):
+    """
+    Takes as input a list of polynomials, a variable,
+    two lists of dummy variables to be used in the linear
+    combinations of constraints and outputs the corresponding
+    Kronecker resultant list of polynomials.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2;La=var_list('a',sz); Lb=var_list('b',sz); Lc=var_list('c',sz)
+        sage: p=expand(prod(x-La[i] for i in rg(sz)))
+        sage: q=expand(prod(x-La[i] for i in rg(floor(sz/2)))*prod(x-Lb[1] for i in rg(floor(sz/2))))
+        sage: h=expand(prod((x-Lc[i]) for i in rg(sz)))
+        sage: L=[p, q, h]
+        sage: Set([factor(v) for v in KroneckerResultant(L, x, var_list('u',len(L)), var_list('v',len(L)))]).list()
+        [(a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
+         (a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
+         -2*(a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
+         -2*(a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
+         (2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
+         -(2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
+         (a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
+         (a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
+         -(a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
+         -(a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1)]
+
+
+    AUTHORS:
+    - Jonathan Earl
+    """
+    lenL = len(L)
+    var1, var2 = str(VrbLp[0])[0], str(VrbLq[0])[0]
+    M = SylvesterHM(sum(VrbLp[i]*L[i] for i in range(lenL)), sum(VrbLq[i]*L[i] for i in range(lenL)), vrbl).matrix()
+    f = expand(M.det())
+    appender = {}
+    for i in f.operands():
+        parts = str(i).replace('-'+var1, '-1*'+var1).replace('-'+var2, '-1*'+var2).split('*')
+        myKey = '*'.join([j for j in parts if j.startswith(var1) or j.startswith(var2)])
+        myVal = '*'.join([j for j in parts if j not in myKey])
+        myVal = 1 if not bool(myVal) else SR(myVal)
+        appender[myKey] = appender.get(myKey, 0) + myVal
+    return appender.values()
+
+
+def kroneckerian_elimination(L, VrbL):
+    """
+    Takes as input a list of polynomials and a list of variable
+    and outputs the corresponding resultant. Performs the Kroneckerian
+    elimination algorithm
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; VrbL=var_list('x',sz); L=(Vandermonde(rg(1,1+sz))*HM(sz,1,VrbL)-HM(sz,1,rg(sz))).list()
+        sage: degree_matrix(L,VrbL)
+        [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+        sage: kroneckerian_elimination(L, VrbL)
+        [[x0 + x1 + x2, x0 + 2*x1 + 3*x2 - 1, x0 + 4*x1 + 9*x2 - 2],
+         [-x1 - 2*x2 + 1,
+          2*x1 + 6*x2 - 1,
+          -2*x1 - 6*x2 + 1,
+          x1 + 2*x2 - 1,
+          -3*x1 - 8*x2 + 2,
+          3*x1 + 8*x2 - 2],
+         [-2*x2 - 1, 2*x2 + 1]]
+        sage: sz=2; VrbL=var_list('x',sz); A=HM(sz,sz,'a'); b=HM(sz,1,var_list('b',sz))
+        sage: L=(A*HM(sz,1,VrbL)-b).list()
+        sage: kroneckerian_elimination(L, VrbL)
+        [[a00*x0 + a01*x1 - b0, a10*x0 + a11*x1 - b1],
+         [a01*a10*x1 - a00*a11*x1 - a10*b0 + a00*b1,
+          -a01*a10*x1 + a00*a11*x1 + a10*b0 - a00*b1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the resulting list
+    RsL=[L]
+    # Initialization of the loop eliminating all the variables
+    for i in rg(len(VrbL)-1):
+        RsL.append(Set(KroneckerResultant(RsL[len(RsL)-1], VrbL[i], var_list('u',len(RsL[len(RsL)-1])), var_list('v',len(RsL[len(RsL)-1])))).list()) 
+    return RsL
+
+def GeneralHypermatrixSubstituteInMatrix(A,vrbl,M):
+    """
+    Outputs a hypermatrix whose polynomial entries
+    have been substited in the input matrix for the
+    input variable.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: var('x'); Ha=HM(2,1,[x+1,x^2+1])
+        sage: Y=var_list('y',2); rM=GeneralHypermatrixSubstituteInMatrix(Ha,x,HM(2,2,[Y[0],0,0,Y[1]]))
+        sage: rM[0,0].printHM()
+        [:, :]=
+        [y0 + 1      0]
+        [     0 y1 + 1]
+        sage: rM[0,0].printHM()
+        [:, :]=
+        [y0^2 + 1        0]
+        [       0 y1^2 + 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the computations of the entries
+    for i in range(prod(l)):
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if A[tuple(entry)].is_zero():
+            Rh[tuple(entry)] = 0
+        else:
+            Rh[tuple(entry)] = substituteHM(A[tuple(entry)],vrbl,M).expand()
+    return Rh
 
