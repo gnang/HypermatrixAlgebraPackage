@@ -163,6 +163,13 @@ class HM:
                 self.hm=SymHypermatrixGenerate(dims[1],dims[2])
             else:
                 raise ValueError, "SymHypermatrixGenerate not supported for order %d hypermatrices" % dims[0]
+        elif s == 'skewsym':
+            if (len(dims) == 3) and (dims[0]==2):
+                self.hm=SkewSymMatrixGenerate(dims[1],dims[2])
+            elif (len(dims) == 3) and (dims[0]==3):
+                self.hm=SkewSymHypermatrixGenerate(dims[1],dims[2])
+            else:
+                raise ValueError, "SkewSymHypermatrixGenerate not supported for order %d hypermatrices" % dims[0]
         elif type(s) == list:
             self.hm=(apply(List2Hypermatrix, args)).listHM()
         else:
@@ -281,9 +288,9 @@ class HM:
             l=other
             return Prod(self,*l)
         else: 
-            return GeneralHypermatrixScale(self,other)
+            return GeneralHypermatrixScaleRight(self,other)
     def __rmul__(self, a):
-        return self*a
+        return GeneralHypermatrixScale(self,a)
     def __getitem__(self,i):
         if i.__class__.__name__=='tuple':
             tmp = self.hm
@@ -1743,6 +1750,42 @@ def SymMatrixGenerate(nr, c):
     else :
         raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integers."
 
+def SkewSymMatrixGenerate(nr, c):
+    """
+    Generates a list of lists associated with a symbolic nr x nr
+    symmetric matrix by indexing the input character c by indices.
+
+    EXAMPLES:
+
+    ::
+
+        sage: M = SkewSymMatrixGenerate(2, 'm'); M
+        [[0, m01], [-m01, 0]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Setting the dimensions parameters.
+    n_q_rows = nr; n_q_cols = nr
+    # Test for dimension match
+    if n_q_rows > 0 and n_q_cols > 0:
+        # Initialization of the hypermatrix
+        q = []
+        for i in range(n_q_rows):
+            q.append([])
+        for i in range(len(q)):
+            for j in range(n_q_cols):
+                # Filling up the matrix
+                if i==j:
+                    (q[i]).append(0)
+                elif i>j:
+                    (q[i]).append(-var(c+str(min(i,j))+str(max(i,j))))
+                else:
+                    (q[i]).append(var(c+str(min(i,j))+str(max(i,j))))
+        return q
+    else :
+        raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integers."
+
 def HypermatrixGenerate(*args):
     """
     Generates a list of lists associated with a symbolic arbitrary
@@ -1871,6 +1914,62 @@ def SymHypermatrixGenerate(nr, c):
                             (q[i][j]).append(var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
                         else:
                             (q[i][j]).append(var(c+str(i+j+k-min(i,j,k)-max(i,j,k))+str(min(i,j,k))+str(max(i,j,k))))
+        return q
+    else :
+        raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integer."
+
+def SkewSymHypermatrixGenerate(nr, c):
+    """
+    Generates a list of lists associated with a symbolic third order hypermatrix of size
+    nr x nc x nd third order hypematrix using the input character c followed by indices.
+
+    EXAMPLES:
+
+    ::
+
+        sage: M = SkewSymHypermatrixGenerate(3, 'm'); M
+        [[[0, 0, 0], [0, 0, m012], [0, m021, 0]],
+         [[0, 0, m021*w^2], [0, 0, 0], [m012*w, 0, 0]],
+         [[0, m012*w^2, 0], [m021*w, 0, 0], [0, 0, 0]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the variable to be subsituted
+    w=var('w')
+    # Setting the dimensions parameters.
+    n_q_rows = nr
+    n_q_cols = nr
+    n_q_dpts = nr
+    # Test for dimension match
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
+        # Initialization of the hypermatrix
+        q = []
+        for i in range(n_q_rows):
+            q.append([])
+        for i in range(len(q)):
+            for j in range(n_q_cols):
+                (q[i]).append([])
+        for i in range(len(q)):
+            for j in range(len(q[i])):
+                for k in range(n_q_dpts):
+                    if i==j or i==k or j==k:
+                        (q[i][j]).append(0*var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+                    else:
+                        if i == min(i,j,k) and k == max(i,j,k):
+                            (q[i][j]).append(w^0*var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+                        elif k == min(i,j,k) and j == max(i,j,k):
+                            (q[i][j]).append(w^1*var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+                        elif i == max(i,j,k) and j == min(i,j,k):
+                            (q[i][j]).append(w^2*var(c+str(min(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))+str(max(i,j,k))))
+
+                        elif i == min(i,j,k) and j == max(i,j,k):
+                            (q[i][j]).append(w^0*var(c+str(min(i,j,k))+str(max(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))))
+                        elif k == min(i,j,k) and i == max(i,j,k):
+                            (q[i][j]).append(w^1*var(c+str(min(i,j,k))+str(max(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))))
+                        elif k == max(i,j,k) and j == min(i,j,k):
+                            (q[i][j]).append(w^2*var(c+str(min(i,j,k))+str(max(i,j,k))+str(i+j+k-min(i,j,k)-max(i,j,k))))
         return q
     else :
         raise ValueError, "Input dimensions "+str(nr)+" must be a non-zero positive integer."
@@ -4793,6 +4892,199 @@ def GeneralHypermatrixProductIII(Lh, Op, Lv):
             Rh[tuple(entry)]=apply(Op, [ [([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[0].subs([Lv[z-1]==([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[z] for z in rg(1,len(Lh))]) for t in range((Lh[0]).n(1))] ])
     return Rh
 
+def GeneralHypermatrixProductIV(Lh, Op, Lv):
+    """
+    Outputs a list of lists associated with the composition
+    based Bhattacharya-Mesner product of the input hypermatrices.
+    The entries of the hypermatrices are taken to be functions
+    so that while performing the product we compose with the entries
+    of the first of the list of inputs. This implementation is aesthetically
+    more pleasing then the previous one because it explicitly articulate the
+    preference for composition as our defacto product operation. Hoever it is
+    theoretically less general then the previous one. Both these implementations
+    are inspired by initial exposure to ideas from Category theory, the implementation
+    also make painfully obvious some of the programming constraints imposed by Python.
+    The code only handles the Hypermatrix HM class objects. This new variant is to
+    accomodate substitution with free variables, it is mainly a work around a sage
+    bug the substitute function behaves very differently for free field.
+    This implmentation suggest that free variables which support inversions would
+    be a great feature to have. I will keep this in mind as I get acquainted with
+    sage developers.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+[z]),La+Lx+Lb+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, z>=FreeAlgebra(QQ,len(La+Lx+Lb+[z]))
+        sage: Ha=HM(sz,l,[a00, a10, a20, a01, a11, a21]); Hx=HM(l,1,[x0, x1])
+        sage: Hb=HM(sz,l,[b00, b10, b20, b01, b11, b21])
+        sage: Hr=Ha.elementwise_product(z*Hb); GeneralHypermatrixProductIV([Hr, Hx], sum, [z]).printHM()
+        [:, :]=
+        [a00*x0*b00 + a01*x1*b01]
+        [a10*x0*b10 + a11*x1*b11]
+        [a20*x0*b20 + a21*x1*b21]
+        sage: x,y=var('x,y'); Ha=x*y*HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GeneralHypermatrixProductIV([Ha,Hb,Hc], sum, [x,y]); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [(Lh[i]).n(i) for i in range(len(Lh))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the assignement
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        # computing the Hypermatrix product
+        if len(Lh)<2:
+            raise ValueError, "The number of operands must be >= 2"
+        elif len(Lh) >= 2:
+            Ltmp=[]
+            for t in range((Lh[0]).n(1)):
+                Tmp=([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[0]
+                #print 'Tmp before', Tmp
+                #print 'Ltmp before', Ltmp
+                for vz in rg(1,len(Lh)):
+                    #print {Lv[vz-1]:([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[vz]}
+                    Tmp=Tmp.subs({Lv[vz-1]:([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[vz]})
+                    #print 'Tmp after', Tmp
+                Ltmp.append(Tmp)
+                #print 'Ltmp after', Ltmp
+            #print apply(Op, [Ltmp])
+            Rh[tuple(entry)]=apply(Op, [Ltmp])
+    return Rh
+
+def GeneralHypermatrixProductV(Lh, Op, Lv, indx):
+    """
+    Outputs a list of lists associated with the composition
+    based Bhattacharya-Mesner product of the input hypermatrices.
+    The entries of the hypermatrices are taken to be functions
+    so that while performing the product we compose with the entries
+    of the first of the list of inputs. This implementation is aesthetically
+    more pleasing then the previous one because it explicitly articulate the
+    preference for composition as our defacto product operation. Hoever it is
+    theoretically less general then the previous one. Both these implementations
+    are inspired by initial exposure to ideas from Category theory, the implementation
+    also make painfully obvious some of the programming constraints imposed by Python.
+    The code only handles the Hypermatrix HM class objects. This new variant is to
+    accomodate substitution with free variables, it is mainly a work around a sage
+    bug the substitute function behaves very differently for free field.
+    This implmentation suggest that free variables which support inversions would
+    be a great feature to have. I will keep this in mind as I get acquainted with
+    sage developers. The difference with the previous function is that this support
+    an indexing parameter for the hypermatrix input in which the substitions will be
+    performed. This gives a tiny bit more flexibility with setting the composer.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+[z]),La+Lx+Lb+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, z>=FreeAlgebra(QQ,len(La+Lx+Lb+[z]))
+        sage: Ha=HM(sz,l,[a00, a10, a20, a01, a11, a21]); Hx=HM(l,1,[x0, x1])
+        sage: Hb=HM(sz,l,[b00, b10, b20, b01, b11, b21])
+        sage: Hr=Ha.elementwise_product(z*Hb); GeneralHypermatrixProductV([Hr, Hx], sum, [z], 0).printHM()
+        [:, :]=
+        [a00*x0*b00 + a01*x1*b01]
+        [a10*x0*b10 + a11*x1*b11]
+        [a20*x0*b20 + a21*x1*b21]
+        sage: x,y=var('x,y'); Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: GeneralHypermatrixProductV([x*y*Ha,Hb,Hc], sum, [x,y], 0).printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        sage: x,y=var('x,y'); Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: GeneralHypermatrixProductV([Ha,x*y*Hb,Hc], sum, [x,y], 1).printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        sage: GeneralHypermatrixProductV([x*y*Ha,Hb,Hc], sum, [x,y], 1).printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if indx == 0:
+        return GeneralHypermatrixProductIV(Lh, Op, Lv)
+    else:
+        # Initialization of the list specifying the dimensions of the output
+        l = [(Lh[i]).n(i) for i in range(len(Lh))]
+        # Initializing the input for generating a symbolic hypermatrix
+        inpts = l+['zero']
+        # Initialization of the hypermatrix
+        Rh = HM(*inpts)
+        # Main loop performing the assignement
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            # computing the Hypermatrix product
+            if len(Lh)<2:
+                raise ValueError, "The number of operands must be >= 2"
+            elif len(Lh) >= 2:
+                Ltmp=[]
+                for t in range((Lh[0]).n(1)):
+                    Tmp=([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[indx]
+                    #print 'Tmp before', Tmp
+                    #print 'Ltmp before', Ltmp
+                    LindX1 = rg(indx)
+                    #print 'indx=', indx
+                    #print 'LindX1=', LindX1
+                    for vz in LindX1:
+                        #print {Lv[vz]:([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[vz]}
+                        Tmp=Tmp.subs({Lv[vz]:([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[vz]})
+                        #print 'Tmp after', Tmp
+                    #print 'LindX2=', LindX2
+                    LindX2 = rg(1+indx,1+len(Lh)-indx)
+                    for vz in LindX2:
+                        #print {Lv[vz-1]:([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[vz]}
+                        Tmp=Tmp.subs({Lv[vz-1]:([Lh[s][tuple(entry[0:Integer(mod(s+1,len(Lh)))]+[t]+entry[Integer(mod(s+2,len(Lh))):])] for s in range(len(Lh)-2)]+[Lh[len(Lh)-2][tuple(entry[0:len(Lh)-1]+[t])]]+[Lh[len(Lh)-1][tuple([t]+entry[1:])]])[vz]})
+                        #print 'Tmp after', Tmp
+                    Ltmp.append(Tmp)
+                    #print 'Ltmp after', Ltmp
+                #print apply(Op, [Ltmp])
+                Rh[tuple(entry)]=apply(Op, [Ltmp])
+        return Rh
+
 def GProd(Lh, Op, Lv):
     """
     Outputs a list of lists associated with the composition
@@ -4820,18 +5112,79 @@ def GProd(Lh, Op, Lv):
         [:, :, 1]=
         [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
         [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
-
+        <BLANKLINE>
         sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GProd([Ha, Hb], sum, [x])
         [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
-        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GeneralHypermatrixProductIII([Ha, Hb], prod, [x])
+        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GProd([Ha, Hb], prod, [x])
         [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
-
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); Lc=var_list('c',sz); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]),La+Lx+Lb+Lc+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, c0, c1, c2, z>=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]))
+        sage: Ha=HM(sz,l,[a00, a10, a20, a01, a11, a21]); Hx=HM(l,1,[x0, x1])
+        sage: Hb=HM(sz,l,[b00, b10, b20, b01, b11, b21])
+        sage: Hr=Ha.elementwise_product(z*Hb)-HM(sz,1,[c0, c1, c2])*HM(1,l,[QQ(1/2) for i in rg(l)])
+        sage: GProd([Hr, Hx], sum, [z]).printHM()
+        [:, :]=
+        [-c0 + a00*x0*b00 + a01*x1*b01]
+        [-c1 + a10*x0*b10 + a11*x1*b11]
+        [-c2 + a20*x0*b20 + a21*x1*b21]
 
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    return GeneralHypermatrixProductIII(Lh, Op, Lv)
+    #return GeneralHypermatrixProductIII(Lh, Op, Lv)
+    return GeneralHypermatrixProductIV(Lh, Op, Lv)
+
+def GProdII(Lh, Op, Lv, indx):
+    """
+    Outputs a list of lists associated with the composition
+    based Bhattacharya-Mesner product of the input hypermatrices.
+    The entries of the hypermatrices are taken to be functions
+    so that while performing the product we compose with the entries
+    of the first of the list of inputs. This implementation is aesthetically
+    more pleasing then the previous one because it explicitly articulate the
+    preference for composition as our defacto product operation. Hoever it is
+    theoretically less general then the previous one. Both these implementations
+    are inspired by initial exposure to ideas from Category theory, the implementation
+    also make painfully obvious some of the programming constraints imposed by Python.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y=var('x,y'); Ha=x*y*HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: GProdII([Ha,Hb,Hc], sum, [x,y], 0).printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        <BLANKLINE>
+        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GProd([Ha, Hb], sum, [x], 0)
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GProdII([Ha, Hb], prod, [x], 0)
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); Lc=var_list('c',sz); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]),La+Lx+Lb+Lc+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, c0, c1, c2, z>=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]))
+        sage: Ha=HM(sz,l,[a00, a10, a20, a01, a11, a21]); Hx=HM(l,1,[x0, x1])
+        sage: Hb=HM(sz,l,[b00, b10, b20, b01, b11, b21])
+        sage: Hr=Ha.elementwise_product(z*Hb)-HM(sz,1,[c0, c1, c2])*HM(1,l,[QQ(1/2) for i in rg(l)])
+        sage: GProdII([Hr, Hx], sum, [z], 0).printHM()
+        [:, :]=
+        [-c0 + a00*x0*b00 + a01*x1*b01]
+        [-c1 + a10*x0*b10 + a11*x1*b11]
+        [-c2 + a20*x0*b20 + a21*x1*b21]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductV(Lh, Op, Lv, indx)
 
 def GeneralHypermatrixCyclicPermute(A):
     """
@@ -4901,6 +5254,41 @@ def GeneralHypermatrixScale(A,s):
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=s*A[tuple(entry)]
     return Rh
+
+def GeneralHypermatrixScaleRight(A,s):
+    """
+    Outputs a list of lists associated with the scaling of a general hypermatrix.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,2,'a')
+        sage: GeneralHypermatrixScale(Ha,3)
+        [[[3*a000, 3*a001], [3*a010, 3*a011]], [[3*a100, 3*a101], [3*a110, 3*a111]]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=A[tuple(entry)]*s
+    return Rh
+
+
 
 def GeneralHypermatrixExponent(A,s):
     """
@@ -6175,7 +6563,7 @@ def Matrix2HM(A):
     AUTHORS:
     - Edinah K. Gnang
     """
-    return HM(A.nrows(), A.ncols(), A.transpose().list())
+    return HM(A.nrows(), A.ncols(), [SR(v) for v in A.transpose().list()])
 
 def Deter(A):
     """
@@ -6363,6 +6751,32 @@ def GenerateUnitLpNormVector(n,p = 2,indx=0):
         X.append((prod([sin(var('t'+str(j+indx))) for j in range(n-1)]))^(2/p))
         return X
 
+def GenerateUnitLpNormVectorII(sz,p=2,indx=0):
+    """
+    outputs a unit lp norm vector.
+
+    EXAMPLES:
+
+    ::
+
+        sage: GenerateUnitLpNormVectorII(2) 
+        [cos(t0), sin(t0)]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    Cos(x)=exp(I*x)/(2*1) + exp(-I*x)/(2*1); Sin(x)=exp(I*x)/(2*I) - exp(-I*x)/(2*I)
+    if n == 1:
+        return [1]
+    else :
+        X = []
+        X.append( Cos(var('t'+str(indx)))^(2/p) )
+        for i in range(1,sz-1):
+            X.append( prod(Sin( var('t'+str(j+indx)) ) for j in range(i))*Cos(var('t'+str(i+indx)))^(2/p) )
+        X.append( prod(Sin(var('t'+str(j+indx)))^(2/p) for j in range(sz-1)) )
+        return X
+
 def ProbabilityMatrix(n, xi=0):
     """
     outputs the symbolic parametrization of a doubly stochastic matrix
@@ -6456,6 +6870,53 @@ def ProbabilityHM(sz, xi=0):
     M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in rg(sz-1)])
     return M
 
+def ProbabilityHMII(sz, xi=0):
+    """
+    outputs the symbolic parametrization of a doubly stochastic matrix
+
+    EXAMPLES:
+
+    ::
+
+        sage: ProbabilityHMII(2).printHM()
+        [:, :]=
+        [              1/4*(e^(I*t0) + e^(-I*t0))^2      (-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2]
+        [         -1/4*(e^(I*t0) + e^(-I*t0))^2 + 1 -(-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2 + 1]       
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing the matrix to be filled
+    M = HM(sz,sz,'zero')
+    # Initialixzing the variable index
+    indx=xi
+    for c in rg(sz-1):
+        # Initializing the probability vector associated with the row c
+        La = GenerateUnitLpNormVectorII(sz-c,1,indx)
+        # Updating the variable index
+        indx = indx+len(La)-1
+        # Initializing the probability vector associated with the column c
+        Lb = GenerateUnitLpNormVectorII(sz-c-1,1,indx)
+        # Updating the variable index
+        indx = indx+len(Lb)-1
+        # Loop which fills up the Matrix
+        for i in range(c, c+len(La)):
+            if c > 0:
+                # Filling up the row c of the Matrix M
+                M[c,i] = (1-sum([M[c,j] for j in rg(c)]))*La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = (1-sum([M[j,c] for j in rg(c+1)]))*Lb[i-c-1]
+            else:
+                # Filling up the row c of the Matrix M
+                M[c,i] = La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = (1-sum([M[j,c] for j in rg(c+1)]))*Lb[i-c-1]
+    M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in rg(sz-1)])
+    return M
+
 def ProbabilitySymMatrix(n, xi=0):
     """
     outputs the symbolic parametrization of a symetric doubly stochastic matrix
@@ -6524,6 +6985,49 @@ def ProbabilitySymHM(sz, xi=0):
     for c in rg(sz-1):
         # Initializing the probability vector associated with the row c
         La = GenerateUnitLpNormVector(sz-c,1,indx)
+        # Updating the variable index
+        indx = indx+len(La)-1
+        # Loop which fills up the Matrix
+        for i in range(c, c+len(La)):
+            if c > 0:
+                # Filling up the row c of the Matrix M
+                M[c,i] = (1-sum([M[c,j] for j in range(c)]))*La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = M[c,i] 
+            else:
+                # Filling up the row c of the Matrix M
+                M[c,i] = La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = M[c,i]
+    M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in range(sz-1)])
+    return M
+
+def ProbabilitySymHMII(sz, xi=0):
+    """
+    outputs the symbolic parametrization of a symetric doubly stochastic matrix
+
+    EXAMPLES:
+
+    ::
+
+        sage: ProbabilitySymHMII(2).printHM()
+        [:, :]=
+        [              1/4*(e^(I*t0) + e^(-I*t0))^2      (-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2]
+        [     (-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2 -(-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2 + 1]        
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initializing the matrix to be filled
+    M = HM(sz, sz, 'zero')
+    # Initialixzing the variable index
+    indx=xi
+    for c in rg(sz-1):
+        # Initializing the probability vector associated with the row c
+        La = GenerateUnitLpNormVectorII(sz-c,1,indx)
         # Updating the variable index
         indx = indx+len(La)-1
         # Loop which fills up the Matrix
@@ -6921,6 +7425,51 @@ def GeneralStochasticHypermatrix(t, od):
                     B[tuple(entry+[1])]=sin(t)^2
                 else :
                     B[tuple(entry+[1])]=cos(t)^2
+        return B
+    else :
+        raise ValueError, "The order must be a positive integer"
+
+def GeneralStochasticHypermatrixII(t, od):
+    """
+    Generates an stochastic hypermatrix of the appropriate order
+    for which each one of the dimensions are equal to 2.
+    The vectors are not normalized.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Q = GeneralStochasticHypermatrixII(var('t'), 2); Q
+        [[cos(t)^2, sin(t)^2], [sin(t)^2, cos(t)^2]]
+
+    AUTHORS:
+    - Edinah K. Gnang, Ori Parzanchevski
+    """
+    if od < 2 and type(od)==type(1):
+        raise ValueError, "The order must be greater or equal to 2."
+    elif od == 2:
+        return HM([[(exp(I*t)/2+exp(-I*t)/2)^2, (exp(I*t)/(2*I)-exp(-I*t)/(2*I))^2], [(exp(I*t)/(2*I)-exp(-I*t)/(2*I))^2, (exp(I*t)/2+exp(-I*t)/2)^2]])
+    elif od > 2 and type(od) == type(1):
+        dms = [2,2]
+        B = GeneralStochasticHypermatrixII(t,2)
+        for z in range(2,od):
+            A = B 
+            dms.append(2) 
+            B = apply(HM, dms+['zero'])
+            l = [A.n(i) for i in range(A.order())]
+            # Main loop performing the transposition of the entries
+            for i in range(prod(l)):
+                # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                entry = [Integer(mod(i,l[0]))]
+                sm = Integer(mod(i,l[0]))
+                for k in range(len(l)-1):
+                    entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                    sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                B[tuple(entry+[0])]=A[tuple(entry)]
+                if A[tuple(entry)] == (exp(I*t)/2+exp(-I*t)/2)^2:
+                    B[tuple(entry+[1])]=(exp(I*t)/(2*I)-exp(-I*t)/(2*I))^2
+                else :
+                    B[tuple(entry+[1])]=(exp(I*t)/2+exp(-I*t)/2)^2
         return B
     else :
         raise ValueError, "The order must be a positive integer"
@@ -13267,6 +13816,184 @@ def TriangulationGraphsDualAdjacencyMatrixList(sz):
                     TmpA[i,j]=1; TmpA[j,i]=1
         list_of_graphs.append([copy(TmpA),L2[l],L[l]]) 
     return list_of_graphs
+
+def TriangulationListing(A,B,m,sz):
+    """
+    Outputs a list of third order hypermatrices of size sz x sz x 1 each describing a
+    triangulation of a regular polygon on n vertices. The input hypermatrix A of size
+    sz x sz x 1 is meant to be a symbolic upper-triangular with free variable entries.
+    defined over free fields. This implements is construct centric.
+
+
+     EXAMPLES:
+
+    ::
+
+        sage: sz=4;a01,a02,a03,a12,a13,a23,b01,b02,b03,b12,b13,b23,c01,c02,c03,c12,c13,c23,z0,z1=\
+        ....: var('a01,a02,a03,a12,a13,a23,b01,b02,b03,b12,b13,b23,c01,c02,c03,c12,c13,c23,z0,z1')
+        sage: F=FreeAlgebra(QQ,20,[a01,a02,a03,a12,a13,a23,b01,b02,b03,b12,b13,b23,c01,c02,c03,c12,c13,c23,z0,z1])
+        sage: F.<a01,a02,a03,a12,a13,a23,b01,b02,b03,b12,b13,b23,c01,c02,c03,c12,c13,c23,z0,z1>=FreeAlgebra(QQ,20)
+        sage: A=HM(sz,sz,1,[QQ(0),QQ(0),QQ(0),QQ(0),a01,QQ(0),QQ(0),QQ(0),a02,a12,QQ(0),QQ(0),a03,a13,a23,0])
+        sbge: Tb=HM(sz,sz,[QQ(0),QQ(0),QQ(0),QQ(0),b01,QQ(0),QQ(0),QQ(0),b02,b12,QQ(0),QQ(0),b03,b13,b23,0])
+        sage: B=HM(sz,sz,sz,[Tb[i,j] for k in rg(sz) for j in rg(sz) for i in rg(sz)])*z0*z1
+        sage: TriangulationListing(A,B,sz-1,sz)
+        [[[[0], [0], [0], [b03*a01*b13*a12*a23]], [[0], [0], [0], [0]], [[0], [0], [0], [0]], [[0], [0], [0], [0]]],
+         [[[0], [0], [0], [b03*b02*a01*a12*a23]], [[0], [0], [0], [0]], [[0], [0], [0], [0]], [[0], [0], [0], [0]]]]        
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    if m == 1:
+        return [A]
+    else:
+        gu = []
+        for i in range(1,m):
+            gu = gu+[GProdII([g1,B,g2],sum,[z0,z1],1) for g1 in TriangulationListing(A,B,i,sz) for g2 in TriangulationListing(A,B,m-i,sz)]
+        return gu
+
+def generate_triangulation_scriptII(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which computes triangulation using non-commutative
+    variables. The script starts with a stricly upper-
+    triangular symbolic adjacency matrix whose non-
+    zero entries are defined as free variables.
+    this implementation is construct centric
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_triangulation_scriptII(4)
+        sage: load('triangulation_4.sage')
+        sage: L[0].printHM()
+        [:, :, 0]=
+        [                  0                   0                   0 b03*a01*b13*a12*a23]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: L[1].printHM()
+        [:, :, 0]=
+        [                  0                   0                   0 b03*b02*a01*a12*a23]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: from subprocess import call
+        sage: call("rm triangulation_4.sage", shell=True)
+        0
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrices and the construct variables
+    A=HM(sz,sz,'a'); TpB=HM(sz,sz,'b'); z0,z1=var('z0,z1')
+    for i in rg(sz):
+        for j in rg(sz):
+            if i >= j:
+                A[i,j]=0; TpB[i,j]=0
+    B=HM(sz,sz,sz,[TpB[i,j] for k in rg(sz) for j in rg(sz) for i in rg(sz)])
+    # Initialization of the list which will store the variable to be set free
+    Al=[HM(sz,sz,'a')[i,j] for i in rg(sz) for j in rg(sz) if i<j]
+    Bl=[HM(sz,sz,'b')[i,j] for i in rg(sz) for j in rg(sz) if i<j]
+    Zl=[z0,z1]
+    # Creating the file name string.
+    filename='triangulation_'+str(sz)+'.sage'
+    # Opening the file
+    f=open(filename,'w')
+    f.write('# Loading the Hypermatrix Package\n')
+    f.write("load('./Hypermatrix_Algebra_tst.sage')\n\n")
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n\n')
+    f.write('# Initialization of the variables\n')
+    f.write("z0,z1=var('z0,z1')\n")
+    f.write("La=[HM(od,sz,'a','sym')[i,j] for i in rg(sz) for j in rg(sz) if i<j]\n")
+    f.write("Lb=[HM(od,sz,'b','sym')[i,j] for i in rg(sz) for j in rg(sz) if i<j]\n")
+    f.write("Lz=[z0,z1]\n\n")
+    f.write('# Initializing the free variables\n')
+    f.write('F=FreeAlgebra(QQ,len(La+Lb+Lz),La+Lb+Lz)\n')
+    f.write('F.<'+str(Al+Bl+Zl)[1:len(str(Al+Bl+Zl))-1]+'>=FreeAlgebra(QQ,len(La+Lb+Lz))\n\n')
+    f.write('# Initialization of the hypermatrices with symbolic variable entries which do not commute\n')
+    f.write('Ha=HM(sz,sz,1,'+str(A.list())+')\n')
+    f.write('Hb=HM(sz,sz,sz,'+str(B.list())+')*z0*z1\n\n')
+    f.write('# Obtaining the triangulations\n')
+    f.write('L=TriangulationListing(Ha,Hb,sz-1,sz)')
+    # Closing the file
+    f.close()
+
+def generate_triangulation_scriptIII(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which computes triangulation using non-commutative
+    variables. The script starts with a stricly upper-
+    triangular symbolic adjacency matrix whose non-
+    zero entries are defined as free variables.
+    this implementation is construct centric
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_triangulation_scriptIII(4)
+        sage: load('triangulation_4.sage')
+        sage: L[0].printHM()
+        [:, :, 0]=
+        [                  0                   0                   0 a01*a12*a23*b13*b03]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: L[1].printHM()
+        [:, :, 0]=
+        [                  0                   0                   0 a01*a12*b02*a23*b03]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        [                  0                   0                   0                   0]
+        sage: from subprocess import call
+        sage: call("rm triangulation_4.sage", shell=True)
+        0
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the hypermatrices and the construct variables
+    A=HM(sz,sz,'a'); TpB=HM(sz,sz,'b'); z0,z1=var('z0,z1')
+    for i in rg(sz):
+        for j in rg(sz):
+            if i >= j:
+                A[i,j]=0; TpB[i,j]=0
+    B=HM(sz,sz,sz,[TpB[i,j] for k in rg(sz) for j in rg(sz) for i in rg(sz)])
+    # Initialization of the list which will store the variable to be set free
+    Al=[HM(sz,sz,'a')[i,j] for i in rg(sz) for j in rg(sz) if i<j]
+    Bl=[HM(sz,sz,'b')[i,j] for i in rg(sz) for j in rg(sz) if i<j]
+    Zl=[z0,z1]
+    # Creating the file name string.
+    filename='triangulation_'+str(sz)+'.sage'
+    # Opening the file
+    f=open(filename,'w')
+    f.write('# Loading the Hypermatrix Package\n')
+    f.write("load('./Hypermatrix_Algebra_tst.sage')\n\n")
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n\n')
+    f.write('# Initialization of the variables\n')
+    f.write("z0,z1=var('z0,z1')\n")
+    f.write("La=[HM(od,sz,'a','sym')[i,j] for i in rg(sz) for j in rg(sz) if i<j]\n")
+    f.write("Lb=[HM(od,sz,'b','sym')[i,j] for i in rg(sz) for j in rg(sz) if i<j]\n")
+    f.write("Lz=[z0,z1]\n\n")
+    f.write('# Initializing the free variables\n')
+    f.write('F=FreeAlgebra(QQ,len(La+Lb+Lz),La+Lb+Lz)\n')
+    f.write('F.<'+str(Al+Bl+Zl)[1:len(str(Al+Bl+Zl))-1]+'>=FreeAlgebra(QQ,len(La+Lb+Lz))\n\n')
+    f.write('# Initialization of the hypermatrices with symbolic variable entries which do not commute\n')
+    f.write('Ha=HM(sz,sz,1,'+str(A.list())+')\n')
+    f.write('Hb=z0*z1*HM(sz,sz,sz,'+str(B.list())+')\n\n')
+    f.write('# Obtaining the triangulations\n')
+    f.write('L=TriangulationListing(Ha,Hb,sz-1,sz)')
+    # Closing the file
+    f.close()
 
 def Tetrahedralizations(A,B,n,sz):
     """
