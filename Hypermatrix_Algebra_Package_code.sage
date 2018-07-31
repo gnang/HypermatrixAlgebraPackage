@@ -1671,12 +1671,7 @@ class HM:
         - Edinah K. Gnang
         - To Do: 
         """
-        if self.order()==2:
-            return SecondOrderSlicer(self, L, strg)
-        if self.order()==3:
-            return ThirdOrderSlicer(self, L, strg)
-        else :
-            raise ValueError, "Not supported for hypermatrices of order > 3"
+        return GeneralHypermatrixSlicer(self, L, strg)
 
 
 def MatrixGenerate(nr, nc, c):
@@ -6648,8 +6643,8 @@ def Per(A):
     - Edinah K. Gnang
     """
     # Initializing the permutations
-    P = Permutations(range(A.nrows()))
-    return sum([prod([A[k,p[k]] for k in range(A.nrows())]) for p in P])
+    P = Permutations(rg(A.nrows()))
+    return sum([prod([A[k,p[k]] for k in rg(A.nrows())]) for p in P])
  
 def MeanApproximation(T):
     """
@@ -11312,37 +11307,27 @@ def gaussian_eliminationHM(Cf, rs):
     # Initialization of the row and column index
     i=0; j=0
     while i < A.n(0) and j < A.n(1):
-        #while (A[i:,j]).is_zero() and j < A.ncols()-1:
-        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+        while A.slice(rg(i,A.n(0)),'row').slice([j],'col').is_zero() and j < A.n(1)-1:
             # Incrementing the column index
             j=j+1
-        #if (A[i:,:].is_zero())==False:
-        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+        if A.slice(rg(i,A.n(0)),'row').is_zero()==False:
             while A[i,j].is_zero(): 
-                #Ta=A[i:,:]
-                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
-                #Tb=b[i:,:]
-                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                Ta=A.slice(rg(i,A.n(0)),'row')
+                Tb=b.slice(rg(i,b.n(0)),'row')
                 # Initializing the cyclic shift permutation matrix
-                #Id=identity_matrix(Ta.nrows())
                 Id=HM(2, Ta.n(0), 'kronecker')
-                #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
                 Ta=P*Ta; Tb=P*Tb
-                #A[i:,:]=Ta
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
-                #b[i:,:]=Tb
                 for i0 in range(Tb.n(0)):
                     for j0 in range(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
             # Performing the row operations.
             cf1=A[i,j]
-            #b[i,:]=(1/A[i,j])*b[i,:]
             for j0 in range(b.n(1)):
                 b[i,j0]=(cf1^(-1))*b[i,j0]
-            #A[i,:]=(1/A[i,j])*A[i,:]
             for j0 in range(A.n(1)):
                 A[i,j0]=(cf1^(-1))*A[i,j0]
             for r in range(i+1,A.nrows()):
@@ -11352,10 +11337,8 @@ def gaussian_eliminationHM(Cf, rs):
                 else:
                     # Initialization of the coefficient
                     cf2=A[r,j]
-                    #b[r,:]=-A[r,j]*b[i,:]+b[r,:]
                     for j0 in range(b.n(1)):
                         b[r,j0]=-cf2*b[i,j0]+b[r,j0]
-                    #A[r,:]=-A[r,j]*A[i,:]+A[r,:]
                     for j0 in range(A.n(1)):
                         A[r,j0]=-cf2*A[i,j0]+A[r,j0]
         # Incrementing the row and column index.
@@ -12368,6 +12351,94 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
             i = i - 1; j = 0
     return [A, b, indx, Lst]
 
+def multiplicative_gaussian_eliminationHM(Cf,rs,jndx=0):
+    """
+    Outputs the row echelon form of the input matrix and the right hand side.
+    The solver here differs from the one above in the fact that it assumes
+    that the entries of the Cf HM are not symbolic and checks during
+    the elimination steps whether or we are indeed adding new branches.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [EfA,c,indx,Lst]=multiplicative_gaussian_eliminationHM(HM(2,2,'a'), HM(2,1,'b'))
+        sage: EfA.printHM()
+        [:, :]
+        [      1 a01/a00]
+        [      0       1]
+        sage: c.printHM()
+        [:, :]
+        [                                                                    (b00*e^(2*I*pi*k0))^(1/a00)]
+        [(((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    A = Cf.copy(); b = rs.copy()
+    # Initialization of the row and column index
+    i=0; j=0; indx=jndx; Lst = []
+    #while i<A.nrows() and j<A.ncols():
+    while i<A.n(0) and j<A.n(1):
+        #while (A[i:,j]).is_zero() and j < A.ncols()-1:
+        while A.slice(rg(i,A.n(0)),'row').slice([j],'col').is_zero() and j < A.n(1)-1:
+            # Incrementing the column index
+            j=j+1
+        #if A[i:,:].is_zero()==False:
+        if A.slice(rg(i,A.n(0)),'row').is_zero()==False:
+            while A[i,j].is_zero():
+                #Ta=A[i:,:]
+                Ta=A.slice(rg(i,A.n(0)),'row')
+                #Tb=b[i:,:]
+                Tb=b.slice(rg(i,b.n(0)),'row')
+                # Initializing the cyclic shift permutation matrix
+                #Id=identity_matrix(Ta.nrows())
+                Id=HM(2,Ta.n(0),'kronecker')
+                P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
+                Ta=P*Ta; Tb=P*Tb
+                #A[i:,:]=Ta
+                for u in rg(i,A.n(0)):
+                    for v in rg(A.n(1)):
+                        A[u,v]=Ta[u,v]
+                #b[i:,:]=Tb 
+                for u in rg(i,b.n(0)):
+                    for v in rg(b.n(1)):
+                        b[u,v]=b[u,v]
+            # Performing the row operations.
+            if (A[i,j].numerator()==1 or A[i,j].numerator()==-1) and A[i,j].denominator().is_integer():
+                b[i,0]=b[i,0]^(1/A[i,j])
+            else:
+                b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
+                indx = indx+1
+                Lst.append(A[i,j])
+            #A[i,:]=(1/A[i,j])*A[i,:]
+            tpv=A[i,j]
+            for v in rg(A.n(1)):
+                A[i,v]=(1/tpv)*A[i,v]
+            for r in rg(i+1,A.nrows()):
+                # Taking care of the zero row
+                #if A[r,:].is_zero():
+                if A.slice([r],'row').is_zero():
+                    r=r+1
+                else:
+                    if A[r,j].is_integer():
+                        b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
+                    else:
+                        b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                        if (A[r,j]).is_zero()==False:
+                            indx = indx+1
+                            Lst.append(1/A[r,j])
+                    #A[r,:]=-A[r,j]*A[i,:]+A[r,:]
+                    tpv=-A[r,j]
+                    for v in rg(A.n(1)):
+                        A[r,v]=tpv*A[i,v]+A[r,v]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A, b, indx, Lst]
+
 def multiplicative_matrix_product(A,B):
     """
     Outputs the result of the multiplicative product of the
@@ -12631,9 +12702,9 @@ def multiplicative_linear_solverHM(A,b,x,v):
     ::
 
         sage: sz=2; Eq=[var('x'+str(i))*var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
-        sage: [A,b]=multiplicativeConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
-        sage: Mx=HM(A.ncols(),1,[var('x'+str(i)) for i in range(A.ncols())])
-        sage: Mv=HM(A.ncols(),1,[var('t'+str(i)) for i in range(A.ncols())])
+        sage: [A,b]=multiplicativeConstraintFormatorHM(Eq,var_list('x',2*sz))
+        sage: Mx=HM(A.ncols(),1,var_list('x',A.ncols()))
+        sage: Mv=HM(A.ncols(),1,var_list('t',A.ncols()))
         sage: multiplicative_linear_solverHM(A,b,Mx,Mv)
         [x0 == a00*a11/(a10*t3),
          x1 == a11/t3,
@@ -17172,7 +17243,7 @@ def generate_general_linear_constraints(sz,l):
     # Closing the file
     f.close()
 
-def SecondOrderSlicer(A, L, strg):
+def GeneralHypermatrixSlicer(A, Rg, indx):
     """
     Outputs slices specified by index list L.
     the last string input is either row or col
@@ -17185,126 +17256,139 @@ def SecondOrderSlicer(A, L, strg):
     ::
 
         sage: sz=3; A=HM(sz,sz,'a')
-        sage: SecondOrderSlicer(A, [0], 'row').printHM()
+        sage: GeneralHypermatrixSlicer(A, [0], 'row').printHM()
         [:, :]=
         [a00 a01 a02]
-        <BLANKLINE>
-        sage: SecondOrderSlicer(A, [1], 'col').printHM()
+        sage: GeneralHypermatrixSlicer(A, [1], 'col').printHM()
         [:, :]=
         [a01]
         [a11]
         [a21]
-        <BLANKLINE>
         
 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
     """
-    if   strg=='row':
-        return HM(len(L),A.n(1),[A[i,j] for j in rg(A.n(1)) for i in L])
-    elif strg=='col':
-        return HM(A.n(0),len(L),[A[i,j] for j in L for i in rg(A.n(0))])
+    # Initialization of a number for the test
+    nb=2
+    if type(indx) == type(nb):
+        if indx < A.order() :
+            if len(Rg) < A.n(indx):
+                # Initialization of the hypermatrix which stores the result
+                dms=A.dimensions(); dms[indx]=len(Rg); 
+                # Initializing the list of entries
+                Lst=[]
+                # Initialization of the list specifying the dimensions of the output
+                l = [A.n(i) for i in range(A.order())]
+                # Main loop performing the transposition of the entries
+                for i in range(prod(l)):
+                    # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                    entry = [Integer(mod(i,l[0]))]
+                    sm = Integer(mod(i,l[0]))
+                    for k in range(len(l)-1):
+                        entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                        sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                    if entry[indx] in Rg:
+                        Lst.append(A[tuple(entry)])
+                return apply(HM,dms+[Lst])
+            else:
+                raise ValueError, "The range must be smaller then corresponding index range"
+        else:
+            raise ValueError, "The index must be smaller then the order of the Hypermatrix"
+    elif type(indx) == type('tst'):
+        if indx == 'row':
+            indx=0
+            if len(Rg) < A.n(indx):
+                # Initialization of the hypermatrix which stores the result
+                dms=A.dimensions(); dms[indx]=len(Rg); 
+                # Initializing the list of entries
+                Lst=[]
+                # Initialization of the list specifying the dimensions of the output
+                l = [A.n(i) for i in range(A.order())]
+                # Main loop performing the transposition of the entries
+                for i in range(prod(l)):
+                    # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                    entry = [Integer(mod(i,l[0]))]
+                    sm = Integer(mod(i,l[0]))
+                    for k in range(len(l)-1):
+                        entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                        sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                    if entry[indx] in Rg:
+                        Lst.append(A[tuple(entry)])
+                return apply(HM,dms+[Lst])
+            else:
+                raise ValueError, "The range must be smaller then corresponding index range"
+        elif indx == 'col':
+            indx=1
+            if len(Rg) < A.n(indx):
+                # Initialization of the hypermatrix which stores the result
+                dms=A.dimensions(); dms[indx]=len(Rg); 
+                # Initializing the list of entries
+                Lst=[]
+                # Initialization of the list specifying the dimensions of the output
+                l = [A.n(i) for i in range(A.order())]
+                # Main loop performing the transposition of the entries
+                for i in range(prod(l)):
+                    # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                    entry = [Integer(mod(i,l[0]))]
+                    sm = Integer(mod(i,l[0]))
+                    for k in range(len(l)-1):
+                        entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                        sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                    if entry[indx] in Rg:
+                        Lst.append(A[tuple(entry)])
+                return apply(HM,dms+[Lst])
+            else:
+                raise ValueError, "The range must be smaller then corresponding index range"
+        elif indx == 'dpt':
+            indx=3
+            if len(Rg) < A.n(indx):
+                # Initialization of the hypermatrix which stores the result
+                dms=A.dimensions(); dms[indx]=len(Rg); 
+                # Initializing the list of entries
+                Lst=[]
+                # Initialization of the list specifying the dimensions of the output
+                l = [A.n(i) for i in range(A.order())]
+                # Main loop performing the transposition of the entries
+                for i in range(prod(l)):
+                    # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                    entry = [Integer(mod(i,l[0]))]
+                    sm = Integer(mod(i,l[0]))
+                    for k in range(len(l)-1):
+                        entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                        sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                    if entry[indx] in Rg:
+                        Lst.append(A[tuple(entry)])
+                return apply(HM,dms+[Lst])
+            else:
+                raise ValueError, "The range must be smaller then corresponding index range"
+        elif indx == 'tme':
+            indx=4
+            if len(Rg) < A.n(indx):
+                # Initialization of the hypermatrix which stores the result
+                dms=A.dimensions(); dms[indx]=len(Rg); 
+                # Initializing the list of entries
+                Lst=[]
+                # Initialization of the list specifying the dimensions of the output
+                l = [A.n(i) for i in range(A.order())]
+                # Main loop performing the transposition of the entries
+                for i in range(prod(l)):
+                    # Turning the index i into an hypermatrix array location using the decimal encoding trick
+                    entry = [Integer(mod(i,l[0]))]
+                    sm = Integer(mod(i,l[0]))
+                    for k in range(len(l)-1):
+                        entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                        sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+                    if entry[indx] in Rg:
+                        Lst.append(A[tuple(entry)])
+                return apply(HM,dms+[Lst])
+            else:
+                raise ValueError, "The range must be smaller then corresponding index range"
+        else:
+            raise ValueError, "The string must be one of the following 4 choices row, col, dpt or tme"
     else:
-        raise ValueError, "Expected the string input to be either row or col"
-
-def ThirdOrderSlicer(A, L, strg):
-    """
-    Outputs slices specified by index list L.
-    the last string input is either row, col or dpt
-    and determines the slices to be collected
-    into a hypermatrix
-    
-
-    EXAMPLES:
- 
-    ::
-
-        sage: sz=3; A=HM(sz,sz,sz,'a')
-        sage: ThirdOrderSlicer(A, [0], 'row').printHM()
-        [:, :, 0]=
-        [a000 a010 a020]
-        <BLANKLINE>
-        [:, :, 1]=
-        [a001 a011 a021]
-        <BLANKLINE>
-        [:, :, 2]=
-        [a002 a012 a022]
-        <BLANKLINE>
-        sage: ThirdOrderSlicer(A, [1], 'col').printHM()
-        [:, :, 0]=
-        [a010]
-        [a110]
-        [a210]
-        <BLANKLINE>
-        [:, :, 1]=
-        [a011]
-        [a111]
-        [a211]
-        <BLANKLINE>
-        [:, :, 2]=
-        [a012]
-        [a112]
-        [a212]
-        <BLANKLINE>
-        sage: ThirdOrderSlicer(A, [2], 'dpt').printHM()
-        [:, :, 0]=
-        [a002 a012 a022]
-        [a102 a112 a122]
-        [a202 a212 a222] 
-        <BLANKLINE>
-        
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    if   strg=='row':
-        return HM(len(L),A.n(1),A.n(2),[A[i,j,k] for k in rg(A.n(2)) for j in rg(A.n(1)) for i in L])
-    elif strg=='col':
-        return HM(A.n(0),len(L),A.n(2),[A[i,j,k] for k in rg(A.n(2)) for j in L for i in rg(A.n(0))])
-    elif strg=='dpt':
-        return HM(A.n(0),A.n(1),len(L),[A[i,j,k] for k in L for j in rg(A.n(1)) for i in rg(A.n(0))])
-    else:
-        raise ValueError, "Expected the string input to be either row, col or dpt"
-
-def FourthOrderSlicer(A, L, strg):
-    """
-    Outputs slices specified by index list L.
-    the last string input is either row, col, dpt, tme
-    and determines the slices to be collected into a
-    hypermatrix
-    
-
-    EXAMPLES:
- 
-    ::
-
-        sage: sz=2; A=HM(sz, sz, sz, sz, 'a')
-        sage: FourthOrderSlicer(A, [0], 'row')
-        [[[[a0000, a0001], [a0010, a0011]], [[a0100, a0101], [a0110, a0111]]]]
-        sage: FourthOrderSlicer(A, [1], 'col')
-        [[[[a0100, a0101], [a0110, a0111]]], [[[a1100, a1101], [a1110, a1111]]]]
-        sage: FourthOrderSlicer(A, [1], 'dpt')
-        [[[[a0010, a0011]], [[a0110, a0111]]], [[[a1010, a1011]], [[a1110, a1111]]]]
-        sage: FourthOrderSlicer(A, [1], 'tme')
-        [[[[a0001], [a0011]], [[a0101], [a0111]]], [[[a1001], [a1011]], [[a1101], [a1111]]]]
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do:
-    """
-    if strg=='row':
-        return HM(len(L), A.n(1), A.n(2), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in rg(A.n(2)) for j in rg(A.n(1)) for i in L])
-    elif strg=='col':
-        return HM(A.n(0), len(L), A.n(2), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in rg(A.n(2)) for j in L for i in rg(A.n(0))])
-    elif strg=='dpt':
-        return HM(A.n(0), A.n(1), len(L), A.n(3), [A[i,j,k,t] for t in rg(A.n(3)) for k in L for j in rg(A.n(1)) for i in rg(A.n(0))])
-    elif strg=='tme':
-        return HM(A.n(0), A.n(1), A.n(2), len(L), [A[i,j,k,t] for t in L for k in rg(A.n(2)) for j in rg(A.n(1)) for i in rg(A.n(0))])
-    else:
-        raise ValueError, "Expected the string input to be either row, col, dpt, tme"
+        raise ValueError, "The index must be a string or an integer"
 
 def KroneckerResultant(L, vrbl, VrbLp, VrbLq):
     """
@@ -17402,6 +17486,7 @@ def KroneckerResultantII(L, vrbl, VrbLp, VrbLq):
         appender[myKey] = appender.get(myKey, 0) + myVal
     return appender.values()
 
+
 def kroneckerian_elimination(L, VrbL):
     """
     Takes as input a list of polynomials and a list of variable
@@ -17486,4 +17571,120 @@ def GeneralHypermatrixSubstituteInMatrix(A,vrbl,M):
         else:
             Rh[tuple(entry)] = substituteHM(A[tuple(entry)],vrbl,M).expand()
     return Rh
+
+def naught_eliminationHM(Cf):
+    """
+    Outputs the row echelon form of a multiplicative linear constraints where the RHS is zero.
+    This implementation assumes that there is not division. This assumption incurs no loss of 
+    generality at all since we can collect the denominators to make up a new multiplicative 
+    system. Solve it independently and check whether they have non overlapping solutions.
+    The corresponding problem is striking by its combinatorial flavor.
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: A = naught_eliminationHM(HM(2,2,'a'))
+        sage: A.printHM()
+        [:, :]=
+        [a00 a01]
+        [  0   0]
+        sage: Ta=HM(2,2,'a') # Initialization of the coefficient matrix.
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: A=naught_eliminationHM(Ha) # performing the gaussian elimination where entries are hypermatrices.
+        sage: A
+        [[[[a00, 0], [0, a00]], [[a01, 0], [0, a01]]], [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]]
+        sage: sz=2; A=HM(sz,sz,'a'); B=HM(sz,sz,'b')
+        sage: A00=HM([[A[0,0],-B[0,0]],[B[0,0],A[0,0]]]); A01=HM([[A[0,1],-B[0,1]],[B[0,1],A[0,1]]])
+        sage: A10=HM([[A[1,0],-B[1,0]],[B[1,0],A[1,0]]]); A11=HM([[A[1,1],-B[1,1]],[B[1,1],A[1,1]]])
+        sage: M=naught_eliminationHM(HM([[A00,A01],[A10,A11]]))
+        sage: M
+        [[[[a00, -b00], [b00, a00]], [[a01, -b01], [b01, a01]]], [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while A.slice(rg(i,A.n(0)),'row').slice([j],'col').is_zero() and j < A.n(1)-1:
+            # Incrementing the column index
+            j=j+1
+        if A.slice(rg(i,A.n(0)),'row').is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=A.slice(rg(i,A.n(0)),'row')
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2,Ta.n(0), 'kronecker')
+                P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
+                Ta=P*Ta
+                for i0 in rg(Ta.n(0)):
+                    for j0 in rg(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            for r in rg(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    if A[r,j].is_zero() == False:
+                        for j0 in rg(A.n(1)):
+                            A[r,j0]=0*A[r,j0]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return A
+
+def naught_reduced_eliminationHM(Cf):
+    """
+    Outputs the reduced row echelon form associated with the naught elimination.
+    This implementation is skew field friendly as illustrated in some of the examples
+    below. We do not assume that the input entries commute. 
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: RefA = naught_reduced_eliminationHM(HM(2,2,'a'))
+        sage: RefA.printHM()
+        [:, :]=
+        [1 0]
+        [0 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    A=naught_eliminationHM(Cf)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        #if HM(1,A.n(1),[A[i,j0] for j0 in rg(A.n(1))]).is_zero():
+        if A.slice([i],'row').is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in rg(i-1,-1,-1):
+                #A[r,:] = -A[r,j]*A[i,:]+A[r,:]
+                Tra=HM(1, A.n(1), 'zero')
+                for j0 in rg(A.n(1)):
+                    if j0 == j:
+                        Tra[0,j0]=-A[r,j0]*A[i,j0]+A[r,j0]
+                    else:
+                        Tra[0,j0]=A[r,j0]
+                for j0 in rg(A.n(1)):
+                    A[r,j0]=Tra[0,j0]
+            i=i-1; j=0
+    return A
 
