@@ -88,7 +88,7 @@ class HM:
         [:, :, 1]=
         [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
         [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
-        sage: HM(3,3,3,'a').slice(A, [2], 'dpt') # Illustrating the slicing
+        sage: HM(3,3,3,'a').slice([2], 'dpt') # Illustrating the slicing
         [:, :, 0]=
         [a002 a012 a022]
         [a102 a112 a122]
@@ -1659,7 +1659,7 @@ class HM:
             [a11]
             [a21]
             <BLANKLINE>
-            sage: HM(3,3,3,'a').slice(A, [2], 'dpt')
+            sage: HM(3,3,3,'a').slice([2], 'dpt')
             [:, :, 0]=
             [a002 a012 a022]
             [a102 a112 a122]
@@ -2770,7 +2770,7 @@ def Orthogonal2x2x2HypermatrixIII(t,x,y):
 
         sage: t,x,y=var('t,x,y')
         sage: Orthogonal2x2x2HypermatrixIII(t,x,y)
-        [[[sin(t)^(2/3), -x*cos(t)^(2/3)], [cos(t)^(2/3), y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
+        [[[sin(t)^(2/3), x*cos(t)^(2/3)], [cos(t)^(2/3), -y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]]
         sage: U=Orthogonal2x2x2HypermatrixIII(t,x,y); Prod(U,U.transpose(2),U.transpose())
         [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
 
@@ -17274,7 +17274,7 @@ def GeneralHypermatrixSlicer(A, Rg, indx):
     nb=2
     if type(indx) == type(nb):
         if indx < A.order() :
-            if len(Rg) < A.n(indx):
+            if len(Rg) <= A.n(indx):
                 # Initialization of the hypermatrix which stores the result
                 dms=A.dimensions(); dms[indx]=len(Rg); 
                 # Initializing the list of entries
@@ -17299,7 +17299,7 @@ def GeneralHypermatrixSlicer(A, Rg, indx):
     elif type(indx) == type('tst'):
         if indx == 'row':
             indx=0
-            if len(Rg) < A.n(indx):
+            if len(Rg) <= A.n(indx):
                 # Initialization of the hypermatrix which stores the result
                 dms=A.dimensions(); dms[indx]=len(Rg); 
                 # Initializing the list of entries
@@ -17321,7 +17321,7 @@ def GeneralHypermatrixSlicer(A, Rg, indx):
                 raise ValueError, "The range must be smaller then corresponding index range"
         elif indx == 'col':
             indx=1
-            if len(Rg) < A.n(indx):
+            if len(Rg) <= A.n(indx):
                 # Initialization of the hypermatrix which stores the result
                 dms=A.dimensions(); dms[indx]=len(Rg); 
                 # Initializing the list of entries
@@ -17342,8 +17342,8 @@ def GeneralHypermatrixSlicer(A, Rg, indx):
             else:
                 raise ValueError, "The range must be smaller then corresponding index range"
         elif indx == 'dpt':
-            indx=3
-            if len(Rg) < A.n(indx):
+            indx=2
+            if len(Rg) <= A.n(indx):
                 # Initialization of the hypermatrix which stores the result
                 dms=A.dimensions(); dms[indx]=len(Rg); 
                 # Initializing the list of entries
@@ -17364,8 +17364,8 @@ def GeneralHypermatrixSlicer(A, Rg, indx):
             else:
                 raise ValueError, "The range must be smaller then corresponding index range"
         elif indx == 'tme':
-            indx=4
-            if len(Rg) < A.n(indx):
+            indx=3
+            if len(Rg) <= A.n(indx):
                 # Initialization of the hypermatrix which stores the result
                 dms=A.dimensions(); dms[indx]=len(Rg); 
                 # Initializing the list of entries
