@@ -1,10 +1,10 @@
 =======
 # Hypermatrix Algebra Package
 
-We provide here a sagemath implementation of the Bhattacharya-Mesner algebra as well as the general Bhattacharya-Mesner algebra.
+We provide here a sagemath implementation of the Bhattacharya-Mesner algebra as well as the algebra of constructs.
 
 The `Hypermatrix Algebra Package` is a symbolic hypermatrix package designed to experimentally investigate symbolic
-structural and combinatorial properties of the Bhattacharya-Mesner algebra.
+structural and combinatorial properties of the Bhattacharya-Mesner algebra and the algebra of constructs more generally.
 
 # Installation 
 
@@ -12,10 +12,10 @@ A working install of [sage](http://sagemath.org/) is the only prerequisite to us
 algebra package, simply download the [hypermatrix algebra package sage file](https://github.com/gnang/HypermatrixAlgebraPackage/blob/master/Hypermatrix_Algebra_Package_code.sage) into your working directory and load the file into your SageMath [interactive shell](http://doc.sagemath.org/html/en/tutorial/interactive_shell.html) session via the command:
 
 ```python
-sage: %runfile Hypermatrix_Algebra_Package_code.sage
+sage: load('Hypermatrix_Algebra_Package_code.sage')
 ```
 
-The hypermatrix package passes all tests on SageMath version 7.6. To run the hypermatrix tests on your local sage, 
+The hypermatrix package passes all tests on SageMath version 8.3. To run the hypermatrix tests on your local sage, 
 use the following command in a [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) shell session
 
 ```bash

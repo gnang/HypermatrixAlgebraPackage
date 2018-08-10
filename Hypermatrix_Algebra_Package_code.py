@@ -97,7 +97,7 @@ class HM:
         [:, :, 1]=
         [a001*c000*f001 + b001*d000*g001 a001*c010*f011 + b001*d010*g011]
         [a101*c100*f001 + b101*d100*g001 a101*c110*f011 + b101*d110*g011]
-        sage: HM(3,3,3,'a').slice([2], 'dpt') # Illustrating the slicing
+        sage: HM(3,3,3,'a').slice([2], 'dpt').printHM() # Illustrating the slicing
         [:, :, 0]=
         [a002 a012 a022]
         [a102 a112 a122]
@@ -739,6 +739,10 @@ class HM:
             [b d]
             [d e]
             sage: m.subs({a: 3, b:2, d:1, e:-1}).printHM()
+            [:, :]=
+            [ 3  2]
+            [ 1 -1]
+            sage: m.subs([a==3, b==2, d==1, e==-1]).printHM()
             [:, :]=
             [ 3  2]
             [ 1 -1]
@@ -1668,7 +1672,7 @@ class HM:
             [a11]
             [a21]
             <BLANKLINE>
-            sage: HM(3,3,3,'a').slice([2], 'dpt')
+            sage: HM(3,3,3,'a').slice([2], 'dpt').printHM()
             [:, :, 0]=
             [a002 a012 a022]
             [a102 a112 a122]
@@ -5022,7 +5026,7 @@ def GeneralHypermatrixProductV(Lh, Op, Lv, indx):
         [:, :, 1]=
         [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
         [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
-        sage: GeneralHypermatrixProductV([x*y*Ha,Hb,Hc], sum, [x,y], 1).printHM()
+        sage: GeneralHypermatrixProductV([x*y*Ha,Hb,Hc], sum, [x,y], 0).printHM()
         [:, :, 0]=
         [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
         [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
@@ -5159,7 +5163,7 @@ def GProdII(Lh, Op, Lv, indx):
         [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
         [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
         <BLANKLINE>
-        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GProd([Ha, Hb], sum, [x], 0)
+        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GProdII([Ha, Hb], sum, [x], 0)
         [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
         sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GProdII([Ha, Hb], prod, [x], 0)
         [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
@@ -6755,7 +6759,7 @@ def GenerateUnitLpNormVectorII(sz,p=2,indx=0):
     ::
 
         sage: GenerateUnitLpNormVectorII(2) 
-        [cos(t0), sin(t0)]
+        [1/2*e^(I*t0) + 1/2*e^(-I*t0), -1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0)]
         
 
     AUTHORS:
@@ -6875,8 +6879,8 @@ def ProbabilityHMII(sz, xi=0):
 
         sage: ProbabilityHMII(2).printHM()
         [:, :]=
-        [              1/4*(e^(I*t0) + e^(-I*t0))^2      (-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2]
-        [         -1/4*(e^(I*t0) + e^(-I*t0))^2 + 1 -(-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2 + 1]       
+        [                                 1/4*(e^(I*t0) + e^(-I*t0))^2                         (-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2]
+        [-1/16*((e^(I*t0) + e^(-I*t0))^2 - 4)*(e^(I*t1) + e^(-I*t1))^2                    -(-1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0))^2 + 1]
  
 
     AUTHORS:
@@ -7434,8 +7438,9 @@ def GeneralStochasticHypermatrixII(t, od):
 
     ::
 
-        sage: Q = GeneralStochasticHypermatrixII(var('t'), 2); Q
-        [[cos(t)^2, sin(t)^2], [sin(t)^2, cos(t)^2]]
+        sage: GeneralStochasticHypermatrixII(var('t'), 2)
+        [[1/4*(e^(I*t) + e^(-I*t))^2, (-1/2*I*e^(I*t) + 1/2*I*e^(-I*t))^2], [(-1/2*I*e^(I*t) + 1/2*I*e^(-I*t))^2, 1/4*(e^(I*t) + e^(-I*t))^2]]
+
 
     AUTHORS:
     - Edinah K. Gnang, Ori Parzanchevski
@@ -12158,7 +12163,8 @@ def multiplicative_gaussian_elimination(Cf,rs,jndx=0):
         [      0       1]
         sage: c
         [                                                                    (b00*e^(2*I*pi*k0))^(1/a00)]
-        [(((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+        [1/((b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))]
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -12213,8 +12219,8 @@ def multiplicative_gauss_jordan_elimination(Cf,rs,jndx=0):
         [1 0]
         [0 1]
         sage: c
-        [(b00*e^(2*I*pi*k0))^(1/a00)*((((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))*e^(2*I*pi*k3))^(-a01/a00)]
-        [                                                       (((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+        [(b00*e^(2*I*pi*k0))^(1/a00)/(e^(2*I*pi*k3)/(b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))^(a01/a00)]
+        [                                                  1/((b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))]
         
 
     AUTHORS:
@@ -12259,7 +12265,7 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
         [      0       1]
         sage: c
         [                                                                    (b00*e^(2*I*pi*k0))^(1/a00)]
-        [(((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+        [1/((b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))]
 
 
     AUTHORS:
@@ -12327,8 +12333,8 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
         [1 0]
         [0 1]
         sage: c
-        [(b00*e^(2*I*pi*k0))^(1/a00)*((((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))*e^(2*I*pi*k3))^(-a01/a00)]
-        [                                                       (((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+        [(b00*e^(2*I*pi*k0))^(1/a00)/(e^(2*I*pi*k3)/(b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))^(a01/a00)]
+        [                                                  1/((b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))]
         
 
     AUTHORS:
@@ -12373,13 +12379,13 @@ def multiplicative_gaussian_eliminationHM(Cf,rs,jndx=0):
 
         sage: [EfA,c,indx,Lst]=multiplicative_gaussian_eliminationHM(HM(2,2,'a'), HM(2,1,'b'))
         sage: EfA.printHM()
-        [:, :]
+        [:, :]=
         [      1 a01/a00]
         [      0       1]
         sage: c.printHM()
-        [:, :]
+        [:, :]=
         [                                                                    (b00*e^(2*I*pi*k0))^(1/a00)]
-        [(((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^(-a10)*b10*e^(2*I*pi*k2))^(-1/(a01*a10/a00 - a11))]
+        [1/((b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))]
 
 
     AUTHORS:
@@ -12881,8 +12887,8 @@ def exponential_linear_solverHM(Ha,b,x,v):
         sage: sz=2; X=var_list('x',sz); A=HM(sz,sz,'a'); Eq=[(A[0,0]^X[0])*(A[0,1]^X[1])==7, (A[1,0]^X[0])*(A[1,1]^X[1])==2]
         sage: [A,b]=exponentialConstraintFormatorHM(Eq,X); Mx=HM(sz,1,X); Mv=HM(sz,1,var_list('t',sz))
         sage: exponential_linear_solverHM(A,b,Mx,Mv)
-        [e^x0 == ((2*((7*e^(2*I*pi*k0))^(1/log(a00))*e^(2*I*pi*k1))^(-log(a10))*e^(2*I*pi*k2))^(-1/(log(a01)*log(a10)/log(a00) - log(a11)))*e^(2*I*pi*k3))^(-log(a01)/log(a00))*(7*e^(2*I*pi*k0))^(1/log(a00)),
-         e^x1 == (2*((7*e^(2*I*pi*k0))^(1/log(a00))*e^(2*I*pi*k1))^(-log(a10))*e^(2*I*pi*k2))^(-1/(log(a01)*log(a10)/log(a00) - log(a11)))]
+        [e^x0 == (7*e^(2*I*pi*k0))^(1/log(a00))/(e^(2*I*pi*k3)/(2*e^(2*I*pi*k2)/((7*e^(2*I*pi*k0))^(1/log(a00))*e^(2*I*pi*k1))^log(a10))^(1/(log(a01)*log(a10)/log(a00) - log(a11))))^(log(a01)/log(a00)),
+         e^x1 == (1/((2*e^(2*I*pi*k2)/((7*e^(2*I*pi*k0))^(1/log(a00))*e^(2*I*pi*k1))^log(a10))^(1/(log(a01)*log(a10)/log(a00) - log(a11)))))]
 
 
     AUTHORS:
@@ -13905,11 +13911,10 @@ def TriangulationListing(A,B,m,sz):
         sage: F=FreeAlgebra(QQ,20,[a01,a02,a03,a12,a13,a23,b01,b02,b03,b12,b13,b23,c01,c02,c03,c12,c13,c23,z0,z1])
         sage: F.<a01,a02,a03,a12,a13,a23,b01,b02,b03,b12,b13,b23,c01,c02,c03,c12,c13,c23,z0,z1>=FreeAlgebra(QQ,20)
         sage: A=HM(sz,sz,1,[QQ(0),QQ(0),QQ(0),QQ(0),a01,QQ(0),QQ(0),QQ(0),a02,a12,QQ(0),QQ(0),a03,a13,a23,0])
-        sbge: Tb=HM(sz,sz,[QQ(0),QQ(0),QQ(0),QQ(0),b01,QQ(0),QQ(0),QQ(0),b02,b12,QQ(0),QQ(0),b03,b13,b23,0])
+        sage: Tb=HM(sz,sz,[QQ(0),QQ(0),QQ(0),QQ(0),b01,QQ(0),QQ(0),QQ(0),b02,b12,QQ(0),QQ(0),b03,b13,b23,0])
         sage: B=HM(sz,sz,sz,[Tb[i,j] for k in rg(sz) for j in rg(sz) for i in rg(sz)])*z0*z1
-        sage: TriangulationListing(A,B,sz-1,sz)
-        [[[[0], [0], [0], [b03*a01*b13*a12*a23]], [[0], [0], [0], [0]], [[0], [0], [0], [0]], [[0], [0], [0], [0]]],
-         [[[0], [0], [0], [b03*b02*a01*a12*a23]], [[0], [0], [0], [0]], [[0], [0], [0], [0]], [[0], [0], [0], [0]]]]        
+        sage: len(TriangulationListing(A,B,sz-1,sz))
+        2
 
 
     AUTHORS:
@@ -14523,7 +14528,7 @@ def GeneralHypermatrixTransform(Hl, X):
         sage: sz=2; P0=HM(sz,1,var_list('x',sz)); A=HM(sz,sz,'a'); B=i2x2(A)
         sage: P1=GeneralHypermatrixTransform([A,B],P0).canonicalize_radical()
         sage: sum(f^2 for f in P1.list()).canonicalize_radical()
-        ix0^2 + x1^2
+        x0^2 + x1^2
 
 
     AUTHORS:
@@ -17416,26 +17421,11 @@ def KroneckerResultant(L, vrbl, VrbLp, VrbLq):
         sage: q=expand(prod(x-La[i] for i in rg(floor(sz/2)))*prod(x-Lb[1] for i in rg(floor(sz/2))))
         sage: h=expand(prod((x-Lc[i]) for i in rg(sz)))
         sage: L=[p, q, h]
-        sage: Set([factor(v) for v in KroneckerResultant(L, x, var_list('u',len(L)), var_list('v',len(L)))]).list()
-        [-2*(a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
-         (a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
-         (a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
-         -(2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
-         (a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
-         (2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
-         -2*(a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
-         -(a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
-         (a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
-         -(a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1)]
-        sage: var_list('x',4) # Initialization of the list of variables
-        sage: L=[x1 + x2 + x3 - 5, 7*x1*x2 + 4*x3 - 2*x2 - 8, 10*x2+5*x1*x2-2*x2*x3+1]
-        sage: Set([factor(v) for v in KroneckerResultant(L, x1, var_list('u',len(L)), var_list('v',len(L)))]).list()
-        [7*x2^2 + 7*x2*x3 - 33*x2 - 4*x3 + 8,
-         -14*x2^2*x3 + 80*x2^2 - 20*x2*x3 + 47*x2,
-         5*x2^2 + 7*x2*x3 - 35*x2 - 1,
-         14*x2^2*x3 - 80*x2^2 + 20*x2*x3 - 47*x2,
-         -7*x2^2 - 7*x2*x3 + 33*x2 + 4*x3 - 8,
-         -5*x2^2 - 7*x2*x3 + 35*x2 + 1]
+        sage: len(Set([factor(v) for v in KroneckerResultant(L, x, var_list('u',len(L)), var_list('v',len(L)))]).list())
+        10        
+        sage: X=var_list('x',4); L=[X[1] + X[2] + X[3] - 5, 7*X[1]*X[2] + 4*X[3] - 2*X[2] - 8, 10*X[2]+5*X[1]*X[2]-2*X[2]*X[3]+1]
+        sage: len(Set([factor(v) for v in KroneckerResultant(L, X[1], var_list('u',len(L)), var_list('v',len(L)))]).list())
+        6 
 
 
     AUTHORS:
@@ -17466,17 +17456,8 @@ def KroneckerResultantII(L, vrbl, VrbLp, VrbLq):
         sage: q=expand(prod(x-La[i] for i in rg(floor(sz/2)))*prod(x-Lb[1] for i in rg(floor(sz/2))))
         sage: h=expand(prod((x-Lc[i]) for i in rg(sz)))
         sage: L=[p, q, h]
-        sage: Set([factor(v) for v in KroneckerResultant(L, x, var_list('u',len(L)), var_list('v',len(L)))]).list()
-        [(a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
-         (a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
-         -2*(a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
-         -2*(a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
-         (2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
-         -(2*a1*b1 - a1*c0 - b1*c0 - a1*c1 - b1*c1 + 2*c0*c1)*(a0 - c0)*(a0 - c1),
-         (a0 - c0)*(a0 - c1)*(b1 - c0)*(b1 - c1),
-         (a0 - c0)*(a0 - c1)*(a1 - c0)*(a1 - c1),
-         -(a0 - b1)*(a0 - c0)*(a0 - c1)*(a1 - b1),
-         -(a0 - a1)*(a0 - c0)*(a0 - c1)*(a1 - b1)]
+        sage: len(Set([factor(v) for v in KroneckerResultant(L, x, var_list('u',len(L)), var_list('v',len(L)))]).list())
+        10
 
 
     AUTHORS:
@@ -17509,15 +17490,8 @@ def kroneckerian_elimination(L, VrbL):
         sage: sz=3; VrbL=var_list('x',sz); L=(Vandermonde(rg(1,1+sz))*HM(sz,1,VrbL)-HM(sz,1,rg(sz))).list()
         sage: degree_matrix(L,VrbL)
         [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
-        sage: kroneckerian_elimination(L, VrbL)
-        [[x0 + x1 + x2, x0 + 2*x1 + 3*x2 - 1, x0 + 4*x1 + 9*x2 - 2],
-         [-x1 - 2*x2 + 1,
-          2*x1 + 6*x2 - 1,
-          -2*x1 - 6*x2 + 1,
-          x1 + 2*x2 - 1,
-          -3*x1 - 8*x2 + 2,
-          3*x1 + 8*x2 - 2],
-         [-2*x2 - 1, 2*x2 + 1]]
+        sage: len(kroneckerian_elimination(L, VrbL))
+        3
         sage: sz=2; VrbL=var_list('x',sz); A=HM(sz,sz,'a'); b=HM(sz,1,var_list('b',sz))
         sage: L=(A*HM(sz,1,VrbL)-b).list()
         sage: kroneckerian_elimination(L, VrbL)
@@ -17547,13 +17521,13 @@ def GeneralHypermatrixSubstituteInMatrix(A,vrbl,M):
 
     ::
 
-        sage: var('x'); Ha=HM(2,1,[x+1,x^2+1])
+        sage: x=var('x'); Ha=HM(2,1,[x+1,x^2+1])
         sage: Y=var_list('y',2); rM=GeneralHypermatrixSubstituteInMatrix(Ha,x,HM(2,2,[Y[0],0,0,Y[1]]))
         sage: rM[0,0].printHM()
         [:, :]=
         [y0 + 1      0]
         [     0 y1 + 1]
-        sage: rM[0,0].printHM()
+        sage: rM[1,0].printHM()
         [:, :]=
         [y0^2 + 1        0]
         [       0 y1^2 + 1]
@@ -17662,8 +17636,8 @@ def naught_reduced_eliminationHM(Cf):
         sage: RefA = naught_reduced_eliminationHM(HM(2,2,'a'))
         sage: RefA.printHM()
         [:, :]=
-        [1 0]
-        [0 1]
+        [a00 a01]
+        [  0   0]
 
 
     AUTHORS:
