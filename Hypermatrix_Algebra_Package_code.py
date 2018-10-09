@@ -107,7 +107,7 @@ class HM:
     def __init__(self,*args):
         if len(args) == 1:
             inp = args[0]
-            if type(inp)==type(Matrix(SR,2,1,[var('x'),var('y')])) or type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
+            if type(inp)==type(Matrix(SR,2,1,[var('xxi'),var('yyj')])) or type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
                 self.hm=DiagonalHypermatrix(inp)
             elif type(inp) == list:
                 self.hm = inp
@@ -878,6 +878,65 @@ class HM:
             return A
         else:
             return GeneralHypermatrixConjugate(A)
+
+    def tumble(self, i=1):
+        """
+        Outputs a list of lists associated with the tumble
+        transpose. 
+        The code only handles second order HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: sz=5; (HM(sz,sz,'a') - HM(sz,sz,'a').tumble()).printHM()
+            [:, :]=
+            [ a00 - a40  a01 - a30  a02 - a20  a03 - a10 -a00 + a04]
+            [ a10 - a41  a11 - a31  a12 - a21 -a11 + a13 -a01 + a14]
+            [ a20 - a42  a21 - a32          0 -a12 + a23 -a02 + a24]
+            [ a30 - a43  a31 - a33 -a23 + a32 -a13 + a33 -a03 + a34]
+            [ a40 - a44 -a34 + a41 -a24 + a42 -a14 + a43 -a04 + a44]
+
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        if self.order()==2 and self.is_cubical():
+            t = Integer(mod(i,4))
+            tA = self.copy() 
+            for itr in range(t):
+                B=HM(tA.n(0),tA.n(1),'zero')
+                for i in rg(tA.n(0)):
+                    for j in rg(tA.n(1)):
+                        B[i,j]=tA[tA.n(0)-1-j,i]
+                tA=B.copy()
+            return tA
+        else:
+            raise ValueError, "Expected a cubical second order hypermatrix"
+
+    def index_rotation(self, T):
+        """
+        Outputs a list of lists associated with the tumble
+        transpose. 
+        The code only handles second order HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: sz=5; (HM(sz,sz,'a') - HM(sz,sz,'a').index_rotation(pi/2)).printHM()
+            [:, :]=
+            [ a00 - a40  a01 - a30  a02 - a20  a03 - a10 -a00 + a04]
+            [ a10 - a41  a11 - a31  a12 - a21 -a11 + a13 -a01 + a14]
+            [ a20 - a42  a21 - a32          0 -a12 + a23 -a02 + a24]
+            [ a30 - a43  a31 - a33 -a23 + a32 -a13 + a33 -a03 + a34]
+            [ a40 - a44 -a34 + a41 -a24 + a42 -a14 + a43 -a04 + a44]
+
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        return MatrixIndexRotation(self, T)
 
     def nrows(self):
         return len(self.hm)
@@ -4771,14 +4830,12 @@ def BlockProd(*args):
 
 def GeneralHypermatrixProductII(Lh, Op, F):
     """
-    Outputs a list of lists associated with the functional 
-    approach to the Bhattacharya-Mesner product of the input
-    hypermatrices. This version is theoretically more general
-    then the next implementation but in practice is hard for
-    to input arbitrary functions for F for instance I do not
-    know how to specify F so that effect the Categorically
-    inspired perspective. For this reason we also supply
-    the next function which implements the composition formulation.  
+    Outputs an HM which is a list of lists associated with the
+    construct approach to the Bhattacharya-Mesner product of the input
+    hypermatrices. Here Op is the combinator and F is the composer.
+    This implementation in theory captures the full scope of
+    the construct products subsequently implemented here but in 
+    practice is hard for to specify arbitrary composers for F.
     The code only handles the Hypermatrix HM class objects.
 
     EXAMPLES:
@@ -4806,6 +4863,11 @@ def GeneralHypermatrixProductII(Lh, Op, F):
 
         sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); GeneralHypermatrixProductII([Ha, Hb], sum, prod)
         [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: A=HM([[59, -3, 2], [-6, 1, 1], [1, -1, 1]]); B=HM([[-1, 1, 0], [-1, 1, 0], [0, -43, 1]])
+        sage: GeneralHypermatrixProductII([A, B], sum, prod)-A*B # One way of recovering matrix multiplication
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        sage: GeneralHypermatrixProductII([A, B], min, sum) # Recovering the Min-plus matrix multiplication
+        [[-4, -41, -3], [-7, -42, -6], [-2, -42, -1]]
 
 
     AUTHORS:
@@ -4939,6 +5001,13 @@ def GeneralHypermatrixProductIV(Lh, Op, Lv):
     AUTHORS:
     - Edinah K. Gnang
     """
+    # Testing conformability by initiailizing the common dimension
+    el=Lh[len(Lh)-1].n(0)
+    # Loop running throug the dimentsion of the input
+    for indx in rg(len(Lh)-1):
+        if Lh[indx].n(indx+1) != el:
+            print 'WARNING !!! The input hypermatrices are not conformable. Truncating to allow the product.'
+            break
     # Initialization of the list specifying the dimensions of the output
     l = [(Lh[i]).n(i) for i in range(len(Lh))]
     # Initializing the input for generating a symbolic hypermatrix
@@ -5092,7 +5161,7 @@ def GProd(Lh, Op, Lv):
     so that while performing the product we compose with the entries
     of the first of the list of inputs. This implementation is aesthetically
     more pleasing then the previous one because it explicitly articulate the
-    preference for composition as our defacto product operation. Hoever it is
+    preference for composition as our defacto product operation. However it is
     theoretically less general then the previous one. Both these implementations
     are inspired by initial exposure to ideas from Category theory, the implementation
     also make painfully obvious some of the programming constraints imposed by Python.
@@ -5137,17 +5206,17 @@ def GProd(Lh, Op, Lv):
 
 def GProdII(Lh, Op, Lv, indx):
     """
-    Outputs a list of lists associated with the composition
+    Outputs an HM which is list of lists associated with the composition
     based Bhattacharya-Mesner product of the input hypermatrices.
     The entries of the hypermatrices are taken to be functions
     so that while performing the product we compose with the entries
-    of the first of the list of inputs. This implementation is aesthetically
+    of the indx-th of the list of inputs. This implementation is aesthetically
     more pleasing then the previous one because it explicitly articulate the
-    preference for composition as our defacto product operation. Hoever it is
-    theoretically less general then the previous one. Both these implementations
-    are inspired by initial exposure to ideas from Category theory, the implementation
-    also make painfully obvious some of the programming constraints imposed by Python.
-    The code only handles the Hypermatrix HM class objects.
+    preference for a particular composition operation. However both this
+    and the previous implementation are special instances of ways to specify the composer.
+    Both these implementations are inspired by initial exposure to ideas from Category theory,
+    the implementation also make painfully obvious some of the programming constraints imposed by Python.
+    This code only handles the Hypermatrix HM class objects.
 
     EXAMPLES:
 
@@ -6642,7 +6711,7 @@ def ThirdOrderDeter(H):
  
 def Per(A):
     """
-    Computes symbolically the determinant of a square matrix
+    Computes symbolically the permanent of a square matrix
     using the sum over permutation formula.
 
     EXAMPLES:
@@ -6658,6 +6727,32 @@ def Per(A):
     # Initializing the permutations
     P = Permutations(rg(A.nrows()))
     return sum([prod([A[k,p[k]] for k in rg(A.nrows())]) for p in P])
+
+def PerII(A):
+    """
+    Computes symbolically the permanent of a square matrix
+    using the sum over permutation formula. This function 
+    follows a maple implementation suggested
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: M = HM(2, 2, 'm'); PerII(M)
+        m01*m10 + m00*m11
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Harry Crane
+    """
+    # Initializing the symbolic matrix
+    sz = min(A.nrows(), A.ncols())
+    P = GeneratePartition(sz)
+    Pml = []
+    for part in P:
+        Pml.append((-1)^(max(part))*factorial(max(part))*((Partition2HM(part)).elementwise_product(A)).det())
+    return expand(sum(Pml))*(-1)^A.nrows()
  
 def MeanApproximation(T):
     """
@@ -11812,6 +11907,14 @@ def gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, RltsII):
         sage: d0=3; d1=2; Rh=gaussian_elimination_ReductionHMIII(M,Lx,[v^d0 for v in Lx],[v^d1 for v in Lx])
         sage: Rh[sz-2,sz-2]
         a00*a01*a02*a03*x0*x1*x2*x3 + a00*a02*a03*a12*x0*x1*x2*x3 + a00*a03*a12*a13*x0*x1*x2*x3 + a00*a03*a13*a23*x0*x1*x2*x3
+        sage: od=2; sz=4 # Initialization of the order and size parameter
+        sage: Lx=var_list('x',sz) # Initialization of the list of variables
+        sage: A=HM(sz,sz,'a') # Initialization of part of the adjacency matrix
+        sage: X=HM(sz,sz,[Lx[abs(j-i)] for j in rg(sz) for i in rg(sz)]) # Initialization of the symbolic edge weights
+        sage: Hb=Matrix2HM((HM(od,(A.elementwise_product(X)*HM(sz,1,'one')).list(),'diag')-A.elementwise_product(X)).matrix()[1:,1:]) # Directed Laplacian
+        sage: d0=3; d1=2; Rh2=A[0,0]*Lx[0]*gaussian_elimination_ReductionHMIII(Hb,Lx,[v^3 for v in Lx],[v^2 for v in Lx])
+        sage: Rh2[sz-2,sz-2]
+        (a10*a20*a30*x1*x2*x3 + a12*a20*a30*x1*x2*x3 + a13*a21*a30*x1*x2*x3 + a13*a23*a30*x1*x2*x3)*a00*x0
 
 
     AUTHORS:
@@ -12600,7 +12703,7 @@ def linear_solverHM(A,b,x,v):
 
         sage: sz=2; Eq=[var('x'+str(i))+var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
         sage: [A,b]=ConstraintFormatorHM(Eq,[var('x'+str(i)) for i in range(2*sz)])
-        sage: linear_solverHM(A,b,HM(A.ncols(),1,var_list('x',A.ncols())),HM(A.ncols(),1,var_list('t',A.ncols())))
+        sage: linear_solverHM(A,b,HM(A.n(1),1,var_list('x',A.n(1))),HM(A.n(1),1,var_list('t',A.n(1))))
         [x0 == a00 - a10 + a11 - t3,
          x1 == a11 - t3,
          x2 == a10 - a11 + t3,
@@ -17625,8 +17728,7 @@ def naught_eliminationHM(Cf):
 def naught_reduced_eliminationHM(Cf):
     """
     Outputs the reduced row echelon form associated with the naught elimination.
-    This implementation is skew field friendly as illustrated in some of the examples
-    below. We do not assume that the input entries commute. 
+    This implementation assumes that the input entries commute. 
 
 
     EXAMPLES:
@@ -17670,4 +17772,331 @@ def naught_reduced_eliminationHM(Cf):
                     A[r,j0]=Tra[0,j0]
             i=i-1; j=0
     return A
+
+def default_naught_solver(Eq, La, Lf):
+    """
+    Formats the constraints performs and solves the multiplicatively linear constraints
+    where the right hand side equals zero. This function outputs the solutions. The input
+    EqL corresponds to a list of constraints. The input Lv corresponds to the list of 
+    variables appearing in the constraints. The input Lf corresponds to the list of free
+    varaibles each taken in correspondence with the entries of Lv. This implementation 
+    tacitly assumes that the  the input constraints are indeed multiplicatively linear.
+    This implementation performs cyclic permutations to the equations and all permutations
+    to the variables in the first constraints.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; len(default_naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
+        2
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the list which stores the solutions
+    Sln=[]
+    for itr in rg(len(Eq)):
+        # Performing a cyclic permutation of the constraints
+        Eq.insert(0,Eq.pop())
+
+        # Obtaining the variables in the first equations
+        [TmpHa,hb]=multiplicativeConstraintFormatorIIHM(Eq[:1],La)
+        La1=(TmpHa*HM(len(La),1,La))[0,0].operands()
+        La2=Set(La).difference(Set(La1)).list()
+
+        # Initializing the permutation of the variables in the first constraints
+        P=Permutations(len(La1))
+        for p in P:
+            q=[p[i]-1 for i in rg(len(La1))]
+            # Updating the ordering of the variables
+            tLa=[La1[q[i]] for i in rg(len(La1))]+La2
+            # Formatting the constraints to obtain the coefficient matrix
+            [Ha, hb]=multiplicativeConstraintFormatorIIHM(Eq, tLa)
+
+            # Performing the Gaussian elimination procedure
+            tA=naught_reduced_eliminationHM(Ha)
+
+            # Identifying the non zero rows of the matrix
+            r=1
+            while HM(tA.n(0),tA.n(1),'zero').fill_with(tA.slice(rg(r),'row')) != tA:
+                r=r+1
+        
+            # Taking only the nonzero rows
+            Ca=tA.slice(rg(r),'row')
+
+            # Initialization of the vector
+            #vA=HM(len(tLa),1,tLa)
+        
+            # Obtaining the resulting constraints
+            #qE=(vA^Ca).list(); print 'Eq =', Eq,'qE =', qE, 'tLa =', tLa
+        
+            # Obtaining a solution to the system
+            Mx=HM(Ca.n(1),1,tLa); Mv=HM(Ca.n(1),1,Lf) # Initialization of the pivot and free variables
+            tmpSln=multiplicative_linear_solverHM(Ca,HM(Ca.n(0),1,'zero'),Mx,Mv)
+            if (Set(tmpSln).list() in Sln) == False:
+                Sln.append(Set(tmpSln).list())
+    return Sln 
+
+def naught_solver(EqL, La, Lf):
+    """
+    Formats the constraints performs and solves the multiplicatively linear constraints
+    where the right hand side equals zero. This function outputs the solutions. The input
+    EqL corresponds to a list of constraints. The input Lv corresponds to the list of 
+    variables appearing in the constraints. The input Lf corresponds to the list of free
+    varaibles each taken in correspondence with the entries of Lv. This implementation 
+    tacitly assumes that the  the input constraints are indeed multiplicatively linear.
+    This implementation performs all permutations of the variables and all permutations
+    of the equations.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; len(naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
+        6
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the permutations
+    P=Permutations(len(La)); Q=Permutations(len(EqL))
+    # Initialization of the list which stores the solutions
+    Sln=[]
+    for jtr in Q:
+        itr=[jtr[i]-1 for i in rg(len(EqL))]
+        # Performing a cyclic permutation of the constraints
+        Eq=[EqL[itr[i]] for i in rg(len(EqL))]
+
+        # Obtaining the variables in the first equations
+        [TmpHa,hb]=multiplicativeConstraintFormatorIIHM(Eq[:1],La)
+        La1=(TmpHa*HM(len(La),1,La))[0,0].operands()
+        La2=Set(La).difference(Set(La1)).list()
+
+        for p in P:
+            q=[p[i]-1 for i in rg(len(La))]
+            # Updating the ordering of the variables
+            tLa=[La[q[i]] for i in rg(len(La))]
+            # Formatting the constraints to obtain the coefficient matrix
+            [Ha, hb]=multiplicativeConstraintFormatorIIHM(Eq, tLa)
+
+            # Performing the Gaussian elimination procedure
+            tA=naught_reduced_eliminationHM(Ha)
+
+            # Identifying the non zero rows of the matrix
+            r=1
+            while HM(tA.n(0),tA.n(1),'zero').fill_with(tA.slice(rg(r),'row')) != tA:
+                r=r+1
+        
+            # Taking only the nonzero rows
+            Ca=tA.slice(rg(r),'row')
+
+            # Initialization of the vector
+            #vA=HM(len(tLa),1,tLa)
+        
+            # Obtaining the resulting constraints
+            #qE=(vA^Ca).list(); print 'Eq =', Eq,'qE =', qE, 'tLa =', tLa
+        
+            # Obtaining a solution to the system
+            Mx=HM(Ca.n(1),1,tLa); Mv=HM(Ca.n(1),1,Lf) # Initialization of the pivot and free variables
+            tmpSln=multiplicative_linear_solverHM(Ca,HM(Ca.n(0),1,'zero'),Mx,Mv)
+            if (Set(tmpSln).list() in Sln) == False:
+                Sln.append(Set(tmpSln).list())
+    return Sln 
+ 
+def MatrixIndexRotation(Ha, T):
+    """
+    The function perform the rotation of angle T for the indices.
+    Ha is input second order hypermatrices.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=5; Ha=HM(sz,sz,'a') # Initialization of the input Hypermatrix
+        sage: (Ha.tumble()-MatrixIndexRotation(Ha, 2*pi/4)).is_zero()
+        True
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.is_cubical() and Integer(mod(Ha.n(0),2)) == 1:
+        # Initialization of the matrix
+        sz=Ha.n(0); B=HM(sz,sz,'zero')
+        for i in rg(sz):
+            for j in rg(sz):
+                B[i,j]=Ha[(i-floor(sz/2))*cos(T)+(-j+floor(sz/2))*sin(T)+floor(sz/2), (i-floor(sz/2))*sin(T)-(-j+floor(sz/2))*cos(T)+floor(sz/2)]
+        return B
+    elif Ha.is_cubical() and Integer(mod(Ha.n(0),2)) == 0:
+        # Initialization of the matrix
+        sz=Ha.n(0); B=HM(sz,sz,'zero')
+        for i in rg(sz):
+            for j in rg(sz):
+                B[i,j]=Ha[(i-floor(sz/2))*cos(T)+(-j+floor(sz/2))*sin(T)+floor(sz/2)-1, (i-floor(sz/2))*sin(T)-(-j+floor(sz/2))*cos(T)+floor(sz/2)-1]
+        return B
+    else:
+        raise ValueError, "The input matrices must be square."
+
+def geometric_mean(L):
+    """
+    The function computes the geometric mean
+    of the input list L.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz0=2; sz1=3; Ha=HM(sz0, sz1, 'a')
+        sage: geometric_mean(Ha.list())
+        (a00*a01*a02*a10*a11*a12)^(1/6)
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Jeanine S. Gnang
+    """
+    # Initialization of the construct variable
+    z=var('z')
+    # Initialization of the size determined by the length of the list
+    sz=len(L)
+    # Return the geometric mean viewed as an inner-product of sorts
+    return GProd([HM(1,sz,L), HM(sz,1,'one')], prod, [z])[0,0]^(1/sz)
+
+def geometric_meanII(L):
+    """
+    The function computes the geometric mean
+    of the input list L. To be used for numerical
+    computation
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: X=[0.03658233053840871, 0.022693452948493835, 0.09667167574741581, 0.1354454280082533, 0.02906998361722122, 0.09068172967913375, 0.18808247869583106, 0.06596997458401005, 0.043486280252139436, 0.6087259605232003, 0.14746917844106938, 0.0024856908759630526, 0.11116106918595019, 0.02867537872396155, 0.15283808208604527]
+        sage: geometric_meanII(X)
+        0.0653181757705423
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Jeanine S. Gnang
+    """
+    return prod(L)^(1.0/len(L))
+
+
+
+def arithmetic_mean(L):
+    """
+    The function computes the arithmetic mean
+    of the input list L.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz0=2; sz1=3; Ha=HM(sz0, sz1, 'a')
+        sage: arithmetic_mean(Ha.list())
+        1/6*a00 + 1/6*a01 + 1/6*a02 + 1/6*a10 + 1/6*a11 + 1/6*a12
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Jeanine S. Gnang
+    """
+    # Initialization of the construct variable
+    z=var('z')
+    # Initialization of the size determined by the length of the list
+    sz=len(L)
+    # Return the arithmetic mean viewed as an inner-product of sorts
+    return GProd([HM(1,sz,L), HM(sz,1,'one')], sum, [z])[0,0]*(1/sz)
+
+def arithmetic_meanII(L):
+    """
+    The function computes the arithmetic mean
+    of the input list L. To be used for numerical
+    computation
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: X=[0.03658233053840871, 0.022693452948493835, 0.09667167574741581, 0.1354454280082533, 0.02906998361722122, 0.09068172967913375, 0.18808247869583106, 0.06596997458401005, 0.043486280252139436, 0.6087259605232003, 0.14746917844106938, 0.0024856908759630526, 0.11116106918595019, 0.02867537872396155, 0.15283808208604527]
+        sage: arithmetic_mean(X)
+        0.117335912927140
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Jeanine S. Gnang
+    """
+    return sum(L)*(1.0/len(L))
+
+def GeneratePartition(sz):
+    """
+    Creates Partition to be used for computing the permanent.
+    This function follows a maple implementation suggested
+    Harry Crane
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: GeneratePartition(3)
+        [[1, 1, 1], [1, 1, 2], [1, 2, 1], [1, 2, 2], [1, 2, 3]]
+        
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Harry Crane
+    """
+    N = [[1]]
+    if sz > 1:
+        for i in rg(1,sz):
+            M = N
+            r = len(M)
+            N = []
+            for j in rg(r):
+                mx = max(M[j])
+                for k in rg(1,mx+2):
+                    N = N + [M[j]+[k]]
+    return N
+
+def Partition2HM(part):
+    """
+    Converts a partition into matrices. This function follows a maple implementation suggested
+    Harry Crane
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: Partition2HM([1, 2, 1]).printHM()
+        [:, :]=
+        [1 0 1]
+        [0 1 0]
+        [1 0 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Harry Crane
+    """
+    M = max(part); N = len(part)
+    B = HM(N,N,'zero')
+    for i in rg(1,M+1):
+        d = HM(N,1,'zero')
+        for j in rg(N):
+            if part[j] == i:
+                d[j,0] = 1
+        B = B + d*d.transpose()
+    return B
 
