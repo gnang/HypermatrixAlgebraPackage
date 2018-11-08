@@ -4376,7 +4376,7 @@ def OuterHypermatrixInversePair(U, V):
         sage: [Sln, Tx, Ty]=OuterHypermatrixInversePair(Hu, Hv)[0]
         sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1])) 
         sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
-        sage: Prod(Hx, Prod(Hu, HM(3,4,2,'a'), Hv), Hy).factor().list()
+        sage: Prod(Hx, Prod(Hu, HM(3,4,2,'a'), Hv), Hy)).list()
         [a000,
          a100,
          a200,
@@ -4453,7 +4453,7 @@ def InnerHypermatrixInversePair(X, Y):
         sage: [Sln, Tu, Tv]=InnerHypermatrixInversePair(Hx, Hy)[0]
         sage: Hu=Tu.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1])) 
         sage: Hv=Tv.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1]))
-        sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).factor().list()
+        sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).list()
         [a000,
          a100,
          (x101*x110*y001*y100 - x100*x111*y000*y101)*(x001*x010*y011*y110 - x000*x011*y010*y111)*a010/((x001*x010*y001*y100 - x000*x011*y000*y101)*(x101*x110*y011*y110 - x100*x111*y010*y111)),
@@ -4829,6 +4829,7 @@ def GeneralHypermatrixProductII(Lh, Op, F):
     practice is hard for to specify arbitrary composers for F.
     The code only handles the Hypermatrix HM class objects.
 
+
     EXAMPLES:
 
     ::
@@ -4859,6 +4860,10 @@ def GeneralHypermatrixProductII(Lh, Op, F):
         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
         sage: GeneralHypermatrixProductII([A, B], min, sum) # Recovering the Min-plus matrix multiplication
         [[-4, -41, -3], [-7, -42, -6], [-2, -42, -1]]
+        sage: MSta=HM([[Set([1,2]), Set([1,3,2])], [Set([1]), Set([2,3])]])
+        sage: MStb=HM([[Set([1,2,3]), Set([2])], [Set([1,3]), Set([1,3])]])
+        sage: GeneralHypermatrixProductII([MSta, MStb], SetIntersection, SetUnion) 
+        [[{1, 2, 3}, {1, 2}], [{1, 2, 3}, {1, 2}]]
 
 
     AUTHORS:
@@ -5244,6 +5249,96 @@ def GProdII(Lh, Op, Lv, indx):
     - Edinah K. Gnang
     """
     return GeneralHypermatrixProductV(Lh, Op, Lv, indx)
+
+def GProdIII(Lh, Op, F):
+    """
+    Outputs an HM which is a list of lists associated with the
+    construct approach to the Bhattacharya-Mesner product of the input
+    hypermatrices. Here Op is the combinator and F is the composer.
+    This implementation in theory captures the full scope of
+    the construct products subsequently implemented here but in 
+    practice is hard for to specify arbitrary composers for F.
+    The code only handles the Hypermatrix HM class objects.
+    This implementation comes in handy for combinatorial constructs
+    such as shortest path problems and set valued constructs.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GProdIII([Ha, Hb, Hc], prod, sum); Rslt.printHM()
+        [:, :, 0]=
+        [(a000 + b000 + c000)*(a010 + b001 + c100) (a000 + b010 + c010)*(a010 + b011 + c110)]
+        [(a100 + b100 + c000)*(a110 + b101 + c100) (a100 + b110 + c010)*(a110 + b111 + c110)]
+        <BLANKLINE>
+        [:, :, 1]=
+        [(a001 + b000 + c001)*(a011 + b001 + c101) (a001 + b010 + c011)*(a011 + b011 + c111)]
+        [(a101 + b100 + c001)*(a111 + b101 + c101) (a101 + b110 + c011)*(a111 + b111 + c111)]        
+        <BLANKLINE>
+        sage: Rslt=GProdIII([Ha, Hb, Hc], sum, prod); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        <BLANKLINE>
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); GProdIII([Ha, Hb], sum, prod)
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: A=HM([[59, -3, 2], [-6, 1, 1], [1, -1, 1]]); B=HM([[-1, 1, 0], [-1, 1, 0], [0, -43, 1]])
+        sage: GProdIII([A, B], sum, prod)-A*B # One way of recovering matrix multiplication
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        sage: GProdIII([A, B], min, sum) # Recovering the Min-plus matrix multiplication
+        [[-4, -41, -3], [-7, -42, -6], [-2, -42, -1]]
+        sage: MSta=HM([[Set([1,2]), Set([1,3,2])], [Set([1]), Set([2,3])]])
+        sage: MStb=HM([[Set([1,2,3]), Set([2])], [Set([1,3]), Set([1,3])]])
+        sage: GProdIII([MSta, MStb], SetIntersection, SetUnion) 
+        [[{1, 2, 3}, {1, 2}], [{1, 2, 3}, {1, 2}]]
+        sage: GProdIII([MSta, MStb], SetUnion, SetIntersection)
+        [[{1, 2, 3}, {1, 2, 3}], [{1, 3}, {3}]]
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); Lc=var_list('c',sz); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]),La+Lx+Lb+Lc+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, c0, c1, c2, z>=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]))
+        sage: Ha=HM(1,l,sz,[a00, a10, a20, a01, a11, a21])
+        sage: Hx=HM(1,1,l,[x0, x1]) 
+        sage: Hb=HM(l,1,sz,[b00, b10, b20, b01, b11, b21])
+        sage: GProdIII([Ha, Hx, Hb], sum, prod).printHM()
+        [:, :, 0]=
+        [a00*x0*b00 + a10*x1*b10]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a20*x0*b20 + a01*x1*b01]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a11*x0*b11 + a21*x1*b21]
+        <BLANKLINE>
+        sage: Ca=HM(2,2,[HM(1,1,[var('a00')]), HM(1,1,[var('a10')]), HM(1,1,[var('a01')]), HM(1,1,[var('a11')])])
+        sage: Cb=HM(2,2,[HM(1,1,[var('b00')]), HM(1,1,[var('b10')]), HM(1,1,[var('b01')]), HM(1,1,[var('b11')])])
+        sage: GProdIII([Ca, Cb], DirectSum, TensorProduct)[0,0].printHM()
+        [:, :]=
+        [a00*b00       0]
+        [      0 a01*b10]
+        sage: GProdIII([Ca, Cb], DirectSum, TensorProduct)[0,1].printHM()
+        [:, :]=
+        [a00*b01       0]
+        [      0 a01*b11]
+        sage: GProdIII([Ca, Cb], DirectSum, TensorProduct)[1,0].printHM()
+        [:, :]=
+        [a10*b00       0]
+        [      0 a11*b10]
+        sage: GProdIII([Ca, Cb], DirectSum, TensorProduct)[1,1].printHM()
+        [:, :]=
+        [a10*b01       0]
+        [      0 a11*b11]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductII(Lh, Op, F)
 
 def GeneralHypermatrixCyclicPermute(A):
     """
@@ -17781,7 +17876,7 @@ def default_naught_solver(Eq, La, Lf):
     ::
 
         sage: sz=2; len(default_naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        2
+        4
 
 
     AUTHORS:
@@ -17849,7 +17944,7 @@ def naught_solver(EqL, La, Lf):
     ::
 
         sage: sz=2; len(naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        6
+        8
 
 
     AUTHORS:
@@ -17982,8 +18077,6 @@ def geometric_meanII(L):
     """
     return prod(L)^(1.0/len(L))
 
-
-
 def arithmetic_mean(L):
     """
     The function computes the arithmetic mean
@@ -18090,4 +18183,106 @@ def Partition2HM(part):
                 d[j,0] = 1
         B = B + d*d.transpose()
     return B
+
+def SetIntersection(L):
+    """
+    Outputs the intersection of the input list of Sets.
+    Thus implementation does not check the validity of the inputs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: SetIntersection([Set([1,2,3]),Set([1,2])])
+        {1, 2}
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    St=L[0]
+    for i in rg(1,len(L)):
+        St=St.intersection(L[i])
+    return St
+
+def SetUnion(L):
+    """
+    Outputs the union of the input list of Sets.
+    Thus implementation does not check the validity of the inputs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: SetUnion([Set([1,2,3]),Set([1,2])])
+        {1, 2, 3}
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    St=L[0]
+    for i in rg(1,len(L)):
+        St=St.union(L[i])
+    return St
+
+def DirectSum(L):
+    """
+    Outputs the direct sum of the input list of Hypermatrices.
+    Thus implementation does not check the validity of the inputs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: DirectSum([HM(2,2,'a'), HM(2,2,'b')]).printHM()
+        [:, :]=
+        [a00 a01   0   0]
+        [a10 a11   0   0]
+        [  0   0 b00 b01]
+        [  0   0 b10 b11]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    TmpH=L[0]
+    for i in rg(1,len(L)):
+        TmpH=TmpH.block_sum(L[i])
+    return TmpH
+
+def TensorProduct(L):
+    """
+    Outputs the tensor product of the input list of Hypermatrices.
+    Thus implementation does not check the validity of the inputs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: TensorProduct([HM(2,2,'a'), HM(2,2,'b')]).printHM()
+        [:, :]=
+        [a00*b00 a00*b01 a01*b00 a01*b01]
+        [a00*b10 a00*b11 a01*b10 a01*b11]
+        [a10*b00 a10*b01 a11*b00 a11*b01]
+        [a10*b10 a10*b11 a11*b10 a11*b11]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    TmpH=L[0]
+    for i in rg(1,len(L)):
+        TmpH=TmpH.tensor_product(L[i])
+    return TmpH
 
