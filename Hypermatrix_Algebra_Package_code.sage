@@ -1,5 +1,5 @@
 #*************************************************************************#
-#    Copyright (C) 2015, 2016, 2017 Edinah K.Gnang <kgnang@gmail.com>,    #
+#    Copyright (C) 2016, 2017, 2018 Edinah K.Gnang <kgnang@gmail.com>,    #
 #                          Ori Parzanchevski,                             #
 #                          Yuval Filmus,                                  #
 #                          Doron Zeilberger,                              #
@@ -444,6 +444,30 @@ class HM:
         """
         return GeneralHypermatrixBaseExponent(self, s)
 
+    def elementwise_base_exponentN(self, s, dgts=50):
+        """
+        Returns a hypermatrix whose entries are all
+        raised by s.
+        This routine assumes that we are not dividing
+        by zero. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: A=HM(2,2,[1,2,3,4]); A.elementwise_base_exponentN(3)
+            [[3.0000000000000, 27.000000000000], [9.0000000000000, 81.000000000000]]
+            
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixBaseExponentN(self, s, dgts)
+
     def elementwise_base_logarithm(self, s):
         """
         Outputs a list of lists associated with the general
@@ -463,7 +487,27 @@ class HM:
         AUTHORS:
         - Edinah K. Gnang
         """
-        return GeneralHypermatrixLogarithm(self, s)
+        return GeneralHypermatrixLogarithmN(self, s, dgts=50)
+
+    def elementwise_base_logarithmN(self, s, dgts=50):
+        """
+        Outputs a list of lists associated with the general
+        whose entries are numerical logarithms to the base s of the 
+        original hypermatrix.
+        The code only handles the Hypermatrix HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,2,[1,2,3,4]); Ha.elementwise_base_logarithmN(3)
+            [[0.00000000000000, 1.0000000000000], [0.63092975357146, 1.2618595071429]]
+
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixLogarithmN(self, s, dgts)
 
     def apply_map(self, phi):
         """
@@ -5515,6 +5559,41 @@ def GeneralHypermatrixBaseExponent(A,s):
         Rh[tuple(entry)]=s^(A[tuple(entry)])
     return Rh
 
+def GeneralHypermatrixBaseExponentN(A,s, dgts=50):
+    """
+    Outputs a list of lists associated with the general
+    whose entries are exponentiated using the input s as
+    basis for the numerical exponentiation.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,[1,2,3,4]); GeneralHypermatrixBaseExponentN(Ha,3)
+        [[3.0000000000000, 27.000000000000], [9.0000000000000, 81.000000000000]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=ComplexField(dgts)(s)^ComplexField(dgts)(A[tuple(entry)])
+    return Rh
+
 def GeneralHypermatrixLogarithm(A,s=e):
     """
     Outputs a list of lists associated with the general
@@ -5548,6 +5627,41 @@ def GeneralHypermatrixLogarithm(A,s=e):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=log(A[tuple(entry)],s).canonicalize_radical()
+    return Rh
+
+def GeneralHypermatrixLogarithmN(A,s=e, dgts=50):
+    """
+    Outputs a list of lists associated with the general
+    whose entries are numerical logarithms to the base s of the 
+    original hypermatrix.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,[1,2,3,4]); GeneralHypermatrixLogarithmN(Ha,3)
+        [[0.00000000000000, 1.0000000000000], [0.63092975357146, 1.2618595071429]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """   
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=ComplexField(dgts)(log(A[tuple(entry)],s))
     return Rh
 
 def GeneralHypermatrixApplyMap(A, phi):
@@ -10078,7 +10192,7 @@ def MonotoneFormula(n):
 @cached_function
 def ReducedMonotoneFormula(n):
     """
-    Outputs non-monotone formula encodings of length at most n.
+    Outputs monotone formula encodings of length at most n.
 
     EXAMPLES:
 
@@ -10241,6 +10355,112 @@ def ReducedNonMonotoneFormulaSets(sz):
         Rslt.append(Set([EvalT(L[i]) for i in range(len(L))]))
     # Cleaning up the list
     for i in range(1,len(Rslt)):
+        for j in range(i):
+            Rslt[i]=Rslt[i].difference(Rslt[j])
+    return Rslt
+
+def EvalTn(T, dgts):
+    """
+    Outputs the evaluation value of a tree using numerically truncated complex numbers
+    where the number of digits is specified by the second input
+    it is a real mystery how the branches are being chosen however.
+
+    EXAMPLES:
+
+    ::
+
+        sage: EvalTn(['+', ['+', 1, ['+', 1, 1]], ['+', ['+', 1, 1], 1]], 50)
+        6.0000000000000
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if T == ComplexField(dgts)(1,0):
+        return ComplexField(dgts)(1,0)
+    elif T == ComplexField(dgts)(-1,0):
+        return ComplexField(dgts)(-1,0)
+    elif T[0] == '+':
+        return EvalTn(T[1], dgts) + EvalTn(T[2], dgts)
+    elif T[0] == '*':
+        return EvalTn(T[1], dgts) * EvalTn(T[2], dgts)
+    elif T[0] == '^':
+        return EvalTn(T[1], dgts) ^ EvalTn(T[2], dgts)
+    else:
+        print 'IMPROPER INPUT !!!'
+
+@cached_function
+def nReducedNonMonotoneFormula(n, dgts):
+    """
+    Outputs non-monotone formula encodings of length at most n.
+
+    EXAMPLES:
+
+    ::
+
+        sage: nReducedNonMonotoneFormula(3, 4)
+        [[], [1,-1], [], []]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    if n<=3:
+        return [[], [1,-1], [], []]
+    elif n>3:
+        # Initialization of the list of formula.
+        A=[[], [1,-1]] + [[] for t in range(n-1)]
+        # Main loop.
+        for sz in range(3,n+1):
+            # Initialization of the fifth entry
+            for i in range(1,sz-1):
+                #A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and not EvalTn(s).is_zero() and not EvalT(t).is_zero() and not EvalT(['+',s,t]).is_zero()]
+                A[sz]=A[sz]+[['+',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and abs(EvalTn(s,dgts)) > ComplexField(dgts)(10^(-dgts),0) and abs(EvalTn(t,dgts)) > ComplexField(dgts)(10^(-dgts),0) and abs(EvalTn(['+',s,t],dgts)) > ComplexField(dgts)(10^(-dgts),0)]
+            for i in range(1,sz-1):
+                #A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['*',s,t])!=1]
+                A[sz]=A[sz]+[['*',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and abs(EvalTn(s,dgts) - ComplexField(dgts)(1,0)) > ComplexField(dgts)(10^(-dgts),0) and abs(EvalTn(t,dgts)-ComplexField(dgts)(1,0)) > ComplexField(dgts)(10^(-dgts),0) and abs(EvalTn(['*',s,t],dgts)-ComplexField(dgts)(1,0)) > ComplexField(dgts)(10^(-dgts),0)]
+            for i in range(1,sz-1):
+                #A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and EvalT(s)!=1 and EvalT(t)!=1 and EvalT(['^',s,t])!=1]
+                A[sz]=A[sz]+[['^',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and abs(EvalTn(s,dgts)-ComplexField(dgts)(1,0)) > ComplexField(dgts)(10^(-dgts),0) and (EvalTn(t,dgts)-ComplexField(dgts)(1,0)) > ComplexField(dgts)(10^(-dgts),0) and abs(EvalTn(['^',s,t],dgts)-ComplexField(dgts)(1,0)) > ComplexField(dgts)(10^(-dgts),0)]
+        return A
+
+def nReducedNonMonotoneFormulaSets(sz, dgts):
+    """
+    Outputs set of numbers associated with non monotone encodings
+    of complexity less then the size input parameter sz.
+
+    EXAMPLES:
+
+    ::
+
+        sage: nReducedNonMonotoneFormulaSets(5,50)
+        [{},
+         {1.0000000000000, -1.0000000000000},
+         {},
+         {2.0000000000000, -2.0000000000000},
+         {},
+         {3.0000000000000, -3.0000000000000, 1.0000000000000 - 2.4492935982947e-16*I}]
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    Lt=nReducedNonMonotoneFormula(sz,dgts)
+    # Filling up the result list
+    Rslt=[]
+    for n in rg(sz+1):
+        L=[]; i=0
+        while i < len(Lt[n]):
+            L.append(Lt[n][i])
+            i=i+1
+        Rslt.append(Set([EvalTn(L[i], dgts) for i in rg(len(L))]))
+    # Cleaning up the list
+    for i in rg(1,len(Rslt),2):
         for j in range(i):
             Rslt[i]=Rslt[i].difference(Rslt[j])
     return Rslt
@@ -18285,4 +18505,315 @@ def TensorProduct(L):
     for i in rg(1,len(L)):
         TmpH=TmpH.tensor_product(L[i])
     return TmpH
+
+def TupleFunctionList(sz):
+    """
+    Returns a list of edge tuple desctiption for all 
+    functional directed graphs.
+
+
+    EXAMPLES:
+    ::
+        sage: TupleFunctionList(3)
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 1), (1, 0), (2, 0)],
+         [(0, 2), (1, 0), (2, 0)],
+         [(0, 0), (1, 1), (2, 0)],
+         [(0, 1), (1, 1), (2, 0)],
+         [(0, 2), (1, 1), (2, 0)],
+         [(0, 0), (1, 2), (2, 0)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 2), (1, 2), (2, 0)],
+         [(0, 0), (1, 0), (2, 1)],
+         [(0, 1), (1, 0), (2, 1)],
+         [(0, 2), (1, 0), (2, 1)],
+         [(0, 0), (1, 1), (2, 1)],
+         [(0, 1), (1, 1), (2, 1)],
+         [(0, 2), (1, 1), (2, 1)],
+         [(0, 0), (1, 2), (2, 1)],
+         [(0, 1), (1, 2), (2, 1)],
+         [(0, 2), (1, 2), (2, 1)],
+         [(0, 0), (1, 0), (2, 2)],
+         [(0, 1), (1, 0), (2, 2)],
+         [(0, 2), (1, 0), (2, 2)],
+         [(0, 0), (1, 1), (2, 2)],
+         [(0, 1), (1, 1), (2, 2)],
+         [(0, 2), (1, 1), (2, 2)],
+         [(0, 0), (1, 2), (2, 2)],
+         [(0, 1), (1, 2), (2, 2)],
+         [(0, 2), (1, 2), (2, 2)]]
+
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in range(sz)]; Lf=[]
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Appending the function to the list
+        Lf.append([(i,f[i]) for i in rg(sz)])
+    return Lf
+
+def PermutationFunctionList(sz):
+    """
+    Returns a list of edge tuple descriptions associated 
+    with permutations.
+
+
+    EXAMPLES:
+    ::
+        sage: PermutationFunctionList(3)
+        [[(0, 0), (1, 1), (2, 2)],
+         [(0, 0), (1, 2), (2, 1)],
+         [(0, 1), (1, 0), (2, 2)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 2), (1, 0), (2, 1)],
+         [(0, 2), (1, 1), (2, 0)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of permutations of elements from 1 to (n-1).
+    P=Permutations(sz)
+    return [[(i,p[i]-1) for i in rg(sz)] for p in P]
+
+def RootedTupleTreeFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with trees.
+
+    EXAMPLES:
+    ::
+        sage: RootedTupleTreeFunctionList(3)
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 1), (1, 1), (2, 0)],
+         [(0, 2), (1, 0), (2, 2)],
+         [(0, 0), (1, 2), (2, 0)],
+         [(0, 2), (1, 1), (2, 1)],
+         [(0, 2), (1, 2), (2, 2)],
+         [(0, 0), (1, 0), (2, 1)],
+         [(0, 1), (1, 1), (2, 1)],
+         [(0, 1), (1, 2), (2, 2)]]
+        sage: sz=3; X=var_list('x',sz+1); Y=var_list('y',sz+1); Z=var_list('z',sz+1); Ta=HM(sz+1,sz+1,'a'); A=HM(sz+1,sz+1,'zero'); DgA=[Ta[i,i] for i in rg(sz+1)]
+        sage: for i in rg(sz+1):
+        ....:     for j in rg(sz+1):
+        ....:         A[i,j]=Ta[i,j]*X[abs(j-i)]*prod(Y[u] for u in rg(min(i,j), max(i,j)))*prod(Z[u] for u in rg(1+min(i,j), 1+max(i,j)))
+        ....:
+        sage: sum(prod(A[t[0],t[1]] for t in tp) for tp in RootedTupleTreeFunctionList(sz))
+        a00*a10*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a01*a11*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a02*a10*a22*x0*x1*x2*y0^2*y1*z1^2*z2 + a00*a12*a20*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a11*a21*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a12*a22*x0*x1*x2*y0*y1^2*z1*z2^2 + a00*a10*a21*x0*x1^2*y0*y1*z1*z2 + a01*a11*a21*x0*x1^2*y0*y1*z1*z2 + a01*a12*a22*x0*x1^2*y0*y1*z1*z2
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in range(sz)]; Lf=[]
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Initialization of the adjacency martrix of the functional graph
+        A = sum([Id[:,j]*Id[f[j],:] for j in range(sz)])
+        # Initialization of the dierected Laplacian
+        lA= diagonal_matrix((A*ones_matrix(A.nrows(),1)).list())-A
+        # Initialization of the list of sumbratrices
+        Lmtr=[Matrix(ZZ,sz-1,sz-1,[lA[u,v] for u in range(sz) for v in range(sz) if u!=t if v!=t]) for t in range(sz)]
+        # Testing treeness
+        if sum(A[t,t]*Lmtr[t].det() for t in range(sz)) == 1:
+            # Appending the function to the list
+            Lf.append([(i, f[i]) for i in range(sz)])
+    return Lf
+
+def RootedTupleInducedTreeFunctionList(sz, induced_edge_label_sequence):
+    """
+    Goes through all the functions and determines which ones
+    are associated with a given edge labeled sequence sorted
+    in non decreasing order
+
+    EXAMPLES:
+    ::
+        sage: RootedTupleInducedTreeFunctionList(3,[0,1,2])
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 1), (1, 1), (2, 0)],
+         [(0, 0), (1, 2), (2, 0)],
+         [(0, 2), (1, 1), (2, 1)],
+         [(0, 2), (1, 0), (2, 2)],
+         [(0, 2), (1, 2), (2, 2)]]
+        sage: sz=3; X=var_list('x',sz+1); Y=var_list('y',sz+1); Z=var_list('z',sz+1); Ta=HM(sz+1,sz+1,'a'); A=HM(sz+1,sz+1,'zero'); DgA=[Ta[i,i] for i in rg(sz+1)]
+        sage: for i in rg(sz+1):
+        ....:     for j in rg(sz+1):
+        ....:         A[i,j]=Ta[i,j]*X[abs(j-i)]*prod(Y[u] for u in rg(min(i,j), max(i,j)))*prod(Z[u] for u in rg(1+min(i,j), 1+max(i,j)))
+        ....:
+        sage: sum(prod(A[t[0],t[1]] for t in tp) for tp in RootedTupleInducedTreeFunctionList(sz,[0,1,2]))
+        a00*a10*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a01*a11*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a02*a10*a22*x0*x1*x2*y0^2*y1*z1^2*z2 + a00*a12*a20*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a11*a21*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a12*a22*x0*x1*x2*y0*y1^2*z1*z2^2 + a00*a10*a21*x0*x1^2*y0*y1*z1*z2 + a01*a11*a21*x0*x1^2*y0*y1*z1*z2 + a01*a12*a22*x0*x1^2*y0*y1*z1*z2
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in range(sz)]; Lf=[]
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Initialization of the adjacency martrix of the functional graph
+        A = sum([Id[:,j]*Id[f[j],:] for j in range(sz)])
+        # Initialization of the dierected Laplacian
+        lA= diagonal_matrix((A*ones_matrix(A.nrows(),1)).list())-A
+        # Initialization of the list of sumbratrices
+        Lmtr=[Matrix(ZZ,sz-1,sz-1,[lA[u,v] for u in range(sz) for v in range(sz) if u!=t if v!=t]) for t in range(sz)]
+        # Testing treeness
+        EdgLblSeq=[abs(f[i]-i) for i in range(sz)]; EdgLblSeq.sort()
+        if sum(A[t,t]*Lmtr[t].det() for t in range(sz)) == 1 and  EdgLblSeq == induced_edge_label_sequence:
+            # Appending the function to the list
+            Lf.append([(i,f[i]) for i in range(sz)])
+    return Lf
+
+def BasicLagrangeInterpolation(L, x):
+    """
+    Implements the basic lagrange interpolation.
+    The functions take as input a list of tuples
+    and outputs a polynomial in the variable x
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: x=var('x')
+        sage: BasicLagrangeInterpolation([(0,0), (1,1), (2,2), (3,3)], x)
+        1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # L is a list of tuples
+    # Initialized the lenght of the list
+    n = len(L)
+    # Initialization of the function
+    f = 0
+    # Code for building the parts 
+    for idx in range(len(L)):
+        fk = 1
+        for j in [i for i in range(len(L)) if i != idx]:
+            fk = fk*((x-L[j][0])/(L[idx][0]-L[j][0]))
+        f = f + L[idx][1]*fk
+    return f
+
+def composition(f, x, k, sz):
+    """
+    This function performs the composition of the function f in the 
+    variable x with itself k times. The implementation assumes that
+    f is the functions defined by a functional directed graph on sz
+    vertices in order to ensure that the function has degree at most
+    sz-1 
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: x=var('x'); f=1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
+        sage: composition(f, x, 1, 4)
+        1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
+        sage: sz=4; tq=[(0, 1), (1, 2), (2, 3), (3, 3)]
+        sage: f=BasicLagrangeInterpolation(tq,z)
+        sage: tq == [(i, f.subs(z==i)) for i in rg(sz)]
+        True
+        sage: L=[composition(f, z, i, sz) for i in rg(sz)]; L
+        [z,
+         -1/6*(z - 1)*(z - 2)*(z - 3) + 1/2*(z - 1)*(z - 2)*z - 3/2*(z - 1)*(z - 3)*z + (z - 2)*(z - 3)*z,
+         -1/3*(z - 1)*(z - 2)*(z - 3) + 1/2*(z - 1)*(z - 2)*z - 3/2*(z - 1)*(z - 3)*z + 3/2*(z - 2)*(z - 3)*z,
+         -1/2*(z - 1)*(z - 2)*(z - 3) + 1/2*(z - 1)*(z - 2)*z - 3/2*(z - 1)*(z - 3)*z + 3/2*(z - 2)*(z - 3)*z]
+        sage: [[(i, g.subs(z==i)) for i in rg(sz)] for g in L]
+        [[(0, 0), (1, 1), (2, 2), (3, 3)],
+         [(0, 1), (1, 2), (2, 3), (3, 3)],
+         [(0, 2), (1, 3), (2, 3), (3, 3)],
+         [(0, 3), (1, 3), (2, 3), (3, 3)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if k==0:
+        return x
+    elif k==1:
+        return f
+    elif k > 1:
+        # Initialization of the function
+        g=f
+        for t in rg(k-1):
+            # Initialization of the function
+            TmpF=0
+            # Code for building the parts 
+            for idx in range(sz):
+                fk=1
+                for j in [i for i in rg(sz) if i != idx]:
+                    fk=fk*(x-j)/(idx-j)
+                TmpF=TmpF + g.subs(x==f).subs(x==idx)*fk
+            g=TmpF
+        return g
+
+def compose_with(f, g, sz, vrbl):
+    """
+    This function performs the composition of the function f in the 
+    variable x with itself k times. The implementation assumes that
+    f is the functions defined by a functional directed graph on sz
+    vertices in order to ensure that the function has degree at most
+    sz-1 
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: f0=BasicLagrangeInterpolation([(0,1), (1,2), (2,0)],x); f1=BasicLagrangeInterpolation([(0,2), (1,0), (2,1)],x); f2=x
+        sage: f3=0; f4=BasicLagrangeInterpolation([(0,0), (1,2), (2,1)],x)
+        sage: expand(compose_with(f0, f1, 3, x))
+        x
+        sage: compose_with(f4, f4, 3, x) - composition(f4, x, 2, 3)
+        0
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the function
+    TmpF=0
+    # Code for building the parts 
+    for idx in range(sz):
+        fk=1
+        for j in [i for i in rg(sz) if i != idx]:
+            fk=fk*(vrbl-j)/(idx-j)
+        TmpF=TmpF + f.subs(vrbl==g).subs(vrbl==idx)*fk
+    g=TmpF
+    return g
 
