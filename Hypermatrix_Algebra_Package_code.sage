@@ -38,6 +38,8 @@ class HM:
         [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         sage: od=2; sz=2; HM(od,sz,'a','sym') # creating a symmetric matrix
         [[a00, a01], [a01, a11]]
+        sage: od=2; sz=2; HM(od,sz,'a','skewsym') # creating a symmetric matrix
+        [[0, a01], [-a01, 0]]
         sage: sz=2; HM(sz,sz,sz,'a','shift')
         [[[a111, a112], [a121, a122]], [[a211, a212], [a221, a222]]]
         sage: HM(2,2,'one')
@@ -487,7 +489,7 @@ class HM:
         AUTHORS:
         - Edinah K. Gnang
         """
-        return GeneralHypermatrixLogarithmN(self, s, dgts=50)
+        return GeneralHypermatrixLogarithm(self, s)
 
     def elementwise_base_logarithmN(self, s, dgts=50):
         """
@@ -4420,33 +4422,33 @@ def OuterHypermatrixInversePair(U, V):
         sage: [Sln, Tx, Ty]=OuterHypermatrixInversePair(Hu, Hv)[0]
         sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1])) 
         sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1]))
-        sage: Prod(Hx, Prod(Hu, HM(3,4,2,'a'), Hv), Hy)).list()
+        sage: Prod(Hx, Prod(Hu, HM(3,4,2,'a'), Hv), Hy).simplify_full().list()
         [a000,
          a100,
          a200,
-         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)*a010/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v011*v110 - u200*u211*v010*v111)),
-         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)*a110/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u201*u210*v011*v110 - u200*u211*v010*v111)),
+         ((a010*u001*u010*u201*u210*v001*v011*v100 - a010*u001*u010*u200*u211*v000*v011*v101)*v110 - (a010*u000*u011*u201*u210*v001*v010*v100 - a010*u000*u011*u200*u211*v000*v010*v101)*v111)/((u001*u010*u201*u210*v001*v011*v100 - u000*u011*u201*u210*v000*v011*v101)*v110 - (u001*u010*u200*u211*v001*v010*v100 - u000*u011*u200*u211*v000*v010*v101)*v111),
+         ((a110*u101*u110*u201*u210*v001*v011*v100 - a110*u101*u110*u200*u211*v000*v011*v101)*v110 - (a110*u100*u111*u201*u210*v001*v010*v100 - a110*u100*u111*u200*u211*v000*v010*v101)*v111)/((u101*u110*u201*u210*v001*v011*v100 - u100*u111*u201*u210*v000*v011*v101)*v110 - (u101*u110*u200*u211*v001*v010*v100 - u100*u111*u200*u211*v000*v010*v101)*v111),
          a210,
-         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v021*v120 - u000*u011*v020*v121)*a020/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v021*v120 - u200*u211*v020*v121)),
-         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u101*u110*v021*v120 - u100*u111*v020*v121)*a120/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u201*u210*v021*v120 - u200*u211*v020*v121)),
+         ((a020*u001*u010*u201*u210*v001*v021*v100 - a020*u001*u010*u200*u211*v000*v021*v101)*v120 - (a020*u000*u011*u201*u210*v001*v020*v100 - a020*u000*u011*u200*u211*v000*v020*v101)*v121)/((u001*u010*u201*u210*v001*v021*v100 - u000*u011*u201*u210*v000*v021*v101)*v120 - (u001*u010*u200*u211*v001*v020*v100 - u000*u011*u200*u211*v000*v020*v101)*v121),
+         ((a120*u101*u110*u201*u210*v001*v021*v100 - a120*u101*u110*u200*u211*v000*v021*v101)*v120 - (a120*u100*u111*u201*u210*v001*v020*v100 - a120*u100*u111*u200*u211*v000*v020*v101)*v121)/((u101*u110*u201*u210*v001*v021*v100 - u100*u111*u201*u210*v000*v021*v101)*v120 - (u101*u110*u200*u211*v001*v020*v100 - u100*u111*u200*u211*v000*v020*v101)*v121),
          a220,
-         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v031*v130 - u000*u011*v030*v131)*a030/((u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v031*v130 - u200*u211*v030*v131)),
-         (u201*u210*v001*v100 - u200*u211*v000*v101)*(u101*u110*v031*v130 - u100*u111*v030*v131)*a130/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u201*u210*v031*v130 - u200*u211*v030*v131)),
+         ((a030*u001*u010*u201*u210*v001*v031*v100 - a030*u001*u010*u200*u211*v000*v031*v101)*v130 - (a030*u000*u011*u201*u210*v001*v030*v100 - a030*u000*u011*u200*u211*v000*v030*v101)*v131)/((u001*u010*u201*u210*v001*v031*v100 - u000*u011*u201*u210*v000*v031*v101)*v130 - (u001*u010*u200*u211*v001*v030*v100 - u000*u011*u200*u211*v000*v030*v101)*v131),
+         ((a130*u101*u110*u201*u210*v001*v031*v100 - a130*u101*u110*u200*u211*v000*v031*v101)*v130 - (a130*u100*u111*u201*u210*v001*v030*v100 - a130*u100*u111*u200*u211*v000*v030*v101)*v131)/((u101*u110*u201*u210*v001*v031*v100 - u100*u111*u201*u210*v000*v031*v101)*v130 - (u101*u110*u200*u211*v001*v030*v100 - u100*u111*u200*u211*v000*v030*v101)*v131),
          a230,
          a001,
          a101,
          a201,
          a011,
-         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v011*v110 - u100*u111*v010*v111)*a111/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)),
-         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v011*v110 - u200*u211*v010*v111)*a211/((u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v011*v110 - u000*u011*v010*v111)),
+         ((a111*u001*u010*u101*u110*v001*v011*v100 - a111*u000*u011*u101*u110*v000*v011*v101)*v110 - (a111*u001*u010*u100*u111*v001*v010*v100 - a111*u000*u011*u100*u111*v000*v010*v101)*v111)/((u001*u010*u101*u110*v001*v011*v100 - u001*u010*u100*u111*v000*v011*v101)*v110 - (u000*u011*u101*u110*v001*v010*v100 - u000*u011*u100*u111*v000*v010*v101)*v111),
+         ((a211*u001*u010*u201*u210*v001*v011*v100 - a211*u000*u011*u201*u210*v000*v011*v101)*v110 - (a211*u001*u010*u200*u211*v001*v010*v100 - a211*u000*u011*u200*u211*v000*v010*v101)*v111)/((u001*u010*u201*u210*v001*v011*v100 - u001*u010*u200*u211*v000*v011*v101)*v110 - (u000*u011*u201*u210*v001*v010*v100 - u000*u011*u200*u211*v000*v010*v101)*v111),
          a021,
-         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v021*v120 - u100*u111*v020*v121)*a121/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v021*v120 - u000*u011*v020*v121)),
-         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v021*v120 - u200*u211*v020*v121)*a221/((u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v021*v120 - u000*u011*v020*v121)),
+         ((a121*u001*u010*u101*u110*v001*v021*v100 - a121*u000*u011*u101*u110*v000*v021*v101)*v120 - (a121*u001*u010*u100*u111*v001*v020*v100 - a121*u000*u011*u100*u111*v000*v020*v101)*v121)/((u001*u010*u101*u110*v001*v021*v100 - u001*u010*u100*u111*v000*v021*v101)*v120 - (u000*u011*u101*u110*v001*v020*v100 - u000*u011*u100*u111*v000*v020*v101)*v121),
+         ((a221*u001*u010*u201*u210*v001*v021*v100 - a221*u000*u011*u201*u210*v000*v021*v101)*v120 - (a221*u001*u010*u200*u211*v001*v020*v100 - a221*u000*u011*u200*u211*v000*v020*v101)*v121)/((u001*u010*u201*u210*v001*v021*v100 - u001*u010*u200*u211*v000*v021*v101)*v120 - (u000*u011*u201*u210*v001*v020*v100 - u000*u011*u200*u211*v000*v020*v101)*v121),
          a031,
-         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u101*u110*v031*v130 - u100*u111*v030*v131)*a131/((u101*u110*v001*v100 - u100*u111*v000*v101)*(u001*u010*v031*v130 - u000*u011*v030*v131)),
-         (u001*u010*v001*v100 - u000*u011*v000*v101)*(u201*u210*v031*v130 - u200*u211*v030*v131)*a231/((u201*u210*v001*v100 - u200*u211*v000*v101)*(u001*u010*v031*v130 - u000*u011*v030*v131))]
+         ((a131*u001*u010*u101*u110*v001*v031*v100 - a131*u000*u011*u101*u110*v000*v031*v101)*v130 - (a131*u001*u010*u100*u111*v001*v030*v100 - a131*u000*u011*u100*u111*v000*v030*v101)*v131)/((u001*u010*u101*u110*v001*v031*v100 - u001*u010*u100*u111*v000*v031*v101)*v130 - (u000*u011*u101*u110*v001*v030*v100 - u000*u011*u100*u111*v000*v030*v101)*v131),
+         ((a231*u001*u010*u201*u210*v001*v031*v100 - a231*u000*u011*u201*u210*v000*v031*v101)*v130 - (a231*u001*u010*u200*u211*v001*v030*v100 - a231*u000*u011*u200*u211*v000*v030*v101)*v131)/((u001*u010*u201*u210*v001*v031*v100 - u001*u010*u200*u211*v000*v031*v101)*v130 - (u000*u011*u201*u210*v001*v030*v100 - u000*u011*u200*u211*v000*v030*v101)*v131)]
 
-
+ 
     AUTHORS:
     - Edinah K. Gnang
     """
@@ -4497,14 +4499,14 @@ def InnerHypermatrixInversePair(X, Y):
         sage: [Sln, Tu, Tv]=InnerHypermatrixInversePair(Hx, Hy)[0]
         sage: Hu=Tu.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1])) 
         sage: Hv=Tv.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs() !=1]))
-        sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).list()
+        sage: Prod(Hx, Prod(Hu, HM(2,2,2,'a'), Hv), Hy).simplify_full().list()
         [a000,
          a100,
-         (x101*x110*y001*y100 - x100*x111*y000*y101)*(x001*x010*y011*y110 - x000*x011*y010*y111)*a010/((x001*x010*y001*y100 - x000*x011*y000*y101)*(x101*x110*y011*y110 - x100*x111*y010*y111)),
+         ((a010*x001*x010*x101*x110*y001*y011*y100 - a010*x001*x010*x100*x111*y000*y011*y101)*y110 - (a010*x000*x011*x101*x110*y001*y010*y100 - a010*x000*x011*x100*x111*y000*y010*y101)*y111)/((x001*x010*x101*x110*y001*y011*y100 - x000*x011*x101*x110*y000*y011*y101)*y110 - (x001*x010*x100*x111*y001*y010*y100 - x000*x011*x100*x111*y000*y010*y101)*y111),
          a110,
          a001,
          a101,
-         (x101*x110*y001*y100 - x100*x111*y000*y101)*(x001*x010*y011*y110 - x000*x011*y010*y111)*a011/((x001*x010*y001*y100 - x000*x011*y000*y101)*(x101*x110*y011*y110 - x100*x111*y010*y111)),
+         ((a011*x001*x010*x101*x110*y001*y011*y100 - a011*x001*x010*x100*x111*y000*y011*y101)*y110 - (a011*x000*x011*x101*x110*y001*y010*y100 - a011*x000*x011*x100*x111*y000*y010*y101)*y111)/((x001*x010*x101*x110*y001*y011*y100 - x000*x011*x101*x110*y000*y011*y101)*y110 - (x001*x010*x100*x111*y001*y010*y100 - x000*x011*x100*x111*y000*y010*y101)*y111),
          a111]
 
 
@@ -5332,6 +5334,10 @@ def GProdIII(Lh, Op, F):
         <BLANKLINE>
         sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); GProdIII([Ha, Hb], sum, prod)
         [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); GProdIII([Ha, Hb], prod, Exp)
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); GProdIII([Ha, Hb], prod, BaseExp)
+        [[b00^a00*b10^a01, b01^a00*b11^a01], [b00^a10*b10^a11, b01^a10*b11^a11]]
         sage: A=HM([[59, -3, 2], [-6, 1, 1], [1, -1, 1]]); B=HM([[-1, 1, 0], [-1, 1, 0], [0, -43, 1]])
         sage: GProdIII([A, B], sum, prod)-A*B # One way of recovering matrix multiplication
         [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
@@ -9635,7 +9641,6 @@ def GoodsteinT(number_of_iterations=1):
         Ng0.append(Nf[i][0])
     return Ng0
 
-
 def list_eval(L):
     """
     Perform the evaluation of the list to integers
@@ -10398,7 +10403,7 @@ def nReducedNonMonotoneFormula(n, dgts):
     ::
 
         sage: nReducedNonMonotoneFormula(3, 4)
-        [[], [1,-1], [], []]
+        [[], [1, -1], [], []]
 
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
@@ -10595,6 +10600,10 @@ def  GeneralHypermatrixCayleyHamiltonB(A, t):
 def fast_reduce(f, monom, subst):
     """
     computes the reduction by monomial substitution
+    by converting the symbolic expression into a string
+    of characters and performing the substition on the
+    string and converts back in the end the obtained
+    string back into a symbolic expression SR
     
     EXAMPLES:
  
@@ -12668,7 +12677,7 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
  
     ::
 
-        sage: [EfA,c,indx,Lst]=multiplicative_gaussian_eliminationII(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [EfA,c,indx,Lst]=multiplicative_gaussian_eliminationII(HM(2,2,'a').matrix(), HM(2,1,'b').matrix())
         sage: EfA
         [      1 a01/a00]
         [      0       1]
@@ -12702,9 +12711,13 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
             # Performing the row operations.
             #if A[i,j]==-1 or A[i,j]==1:
             if (A[i,j].numerator()==1 or A[i,j].numerator()==-1) and A[i,j].denominator().is_integer():
-                b[i,0]=b[i,0]^(1/A[i,j])
+                # In the case where no branching is introduced by log scaling the pivot
+                for j0 in rg(b.ncols()):
+                    b[i,j0]=b[i,j0]^(1/A[i,j])
             else:
-                b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
+                # In the case where some branching is introduced by log scaling the pivot
+                for j0 in rg(b.ncols()):
+                    b[i,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
                 indx = indx+1
                 Lst.append(A[i,j])
             A[i,:]=(1/A[i,j])*A[i,:]
@@ -12715,9 +12728,13 @@ def multiplicative_gaussian_eliminationII(Cf,rs,jndx=0):
                 else:
                     #if A[r,j]==-1 or A[r,j]==1:
                     if A[r,j].is_integer():
-                        b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
+                        # In the case where no branching is introduced by log scaling the pivot
+                        for j0 in rg(b.ncols()):
+                            b[r,j0]=b[i,j0]^(-A[r,j])*b[r,j0]
                     else:
-                        b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                        # In the case where some branching is introduced by log scaling the pivot
+                        for j0 in rg(b.ncols()):
+                            b[r,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,j0]
                         if (A[r,j]).is_zero()==False:
                             indx = indx+1
                             Lst.append(1/A[r,j])
@@ -12737,7 +12754,7 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
  
     ::
 
-        sage: [RefA, c, indx, L] = multiplicative_gauss_jordan_eliminationII(Matrix(SR,HM(2,2,'a').listHM()), Matrix(SR,HM(2,1,'b').listHM()))
+        sage: [RefA, c, indx, L] = multiplicative_gauss_jordan_eliminationII(HM(2,2,'a').matrix(), HM(2,1,'b').matrix())
         sage: RefA
         [1 0]
         [0 1]
@@ -12765,9 +12782,13 @@ def multiplicative_gauss_jordan_eliminationII(Cf,rs,jndx=0):
             for r in range(i-1, -1, -1):
                 #if A[r,j]==-1 or A[r,j]==1:
                 if A[r,j].is_integer():
-                    b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
+                    # In the case where no branching is introduced by log scaling the pivot
+                    for j0 in rg(b.ncols()):
+                        b[r,j0]=b[i,j0]^(-A[r,j])*b[r,j0]
                 else:
-                    b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                    # In the case where some branching is introduced by log scaling the pivot
+                    for j0 in rg(b.ncols()):
+                        b[r,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,j0]
                     if (A[r,j]).is_zero()==False:
                         indx = indx+1
                         Lst.append(1/A[r,j])
@@ -12806,7 +12827,7 @@ def multiplicative_gaussian_eliminationHM(Cf,rs,jndx=0):
     # Initialization of the row and column index
     i=0; j=0; indx=jndx; Lst = []
     #while i<A.nrows() and j<A.ncols():
-    while i<A.n(0) and j<A.n(1):
+    while i < A.n(0) and j < A.n(1):
         #while (A[i:,j]).is_zero() and j < A.ncols()-1:
         while A.slice(rg(i,A.n(0)),'row').slice([j],'col').is_zero() and j < A.n(1)-1:
             # Incrementing the column index
@@ -12821,21 +12842,24 @@ def multiplicative_gaussian_eliminationHM(Cf,rs,jndx=0):
                 # Initializing the cyclic shift permutation matrix
                 #Id=identity_matrix(Ta.nrows())
                 Id=HM(2,Ta.n(0),'kronecker')
-                P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
+                #P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
+                P=HM(2, [Integer(mod(fi-1, Ta.n(0))) for fi in rg(Ta.n(0))], 'perm')
                 Ta=P*Ta; Tb=P*Tb
                 #A[i:,:]=Ta
                 for u in rg(i,A.n(0)):
                     for v in rg(A.n(1)):
-                        A[u,v]=Ta[u,v]
+                        A[u,v]=Ta[u-i,v]
                 #b[i:,:]=Tb 
                 for u in rg(i,b.n(0)):
                     for v in rg(b.n(1)):
-                        b[u,v]=b[u,v]
+                        b[u,v]=Tb[u-i,v]
             # Performing the row operations.
             if (A[i,j].numerator()==1 or A[i,j].numerator()==-1) and A[i,j].denominator().is_integer():
-                b[i,0]=b[i,0]^(1/A[i,j])
+                for j0 in rg(b.ncols()):
+                    b[i,j0]=b[i,j0]^(1/A[i,j])
             else:
-                b[i,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
+                for j0 in rg(b.ncols()):
+                    b[i,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[i,j])
                 indx = indx+1
                 Lst.append(A[i,j])
             #A[i,:]=(1/A[i,j])*A[i,:]
@@ -12849,9 +12873,11 @@ def multiplicative_gaussian_eliminationHM(Cf,rs,jndx=0):
                     r=r+1
                 else:
                     if A[r,j].is_integer():
-                        b[r,0]=b[i,0]^(-A[r,j])*b[r,0]
+                        for j0 in rg(b.ncols()):
+                            b[r,j0]=b[i,j0]^(-A[r,j])*b[r,j0]
                     else:
-                        b[r,0]=(b[i,0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,0]
+                        for j0 in rg(b.ncols()):
+                            b[r,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(-A[r,j])*b[r,j0]
                         if (A[r,j]).is_zero()==False:
                             indx = indx+1
                             Lst.append(1/A[r,j])
@@ -12861,6 +12887,222 @@ def multiplicative_gaussian_eliminationHM(Cf,rs,jndx=0):
                         A[r,v]=tpv*A[i,v]+A[r,v]
         # Incrementing the row and column index.
         i=i+1; j=j+1
+    return [A, b, indx, Lst]
+
+def multiplicative_gauss_jordan_eliminationHM(Cf,rs):
+    """
+    Outputs the reduced row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
+    The difference with previous implementations is the fact that the row linear combination
+    operations are performed in such a way as to not change the absolute value of the determinant.
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [A, b, indx, Lst] = multiplicative_gauss_jordan_eliminationHM(HM(2,2,'a'), HM(2,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [1 0]
+        [0 1]
+        sage: b.printHM()
+        [:, :]=
+        [(b00*e^(2*I*pi*k0))^(1/a00)/(e^(2*I*pi*k3)/(b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))^(a01/a00)]
+        [                                                  1/((b10*e^(2*I*pi*k2)/((b00*e^(2*I*pi*k0))^(1/a00)*e^(2*I*pi*k1))^a10)^(1/(a01*a10/a00 - a11)))]
+        sage: indx
+        4
+        sage: Lst
+        [a00, 1/a10, -a01*a10/a00 + a11, -a01/a00]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b, indx, Lst] = multiplicative_gaussian_eliminationHM(Cf,rs)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            cf1=A[i,j]
+            for r in range(i-1,-1,-1):
+                #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                cf2=A[r,j]
+                # Performing the row operations.
+                if (cf2/cf1).is_integer():
+                    for j0 in range(b.n(1)):
+                        b[r,j0] = b[i,j0]^(-cf2/cf1)*b[r,j0]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=A[i,j0]*(-cf2/cf1)+A[r,j0]
+                else:
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(-cf2/cf1)*b[r,j0]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=A[i,j0]*(-cf2/cf1)+A[r,j0]
+                    indx = indx+1
+                    Lst.append(-cf2/cf1)
+            i=i-1; j=0
+    return [A, b, indx, Lst]
+
+def multiplicative_gaussian_eliminationHMII(Cf, rs, jndx=0):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
+    The difference with the previous implementation is the fact that the row linear combination
+    operations are performed in such a way as to not change the absolute value of the determinant.
+    This implementation is skew fields or division ring friendly by inputing hypermatrices
+    whose entries are themselve hypermatrices of the approprioate size. 
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [A, b, indx, Lst] = multiplicative_gaussian_eliminationHMII(HM(2,2,'a'), HM(2,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [               a00                a01]
+        [                 0 -a01*a10/a00 + a11]
+        sage: b.printHM()
+        [:, :]=
+        [                              b00]
+        [b10/(b00*e^(2*I*pi*k0))^(a10/a00)]
+        sage: indx
+        1
+        sage: Lst
+        [-a10/a00]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy(); b=rs.copy()
+    # Initialization of the row and column index
+    i=0; j=0; indx=jndx; Lst = []
+    while i < A.n(0) and j < A.n(1):
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+            # Incrementing the column index
+            j=j+1
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                # Initializing the cyclic shift permutation matrix
+                Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=HM(2, [Integer(mod(fi-1, Ta.n(0))) for fi in rg(Ta.n(0))], 'perm')
+                Ta=P*Ta; Tb=P*Tb
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i+i0,j0]=Tb[i0,j0]
+            if A.n(0)-i-1 > 0 and not (HM(A.n(0)-i-1, 1, [A[i0,j] for i0 in range(i+1,A.n(0))]).is_zero() and j <= A.ncols()-1):
+                # Performing the row operations.
+                cf1=A[i,j]
+                for r in range(i+1,A.nrows()):
+                    # Taking care of the zero row
+                    if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                        r=r+1
+                    else:
+                        # Initialization of the coefficient
+                        cf2=A[r,j]
+                        # Performing the row operations.
+                        if (cf2/cf1).is_integer():
+                            for j0 in range(b.n(1)):
+                                b[r,j0] = b[i,j0]^(-cf2/cf1)*b[r,j0]
+                            for j0 in range(A.n(1)):
+                                #A[r,j0] = A[i,j0]^(-cf2/cf1)*A[r,j0]
+                                A[r,j0]=A[i,j0]*(-cf2/cf1)+A[r,j0]
+                        else:
+                            for j0 in range(b.n(1)):
+                                b[r,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(-cf2/cf1)*b[r,j0]
+                            for j0 in range(A.n(1)):
+                                #A[r,j0]=A[i,j0]^(-cf2/cf1)*A[r,j0]
+                                A[r,j0]=A[i,j0]*(-cf2/cf1)+A[r,j0]
+                            indx = indx+1
+                            Lst.append(-cf2/cf1)
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A, b, indx, Lst]
+
+def multiplicative_gauss_jordan_eliminationHMII(Cf,rs):
+    """
+    Outputs the reduced row echelon form of the input second order hypermatrix and the right hand side.
+    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1.
+    The difference with previous implementations is the fact that the row linear combination
+    operations are performed in such a way as to not change the absolute value of the determinant.
+    
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: [A, b, indx, Lst] = multiplicative_gauss_jordan_eliminationHMII(HM(2,2,'a'), HM(2,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [               a00                  0]
+        [                 0 -a01*a10/a00 + a11]
+        sage: b.printHM()
+        [:, :]=
+        [b00*(b10*e^(2*I*pi*k1)/(b00*e^(2*I*pi*k0))^(a10/a00))^(a01/(a01*a10/a00 - a11))]
+        [                                              b10/(b00*e^(2*I*pi*k0))^(a10/a00)]
+        sage: indx
+        2
+        sage: Lst
+        [-a10/a00, a01/(a01*a10/a00 - a11)]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    [A, b, indx, Lst] = multiplicative_gaussian_eliminationHMII(Cf,rs)
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            cf1=A[i,j]
+            for r in range(i-1,-1,-1):
+                #b[r,:] = -A[r,j]*b[i,:]+b[r,:]
+                cf2=A[r,j]
+                # Performing the row operations.
+                if (cf2/cf1).is_integer():
+                    for j0 in range(b.n(1)):
+                        b[r,j0] = b[i,j0]^(-cf2/cf1)*b[r,j0]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=A[i,j0]*(-cf2/cf1)+A[r,j0]
+                else:
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=(b[i,j0]*exp(I*2*pi*var('k'+str(indx))))^(-cf2/cf1)*b[r,j0]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=A[i,j0]*(-cf2/cf1)+A[r,j0]
+                    indx = indx+1
+                    Lst.append(-cf2/cf1)
+            i=i-1; j=0
     return [A, b, indx, Lst]
 
 def multiplicative_matrix_product(A,B):
@@ -13284,6 +13526,65 @@ def multiplicative_least_square_linear_solverHM(A,b,x,v):
     tp1=multiplicative_matrix_product(Pm,x)
     tp2=multiplicative_matrix_product((Ap-Pm),v)
     return [tp1[i,0]==bp[i,0]/tp2[i,0] for i in range(tp1.nrows())]
+
+def default_multiplicative_linear_solverHM(EqL, Lv, Lf):
+    """
+    Formats the constraints performs and solves the multiplicatively linear constraints.
+    Outputs the solutions. The input EqL corresponds to a list of constraints. The input Lv
+    corresponds to the list of variables appearing in the constraints. The input Lf corresponds
+    to the list of free varaibles each taken in correspondence with the entries of Lv. This 
+    implementation tacitly assumes that the  the input constraints are indeed multiplicatively linear.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; EqL=[GProdIII([HM(sz,sz,'a'), HM(sz,1,var_list('x',sz))], prod, BaseExp)[i,0]==var_list('b',sz)[i] for i in rg(sz)]
+        sage: default_multiplicative_linear_solverHM(EqL, var_list('x', sz), var_list('t', sz))
+        [[x0 == (b0*(b1*e^(2*I*pi*k1)/(b0*e^(2*I*pi*k0))^(a10/a00))^(a01/(a01*a10/a00 - a11))*e^(2*I*pi*k2))^(1/a00),
+          x1 == (b1*e^(2*I*pi*k3)/(b0*e^(2*I*pi*k0))^(a10/a00))^(1/a11)],
+         4,
+         [-a10/a00, a01/(a01*a10/a00 - a11), 1/a00, -1/(a01*a10/a00 - a11)]]
+        sage: sz=2; Eq=[var('x'+str(i))*var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
+        sage: sz=2; default_multiplicative_linear_solverHM(Eq, var_list('x',2*sz), var_list('t',2*sz))
+        [[x0 == a00*a11/a10, x1 == a11, x2 == a10/a11, 1 == a01*a10/(a00*a11)], 0, []]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Formatting the constraints
+    [A, b]=multiplicativeConstraintFormatorIIIHM(EqL, Lv)
+    # Initialization of the variables
+    Hx = HM(A.ncols(), 1, Lv); Hv = HM(A.ncols(), 1, Lf)
+    # Initialization of the reduced echelon form.
+    [Ap, bp, indx, Lst] = multiplicative_gauss_jordan_eliminationHMII(A, b)
+    Id1=HM(2, Ap.nrows(), 'kronecker'); Id2=HM(2, Ap.ncols(), 'kronecker')
+    # Obtainin the list of pivot variables.
+    Pm=HM(Ap.nrows(), Ap.ncols(), 'zero'); Qm=HM(Ap.nrows(), Ap.ncols(), 'zero')
+    for i in range(Ap.nrows()):
+        if not Ap.slice([i],'row').is_zero():
+            for j in range(Ap.ncols()):
+                if Ap[i,j] != 0:
+                    break
+            Pm=Pm+HM(Ap.nrows(),1,[Id1[f,i] for f in rg(Ap.nrows())])*HM(1,Ap.ncols(),[Ap[j,g] for g in rg(Ap.ncols())])
+            Qm=Qm+HM(Ap.nrows(),1,[Id1[f,i] for f in rg(Ap.nrows())])*HM(1,Ap.ncols(),[Id2[j,g] for g in rg(Ap.ncols())])
+    # Expressing the solutions
+    tp1=GProdIII([Pm, Hx], prod, BaseExp); tp2=GProdIII([Ap-Pm, Hv], prod, BaseExp); tq=GProdIII([Qm, Hx], prod, BaseExp)
+    # Initialization of the variables
+    [Af, bf]=multiplicativeConstraintFormatorIIIHM([tp1[gi,0] == bp[gi,0]/tp2[gi,0] for gi in range(tp1.nrows())], [vb for vb in tq.list() if vb in Lv])
+    for r in rg(min(Af.dimensions())):
+        if (1/Af[r,r]).is_integer():
+            for j0 in rg(bf.n(1)):
+                bf[r,j0]=(bf[r,j0])^(1/Af[r,r])
+        else:
+            for j0 in rg(bf.n(1)):
+                bf[r,j0]=(bf[r,j0]*exp(I*2*pi*var('k'+str(indx))))^(1/A[r,r])
+            indx = indx+1
+            Lst.append(1/Af[r,r])
+    return [[tq[i,0] == bf[i,0] for i in range(tq.nrows())], indx, Lst]
 
 def exponential_linear_solverHM(Ha,b,x,v):
     """
@@ -18096,7 +18397,7 @@ def default_naught_solver(Eq, La, Lf):
     ::
 
         sage: sz=2; len(default_naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        4
+        3
 
 
     AUTHORS:
@@ -18164,7 +18465,7 @@ def naught_solver(EqL, La, Lf):
     ::
 
         sage: sz=2; len(naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        8
+        6
 
 
     AUTHORS:
@@ -18506,6 +18807,104 @@ def TensorProduct(L):
         TmpH=TmpH.tensor_product(L[i])
     return TmpH
 
+def Exp(L):
+    """
+    Outputs the exponentiation of the input list of two elements.
+    The function checks that the list has only two elements
+    When used with GProdIII it can only handle second order constructs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: Exp(var_list('a',2))
+        a0^a1
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if len(L) == 2:
+        return L[0]^L[1]
+    else:
+        raise ValueError, "Expected list of two elements"
+
+def BaseExp(L):
+    """
+    Outputs the base exponentiation of the input list
+    Thus implementation check the validity of the inputs
+    When used with GProdIII it can only handle second order constructs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: Exp(var_list('a',2))
+        a0^a1
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if len(L) == 2:
+        return L[1]^L[0]
+    else:
+        raise ValueError, "Expected list of two elements"
+
+def ExpN(L, dgts=50):
+    """
+    Outputs the exponentiation of the input list of two elements
+    The function checks that the list has only two elements
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: ExpN([2.000000, 3.000000])
+        8.0000000000000
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if len(L) == 2:
+        return ComplexField(dgts)(exp(L[1]*ln(L[0])))
+    else:
+        raise ValueError, "Expected list of two elements"
+
+def BaseExpN(L,dgts=50):
+    """
+    Outputs the base exponentiation of the input list
+    Thus implementation check the validity of the inputs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: BaseExpN([2.000000, 3.000000])
+        9.0000000000000
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    if len(L) == 2:
+        return ComplexField(dgts)(exp(L[0]*ln(L[1])))
+    else:
+        raise ValueError, "Expected list of two elements"
+
 def TupleFunctionList(sz):
     """
     Returns a list of edge tuple desctiption for all 
@@ -18598,13 +18997,13 @@ def RootedTupleTreeFunctionList(sz):
         sage: RootedTupleTreeFunctionList(3)
         [[(0, 0), (1, 0), (2, 0)],
          [(0, 1), (1, 1), (2, 0)],
-         [(0, 2), (1, 0), (2, 2)],
          [(0, 0), (1, 2), (2, 0)],
-         [(0, 2), (1, 1), (2, 1)],
-         [(0, 2), (1, 2), (2, 2)],
          [(0, 0), (1, 0), (2, 1)],
          [(0, 1), (1, 1), (2, 1)],
-         [(0, 1), (1, 2), (2, 2)]]
+         [(0, 2), (1, 1), (2, 1)],
+         [(0, 2), (1, 0), (2, 2)],
+         [(0, 1), (1, 2), (2, 2)],
+         [(0, 2), (1, 2), (2, 2)]]
         sage: sz=3; X=var_list('x',sz+1); Y=var_list('y',sz+1); Z=var_list('z',sz+1); Ta=HM(sz+1,sz+1,'a'); A=HM(sz+1,sz+1,'zero'); DgA=[Ta[i,i] for i in rg(sz+1)]
         sage: for i in rg(sz+1):
         ....:     for j in rg(sz+1):
@@ -18650,7 +19049,7 @@ def RootedTupleInducedTreeFunctionList(sz, induced_edge_label_sequence):
 
     EXAMPLES:
     ::
-        sage: RootedTupleInducedTreeFunctionList(3,[0,1,2])
+        sage: RootedTupleInducedTreeFunctionList(3, [0, 1, 2])
         [[(0, 0), (1, 0), (2, 0)],
          [(0, 1), (1, 1), (2, 0)],
          [(0, 0), (1, 2), (2, 0)],
@@ -18663,7 +19062,7 @@ def RootedTupleInducedTreeFunctionList(sz, induced_edge_label_sequence):
         ....:         A[i,j]=Ta[i,j]*X[abs(j-i)]*prod(Y[u] for u in rg(min(i,j), max(i,j)))*prod(Z[u] for u in rg(1+min(i,j), 1+max(i,j)))
         ....:
         sage: sum(prod(A[t[0],t[1]] for t in tp) for tp in RootedTupleInducedTreeFunctionList(sz,[0,1,2]))
-        a00*a10*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a01*a11*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a02*a10*a22*x0*x1*x2*y0^2*y1*z1^2*z2 + a00*a12*a20*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a11*a21*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a12*a22*x0*x1*x2*y0*y1^2*z1*z2^2 + a00*a10*a21*x0*x1^2*y0*y1*z1*z2 + a01*a11*a21*x0*x1^2*y0*y1*z1*z2 + a01*a12*a22*x0*x1^2*y0*y1*z1*z2
+        a00*a10*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a01*a11*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a02*a10*a22*x0*x1*x2*y0^2*y1*z1^2*z2 + a00*a12*a20*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a11*a21*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a12*a22*x0*x1*x2*y0*y1^2*z1*z2^2
 
 
     AUTHORS:
@@ -18695,6 +19094,104 @@ def RootedTupleInducedTreeFunctionList(sz, induced_edge_label_sequence):
             Lf.append([(i,f[i]) for i in range(sz)])
     return Lf
 
+def RootedTupleTreeNonIncreasingFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with trees.
+
+    EXAMPLES:
+    ::
+        sage: RootedTupleTreeNonIncreasingFunctionList(3)[0]
+        [[(0, 0), (1, 0), (2, 0)], [(0, 0), (1, 0), (2, 1)]] 
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in range(sz)]; Lf=[]; Lg=[]
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Initialization of the adjacency martrix of the functional graph
+        A = sum([Id[:,j]*Id[f[j],:] for j in range(sz)])
+        # Initialization of the dierected Laplacian
+        lA= diagonal_matrix((A*ones_matrix(A.nrows(),1)).list())-A
+        # Initialization of the list of sumbratrices
+        Lmtr=[Matrix(ZZ,sz-1,sz-1,[lA[u,v] for u in range(sz) for v in range(sz) if u!=t if v!=t]) for t in range(sz)]
+        # Testing treeness
+        if sum(A[t,t]*Lmtr[t].det() for t in range(sz)) == 1:
+            # Setting the boolean function
+            Increasing = True
+            for i in rg(sz):
+                if f[i] > i:
+                    Increasing = False
+                    break
+            # Appending the function to the list
+            if Increasing == True:
+                Lf.append([(i, f[i]) for i in range(sz)])
+            else:
+                Lg.append([(i, f[i]) for i in range(sz)])
+    return [Lf, Lg]
+
+def RootedTupleTreeNonDecreasingFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with trees.
+
+    EXAMPLES:
+    ::
+        sage: RootedTupleTreeNonDecreasingFunctionList(3)[0]
+        [[(0, 1), (1, 2), (2, 2)], [(0, 2), (1, 2), (2, 2)]]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in range(sz)]; Lf=[]; Lg=[]
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Initialization of the adjacency martrix of the functional graph
+        A = sum([Id[:,j]*Id[f[j],:] for j in range(sz)])
+        # Initialization of the dierected Laplacian
+        lA= diagonal_matrix((A*ones_matrix(A.nrows(),1)).list())-A
+        # Initialization of the list of sumbratrices
+        Lmtr=[Matrix(ZZ,sz-1,sz-1,[lA[u,v] for u in range(sz) for v in range(sz) if u!=t if v!=t]) for t in range(sz)]
+        # Testing treeness
+        if sum(A[t,t]*Lmtr[t].det() for t in range(sz)) == 1:
+            # Setting the boolean function
+            Decreasing = True
+            for i in rg(sz):
+                if f[i] < i:
+                    Decreasing = False
+                    break
+            # Appending the function to the list
+            if Decreasing == True:
+                Lf.append([(i, f[i]) for i in range(sz)])
+            else:
+                Lg.append([(i, f[i]) for i in range(sz)])
+    return [Lf, Lg]
+
 def BasicLagrangeInterpolation(L, x):
     """
     Implements the basic lagrange interpolation.
@@ -18706,8 +19203,7 @@ def BasicLagrangeInterpolation(L, x):
     ::
 
 
-        sage: x=var('x')
-        sage: BasicLagrangeInterpolation([(0,0), (1,1), (2,2), (3,3)], x)
+        sage: x=var('x'); BasicLagrangeInterpolation([(0,0), (1,1), (2,2), (3,3)], x)
         1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
 
 
@@ -18740,23 +19236,24 @@ def composition(f, x, k, sz):
     ::
 
 
-        sage: x=var('x'); f=1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
+        sage: f=1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
         sage: composition(f, x, 1, 4)
         1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
         sage: sz=4; tq=[(0, 1), (1, 2), (2, 3), (3, 3)]
-        sage: f=BasicLagrangeInterpolation(tq,z)
+        sage: f=BasicLagrangeInterpolation(tq,var('z'))
         sage: tq == [(i, f.subs(z==i)) for i in rg(sz)]
         True
-        sage: L=[composition(f, z, i, sz) for i in rg(sz)]; L
+        sage: L=[composition(f, var('z'), i, sz) for i in rg(sz)]; L
         [z,
          -1/6*(z - 1)*(z - 2)*(z - 3) + 1/2*(z - 1)*(z - 2)*z - 3/2*(z - 1)*(z - 3)*z + (z - 2)*(z - 3)*z,
          -1/3*(z - 1)*(z - 2)*(z - 3) + 1/2*(z - 1)*(z - 2)*z - 3/2*(z - 1)*(z - 3)*z + 3/2*(z - 2)*(z - 3)*z,
          -1/2*(z - 1)*(z - 2)*(z - 3) + 1/2*(z - 1)*(z - 2)*z - 3/2*(z - 1)*(z - 3)*z + 3/2*(z - 2)*(z - 3)*z]
-        sage: [[(i, g.subs(z==i)) for i in rg(sz)] for g in L]
+        sage: [[(i, g.subs(var('z')==i)) for i in rg(sz)] for g in [composition(f, var('z'), i, sz) for i in rg(sz)]]
         [[(0, 0), (1, 1), (2, 2), (3, 3)],
          [(0, 1), (1, 2), (2, 3), (3, 3)],
          [(0, 2), (1, 3), (2, 3), (3, 3)],
          [(0, 3), (1, 3), (2, 3), (3, 3)]]
+
 
 
     AUTHORS:
@@ -18816,4 +19313,266 @@ def compose_with(f, g, sz, vrbl):
         TmpF=TmpF + f.subs(vrbl==g).subs(vrbl==idx)*fk
     g=TmpF
     return g
+
+def tpl_pre_image_set(tp, i):
+    """
+    returns the list of vertex pre-images of the input vertex.
+    The input graphs is assumes to have no isolated vertices.
+
+    EXAMPLES:
+
+    ::
+
+        sage: tpl_pre_image_set([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)], 0)
+        [0, 3, 4]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return Set([t[0] for t in tp if t[1]==i]).list()
+
+def tpl_image_set(tp):
+    """
+    returns the list of vertex image of the domain of the input
+    function associated with the list of tuples.
+    The input graphs is assumes to have no isolated vertices.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: tpl_image_set([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)])
+        [0, 2, 4]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing and sorting the list
+    L=Set([t[1] for t in tp]).list(); L.sort()
+    return L
+
+def tpl_pre_image_set_function(tp):
+    """
+    returns the list of vertex pre-images of every vertex
+    the vertices being sorted in increasing order.
+    The input graphs is assumes to have no isolated vertices.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: tpl_pre_image_set_function([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)])
+        [[0, 3, 4], [], [1], [], [2]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return [tpl_pre_image_set(tp, i) for i in rg(len(tp))]
+
+def gcomp(tp, tq):
+    """
+    Performs the absolute difference composition of functions
+    the inputs to the function are two tuple lists of the same
+    size. The current version does not check that the list are
+    in fact of the same size.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: tp=[(0,1), (1,2), (2,3), (3,0)]; tq=[(0,0), (1,0), (2,0), (3,0)]
+        sage: gcomp(tp, tq)
+        [(0, 1), (1, 2), (2, 3), (3, 0)]
+       
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=len(tq); tr=[(i,i) for i in rg(sz)]
+    # Updating the composition
+    for i in rg(sz):
+        tr[abs(tq[i][1]-tq[i][0])] = (abs(tq[i][0]-tq[i][1]), tp[abs(tq[i][0]-tq[i][1])][1])
+    return tr
+
+def functionaldigraphincidenceHM(T):
+    """
+    Returns the transpose of the conventional incidence matrix associated with the input
+    tree specified by a list of tuples associated with the function. 
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: functionaldigraphincidenceHM([(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)])
+        [[0, 0, 0, 0, 0], [1, -1, 0, 0, 0], [1, 0, -1, 0, 0], [1, 0, 0, -1, 0], [1, 0, 0, 0, -1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    sz = len(T)
+    # Initialization of the list of variables
+    X = var_list('x',sz); Y = var_list('y',sz)
+    # Initialization of the list of constraints
+    Eq=[X[T[i][1]]-X[T[i][0]] == Y[i] for i in rg(sz)]
+    return ConstraintFormatorHM(Eq, X)[0]
+
+def functionaldigraphunsignedincidenceHM(T):
+    """
+    Returns the transpose of the conventional incidence matrix associated with the input
+    tree specified by a list of tuples associated with the function. 
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: functionaldigraphunsignedincidenceHM([(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)])
+        [[2, 0, 0, 0, 0], [1, 1, 0, 0, 0], [1, 0, 1, 0, 0], [1, 0, 0, 1, 0], [1, 0, 0, 0, 1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    sz = len(T)
+    # Initialization of the list of variables
+    X = var_list('x',sz); Y = var_list('y',sz)
+    # Initialization of the list of constraints
+    Eq=[X[T[i][1]]+X[T[i][0]] == Y[i] for i in rg(sz)]
+    return ConstraintFormatorHM(Eq, X)[0]
+
+def EuclidsGCD(a, b):
+    """
+
+    This function implements Euclid's GCD algorithm.
+    The function checks that the inputs are non-zero
+    integers and returns as output the matrix which
+    describes all the iterations of the algorithm.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: G=EuclidsGCD(89, 55); G.printHM()
+        [:, :]=
+        [89 55  1 34]
+        [55 34  1 21]
+        [34 21  1 13]
+        [21 13  1  8]
+        [13  8  1  5]
+        [ 8  5  1  3]
+        [ 5  3  1  2]
+        [ 3  2  1  1]
+        [ 2  1  2  0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if type(a)==type(Integer(1)) and type(b)==type(Integer(1)) and a*b !=0:
+        # Initialization of the matrix Data Structure.
+        G = HM(1, 4, 'zero')
+        # Initialization of the initial conditions
+        G[0, 0] = a; G[0, 1] = b
+        G[0, 3] = Integer(mod(G[0, 0], G[0, 1]))
+        G[0, 2] = (G[0, 0] - G[0, 3])/G[0, 1] 
+        # Initialization of the index
+        indx = 0
+        while G[indx, 3] != 0:
+            # Updating the size of G
+            G=G.zero_pad([G.n(0)+1, G.n(1)])
+            # Incrementing the index
+            indx=indx+1
+            G[indx, 0] = G[indx-1, 1]; G[indx, 1] = G[indx-1, 3]
+            G[indx, 3] = Integer(mod(G[indx, 0], G[indx, 1]))
+            G[indx, 2] = (G[indx, 0] - G[indx, 3])/G[indx, 1]
+        return G
+    else:
+        raise ValueError, "Expected non zero integer inputs."
+
+def Modulo(f, VrbL, Rlts):
+    """
+    Outputs the quotient and the remainder of the simultaneous
+    Euclidean division. The algorithm takes as input
+    a multivariate polynomial f in the variables in the
+    input list VrbL and a list of monic univariate polynomial
+    which correspond to the relations we are moding by.
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: VrbL = var_list('x', 2); f = expand((VrbL[0]+VrbL[1])^10); Rlts = [VrbL[0]^2-5, VrbL[1]^3-7]
+        sage: Modulo(f, VrbL, Rlts)
+        [(x0^2 - 5)*x0^8 + (x0^2 - 5)*x0^7 + (x1^3 - 7)*x1^7 + (x0^2 - 5)*x0^6 + (x1^3 - 7)*x1^6 + (x0^2 - 5)*x0^5 + (x1^3 - 7)*x1^5 + (x0^2 - 5)*x0^4 + (x1^3 - 7)*x1^4 + (x0^2 - 5)*x0^3 + (x1^3 - 7)*x1^3 + (x0^2 - 5)*x0^2 + (x1^3 - 7)*x1^2 + x1^3 + (x0^2 - 5)*x0 + x0^2 + (x1^3 - 7)*x1 - 12,
+         44100*x0*x1^2 + 35650*x0*x1 + 39150*x1^2 + 108430*x0 + 184093*x1 + 260375]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the degree matrix
+    Dm = degree_matrix(Rlts, VrbL)
+    for i in rg(min(Dm.n(0), Dm.n(1))):
+        for j in rg(min(Dm.n(0), Dm.n(1))):
+            Dm[i,j]=0
+    if Dm.is_zero():
+        # Initialization of the quotient
+        # and the initial remainder.
+        q = 0; r = f
+        for v in rg(len(VrbL)):
+            for d in rg(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]), -1, -1):
+                q = q + (VrbL[v]^d)*Rlts[v]
+                r = expand(fast_reduce(r, [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))], [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+        return [q, r]
+    else:
+        raise ValueError, "Expected univariate algebraic relations."
+
+def ModuloII(f, VrbL, Rlts):
+    """
+    Outputs the remainder of the simultaneous
+    Euclidean division. The algorithm takes as input
+    a multivariate polynomial f in the variables in the
+    input list VrbL and a list of monic univariate polynomial
+    which correspond to the relations we are moding by.
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: VrbL = var_list('x', 2); f = expand((VrbL[0]+VrbL[1])^10); Rlts = [VrbL[0]^2-5, VrbL[1]^3-7]
+        sage: ModuloII(f, VrbL, Rlts)
+        44100*x0*x1^2 + 35650*x0*x1 + 39150*x1^2 + 108430*x0 + 184093*x1 + 260375
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: Implment faster version
+    """
+    # Initialization of the degree matrix
+    Dm = degree_matrix(Rlts, VrbL)
+    # Updating only the diagonal entries to zero
+    for i in rg(min(Dm.n(0), Dm.n(1))):
+        for j in rg(min(Dm.n(0), Dm.n(1))):
+            Dm[i,j]=0
+    if Dm.is_zero():
+        # Initialization of the initial remainder.
+        r = f
+        for v in rg(len(VrbL)):
+            for d in rg(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]), -1, -1):
+                r = expand(fast_reduce(r, [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))], [VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
+        return r
+    else:
+        raise ValueError, "Expected univariate algebraic relations."
 
