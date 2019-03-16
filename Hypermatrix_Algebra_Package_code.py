@@ -204,7 +204,8 @@ class HM:
         - Edinah K. Gnang
         """
         if self.order()==2 and other.order()==2 and self.n(0)==other.n(1):
-            return mprod(other, self)
+            #return mprod(other, self)
+            return GProdIII([other,self],prod,BaseExp)
         elif self.order()==2 and self.is_hypercolumn() and prod(self.dimensions())>1:
             return vec_exp(self, other)
         elif self.order()==2 and other==-1 and self.is_cubical():
@@ -977,12 +978,27 @@ class HM:
             [ a20 - a42  a21 - a32          0 -a12 + a23 -a02 + a24]
             [ a30 - a43  a31 - a33 -a23 + a32 -a13 + a33 -a03 + a34]
             [ a40 - a44 -a34 + a41 -a24 + a42 -a14 + a43 -a04 + a44]
+            sage: sz=2; A=HM(sz, sz, sz, 'a')
+            sage: A.index_rotation([2*pi/4, 0, 0]).printHM()
+            [:, :, 0]=
+            [a100 a110]
+            [a101 a111]
+            <BLANKLINE>
+            [:, :, 1]=
+            [a000 a010]
+            [a001 a011]
+            <BLANKLINE>
 
 
         AUTHORS:
-        - Edinah K. Gnang
+        - Edinah K. Gnang and Fan Tian
         """
-        return MatrixIndexRotation(self, T)
+        if self.order()==2:
+            return SecondOrderIndexRotation(self, T)
+        elif self.order()==3:
+            return ThirdOrderIndexRotation(self, T)
+        else :
+            raise ValueError,"not supported for order %d hypermatrices" % self.order()
 
     def nrows(self):
         return len(self.hm)
@@ -1835,34 +1851,35 @@ class HM:
             [:, :, 0]=
             [a0000]
             [a1000]
-
+            <BLANKLINE>
             [:, :, 1]=
             [a0100]
             [a1100]
-
+            <BLANKLINE>
             [:, :, 2]=
             [a0010]
             [a1010]
-
+            <BLANKLINE>
             [:, :, 3]=
             [a0110]
             [a1110]
-
+            <BLANKLINE>
             [:, :, 4]=
             [a0001]
             [a1001]
-
+            <BLANKLINE>
             [:, :, 5]=
             [a0101]
             [a1101]
-
+            <BLANKLINE>
             [:, :, 6]=
             [a0011]
             [a1011]
-
+            <BLANKLINE>
             [:, :, 7]=
             [a0111]
             [a1111]
+            <BLANKLINE>
   
 
         AUTHORS:
@@ -5522,10 +5539,11 @@ def GProdB(Lh, Op, F):
         [:, :, 0]=
         [a0*d000*e0*q0 + a1*d100*e0*q0 + a0*d010*e1*q0 + a1*d110*e1*q0 + a0*d001*e0*q1 + a1*d101*e0*q1 + a0*d011*e1*q1 + a1*d111*e1*q1 a0*d000*f0*s0 + a1*d100*f0*s0 + a0*d010*f1*s0 + a1*d110*f1*s0 + a0*d001*f0*s1 + a1*d101*f0*s1 + a0*d011*f1*s1 + a1*d111*f1*s1]
         [c0*d000*g0*q0 + c1*d100*g0*q0 + c0*d010*g1*q0 + c1*d110*g1*q0 + c0*d001*g0*q1 + c1*d101*g0*q1 + c0*d011*g1*q1 + c1*d111*g1*q1 c0*d000*h0*s0 + c1*d100*h0*s0 + c0*d010*h1*s0 + c1*d110*h1*s0 + c0*d001*h0*s1 + c1*d101*h0*s1 + c0*d011*h1*s1 + c1*d111*h1*s1]
-
+        <BLANKLINE>
         [:, :, 1]=
         [b0*d000*e0*r0 + b1*d100*e0*r0 + b0*d010*e1*r0 + b1*d110*e1*r0 + b0*d001*e0*r1 + b1*d101*e0*r1 + b0*d011*e1*r1 + b1*d111*e1*r1 b0*d000*f0*t0 + b1*d100*f0*t0 + b0*d010*f1*t0 + b1*d110*f1*t0 + b0*d001*f0*t1 + b1*d101*f0*t1 + b0*d011*f1*t1 + b1*d111*f1*t1]
         [d0*d000*g0*r0 + d1*d100*g0*r0 + d0*d010*g1*r0 + d1*d110*g1*r0 + d0*d001*g0*r1 + d1*d101*g0*r1 + d0*d011*g1*r1 + d1*d111*g1*r1 d0*d000*h0*t0 + d1*d100*h0*t0 + d0*d010*h1*t0 + d1*d110*h1*t0 + d0*d001*h0*t1 + d1*d101*h0*t1 + d0*d011*h1*t1 + d1*d111*h1*t1]
+        <BLANKLINE>
         sage: AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
         sage: sz=2 # Initialization of the size parameter
         sage: A=HM(sz,1,sz,[HM(1,sz,1,var_list(AlphaB[0*sz^2+sz*i+j],sz)) for j in rg(sz) for i in rg(sz)])
@@ -5535,10 +5553,12 @@ def GProdB(Lh, Op, F):
         [:, :, 0]=
         [a0*e0*q0 + a1*e1*q1 a0*f0*s0 + a1*f1*s1]
         [c0*g0*q0 + c1*g1*q1 c0*h0*s0 + c1*h1*s1]
-
+        <BLANKLINE>
         [:, :, 1]=
         [b0*e0*r0 + b1*e1*r1 b0*f0*t0 + b1*f1*t1]
         [d0*g0*r0 + d1*g1*r1 d0*h0*t0 + d1*h1*t1]
+        <BLANKLINE>
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -10684,7 +10704,7 @@ def IncrementVariablesBool(T, incr):
     ::
 
         sage: IncrementVariablesBool(['OR',var('x0'),var('x1')], 1)
-        '+x1x2'
+        ['OR', x1, x2]
 
 
     AUTHORS:
@@ -10721,7 +10741,7 @@ def VariablesBool(T):
     ::
 
         sage: VariablesBool(['OR',var('x0'),var('x1')])
-        {x0, x1}
+        {x1, x0}
 
 
     AUTHORS:
@@ -10780,7 +10800,7 @@ def EvalTBool(T):
     ::
 
         sage: EvalTBool(['AND', ['OR', 1, ['OR', 1, 1]], ['AND', ['AND', 1, 1], 1]])
-        6
+        1
 
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
@@ -10838,7 +10858,10 @@ def Bool2HM(T):
     ::
 
         sage: Bool2HM(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]]).printHM()
-        6
+        [:, :]=
+        [0 0]
+        [1 1]
+
 
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
@@ -10871,7 +10894,7 @@ def Bool2Integer(T):
     ::
 
         sage: Bool2Integer(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]])
-        12
+        10
 
 
     AUTHORS:
@@ -13661,28 +13684,7 @@ def multiplicative_matrix_productHM(A,B):
             Rslt[i,k]=prod([B[j,k]^A[i,j] for j in range(A.ncols())])
     return Rslt
 
-def mprod(A,B):
-    """
-    Outputs the result of the multiplicative product of the
-    two input matrices.
-
-    EXAMPLES:
- 
-    ::
-
-        sage: mprod(HM(2,2,'a'), HM(2,2,'b')).printHM()
-        [:, :]=
-        [b00^a00*b10^a01 b01^a00*b11^a01]
-        [b00^a10*b10^a11 b01^a10*b11^a11]
-        
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    return multiplicative_matrix_productHM(A,B)
-
-def vec_exp(x,A):
+def vec_exp(vx,A):
     """
     Outputs the result of the multiplicative product of a
     matrix by a vector. Does not check that the left input
@@ -13702,7 +13704,8 @@ def vec_exp(x,A):
     - Edinah K. Gnang
     - To Do: 
     """
-    return mprod(A,x)
+    #return mprod(A,x)
+    return GProdIII([A,vx],prod,BaseExp)
 
 def linear_solver(A,b,x,v):
     """
@@ -19030,7 +19033,7 @@ def naught_solver(EqL, La, Lf):
                 Sln.append(Set(tmpSln).list())
     return Sln 
  
-def MatrixIndexRotation(Ha, T):
+def SecondOrderIndexRotation(Ha, T):
     """
     The function perform the rotation of angle T for the indices.
     Ha is input second order hypermatrices.
@@ -19041,10 +19044,10 @@ def MatrixIndexRotation(Ha, T):
     ::
 
         sage: sz=5; Ha=HM(sz,sz,'a') # Initialization of the input Hypermatrix
-        sage: (Ha.tumble()-MatrixIndexRotation(Ha, 2*pi/4)).is_zero()
+        sage: (Ha.tumble()-SecondOrderIndexRotation(Ha, 2*pi/4)).is_zero()
         True
         sage: sz=6; Ha=HM(sz,sz,'a') # Initialization of the input Hypermatrix
-        sage: (Ha.tumble()-MatrixIndexRotation(Ha, 2*pi/4)).is_zero()
+        sage: (Ha.tumble()-SecondOrderIndexRotation(Ha, 2*pi/4)).is_zero()
         True
 
 
@@ -19067,6 +19070,62 @@ def MatrixIndexRotation(Ha, T):
         return B
     else:
         raise ValueError, "The input matrices must be square."
+
+def ThirdOrderIndexRotation(A, Langle):
+    """
+    The function takes a 3rd order hypermatrix and performs
+    an index rotation around the axis specified in the Row,
+    Column and Depth order specified by the input list angles.
+    This implement only handles cubic hypermatrices. In case
+    the hypermatrix is not cubic zeropadd to a cubic hypermatrix.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; A=HM(sz, sz, sz, 'a')
+        sage: Langle=[2*pi/4, 0, 0]
+        sage: ThirdOrderIndexRotation(A, Langle).printHM()
+        [:, :, 0]=
+        [a100 a110]
+        [a101 a111]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a000 a010]
+        [a001 a011]
+        <BLANKLINE>
+
+
+    AUTHORS:
+    - Fan Tian and Edinah K. Gnang
+    - To Do: Implement the arbitrary order version
+    """
+    if A.is_cubical():
+        sz=A.n(0)
+        # Initializing the output
+        B=A.copy()
+        # A rotation along the Row axis performs a rotation of the column slices
+        # A rotation along the Column axis performs a rotation of the  row slices
+        # A rotation along the Depth axis performs a rotation of the depth slices
+        axes = [1, 0, 2]
+        for i in rg(len(axes)):
+            axis = axes[i]
+            for j in rg(sz):
+                M=HM(sz, sz, B.slice([j], axis).list()).index_rotation(Langle[i])
+                for u in rg(sz):
+                    for v in rg(sz):
+                        # Performing the index rotation relative to the row axis
+                        if axis == 1:
+                            B[u,j,v]=M[u,v]
+                        # Performing the index rotation relative to the col axis
+                        elif axis == 0:
+                            B[j,u,v]=M[u,v]
+                        # Performing the index rotation relative to the dpt axis
+                        elif axis == 2:
+                            B[u,v,j]=M[u,v]
+        return B
+    else:
+        raise ValueError, "Expected a cubic hypermatrix"
 
 def geometric_mean(L):
     """
@@ -19434,7 +19493,7 @@ def Sigmoid(L):
 
 
         sage: Exp(var_list('a',2))
-        
+        a0^a1
 
 
     AUTHORS:
@@ -19491,6 +19550,46 @@ def Or(L):
     for i in rg(1,len(L)):
         St = St or L[i]
     return St
+
+def is_Tree(A):
+    """
+    Returns an boolean value determining if the input unweighted
+    adjacency matrix is associated with a tree. The implementation
+    is based on a implementation of the matrix tree theorem.
+
+
+    EXAMPLES:
+    ::
+        sage: is_Tree(Matrix([[0, 1, 0], [1, 0, 1], [0, 1, 0]]))
+        True
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if 1==((diagonal_matrix((A*ones_matrix(A.nrows(),1)).list())-A)[0:A.nrows()-1,0:A.ncols()-1]).det():
+        return True
+    else:
+        return False
+
+def Tuple2DiGraph(T,sz):
+    """
+    The method returns a directed graph object associated with 
+    with the tuple list description of the directed graph
+
+    EXAMPLES:
+
+    ::
+
+        sage: Tuple2DiGraph([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)],5).degree_sequence()
+        [4, 2, 2, 1, 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the identity matrix
+    Id=HM(2,sz,'kronecker')
+    return DiGraph(sum([Id.slice([t[0]],'col')*Id.slice([t[1]],'row') for t in T]).matrix())
 
 def TupleFunctionList(sz):
     """
@@ -19550,6 +19649,45 @@ def TupleFunctionList(sz):
         Lf.append([(i,f[i]) for i in rg(sz)])
     return Lf
 
+def RepresentativeTupleFunctionList(sz):
+    """
+    Returns a list of edge tuple desctiption for all 
+    functional directed graphs. Outputing one per
+    isomorphism class the graph isomorphism routine
+    is doing the heavy lifting here.
+
+
+    EXAMPLES:
+    ::
+        sage: RepresentativeTupleFunctionList(3)
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 1), (1, 0), (2, 0)],
+         [(0, 0), (1, 1), (2, 0)],
+         [(0, 1), (1, 1), (2, 0)],
+         [(0, 2), (1, 1), (2, 0)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 0), (1, 1), (2, 2)]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    L=TupleFunctionList(sz)
+    # Initialization of the list storing the equivalence class of trees.
+    cL=[ L[0] ]
+    # Loop perfomring the isomorphism binning.
+    for tp in L:
+        nwT=True
+        for i in range(len(cL)):
+            if Tuple2DiGraph(tp,sz).is_isomorphic(TupleToDiGraph(cL[i],sz)):
+                nwT=False
+                break
+        if nwT==True:
+            cL.append(tp)
+    return cL
+
 def PermutationFunctionList(sz):
     """
     Returns a list of edge tuple descriptions associated 
@@ -19573,6 +19711,36 @@ def PermutationFunctionList(sz):
     # Initialization of the list of permutations of elements from 1 to (n-1).
     P=Permutations(sz)
     return [[(i,p[i]-1) for i in rg(sz)] for p in P]
+
+def RepresentativePermutationFunctionList(sz):
+    """
+    Returns a list of edge tuple descriptions associated 
+    with permutations.
+
+
+    EXAMPLES:
+    ::
+        sage: RepresentativePermutationFunctionList(3)
+        [[(0, 0), (1, 1), (2, 2)], [(0, 0), (1, 2), (2, 1)], [(0, 1), (1, 2), (2, 0)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    L=PermutationFunctionList(sz)
+    # Initialization of the list storing the equivalence class of trees.
+    cL=[ L[0] ]
+    # Loop perfomring the isomorphism binning.
+    for tp in L:
+        nwT=True
+        for i in range(len(cL)):
+            if TupleToDiGraph(tp,sz).is_isomorphic(TupleToDiGraph(cL[i],sz)):
+                nwT=False
+                break
+        if nwT==True:
+            cL.append(tp)
+    return cL
 
 def RootedTupleTreeFunctionList(sz):
     """
@@ -19627,6 +19795,36 @@ def RootedTupleTreeFunctionList(sz):
             # Appending the function to the list
             Lf.append([(i, f[i]) for i in range(sz)])
     return Lf
+
+def RepresentativeRootedTupleTreeFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with trees.
+
+    EXAMPLES:
+    ::
+        sage: RepresentativeRootedTupleTreeFunctionList(3)
+        [[(0, 0), (1, 0), (2, 0)], [(0, 1), (1, 1), (2, 0)]]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list
+    L = RootedTupleTreeFunctionList(sz)
+    # Initialization of the list storing the equivalence class of trees.
+    cL=[ L[0] ]
+    # Loop perfomring the isomorphism binning.
+    for tp in L:
+        nwT=True
+        for i in range(len(cL)):
+            if TupleToDiGraph(tp,sz).is_isomorphic(TupleToDiGraph(cL[i],sz)):
+                nwT=False
+                break
+        if nwT==True:
+            cL.append(tp)
+    return cL
 
 def RootedTupleInducedTreeFunctionList(sz, induced_edge_label_sequence):
     """
@@ -19778,6 +19976,150 @@ def RootedTupleTreeNonDecreasingFunctionList(sz):
             else:
                 Lg.append([(i, f[i]) for i in range(sz)])
     return [Lf, Lg]
+
+def TreeFunctionList(n):
+    """
+    Goes through all the functions and determines which ones
+    are associated with trees. One of think of thes trees as
+    rooted at 0.
+
+    EXAMPLES:
+    ::
+        sage: TreeFunctionList(4)
+        [[0, 0, 0],
+        [2, 0, 0],
+        [3, 0, 0],
+        [0, 1, 0],
+        [3, 1, 0],
+        [0, 3, 0],
+        [2, 3, 0],
+        [3, 3, 0],
+        [0, 0, 1],
+        [2, 0, 1],
+        [0, 1, 1],
+        [0, 3, 1],
+        [0, 0, 2],
+        [2, 0, 2],
+        [3, 0, 2],
+        [0, 1, 2]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[n for i in range(n-1)]; Lf=[]
+    # Initialization of the identity matrix
+    Id=identity_matrix(n)
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Appending the function to the list
+        if is_Tree(sum([Id[:,j]*Id[f[j-1],:]+Id[:,f[j-1]]*Id[j,:] for j in range(1,n)])):
+            Lf.append(f)
+    return Lf
+
+def Tuple2DiGraphII(T,sz):
+    """
+    The method returns a directed graph object associated with 
+    with the tuple list description of the directed graph
+
+    EXAMPLES:
+
+    ::
+
+        sage: Tuple2DiGraph([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)],5).degree_sequence()
+        [4, 2, 2, 1, 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    return DiGraph(sum([Id[:,t[0]]*Id[t[1],:] for t in T]))
+
+def mPer(A,tq):
+    """
+    Computes symbolically the partial modified permanent by summing only over
+    representatives of the coeset.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=4; tp=[(0, 0), (1, 2), (2, 0), (3, 0)]
+        sage: A=HM(sz,sz,'a').elementwise_product(HM(sz,sz,[x^(sz^abs(j-i)) for j in rg(sz) for i in rg(sz)]))
+        sage: mPer(A,tp).coefficient(x^((sz^sz-1)/(sz-1)))
+        a00*a12*a20*a30 + a02*a12*a22*a30 + a03*a11*a21*a31 + a03*a13*a21*a33
+        sage: sz=4; mPer(HM(sz,sz,'a'), [(i,0) for i in rg(sz)])
+        a00*a10*a20*a30 + a01*a11*a21*a31 + a02*a12*a22*a32 + a03*a13*a23*a33
+       
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    sz=A.n(0)
+    tp=[(1+tq[i][0], 1+tq[i][1]) for i in rg(len(tq))]
+    # Initializing the permutations
+    P = Permutations(sz); S=SymmetricGroup(sz)
+    # Initializing the graph
+    grph=Tuple2DiGraph(tp, sz+1)
+    # Initializing the automorphism group
+    AutGrp=grph.automorphism_group()
+    # Initializing representatives of Left coset as strings
+    Lcstr=[CstL[0].cycle_string() for CstL in S.cosets(AutGrp)]
+    # Loop enumerating the number of graceful labelings
+    fctr=0
+    # Initialization of the function
+    f=0
+    for p in P:
+        if p.cycle_string() in Lcstr:
+            # Initializing the inverse
+            pinv=p.inverse()
+            # fixing the permutations index
+            q =[p[i]-1 for i in rg(sz)]
+            qi=[pinv[i]-1 for i in rg(sz)]
+            f=f+prod([A[j, q[tp[qi[j]][1]-1]] for j in range(sz)])
+    return f
+
+def Monomial2Tuple(mnm, VrbL, sz):
+    """
+    Outputs the tuple edge list description of the input monomial mnm.
+    The variables are obtain by listing the entries of a hypermatrix.
+    directed graph case.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=4; A=HM(sz,sz,'a'); Tp=Monomial2Tuple(prod(A[0,i] for i in rg(sz)), A.list(), sz)
+        sage: Tp
+        [(0, 0), (0, 1), (0, 2), (0, 3)]
+        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Getting rid of the coefficient
+    f=mnm/(mnm.subs([v==1 for v in VrbL]))
+    # Initialization of the dictionary
+    EdgeDct=dict([(VrbL[j*sz+i],(i,j)) for j in rg(sz) for i in rg(sz)])
+    if f in VrbL:
+        return [EdgeDct[f]] 
+    else:
+        Tp=[EdgeDct[g] for g in f.operands()]; Tp.sort()
+    return Tp
 
 def RootedTupleClassTreeFunctionList(tp):
     """
@@ -19956,6 +20298,39 @@ def find_sink(tp):
     for i in rg(len(tp)):
         T=[(tp[i][0],tp[i][1]) for i in tpl_image_set(T)]
     return T[0][0]
+
+def FindTreeTupleComponentsII(T):
+    """
+    Returns a tuple list each of which corresponds to a pair
+    made up of a vertex and the associated sink vertex.
+    This implementation assume the input is a tree.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: FindTreeTupleComponentsII([(0, 0), (1, 2), (2, 4), (3, 7), (4, 4), (5, 0), (6, 0), (7, 0)])
+        [(0, 0), (1, 4), (2, 4), (3, 0), (4, 4), (5, 0), (6, 0), (7, 0)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Classifying the vertices
+    C=[(find_sink(T),find_sink(T))]
+    Rg=rg(len(T)); Rg.remove(find_sink(T))
+    for j in Rg:
+        i=j; cnt=0
+        while T[i][1] != T[i][0] and cnt <= len(T)+1:
+            i=T[i][1]; cnt=cnt+1
+        if T[i][1] == T[i][0]:
+            C.append((j,T[i][0]))
+        else:
+            raise ValueError, "Expected a tree"
+    C.sort()
+    return C
 
 def switch_sink(Tn, alpha):
     """
@@ -20329,35 +20704,36 @@ def GeneralHypermatrixFlatten(A, Rg, ord):
         [:, :, 0]=
         [a0000]
         [a1000]
-
+        <BLANKLINE>
         [:, :, 1]=
         [a0100]
         [a1100]
-
+        <BLANKLINE>
         [:, :, 2]=
         [a0010]
         [a1010]
-
+        <BLANKLINE>
         [:, :, 3]=
         [a0110]
         [a1110]
-
+        <BLANKLINE>
         [:, :, 4]=
         [a0001]
         [a1001]
-
+        <BLANKLINE>
         [:, :, 5]=
         [a0101]
         [a1101]
-
+        <BLANKLINE>
         [:, :, 6]=
         [a0011]
         [a1011]
-
+        <BLANKLINE>
         [:, :, 7]=
         [a0111]
         [a1111]
-        
+        <BLANKLINE>       
+ 
 
     AUTHORS:
     - Edinah K. Gnang and Fan Tian
@@ -20375,5 +20751,4 @@ def GeneralHypermatrixFlatten(A, Rg, ord):
         return HM([GeneralHypermatrixFlatten(A.slice([t],Rg[0]),[Rg[1],Rg[2],Rg[3]],3).listHM() for t in rg(A.n(Rg[0]))])
     elif ord == 5:
         return HM([GeneralHypermatrixFlatten(A.slice([t],Rg[0]),[Rg[1],Rg[2],Rg[3],Rg[4]],4).listHM() for t in rg(A.n(Rg[0]))])
-
 
