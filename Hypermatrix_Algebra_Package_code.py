@@ -963,9 +963,10 @@ class HM:
 
     def index_rotation(self, T):
         """
-        Outputs a list of lists associated with the tumble
-        transpose. 
-        The code only handles second order HM class objects.
+        Outputs the index rotation by angle T of self.
+        The method is only implemented to second and third
+        order hypermatrices. 
+
 
         EXAMPLES:
 
@@ -997,6 +998,54 @@ class HM:
             return SecondOrderIndexRotation(self, T)
         elif self.order()==3:
             return ThirdOrderIndexRotation(self, T)
+        else :
+            raise ValueError,"not supported for order %d hypermatrices" % self.order()
+
+    def select_index_rotation(self, T, EntryList):
+        """
+        Outputs a list of lists associated with the tumble
+        transpose. 
+        The code only handles second order HM class objects.
+
+        EXAMPLES:
+
+        ::
+
+            sage: sz=5; (HM(sz,sz,'a') - HM(sz,sz,'a').select_index_rotation(pi/2, rg(sz))).printHM()
+            [:, :]=
+            [ a00 - a40  a01 - a30  a02 - a20  a03 - a10 -a00 + a04]
+            [ a10 - a41  a11 - a31  a12 - a21 -a11 + a13 -a01 + a14]
+            [ a20 - a42  a21 - a32          0 -a12 + a23 -a02 + a24]
+            [ a30 - a43  a31 - a33 -a23 + a32 -a13 + a33 -a03 + a34]
+            [ a40 - a44 -a34 + a41 -a24 + a42 -a14 + a43 -a04 + a44]
+            sage: sz=5; (HM(sz,sz,'a') - HM(sz,sz,'a').select_index_rotation(pi/2, [1,3])).printHM()
+            [:, :]=
+            [         0          0          0          0          0]
+            [         0  a11 - a31          0 -a11 + a13          0]
+            [         0          0          0          0          0]
+            [         0  a31 - a33          0 -a13 + a33          0]
+            [         0          0          0          0          0]
+            sage: sz=2; A=HM(sz, sz, sz, 'a')
+            sage: A.select_index_rotation([2*pi/4, 0, 0], rg(sz)).printHM()
+            [:, :, 0]=
+            [a100 a110]
+            [a101 a111]
+            <BLANKLINE>
+            [:, :, 1]=
+            [a000 a010]
+            [a001 a011]
+            <BLANKLINE>
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang and Fan Tian 
+        - To Do: Implement the arbitrary order version
+        """
+        if self.order()==2:
+            return SelectSecondOrderIndexRotation(self, T, EntryList)
+        elif self.order()==3:
+            return SelectThirdOrderIndexRotation(self, T, EntryList)
         else :
             raise ValueError,"not supported for order %d hypermatrices" % self.order()
 
@@ -1809,77 +1858,36 @@ class HM:
 
     def flatten(self, Rg, ord):
         """
-        Outputs the result of the slicifing 
+        Outputs a lower order flattened hypermatrix of the higher order input.             
+        The first input is the hypermatrix to be flattened. The second input 
+        corresponds to the indices that will remain unchanged after flattening. 
+        The third input is the order of the desired output hypermatrix. When 
+        flatten an higher order input hypermatrix to order 1, the result is a list.
+        
+        In the example of A.flatten([0, 1], 2) for flattening 
+        the order 3 hypermatrix A into a matrix, the input [0, 1] tells us that the
+        column and the row indices will be left unchanged, and we are stacking depth
+        slices along the row direction. 
+        
+        The flattening of hypermatrices with ord>2 is obtained recursively. 
 
 
         EXAMPLES:
  
         ::
 
-            sage: HM(3,3,'a').slice([0], 'row').printHM()
+
+            sage: sz=3; A=HM(sz, sz, sz, 'a')
+            sage: A.flatten( [0, 1], 2).dimensions()
+            [3, 9]
+            sage: A.flatten([0, 1], 2).printHM()
             [:, :]=
-            [a00 a01 a02]
-            <BLANKLINE>
-            sage: HM(3,3,'a').slice([1], 'col').printHM()
-            [:, :]=
-            [a01]
-            [a11]
-            [a21]
-            <BLANKLINE>
-            sage: HM(3,3,3,'a').slice([2], 'dpt').printHM()
-            [:, :, 0]=
-            [a002 a012 a022]
-            [a102 a112 a122]
-            [a202 a212 a222] 
-            <BLANKLINE>
-            sage: sz=3; A=HM(sz,sz,'a')
-            sage: GeneralHypermatrixFlatten(A, [0], 1)
-            [a00, a10, a20, a01, a11, a21, a02, a12, a22]
-            sage: GeneralHypermatrixFlatten(A, [1], 1)
-            [a00, a01, a02, a10, a11, a12, a20, a21, a22]
-            sage: sz=2; B=HM(sz,sz,sz,'b')
-            sage: GeneralHypermatrixFlatten(B, [0], 1)
-            [b000, b100, b010, b110, b001, b101, b011, b111]
-            sage: GeneralHypermatrixFlatten(B, [1], 1)
-            [b000, b010, b001, b011, b100, b110, b101, b111]
-            sage: GeneralHypermatrixFlatten(B, [2], 1)
+            [a000 a010 a020 a001 a011 a021 a002 a012 a022]
+            [a100 a110 a120 a101 a111 a121 a102 a112 a122]
+            [a200 a210 a220 a201 a211 a221 a202 a212 a222]
+            sage: sz=2, B=HM(sz,sz,sz,'b')
+            sage: B.flatten([2], 1)
             [b000, b001, b100, b101, b010, b011, b110, b111]
-            sage: A=HM(2,2,2,2,'a')
-            sage: GeneralHypermatrixFlatten(A, [0,0,0], 3).dimensions()
-            [2, 1, 8]
-            sage: GeneralHypermatrixFlatten(A, [0,0,0], 3).printHM()
-            [:, :, 0]=
-            [a0000]
-            [a1000]
-            <BLANKLINE>
-            [:, :, 1]=
-            [a0100]
-            [a1100]
-            <BLANKLINE>
-            [:, :, 2]=
-            [a0010]
-            [a1010]
-            <BLANKLINE>
-            [:, :, 3]=
-            [a0110]
-            [a1110]
-            <BLANKLINE>
-            [:, :, 4]=
-            [a0001]
-            [a1001]
-            <BLANKLINE>
-            [:, :, 5]=
-            [a0101]
-            [a1101]
-            <BLANKLINE>
-            [:, :, 6]=
-            [a0011]
-            [a1011]
-            <BLANKLINE>
-            [:, :, 7]=
-            [a0111]
-            [a1111]
-            <BLANKLINE>
   
 
         AUTHORS:
@@ -7576,11 +7584,12 @@ def GenerateRandomOneZeroHM(sz, k):
 
 def Random_d_regular_adjacencyHM(sz, d):
     """
-    outputs a complementary pair of directed graphs where 
+    Outputs a complementary pair of directed graphs where 
     the first graphs has vertex in-degree and out-degree 
     both equal to d for every vertex. While the second has
     vertex in-degree and out-degree both equal to sz-d-1
     for all of it's vertices.
+
 
     EXAMPLES:
 
@@ -7600,34 +7609,84 @@ def Random_d_regular_adjacencyHM(sz, d):
         
 
     AUTHORS:
-    - Edinah K. Gnang
+    - Edinah K. Gnang, Yan Jiang
     """
     # Initializing the matrix to be filled
     M = HM(sz,sz, 'zero'); M[sz-1,sz-1]=1
     # List of regular graph on 2 vertices
-    while M[sz-1,sz-1]!=0 or (M*HM(sz,1,'one')).list() != (HM(1,sz,'one')*M).list():
+    while M[sz-1,sz-1]!=0 or M*HM(sz,1,'one') != HM(sz,1,'one')*d:
+        for c in rg(sz-1):
+            # Initializing the vector associated with the row c
+            La = [0]+GenerateRandomOneZeroHM(sz-c-1, d-sum(M[c,j] for j in rg(c)))
+            # Initializing the vector associated with the column c
+            Lb = [ ]+GenerateRandomOneZeroHM(sz-c-1, d-sum(M[j,c] for j in rg(c+1)))
+            # Loop which fills up the Matrix
+            for i in range(c, c+len(La)):
+                    M[c,i] = La[i-c]
+                    if i > c:
+                        # Filling up the column c of the Matrix M
+                        M[i,c] = Lb[i-c-1]
+        M[sz-1,sz-1]=d-sum([M[j,sz-1] for j in rg(sz-1)])
+    return [M, HM(sz,sz,'one')-M-HM(2,sz,'kronecker')]
+
+def Random_d_regular_undirected_adjacencyHM(sz, d):
+    """
+    Outputs a complementary pair of undirected graphs where
+    the first graphs has vertex in-degree and out-degree
+    both equal to d for every vertex. While the second has
+    vertex in-degree and out-degree both equal to sz-d-1
+    for all of it's vertices.
+    Note that if sz is odd, then d must be even.
+    
+ 
+    EXAMPLES:
+    
+    ::
+    
+    sage: sz=5; [A,B]=Random_d_regular_undirected_adjacencyHM(sz,2)
+    sage: A.printHM()
+    [:, :]=
+    [0 1 1 0 0]
+    [1 0 0 1 0]
+    [1 0 0 0 1]
+    [0 1 0 0 1]
+    [0 0 1 1 0]
+    sage: (A*HM(sz,1,'one')).printHM()
+    [:, :]=
+    [2]
+    [2]
+    [2]
+    [2]
+    [2]
+    sage: (HM(1,sz,'one')*A).printHM()
+    [:, :]=
+    [2 2 2 2 2]
+    (A-A.transpose()).printHM()
+    [:, :]=
+    [0 0 0 0 0]
+    [0 0 0 0 0]
+    [0 0 0 0 0]
+    [0 0 0 0 0]
+    [0 0 0 0 0]
+    
+    
+    AUTHORS:
+    - Yan Jiang, Edinah K. Gnang
+    """
+    # Initializing the matrix to be filled
+    M = HM(sz,sz, 'zero'); M[sz-1,sz-1]=1
+    # List of regular graph on 2 vertices
+    while M[sz-1,sz-1]!=0 or M*HM(sz,1,'one') != HM(sz,1,'one')*d:
         for c in rg(sz-1):
             # Initializing the vector associated with the row c
             La = [0]+GenerateRandomOneZeroHM(sz-c-1,d-sum(M[c,j] for j in rg(c)))
-            # Initializing the vector associated with the column c
-            if sz-c-2 > 0:
-                Lb = [0]+GenerateRandomOneZeroHM(sz-c-2,d-sum(M[j,c] for j in rg(c+1)))
-            elif sz-c-2 == 0:
-                Lb=[0]
             # Loop which fills up the Matrix
             for i in range(c, c+len(La)):
-                if c > 0:
-                    # Filling up the row c of the Matrix M
-                    M[c,i] = La[i-c]
-                    if i > c:
-                        # Filling up the column c of the Matrix M
-                        M[i,c] = Lb[i-c-1]
-                else:
-                    # Filling up the row c of the Matrix M
-                    M[c,i] = La[i-c]
-                    if i > c:
-                        # Filling up the column c of the Matrix M
-                        M[i,c] = Lb[i-c-1]
+                # Filling up the row c of the Matrix M
+                M[c,i] = La[i-c]
+                if i > c:
+                    # Filling up the column c of the Matrix M
+                    M[i,c] = La[i-c]
         M[sz-1,sz-1]=d-sum([M[j,sz-1] for j in rg(sz-1)])
     return [M, HM(sz,sz,'one')-M-HM(2,sz,'kronecker')]
 
@@ -19127,6 +19186,80 @@ def ThirdOrderIndexRotation(A, Langle):
     else:
         raise ValueError, "Expected a cubic hypermatrix"
 
+def SecondOrderIndexMap(A):
+    """
+    The function perform a very special index map to the the the indices.
+    Ha is input second order hypermatrices and is assumed to be ?-diagonal
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=5; Ha=HM(sz, sz, 'a') # Initialization of the input Hypermatrix
+        sage: SecondOrderIndexMap(Ha).printHM()
+        [:, :]=
+        [      a00       a11       a22       a33       a44]
+        [        0 a01 + a10 a12 + a21 a23 + a32 a34 + a43]
+        [        0         0 a02 + a20 a13 + a31 a24 + a42]
+        [        0         0         0 a03 + a30 a14 + a41]
+        [        0         0         0         0 a04 + a40]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.is_cubical():
+        # Initialization of the matrix
+        sz=A.n(0); B=HM(sz,sz,'zero')
+        for i in rg(sz):
+            for j in rg(i+1):
+                if i == A.n(0)-1: 
+                    B[i,j]=A[i-j,A.n(1)-1-j]
+                    #B[j,i]=A[i-j,A.n(1)-1-j]
+                else:
+                    B[i,j]=A[i-j,A.n(1)-1-j]+A[A.n(1)-1-j,i-j]
+                    #B[j,i]=A[i-j,A.n(1)-1-j]+A[A.n(1)-1-j,i-j]
+        return B.index_rotation(2*(2*pi/4))
+    else:
+        raise ValueError, "The input matrices must be square."
+
+def SymmetricSecondOrderIndexMap(A):
+    """
+    The function perform a very special index map to the the the indices.
+    Ha is input second order hypermatrices and is assumed to be ?-diagonal
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=5; Ha=HM(sz, sz, 'a') # Initialization of the input Hypermatrix
+        sage: SymmetricSecondOrderIndexMap(Ha).printHM()
+        [:, :]=
+        [    a00     a11     a22     a33     a44]
+        [      0 a01*a10 a12*a21 a23*a32 a34*a43]
+        [      0       0 a02*a20 a13*a31 a24*a42]
+        [      0       0       0 a03*a30 a14*a41]
+        [      0       0       0       0 a04*a40]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.is_cubical():
+        # Initialization of the matrix
+        sz=A.n(0); B=HM(sz,sz,'zero')
+        for i in rg(sz):
+            for j in rg(i+1):
+                if i == A.n(0)-1: 
+                    B[i,j]=A[i-j,A.n(1)-1-j]
+                else:
+                    B[i,j]=A[i-j,A.n(1)-1-j]*A[A.n(1)-1-j,i-j]
+        return B.index_rotation(2*(2*pi/4))
+    else:
+        raise ValueError, "The input matrices must be square."
+
 def geometric_mean(L):
     """
     The function computes the geometric mean
@@ -19879,10 +20012,103 @@ def RootedTupleInducedTreeFunctionList(sz, induced_edge_label_sequence):
             Lf.append([(i,f[i]) for i in range(sz)])
     return Lf
 
+def NonDecreasingFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with non decreasing functions.
+
+    EXAMPLES:
+    ::
+        sage: NonDecreasingFunctionList(3)[0]
+        [[(0, 0), (1, 1), (2, 2)],
+         [(0, 1), (1, 1), (2, 2)],
+         [(0, 2), (1, 1), (2, 2)],
+         [(0, 0), (1, 2), (2, 2)],
+         [(0, 1), (1, 2), (2, 2)],
+         [(0, 2), (1, 2), (2, 2)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in range(sz)]; Lf=[]; Lg=[]
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Testing whether the candidate fucntion is non decreasing 
+        # Setting the boolean function
+        Decreasing = True
+        for i in rg(sz):
+            if f[i] < i:
+                Decreasing = False
+                break
+        # Appending the function to the list
+        if Decreasing == True:
+            Lf.append([(i, f[i]) for i in range(sz)])
+        else:
+            Lg.append([(i, f[i]) for i in range(sz)])
+    return [Lf, Lg]
+
+def NonIncreasingFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with non increasing functions.
+
+    EXAMPLES:
+    ::
+        sage: NonIncreasingFunctionList(3)[0]
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 0), (1, 1), (2, 0)],
+         [(0, 0), (1, 0), (2, 1)],
+         [(0, 0), (1, 1), (2, 1)],
+         [(0, 0), (1, 0), (2, 2)],
+         [(0, 0), (1, 1), (2, 2)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in range(sz)]; Lf=[]; Lg=[]
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    # Main loop performing the collecting the functions.
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Testing whether the candidate fucntion is non decreasing 
+        # Setting the boolean function
+        Increasing = True
+        for i in rg(sz):
+            if f[i] > i:
+                Increasing = False
+                break
+        # Appending the function to the list
+        if Increasing == True:
+            Lf.append([(i, f[i]) for i in range(sz)])
+        else:
+            Lg.append([(i, f[i]) for i in range(sz)])
+    return [Lf, Lg]
+
 def RootedTupleTreeNonIncreasingFunctionList(sz):
     """
     Goes through all the functions and determines which ones
-    are associated with trees.
+    are associated with trees and separates then according
+    to whether or they are non increasing
 
     EXAMPLES:
     ::
@@ -19931,7 +20157,7 @@ def RootedTupleTreeNonIncreasingFunctionList(sz):
 def RootedTupleTreeNonDecreasingFunctionList(sz):
     """
     Goes through all the functions and determines which ones
-    are associated with trees.
+    are associated with non decreasing functional trees.
 
     EXAMPLES:
     ::
@@ -20260,7 +20486,6 @@ def compose_with(f, g, sz, vrbl):
         x
         sage: compose_with(f4, f4, 3, x) - composition(f4, x, 2, 3)
         0
-
 
 
     AUTHORS:
@@ -20668,71 +20893,34 @@ def ModuloII(f, VrbL, Rlts):
 
 def GeneralHypermatrixFlatten(A, Rg, ord):
     """
-    Outputs the flatening of the input hypermatrix
-    the firts input is the hypermatrix to be flatten
-    the second input corresponds to the index which
-    are left unchanged and the third input is the
-    desired hypermatrix order.
-    when flatening to order 1 the result is a list
-    In the example GeneralHypermatrixFlatten(A, [0,1], 2)
-    the input 0 tells us that we are picking the roof of
-    the cube on the other hand the input 1 tells that we
-    are flattening the matrix along the columns in the matrix
-    the flattening of higher order hypermatrices is obrained recursively 
-
+    Outputs a lower order flattened hypermatrix of the higher order input. 
+    The first input is the hypermatrix to be flattened. The second input 
+    corresponds to the indices that will remain unchanged after flattening. 
+    The third input is the order of the desired output hypermatrix. When 
+    flatten an higher order input hypermatrix to order 1, the result is a list.
+    
+    In the example of GeneralHypermatrixFlatten(A, [0, 1], 2) for flattening 
+    the order 3 hypermatrix A into a matrix, the input [0, 1] tells us that the
+    column and the row indices will be left unchanged, and we are stacking depth 
+    slices along the row direction. 
+    
+    The flattening of hypermatrices with ord>2 is obtained recursively.
 
     EXAMPLES:
- 
-    ::
 
-        sage: sz=3; A=HM(sz,sz,'a')
-        sage: GeneralHypermatrixFlatten(A, [0], 1)
-        [a00, a10, a20, a01, a11, a21, a02, a12, a22]
-        sage: GeneralHypermatrixFlatten(A, [1], 1)
-        [a00, a01, a02, a10, a11, a12, a20, a21, a22]
-        sage: sz=2; B=HM(sz,sz,sz,'b')
-        sage: GeneralHypermatrixFlatten(B, [0], 1)
-        [b000, b100, b010, b110, b001, b101, b011, b111]
-        sage: GeneralHypermatrixFlatten(B, [1], 1)
-        [b000, b010, b001, b011, b100, b110, b101, b111]
+    ::
+        sage: sz=3; A=HM(sz,sz,sz,'a')
+        sage: GeneralHypermatrixFlatten(A, [0, 1], 2).dimensions()
+        [3, 9]
+        sage: GeneralHypermatrixFlatten(A, [0, 1], 2).printHM()
+        [:, :]=
+        [a000 a010 a020 a001 a011 a021 a002 a012 a022]
+        [a100 a110 a120 a101 a111 a121 a102 a112 a122]
+        [a200 a210 a220 a201 a211 a221 a202 a212 a222]
+        sage: sz=2, B=HM(sz,sz,sz,'b')
         sage: GeneralHypermatrixFlatten(B, [2], 1)
         [b000, b001, b100, b101, b010, b011, b110, b111]
-        sage: A=HM(2,2,2,2,'a')
-        sage: GeneralHypermatrixFlatten(A, [0,0,0], 3).dimensions()
-        [2, 1, 8]
-        sage: GeneralHypermatrixFlatten(A, [0,0,0], 3).printHM()
-        [:, :, 0]=
-        [a0000]
-        [a1000]
-        <BLANKLINE>
-        [:, :, 1]=
-        [a0100]
-        [a1100]
-        <BLANKLINE>
-        [:, :, 2]=
-        [a0010]
-        [a1010]
-        <BLANKLINE>
-        [:, :, 3]=
-        [a0110]
-        [a1110]
-        <BLANKLINE>
-        [:, :, 4]=
-        [a0001]
-        [a1001]
-        <BLANKLINE>
-        [:, :, 5]=
-        [a0101]
-        [a1101]
-        <BLANKLINE>
-        [:, :, 6]=
-        [a0011]
-        [a1011]
-        <BLANKLINE>
-        [:, :, 7]=
-        [a0111]
-        [a1111]
-        <BLANKLINE>       
+ 
  
 
     AUTHORS:
