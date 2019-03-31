@@ -19207,46 +19207,8 @@ def SecondOrderIndexMap(A):
             for j in rg(i+1):
                 if i == A.n(0)-1: 
                     B[i,j]=A[i-j,A.n(1)-1-j]
-                    #B[j,i]=A[i-j,A.n(1)-1-j]
                 else:
                     B[i,j]=A[i-j,A.n(1)-1-j]+A[A.n(1)-1-j,i-j]
-                    #B[j,i]=A[i-j,A.n(1)-1-j]+A[A.n(1)-1-j,i-j]
-        return B.index_rotation(2*(2*pi/4))
-    else:
-        raise ValueError, "The input matrices must be square."
-
-def SymmetricSecondOrderIndexMap(A):
-    """
-    The function perform a very special index map to the the the indices.
-    Ha is input second order hypermatrices and is assumed to be ?-diagonal
-
-
-    EXAMPLES:
-
-    ::
-
-        sage: sz=5; Ha=HM(sz, sz, 'a') # Initialization of the input Hypermatrix
-        sage: SymmetricSecondOrderIndexMap(Ha).printHM()
-        [:, :]=
-        [    a00     a11     a22     a33     a44]
-        [      0 a01*a10 a12*a21 a23*a32 a34*a43]
-        [      0       0 a02*a20 a13*a31 a24*a42]
-        [      0       0       0 a03*a30 a14*a41]
-        [      0       0       0       0 a04*a40]
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    if A.is_cubical():
-        # Initialization of the matrix
-        sz=A.n(0); B=HM(sz,sz,'zero')
-        for i in rg(sz):
-            for j in rg(i+1):
-                if i == A.n(0)-1: 
-                    B[i,j]=A[i-j,A.n(1)-1-j]
-                else:
-                    B[i,j]=A[i-j,A.n(1)-1-j]*A[A.n(1)-1-j,i-j]
         return B.index_rotation(2*(2*pi/4))
     else:
         raise ValueError, "The input matrices must be square."
@@ -19805,7 +19767,7 @@ def RepresentativeTupleFunctionList(sz):
     for tp in L:
         nwT=True
         for i in range(len(cL)):
-            if Tuple2DiGraph(tp,sz).is_isomorphic(TupleToDiGraph(cL[i],sz)):
+            if Tuple2DiGraph(tp,sz).is_isomorphic(Tuple2DiGraph(cL[i],sz)):
                 nwT=False
                 break
         if nwT==True:
@@ -19859,7 +19821,7 @@ def RepresentativePermutationFunctionList(sz):
     for tp in L:
         nwT=True
         for i in range(len(cL)):
-            if TupleToDiGraph(tp,sz).is_isomorphic(TupleToDiGraph(cL[i],sz)):
+            if Tuple2DiGraph(tp,sz).is_isomorphic(Tuple2DiGraph(cL[i],sz)):
                 nwT=False
                 break
         if nwT==True:
@@ -19890,6 +19852,9 @@ def RootedTupleTreeFunctionList(sz):
         ....:
         sage: sum(prod(A[t[0],t[1]] for t in tp) for tp in RootedTupleTreeFunctionList(sz))
         a00*a10*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a01*a11*a20*x0*x1*x2*y0^2*y1*z1^2*z2 + a02*a10*a22*x0*x1*x2*y0^2*y1*z1^2*z2 + a00*a12*a20*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a11*a21*x0*x1*x2*y0*y1^2*z1*z2^2 + a02*a12*a22*x0*x1*x2*y0*y1^2*z1*z2^2 + a00*a10*a21*x0*x1^2*y0*y1*z1*z2 + a01*a11*a21*x0*x1^2*y0*y1*z1*z2 + a01*a12*a22*x0*x1^2*y0*y1*z1*z2
+        sage: sz=5; X=HM(sz,1,var_list('x',sz)); Y=HM(1,sz,var_list('y',sz)); A=X*Y # Quick demonstration of Cayley's Theorem
+        sage: factor(sum(prod(A[t[0],t[1]] for t in tp) for tp in RootedTupleTreeFunctionList(sz)))
+        (y0^2 + y1^2 + y2^2 + y3^2 + y4^2)*x0*x1*x2*x3*x4*(y0 + y1 + y2 + y3 + y4)^3
 
 
     AUTHORS:
@@ -19923,13 +19888,14 @@ def RootedTupleTreeFunctionList(sz):
 def RepresentativeRootedTupleTreeFunctionList(sz):
     """
     Goes through all the functions and determines which ones
-    are associated with trees.
+    are associated with trees. The method returns only one
+    per isomorphism equivalence class
+
 
     EXAMPLES:
     ::
         sage: RepresentativeRootedTupleTreeFunctionList(3)
         [[(0, 0), (1, 0), (2, 0)], [(0, 1), (1, 1), (2, 0)]]
-
 
 
     AUTHORS:
@@ -19943,7 +19909,7 @@ def RepresentativeRootedTupleTreeFunctionList(sz):
     for tp in L:
         nwT=True
         for i in range(len(cL)):
-            if TupleToDiGraph(tp,sz).is_isomorphic(TupleToDiGraph(cL[i],sz)):
+            if Tuple2DiGraph(tp,sz).is_isomorphic(Tuple2DiGraph(cL[i],sz)):
                 nwT=False
                 break
         if nwT==True:
