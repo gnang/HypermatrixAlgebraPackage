@@ -1481,9 +1481,9 @@ class HM:
     def mod(self, m):
         return apply(HM, self.dimensions()+[[Integer(mod(self.list()[i], m)) for i in rg(prod(self.dimensions()))]])
 
-    def adjoint(self):
+    def adjugate(self):
         if self.order()==2:
-            return Matrix2HM((self.matrix()).adjoint())
+            return Matrix2HM((self.matrix()).adjugate())
         else:
             raise ValueError, "Expects a second order hypermatrix"
 
@@ -7636,7 +7636,9 @@ def Random_d_regular_undirected_adjacencyHM(sz, d):
     both equal to d for every vertex. While the second has
     vertex in-degree and out-degree both equal to sz-d-1
     for all of it's vertices.
-    Note that if sz is odd, then d must be even.
+    Note that if sz is odd, then d must be even because
+    2*|E| = sz * d in case both d and sz are odd we have
+    a contradictions
     
  
     EXAMPLES:
@@ -10892,17 +10894,34 @@ def SubsTBool(T, Lx, Lv):
     - Edinah K. Gnang and Doron Zeilberger
     """
     if type(T) == type(x):
-        return T.subs([Lx[i]==Lv[i] for i in rg(len(Lx))])
+        return T.subs([Lx[i] == Lv[i] for i in rg(len(Lx))])
     elif T == 1:
         return 1
     elif T == 0:
         return 0
     elif T[0] == 'OR':
-        return SubsTBool(T[1], Lx, Lv) or SubsTBool(T[2], Lx, Lv)
+        if type(T[1]) == type(x) and type(T[2]) == type(x):
+            return T[1].subs([Lx[u]==Lv[u] for u in rg(len(Lx))]) or T[2].subs([Lx[u]==Lv[u] for u in rg(len(Lx))])
+        elif type(T[1]) == type(x) and type(T[2]) != type(x):
+            return T[1].subs([Lx[u]==Lv[u] for u in rg(len(Lx))]) or SubsTBool(T[2], Lx, Lv)
+        elif type(T[1]) != type(x) and type(T[2]) == type(x):
+            return SubsTBool(T[1], Lx, Lv) or T[2].subs([Lx[u]==Lv[u] for u in rg(len(Lx))])
+        else:
+            return SubsTBool(T[1], Lx, Lv) or SubsTBool(T[2], Lx, Lv)
     elif T[0] == 'AND':
-        return SubsTBool(T[1], Lx, Lv) and SubsTBool(T[2], Lx, Lv)
+        if type(T[1]) == type(x) and type(T[2]) == type(x):
+            return T[1].subs([Lx[u]==Lv[u] for u in rg(len(Lx))]) and T[2].subs([Lx[u]==Lv[u] for u in rg(len(Lx))])
+        elif type(T[1]) == type(x) and type(T[2]) != type(x):
+            return T[1].subs([Lx[u]==Lv[u] for u in rg(len(Lx))]) and SubsTBool(T[2], Lx, Lv)
+        elif type(T[1]) != type(x) and type(T[2]) == type(x):
+            return SubsTBool(T[1], Lx, Lv) and T[2].subs([Lx[u]==Lv[u] for u in rg(len(Lx))])
+        else:
+            return SubsTBool(T[1], Lx, Lv) and SubsTBool(T[2], Lx, Lv)
     elif T[0] == 'NOT':
-        return Integer(not SubsTBool(T[1], Lx, Lv) )
+        if type(T[1]) == type(x):
+            return Integer(not T[1].subs([Lx[u]==Lv[u] for u in rg(len(Lx))]))
+        else:
+            return Integer(not SubsTBool(T[1], Lx, Lv))
     else:
         print 'IMPROPER INPUT !!!'
 
@@ -10918,8 +10937,8 @@ def Bool2HM(T):
 
         sage: Bool2HM(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]]).printHM()
         [:, :]=
-        [0 0]
-        [1 1]
+        [0 1]
+        [0 1]
 
 
     AUTHORS:
@@ -10939,7 +10958,12 @@ def Bool2HM(T):
         for k in range(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Rh[tuple(entry)]=SubsTBool(T, VariablesBool(T).list(), entry)
+        # Sorting the list of variables
+        if VariablesBool(T).cardinality() == 1:
+            LstVar=VariablesBool(T).list()
+        else:
+            LstVar=sum(VariablesBool(T)).operands()
+        Rh[tuple(entry)]=SubsTBool(T, LstVar, entry)
     return Rh
 
 def Bool2Integer(T):
@@ -10954,6 +10978,14 @@ def Bool2Integer(T):
 
         sage: Bool2Integer(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]])
         10
+        sage: X=var_list('x',2); Bool2Integer(x0)
+        2
+        sage: Bool2Integer(['NOT', x0])
+        1
+        sage: Bool2Integer(['OR', x0, ['NOT', x0]])
+        3
+        sage: Bool2Integer(['AND', x0, ['NOT', x0]])
+        0
 
 
     AUTHORS:
@@ -10961,23 +10993,11 @@ def Bool2Integer(T):
     """
     # Initialization of the list of evaliations
     L=Bool2HM(T).list()
-    return sum(L[i]*2^i for i in rg(len(L)))
-    # Initialization of the list specifying the dimensions of the output
-    l = [2 for i in rg(CountVariablesBool(T))]
-    # Initializing the input for generating a symbolic hypermatrix
-    inpts = l+['zero']
-    # Initialization of the hypermatrix
-    Rh = HM(*inpts)
-    # Main loop performing the transposition of the entries
-    for i in range(prod(l)):
-        # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[0]))]
-        sm = Integer(mod(i,l[0]))
-        for k in range(len(l)-1):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
-            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        Rh[tuple(entry)]=SubsTBool(T, VariablesBool(T).list(), entry)
-    return Rh
+    if CountVariablesBool(T) == 1:
+        return sum(L[i]*2^i for i in rg(len(L)))
+    else: 
+        # Adding up the geomertric like sum 
+        return sum(2^(2^k) for k in rg(1,CountVariablesBool(T)))+sum(L[i]*2^i for i in rg(len(L)))
 
 def BoolTsize(T):
     """
@@ -11000,6 +11020,8 @@ def BoolTsize(T):
     """
     if type(T)==type(x):
         return 1
+    elif T[0]=='NOT':
+        return 1+BoolTsize(T[1])
     elif T==0:
         return 1
     elif T==1:
@@ -11020,6 +11042,35 @@ def ReducedNonMonotoneBooleanFormula(SZ):
 
         sage: ReducedNonMonotoneBooleanFormula(3)[0]
         [[], [x0], [['NOT', x0]], []]
+        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormula(sz)[0]
+        sage: Lr = [[] for i in rg(len(A))]
+        sage: for i in rg(len(A)):
+        ....:     if len(A[i])>0:
+        ....:         for T in A[i]:
+        ....:             Lr[i].append((T, Bool2Integer(T)))
+        ....:
+        sage: Lr
+        [[],
+         [(x0, 2)],
+         [(['NOT', x0], 1)],
+         [(['AND', x0, x1], 12), (['OR', x0, x1], 18)],
+         [(['AND', x0, ['NOT', x0]], 0),
+          (['AND', x0, ['NOT', x1]], 8),
+          (['AND', ['NOT', x0], x1], 6),
+          (['OR', x0, ['NOT', x0]], 3),
+          (['OR', x0, ['NOT', x1]], 17),
+          (['OR', ['NOT', x0], x1], 15),
+          (['NOT', ['AND', x0, x1]], 11),
+          (['NOT', ['OR', x0, x1]], 5)],
+         [(['AND', x0, ['AND', x1, x2]], 148),
+          (['AND', x0, ['OR', x0, x1]], 16),
+          (['AND', x0, ['OR', x1, x2]], 244),
+          (['AND', ['OR', x0, x1], x1], 14),
+          (['AND', ['OR', x0, x1], x2], 188),
+          (['OR', x0, ['AND', x1, x2]], 268),
+          (['OR', x0, ['OR', x1, x2]], 274),
+          (['OR', ['AND', x0, x1], x2], 254)]]
+
 
     AUTHORS:
     - Edinah K. Gnang and Doron Zeilberger
@@ -11043,16 +11094,17 @@ def ReducedNonMonotoneBooleanFormula(SZ):
             for i in rg(1,sz-1):
                 for s in A[i]:
                     for t in A[sz-i-1]:
-                        if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Bool2Integer(['AND',s,IncrementVariablesBool(t,CountVariablesBool(s))]) in L:
-                            A[sz].append(['AND', s, IncrementVariablesBool(t, CountVariablesBool(s))])
-                            L.append(Bool2Integer(['AND', s, IncrementVariablesBool(t, CountVariablesBool(s))]))
+                        for j in rg(CountVariablesBool(s)+1):
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Bool2Integer(['AND', s, IncrementVariablesBool(t,j)]) in L:
+                                A[sz].append(['AND', s, IncrementVariablesBool(t,j)])
+                                L.append(Bool2Integer(['AND', s, IncrementVariablesBool(t,j)]))
             for i in range(1,sz-1):
                 for s in A[i]:
                     for t in A[sz-i-1]:
-                        if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Bool2Integer(['OR',s,IncrementVariablesBool(t,CountVariablesBool(s))]) in L:
-                            A[sz].append(['OR', s, IncrementVariablesBool(t, CountVariablesBool(s))])
-                            L.append(Bool2Integer(['OR', s, IncrementVariablesBool(t, CountVariablesBool(s))]))
-                A[sz]=A[sz]+[['OR',s,t] for s in A[i] for t in A[sz-i-1] if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Bool2Integer(['OR',s,t]) in L]
+                        for j in rg(CountVariablesBool(s)+1):
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Bool2Integer(['OR', s, IncrementVariablesBool(t,j)]) in L:
+                                A[sz].append(['OR', s, IncrementVariablesBool(t,j)])
+                                L.append(Bool2Integer(['OR', s, IncrementVariablesBool(t,j)]))
             for s in A[sz-1]:
                 if (len(A[sz-1])>0) and not Bool2Integer(['NOT',s]) in L:
                     A[sz].append(['NOT', s])
@@ -19186,6 +19238,96 @@ def ThirdOrderIndexRotation(A, Langle):
     else:
         raise ValueError, "Expected a cubic hypermatrix"
 
+def SelectThirdOrderIndexRotation(A, Langle, EntryList):
+    """
+    The function takes a 3rd order hypermatrix and performs
+    an index rotation  of the select indices specified by the 
+    EntryList input around the axis specified in the Row,
+    Column and Depth order specified by the input list angles.
+    This implement only handles cubic hypermatrices. In case
+    the hypermatrix is not cubic zeropadd to a cubic hypermatrix.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; A=HM(sz, sz, sz, 'a')
+        sage: Langle=[2*pi/4, 0, 0]
+        sage: SelectThirdOrderIndexRotation(A, Langle, rg(sz)).printHM()
+        [:, :, 0]=
+        [a100 a110]
+        [a101 a111]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a000 a010]
+        [a001 a011]
+        <BLANKLINE>
+        sage: sz=4; A=HM(sz, sz, sz, 'a')
+        sage: Langle=[2*pi/4, 0, 0]
+        sage: SelectThirdOrderIndexRotation(A, Langle, [0,1]).printHM()
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Fan Tian 
+    - To Do: Implement the arbitrary order version
+    """
+    if A.is_cubical():
+        # Sorting the EntryList
+        EntryList.sort()
+        sz=A.n(0); TmpB=HM(len(EntryList),len(EntryList),len(EntryList),[A[i,j,k] for k in EntryList for j in EntryList for i in EntryList]).index_rotation(Langle)
+        B=A.copy()
+        for i in rg(len(EntryList)):
+            for j in rg(len(EntryList)):
+                for k in rg(len(EntryList)):
+                    B[EntryList[i], EntryList[j], EntryList[k]]=TmpB[i,j,k]
+        return B
+    else:
+        raise ValueError, "Expected a cubic hypermatrix and the entry list must be smaller then the side length."
+
+def SelectSecondOrderIndexRotation(Ha, T, EntryList):
+    """
+    The function perform the rotation of angle T for the 
+    selected indices specified by the EntryList input.
+    Ha is input second order hypermatrices.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=5; Ha=HM(sz,sz,'a') # Initialization of the input Hypermatrix
+        sage: (Ha.tumble()-SelectSecondOrderIndexRotation(Ha, 2*pi/4, rg(sz))).is_zero()
+        True
+        sage: sz=6; Ha=HM(sz,sz,'a') # Initialization of the input Hypermatrix
+        sage: (Ha.tumble()-SelectSecondOrderIndexRotation(Ha, 2*pi/4, rg(sz))).is_zero()
+        True
+        sage: sz=5; Ha=HM(sz,sz,'a')
+        SelectSecondOrderIndexRotation(Ha, 2*pi/4, [0,1]).printHM()
+        [:, :]=
+        [         0          0          0          0          0]
+        [         0  a11 - a31          0 -a11 + a13          0]
+        [         0          0          0          0          0]
+        [         0  a31 - a33          0 -a13 + a33          0]
+        [         0          0          0          0          0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Ha.is_cubical() and len(EntryList) <= Ha.n(0):
+        # Sorting the EntryList
+        EntryList.sort()
+        # Initialization of the matrix
+        sz=Ha.n(0); TmpB=HM(len(EntryList),len(EntryList),[Ha[i,j] for j in EntryList for i in EntryList]).index_rotation(T)
+        B=Ha.copy()
+        for i in rg(len(EntryList)):
+            for j in rg(len(EntryList)):
+                B[EntryList[i], EntryList[j]]=TmpB[i,j]
+        return B
+    else:
+        raise ValueError, "The input matrices must be square and the entry list must be smaller then the side length."
+
 def SecondOrderIndexMap(A):
     """
     The function perform a very special index map to the the the indices.
@@ -19864,6 +20006,7 @@ def RootedTupleTreeFunctionList(sz):
         sage: sz=5; X=HM(sz,1,var_list('x',sz)); Y=HM(1,sz,var_list('y',sz)); A=X*Y # Quick demonstration of Cayley's Theorem
         sage: factor(sum(prod(A[t[0],t[1]] for t in tp) for tp in RootedTupleTreeFunctionList(sz)))
         (y0^2 + y1^2 + y2^2 + y3^2 + y4^2)*x0*x1*x2*x3*x4*(y0 + y1 + y2 + y3 + y4)^3
+        sage: sz=5; A=HM(sz,sz,'a'); F=sum(prod(A[t[0],t[1]] for t in tp) for tp in RootedTupleTreeFunctionList(sz))
 
 
     AUTHORS:
@@ -19981,7 +20124,9 @@ def RootedTupleInducedTreeFunctionList(sz, induced_edge_label_sequence):
 def NonDecreasingFunctionList(sz):
     """
     Goes through all the functions and determines which ones
-    are associated with non decreasing functions.
+    are associated with pointwise non decreasing functions.
+    They capture the isomorphism class of all spanning union
+    of functional trees.
 
     EXAMPLES:
     ::
@@ -20024,10 +20169,29 @@ def NonDecreasingFunctionList(sz):
             Lg.append([(i, f[i]) for i in range(sz)])
     return [Lf, Lg]
 
+def DecreasingFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with pointwise decreasing functions.
+
+    EXAMPLES:
+    ::
+        sage: DecreasingFunctionList(3)
+        [[(0, 0), (1, 0), (2, 0)], [(0, 0), (1, 0), (2, 1)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=HM(sz,sz,'a')
+    return [Monomial2Tuple(mnm, A.list(), sz) for mnm in expand(A[0,0]*prod(sum(A[i,j] for j in rg(i)) for i in rg(1,sz))).operands()]
+
 def NonIncreasingFunctionList(sz):
     """
     Goes through all the functions and determines which ones
     are associated with non increasing functions.
+    They capture the isomorphism class of all spanning
+    unions of functional trees.
 
     EXAMPLES:
     ::
@@ -20069,6 +20233,45 @@ def NonIncreasingFunctionList(sz):
         else:
             Lg.append([(i, f[i]) for i in range(sz)])
     return [Lf, Lg]
+
+def TupleComplementaryLabel(T):
+    """
+    Returns the tuple encoding of the involuted labeling
+    This implementation does not assume that the tuple is rooted at 0.
+
+    EXAMPLES:
+
+    ::
+
+        sage: T=[(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)]
+        sage: TupleComplementaryLabel(T)
+        [(0, 4), (1, 4), (2, 0), (3, 2), (4, 4)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    sz=len(T)
+    tp=[(sz-1-t[0], sz-1-t[1]) for t in T]
+    tp.sort()
+    return tp
+
+def IncreasingFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with pointwise increasing functions.
+
+    EXAMPLES:
+    ::
+        sage: IncreasingFunctionList(3)
+        [[(0, 2), (1, 2), (2, 2)], [(0, 1), (1, 2), (2, 2)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=HM(sz,sz,'a')
+    return [TupleComplementaryLabel(Monomial2Tuple(mnm, A.list(), sz)) for mnm in expand(A[0,0]*prod(sum(A[i,j] for j in rg(i)) for i in rg(1,sz))).operands()]
 
 def RootedTupleTreeNonIncreasingFunctionList(sz):
     """
@@ -20906,4 +21109,93 @@ def GeneralHypermatrixFlatten(A, Rg, ord):
     elif ord == 5:
         return HM([GeneralHypermatrixFlatten(A.slice([t],Rg[0]),[Rg[1],Rg[2],Rg[3],Rg[4]],4).listHM() for t in rg(A.n(Rg[0]))])
 
+def KroneckerVectorOuterProduct(*args):
+    """
+    Outputs the hypermatrix resulting from the outer product
+    of properly embeded and orriented vectors. The input
+    are column vector of any order. This operation is motivated
+    by the classical vector outer-product.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: U=HM(2,1,var_list('u',3)); V=HM(3,1,var_list('v',3)); W=HM(4,1,var_list('w',4))
+        sage: KroneckerVectorOuterProduct(U, V, W).printHM()
+        [:, :, 0]=
+        [u0*v0*w0 u0*v1*w0 u0*v2*w0]
+        [u1*v0*w0 u1*v1*w0 u1*v2*w0]
+        
+        [:, :, 1]=
+        [u0*v0*w1 u0*v1*w1 u0*v2*w1]
+        [u1*v0*w1 u1*v1*w1 u1*v2*w1]
+        
+        [:, :, 2]=
+        [u0*v0*w2 u0*v1*w2 u0*v2*w2]
+        [u1*v0*w2 u1*v1*w2 u1*v2*w2]
+        
+        [:, :, 3]=
+        [u0*v0*w3 u0*v1*w3 u0*v2*w3]
+        [u1*v0*w3 u1*v1*w3 u1*v2*w3]
+        sage: U=HM(2,1,var_list('u',3)); V=HM(3,1,var_list('v',3))
+        sage: KroneckerVectorOuterProduct(U, V).printHM()
+        [:, :]=
+        [u0*v0 u0*v1 u0*v2]
+        [u1*v0 u1*v1 u1*v2]
+
+
+    AUTHORS: Edinah Gnang and Fan Tian
+    - To Do: 
+    """
+    if len(args) == 2:
+        return Prod(HM((args[0]).n(0),1,(args[0]).list()), HM((args[1]).n(0),1,(args[1]).list()).transpose())
+    else:
+        # Initialization of the canonical embeding into vectors of the appropriate order.
+        Lv = [apply(HM,[(args[i]).n(0)]+[1 for j in rg(len(args)-1)]+[(args[i]).list()]) for i in rg(len(args))]
+        # Initialization of the list hypermatrix slices of the appropriate orders.
+        Lh=[Lv[j].tensor_product(apply(HM,[1,1]+[(args[i]).n(0) for i in rg(2,len(args))]+['one'])) for j in rg(len(args))]
+        # returning the BM product of the appropriately orriented slices
+        return apply(Prod,[Lh[i].transpose(len(args)-i) for i in rg(len(args))])
+
+def HypermatrixList(bnd, DmsL):
+    """
+    Outputs a list of all hypermatrix with entries
+    in {0,1,2,...,bnd-1} of size specified by the list DmsL
+    This fucntion is motivated by the study of hypermatrices
+    with elements from a finite field.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: L=HypermatrixList(2,[2,2,2])
+        sage: L[0].printHM()
+        [:, :, 0]=
+        [0 0]
+        [0 0]
+        
+        [:, :, 1]=
+        [0 0]
+        [0 0]
+
+
+    AUTHORS: Edinah Gnang 
+    - To Do: 
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l=[bnd for i in rg(prod(DmsL))]
+    # Initialization of the list of Hypermatrices
+    Lh=[]
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Lh.append(apply(HM,DmsL+[entry]))
+    return Lh
 
