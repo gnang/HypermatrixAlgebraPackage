@@ -149,9 +149,8 @@ class HM:
                 # Initialization of the size parameter
                 sz=len(dims[1])
                 Id=HM(2,sz,'kronecker')
-                self.hm=sum(HM(sz,1,[Id[i,dims[1][k]] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz)).listHM()
-            elif dims[0]==3:
-                self.hm=HypermatrixPermutation(dims[1])
+                # The permutation acts on columns
+                self.hm=sum(HM(sz,1,[Id[i,dims[1][k]] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz)).transpose().listHM()
             else:
                 raise ValueError, "not supported for order %d hypermatrices" % len(dims)
         elif s == 'kronecker':
@@ -2865,43 +2864,6 @@ def Lagrange(X):
         L.append([X[i]-X[j] for j in tmpl]+[1 for k in range(sz-len(tmpl))]) 
     return HM(L) 
 
-def HypermatrixPermutation(s):
-    """
-    Generates a list of lists associated with the permutation
-    hypermatrix deduced from sigma. Note that as a result of 
-    the  non associativity, permutations must be performed as
-    one transposition at a time.
-
-    EXAMPLES:
-
-    ::
-
-        sage: P = HypermatrixPermutation([0,2,1]); P
-        [[[1, 0, 0], [0, 0, 1], [0, 1, 0]], [[1, 0, 0], [0, 0, 1], [0, 1, 0]], [[1, 0, 0], [0, 0, 1], [0, 1, 0]]]
-
-
-    AUTHORS:
-    - Edinah K. Gnang and Ori Parzanchevski
-    """
-    n = len(s)
-    # Setting the dimensions parameters.
-    n_q_rows = n
-    n_q_cols = n
-    n_q_dpts = n
-    # Test for dimension match
-    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
-        # Initialization of the hypermatrix
-        q = []
-        T = HypermatrixKroneckerDelta(n)
-        U = HypermatrixGenerateAllOne(n,n,n)
-        Id= HypermatrixProduct(U,U,T)
-        Id= HypermatrixCyclicPermute(Id)
-        for i in range(n):
-            q.append(Id[s[i]])
-        return HypermatrixCyclicPermute(HypermatrixCyclicPermute(q))
-    else :
-        raise ValueError, "Input dimensions "+str(n)+" must be a non-zero positive integer."
-
 def DiagonalHypermatrix(Mtrx):
     """
     Outputs a diagonal third order hypermatrix
@@ -2978,8 +2940,8 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the Permutation hypermatrix
-    P=HM(3,[1,0],'perm')
-    return Prod(HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]), P, P.transpose())
+    P,Q=HypermatrixSn([1,0])
+    return Prod(HM([[[cos(t)^(2/3), -x*sin(t)^(2/3)], [sin(t)^(2/3), y*cos(t)^(2/3)]], [[1/x, cos(t)^(2/3)], [1/y, sin(t)^(2/3)]]]), Q.transpose(), P.transpose())
 
 def Orthogonal2x2x2HypermatrixIII(t,x,y):
     """
@@ -5503,6 +5465,100 @@ def GProdIII(Lh, Op, F):
     """
     return GeneralHypermatrixProductII(Lh, Op, F)
 
+def CProd(Lh, Op, F):
+    """
+    Outputs an HM which is a list of lists associated with the
+    construct approach to the Bhattacharya-Mesner product of the input
+    hypermatrices. Here Op is the combinator and F is the composer.
+    This implementation in theory captures the full scope of
+    the construct products subsequently implemented here but in 
+    practice is hard for to specify arbitrary composers for F.
+    The code only handles the Hypermatrix HM class objects.
+    This implementation comes in handy for combinatorial constructs
+    such as shortest path problems and set valued constructs.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=CProd([Ha, Hb, Hc], prod, sum); Rslt.printHM()
+        [:, :, 0]=
+        [(a000 + b000 + c000)*(a010 + b001 + c100) (a000 + b010 + c010)*(a010 + b011 + c110)]
+        [(a100 + b100 + c000)*(a110 + b101 + c100) (a100 + b110 + c010)*(a110 + b111 + c110)]
+        <BLANKLINE>
+        [:, :, 1]=
+        [(a001 + b000 + c001)*(a011 + b001 + c101) (a001 + b010 + c011)*(a011 + b011 + c111)]
+        [(a101 + b100 + c001)*(a111 + b101 + c101) (a101 + b110 + c011)*(a111 + b111 + c111)]        
+        <BLANKLINE>
+        sage: Rslt=CProd([Ha, Hb, Hc], sum, prod); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        <BLANKLINE>
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); CProd([Ha, Hb], sum, prod)
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); CProd([Ha, Hb], prod, Exp)
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+        sage: Ha=HM(2,2,'a'); Hb=HM(2,2,'b'); CProd([Ha, Hb], prod, BaseExp)
+        [[b00^a00*b10^a01, b01^a00*b11^a01], [b00^a10*b10^a11, b01^a10*b11^a11]]
+        sage: A=HM([[59, -3, 2], [-6, 1, 1], [1, -1, 1]]); B=HM([[-1, 1, 0], [-1, 1, 0], [0, -43, 1]])
+        sage: CProd([A, B], sum, prod)-A*B # One way of recovering matrix multiplication
+        [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        sage: CProd([A, B], min, sum) # Recovering the Min-plus matrix multiplication
+        [[-4, -41, -3], [-7, -42, -6], [-2, -42, -1]]
+        sage: MSta=HM([[Set([1,2]), Set([1,3,2])], [Set([1]), Set([2,3])]])
+        sage: MStb=HM([[Set([1,2,3]), Set([2])], [Set([1,3]), Set([1,3])]])
+        sage: CProd([MSta, MStb], SetIntersection, SetUnion) 
+        [[{1, 2, 3}, {1, 2}], [{1, 2, 3}, {1, 2}]]
+        sage: CProd([MSta, MStb], SetUnion, SetIntersection)
+        [[{1, 2, 3}, {1, 2, 3}], [{1, 3}, {3}]]
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); Lc=var_list('c',sz); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]),La+Lx+Lb+Lc+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, c0, c1, c2, z>=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]))
+        sage: Ha=HM(1,l,sz,[a00, a10, a20, a01, a11, a21])
+        sage: Hx=HM(1,1,l,[x0, x1]) 
+        sage: Hb=HM(l,1,sz,[b00, b10, b20, b01, b11, b21])
+        sage: CProd([Ha, Hx, Hb], sum, prod).printHM()
+        [:, :, 0]=
+        [a00*x0*b00 + a10*x1*b10]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a20*x0*b20 + a01*x1*b01]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a11*x0*b11 + a21*x1*b21]
+        <BLANKLINE>
+        sage: Ca=HM(2,2,[HM(1,1,[var('a00')]), HM(1,1,[var('a10')]), HM(1,1,[var('a01')]), HM(1,1,[var('a11')])])
+        sage: Cb=HM(2,2,[HM(1,1,[var('b00')]), HM(1,1,[var('b10')]), HM(1,1,[var('b01')]), HM(1,1,[var('b11')])])
+        sage: CProd([Ca, Cb], DirectSum, TensorProduct)[0,0].printHM()
+        [:, :]=
+        [a00*b00       0]
+        [      0 a01*b10]
+        sage: CProd([Ca, Cb], DirectSum, TensorProduct)[0,1].printHM()
+        [:, :]=
+        [a00*b01       0]
+        [      0 a01*b11]
+        sage: CProd([Ca, Cb], DirectSum, TensorProduct)[1,0].printHM()
+        [:, :]=
+        [a10*b00       0]
+        [      0 a11*b10]
+        sage: CProd([Ca, Cb], DirectSum, TensorProduct)[1,1].printHM()
+        [:, :]=
+        [a10*b01       0]
+        [      0 a11*b11]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductII(Lh, Op, F)
+
 def GProdB(Lh, Op, F):
     """
     Outputs an HM whose entries are themselves hypermatrices
@@ -7229,7 +7285,148 @@ def ZeroPadding(A):
         Rh[tuple(entry)]=A[tuple(entry)]
     return Rh
 
-def GenerateUnitLpNormVector(n,p = 2,indx=0):
+def Permutation_to_PseudoTuple(M):
+    """
+    Returns list of edge tuple desctiption associated with the 
+    input permutation. The encoding is based on the diagonals
+
+
+    EXAMPLES:
+    ::
+        sage: Permutation_to_PseudoTuple(HM([[1,0,0],[0,1,0],[0,0,1]]))
+        [[(0, 0)], [(0, 1), (1, 0)], [(0, 2), (2, 0)]]
+        sage: Permutation_to_PseudoTuple(HM([[0,0,1],[0,1,0],[1,0,0]]))
+        [[(2, 2)], [(1, 2), (2, 1)], [(0, 2), (2, 0)]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of running edge weight parameter and the Tuple list
+    edgw=0; tp=[]
+    while M.n(0) > 1:
+        for i in rg(M.n(0)):
+            if M[0,i] == 1:
+                M=M.slice([k for k in rg(M.n(1)) if k != i], 'col').slice([j  for j in rg(1,M.n(0))], 'row')
+                if edgw == 0:
+                    tp.append([(i, i+edgw)])
+                else:
+                    tp.append([(i, i+edgw), (i+edgw, i)])
+                edgw=edgw+1
+                break
+    tp.append([(0, edgw), (edgw, 0)])
+    return tp
+
+def Tuple_to_PseudoTuple(tp):
+    """
+    Returns list of unidrected edge tuple desctiption associated with the 
+    input tuple.
+
+
+    EXAMPLES:
+    ::
+        sage: Tuple_to_PseudoTuple([(0, 0), (1, 0), (2, 0)])
+        [[(0, 0)], [(0, 1), (1, 0)], [(0, 2), (2, 0)]]
+        sage: Tuple_to_PseudoTuple([(0, 2), (1, 2), (2, 2)])
+        [[(2, 2)], [(1, 2), (2, 1)], [(0, 2), (2, 0)]]
+
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the pseudo tuple list
+    psdT = []
+    for i in rg(len(tp)):
+        if tp[i][0]==tp[i][1]:
+            psdT.append([(tp[i][0],tp[i][1])])
+        else:
+            psdT.append([(min(tp[i][0], tp[i][1]), max(tp[i][0], tp[i][1])),   (max(tp[i][1], tp[i][0]), min(tp[i][1], tp[i][0]))])
+    T=[]
+    for i in rg(len(tp)):
+        for j in rg(len(tp)):
+            if abs(psdT[j][0][0]-psdT[j][0][1]) == i:
+                T.append(psdT[j])
+    return T
+
+def PseudoTuple_to_Permutation(psdT):
+    """
+    Returns a permutation matrix associated with list of edge specified as a pseudo tuple edge list.
+
+
+    EXAMPLES:
+    ::
+        sage: PseudoTuple_to_Permutation([[(0, 0)], [(0, 1), (1, 0)], [(2, 0), (0, 2)]])
+        [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        sage: PseudoTuple_to_Permutation([[(2, 2)], [(1, 2), (2, 1)], [(2, 0), (0, 2)]])
+        [[0, 0, 1], [0, 1, 0], [1, 0, 0]]
+        sage: PseudoTuple_to_Permutation([[(1, 1)], [(1, 2), (2, 1)], [(2, 0), (0, 2)]])
+        [[0, 1, 0], [0, 0, 1], [1, 0, 0]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the input matrix
+    M=HM(len(psdT),len(psdT),'zero'); M[0,psdT[0][0][0]]=1
+    # Initialization of the forbiden index
+    allowed_row_index=rg(1,len(psdT))
+    allowed_col_index=[i for i in rg(len(psdT)) if i != psdT[0][0][0]]
+    # Initialization fo the counter
+    for indx in rg(1,len(psdT)):
+        M[indx, allowed_col_index[min(psdT[indx][0])]]=1
+        # Updating the allowable indices
+        allowed_row_index.remove(indx)
+        allowed_col_index.remove(allowed_col_index[min(psdT[indx][0])])
+    return M
+
+def Permutation_to_InsertionPattern(T):
+    """
+    Returns list of the list of insertion patterns associated
+    with the bijection from permutation to gracefully labeled
+    undirected graph having a loop edge (of weight 0). The 
+    input is tuple descrition of a permutation. The function 
+    checks to see that it is indeed a permutation.
+    The output is a list of insertion patterns reflecting the
+    edge choice made in deacreasin order of subtractive edge
+    weight magnitudes.
+
+
+    EXAMPLES:
+    ::
+        sage: Permutation_to_InsertionPattern([(0, 0), (1, 1), (2, 2)])
+        [0, 0, 0]
+        sage: Permutation_to_InsertionPattern([(0, 2), (1, 1), (2, 1)])
+        [0, 1, 2]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the size and order parameters
+    sz=len(T); od=2
+    # Initialization of the identity matrix
+    Id=HM(od, sz, 'kronecker')
+    P=sum(Id.slice([T[i][0]],'col')*Id.slice([T[i][1]],'row') for i in rg(sz))
+    if (P*P.transpose()-Id).is_zero():
+        # Initialization of the list of options for each subtractive edge weights
+        Lopt=[[(i,i) for i in rg(sz)]]+[[] for i in rg(sz-1)]
+        for i in rg(1,sz):
+            for j in rg(i):
+                Lopt[abs(i-j)].append((j,i))
+        # Initialization of the list of dictionaries for edge weight options
+        LDct=[{Lopt[i][j] : j for j in rg(len(Lopt[i]))} for i in rg(sz)]
+        # Converting the permutation matrix into a Pseudotuple list
+        pT=Permutation_to_PseudoTuple(P)
+        return [LDct[pT[sz-1-i][0][1]-pT[sz-1-i][0][0]][(pT[sz-1-i][0][0],pT[sz-1-i][0][1])] for i in rg(sz)]
+    else:
+        raise ValueError, "The input must be a spanning union of cycles as input."
+
+def GenerateUnitLpNormVector(n, p = 2, indx=0):
     """
     outputs a unit lp norm vector.
 
@@ -7279,6 +7476,36 @@ def GenerateUnitLpNormVectorII(sz,p=2,indx=0):
             X.append( prod(Sin( var('t'+str(j+indx)) ) for j in range(i))*Cos(var('t'+str(i+indx)))^(2/p) )
         X.append( prod(Sin(var('t'+str(j+indx)))^(2/p) for j in range(sz-1)) )
         return X
+
+def GenerateUnitLpNormVectorIII(sz,p,indx,T):
+    """
+    outputs a unit lp norm vector.
+
+    EXAMPLES:
+
+    ::
+
+        sage: GenerateUnitLpNormVectorIII(2, 2, 0, [(0,0), (1,1)]) 
+        [1/2*e^(I*t0) + 1/2*e^(-I*t0), -1/2*I*e^(I*t0) + 1/2*I*e^(-I*t0)]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if n == 1:
+        return [1]
+    else :
+        # Initialization of the exponential encoding of trigonometric functions
+        Cos(x) = exp(I*x)/(2*1) + exp(-I*x)/(2*1); Sin(x) = exp(I*x)/(2*I) - exp(-I*x)/(2*I)
+        # Initialization of the insertion of sequence
+        L = Permutation_to_InsertionPattern(T)
+        X = [Cos(var('t'+str(indx)))^(2/p), Sin(var('t'+str(indx)))^(2/p)]
+        for i in range(1,sz-1):
+            tmp = X[L[i]]
+            X[L[i]] = tmp*Cos(var('t'+str(i+indx)))^(2/p)
+            X.insert(L[i],tmp*Sin(var('t'+str(i+indx)))^(2/p))
+        return X
+
 
 def ProbabilityMatrix(n, xi=0):
     """
@@ -21198,4 +21425,48 @@ def HypermatrixList(bnd, DmsL):
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Lh.append(apply(HM,DmsL+[entry]))
     return Lh
+
+def HypermatrixSn(L):
+    """
+    Generates a list of lists associated with the permutation
+    hypermatrix deduced from sigma. Note that as a result of 
+    the  non associativity, permutations must be performed as
+    one transposition at a time.
+
+    EXAMPLES:
+
+    ::
+
+        sage: P0,P1 = HypermatrixSn([1,2,0])
+        sage: Prod(P0,HM(3,3,3,'a'),P1).printHM()
+        [:, :, 0]=
+        [a001 a011 a021]
+        [a101 a111 a121]
+        [a201 a211 a221]
+        
+        [:, :, 1]=
+        [a002 a012 a022]
+        [a102 a112 a122]
+        [a202 a212 a222]
+        
+        [:, :, 2]=
+        [a000 a010 a020]
+        [a100 a110 a120]
+        [a200 a210 a220]
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Ori Parzanchevski, Fan Tian 
+    """
+    sz=len(L)
+    # Test for dimension match
+    if sz > 0:
+        # Initialization of the first input (P0)
+        P0=HM([HM(2,L,'perm').transpose().listHM() for i in rg(sz)])
+        # Initialization of the second input (P1)
+        P1=HM([HM(2,L,'perm').listHM() for i in rg(sz)]).transpose(2)
+        return [P0, P1]
+    else :
+        raise ValueError, "Input list must me non empty "
+
 
