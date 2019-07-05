@@ -955,7 +955,10 @@ class HM:
         """
         Outputs the index rotation by angle T of self.
         The method is only implemented to second and third
-        order hypermatrices. 
+        order hypermatrices. The rotation is performed
+        clockwise by multiples of 2*pi/4 for second order hypermatrices as follows
+        [i,j] -> [(i-floor(sz/2))*cos(T)+(-j+floor(sz/2))*sin(T)+floor(sz/2), (i-floor(sz/2))*sin(T)-(-j+floor(sz/2))*cos(T)+floor(sz/2)] if sz is odd
+        [i,j] -> [(i-(sz-1)/2)*cos(T)+(-j+(sz-1)/2)*sin(T)+(sz-1)/2, (i-(sz-1)/2)*sin(T)-(-j+(sz-1)/2)*cos(T)+(sz-1)/2] if sz is even
 
 
         EXAMPLES:
@@ -1413,6 +1416,9 @@ class HM:
     def copy(self):
         return GeneralHypermatrixCopy(self)
 
+    def support(self):
+        return GeneralHypermatrixSupport(self)
+
     def append_index(self,indx):
         return GeneralHypermatrixAppendIndex(self,indx)
 
@@ -1868,14 +1874,14 @@ class HM:
 
 
             sage: sz=3; A=HM(sz, sz, sz, 'a')
-            sage: A.flatten( [0, 1], 2).dimensions()
+            sage: A.flatten([0, 1], 2).dimensions()
             [3, 9]
             sage: A.flatten([0, 1], 2).printHM()
             [:, :]=
             [a000 a010 a020 a001 a011 a021 a002 a012 a022]
             [a100 a110 a120 a101 a111 a121 a102 a112 a122]
             [a200 a210 a220 a201 a211 a221 a202 a212 a222]
-            sage: sz=2, B=HM(sz,sz,sz,'b')
+            sage: sz=2; B=HM(sz,sz,sz,'b')
             sage: B.flatten([2], 1)
             [b000, b001, b100, b101, b010, b011, b110, b111]
   
@@ -2855,6 +2861,56 @@ def Lagrange(X):
         L.append([X[i]-X[j] for j in tmpl]+[1 for k in range(sz-len(tmpl))]) 
     return HM(L) 
 
+def HypermatrixPermutation(s):
+    """
+    Generates a list of lists associated with a transposition 
+    hypermatrix deduced from sigma. Note that as a result of 
+    the  non associativity, permutations must be performed as
+    one transposition at a time. This is one way of implementing
+    permutation hypermatrices in this setting only non overlaping
+    cycles can be combined into a single permutation hypermatrix
+
+
+    EXAMPLES:
+
+
+    ::
+
+
+        sage: P = HypermatrixPermutation([0,2,1]); P
+        [[[1, 0, 0], [0, 0, 1], [0, 1, 0]], [[1, 0, 0], [0, 0, 1], [0, 1, 0]], [[1, 0, 0], [0, 0, 1], [0, 1, 0]]]
+        sage: P = HM(HypermatrixPermutation([1,0])); A=HM(2,2,2,'a')
+        sage: Prod(P,A,P.transpose(2)).printHM()
+        [:, :, 0]=
+        [a001 a011]
+        [a101 a111]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a000 a010]
+        [a100 a110]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    sz = len(s)
+    # Setting the dimensions parameters.
+    n_q_rows = sz; n_q_cols = sz; n_q_dpts = sz
+    # Test for dimension match
+    if n_q_rows > 0 and n_q_cols > 0 and n_q_dpts >0:
+        # Initialization of the hypermatrix
+        q = []
+        T = HypermatrixKroneckerDelta(sz)
+        U = HypermatrixGenerateAllOne(sz,sz,sz)
+        Id= HypermatrixProduct(U,U,T)
+        Id= HypermatrixCyclicPermute(Id)
+        for i in range(sz):
+            q.append(Id[s[i]])
+        return HypermatrixCyclicPermute(HypermatrixCyclicPermute(q))
+    else :
+        raise ValueError, "Input dimensions "+str(sz)+" must be a non-zero positive integer."
+
 def DiagonalHypermatrix(Mtrx):
     """
     Outputs a diagonal third order hypermatrix
@@ -2876,12 +2932,10 @@ def DiagonalHypermatrix(Mtrx):
     - Edinah K. Gnang and Ori Parzanchevski
     """
     # Initialization of the dimensions
-    n = min(Mtrx.nrows(),Mtrx.ncols())
-    n_d_rows = n
-    n_d_cols = n
-    n_d_dpts = n
+    sz = min(Mtrx.nrows(), Mtrx.ncols())
+    n_d_rows = sz; n_d_cols = sz; n_d_dpts = sz
     # Initialization of the identity permutations hypermatrix
-    D = HypermatrixPermutation(range(n))
+    D = HypermatrixPermutation(range(sz))
     # Filling up the entries of the hypermatrix.
     for i in range(n_d_rows):
         for j in range(n_d_cols):
@@ -5309,7 +5363,6 @@ def GProd(Lh, Op, Lv):
     AUTHORS:
     - Edinah K. Gnang
     """
-    #return GeneralHypermatrixProductIII(Lh, Op, Lv)
     return GeneralHypermatrixProductIV(Lh, Op, Lv)
 
 def GProdII(Lh, Op, Lv, indx):
@@ -5549,6 +5602,107 @@ def CProd(Lh, Op, F):
     - Edinah K. Gnang
     """
     return GeneralHypermatrixProductII(Lh, Op, F)
+
+def CProdII(Lh, Op, Lv):
+    """
+    Outputs a list of lists associated with the composition
+    based Bhattacharya-Mesner product of the input hypermatrices.
+    The entries of the hypermatrices are taken to be functions
+    so that while performing the product we compose with the entries
+    of the first of the list of inputs. This implementation is aesthetically
+    more pleasing then the previous one because it explicitly articulate the
+    preference for composition as our defacto product operation. However it is
+    theoretically less general then the previous one. Both these implementations
+    are inspired by initial exposure to ideas from Category theory, the implementation
+    also make painfully obvious some of the programming constraints imposed by Python.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y=var('x,y'); Ha=x*y*HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=CProdII([Ha,Hb,Hc], sum, [x,y]); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        <BLANKLINE>
+        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); CProdII([Ha, Hb], sum, [x])
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); CProdII([Ha, Hb], prod, [x])
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); Lc=var_list('c',sz); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]),La+Lx+Lb+Lc+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, c0, c1, c2, z>=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]))
+        sage: Ha=HM(sz,l,[a00, a10, a20, a01, a11, a21]); Hx=HM(l,1,[x0, x1])
+        sage: Hb=HM(sz,l,[b00, b10, b20, b01, b11, b21])
+        sage: Hr=Ha.elementwise_product(z*Hb)-HM(sz,1,[c0, c1, c2])*HM(1,l,[QQ(1/2) for i in rg(l)])
+        sage: CProdII([Hr, Hx], sum, [z]).printHM()
+        [:, :]=
+        [-c0 + a00*x0*b00 + a01*x1*b01]
+        [-c1 + a10*x0*b10 + a11*x1*b11]
+        [-c2 + a20*x0*b20 + a21*x1*b21]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductIV(Lh, Op, Lv)
+
+def GProdII(Lh, Op, Lv, indx):
+    """
+    Outputs an HM which is list of lists associated with the composition
+    based Bhattacharya-Mesner product of the input hypermatrices.
+    The entries of the hypermatrices are taken to be functions
+    so that while performing the product we compose with the entries
+    of the indx-th of the list of inputs. This implementation is aesthetically
+    more pleasing then the previous one because it explicitly articulate the
+    preference for a particular composition operation. However both this
+    and the previous implementation are special instances of ways to specify the composer.
+    Both these implementations are inspired by initial exposure to ideas from Category theory,
+    the implementation also make painfully obvious some of the programming constraints imposed by Python.
+    This code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: x,y=var('x,y'); Ha=x*y*HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: GProdII([Ha,Hb,Hc], sum, [x,y], 0).printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        <BLANKLINE>
+        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GProdII([Ha, Hb], sum, [x], 0)
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GProdII([Ha, Hb], prod, [x], 0)
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); Lc=var_list('c',sz); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]),La+Lx+Lb+Lc+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, c0, c1, c2, z>=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]))
+        sage: Ha=HM(sz,l,[a00, a10, a20, a01, a11, a21]); Hx=HM(l,1,[x0, x1])
+        sage: Hb=HM(sz,l,[b00, b10, b20, b01, b11, b21])
+        sage: Hr=Ha.elementwise_product(z*Hb)-HM(sz,1,[c0, c1, c2])*HM(1,l,[QQ(1/2) for i in rg(l)])
+        sage: GProdII([Hr, Hx], sum, [z], 0).printHM()
+        [:, :]=
+        [-c0 + a00*x0*b00 + a01*x1*b01]
+        [-c1 + a10*x0*b10 + a11*x1*b11]
+        [-c2 + a20*x0*b20 + a21*x1*b21]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductV(Lh, Op, Lv, indx)
+
 
 def GProdB(Lh, Op, F):
     """
@@ -6332,7 +6486,7 @@ def GeneralHypermatrixSubstituteII(A, *args, **kwds):
 
 def GeneralHypermatrixCopy(A):
     """
-    Procedure for computing Hypermatrix Hadamard addition.
+    Procedure for performing a Hypermatrix copy.
 
     EXAMPLES:
 
@@ -7390,7 +7544,7 @@ def Permutation_to_InsertionPattern(T):
     ::
         sage: Permutation_to_InsertionPattern([(0, 0), (1, 1), (2, 2)])
         [0, 0, 0]
-        sage: Permutation_to_InsertionPattern([(0, 2), (1, 1), (2, 1)])
+        sage: Permutation_to_InsertionPattern([(0, 2), (1, 1), (2, 0)])
         [0, 1, 2]
 
 
@@ -7866,11 +8020,11 @@ def Random_d_regular_undirected_adjacencyHM(sz, d):
     sage: sz=5; [A,B]=Random_d_regular_undirected_adjacencyHM(sz,2)
     sage: A.printHM()
     [:, :]=
-    [0 1 1 0 0]
-    [1 0 0 1 0]
-    [1 0 0 0 1]
     [0 1 0 0 1]
-    [0 0 1 1 0]
+    [1 0 0 1 0]
+    [0 0 0 1 1]
+    [0 1 1 0 0]
+    [1 0 1 0 0]
     sage: (A*HM(sz,1,'one')).printHM()
     [:, :]=
     [2]
@@ -7881,7 +8035,7 @@ def Random_d_regular_undirected_adjacencyHM(sz, d):
     sage: (HM(1,sz,'one')*A).printHM()
     [:, :]=
     [2 2 2 2 2]
-    (A-A.transpose()).printHM()
+    sage: (A-A.transpose()).printHM()
     [:, :]=
     [0 0 0 0 0]
     [0 0 0 0 0]
@@ -8090,6 +8244,38 @@ def GenerateRandomHypermatrix(*l):
                 entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
                 sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
             Rh[tuple(entry)]=random()
+        return Rh
+    else :
+        raise ValueError, "The Dimensions must all be non-zero."
+
+def GenerateRandomRationalHypermatrix(*l):
+    """
+     Outputs a random hypermatrix
+
+    EXAMPLES:
+
+    ::
+
+        sage: A=GenerateRandomHypermatrix(2,2,2); A.dimensions()
+        [2, 2, 2]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if prod(list(l)) != 0:
+        # Initializing the input for generating a symbolic hypermatrix
+        inpts = list(l)+['zero']
+        # Initialization of the hypermatrix
+        Rh = HM(*inpts)
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            Rh[tuple(entry)]=QQ(random())
         return Rh
     else :
         raise ValueError, "The Dimensions must all be non-zero."
@@ -10859,11 +11045,11 @@ def EvalTn(T, dgts):
     elif T == ComplexField(dgts)(-1,0):
         return ComplexField(dgts)(-1,0)
     elif T[0] == '+':
-        return EvalTn(T[1], dgts) + EvalTn(T[2], dgts)
+        return ComplexField(dgts)(EvalTn(T[1], dgts) + EvalTn(T[2], dgts))
     elif T[0] == '*':
-        return EvalTn(T[1], dgts) * EvalTn(T[2], dgts)
+        return ComplexField(dgts)(EvalTn(T[1], dgts) * EvalTn(T[2], dgts))
     elif T[0] == '^':
-        return EvalTn(T[1], dgts) ^ EvalTn(T[2], dgts)
+        return ComplexField(dgts)(EvalTn(T[1], dgts) ^ EvalTn(T[2], dgts))
     else:
         print 'IMPROPER INPUT !!!'
 
@@ -11160,6 +11346,7 @@ def Bool2HM(T):
 
 
     AUTHORS:
+
     - Edinah K. Gnang and Doron Zeilberger
     """
     # Initialization of the list specifying the dimensions of the output
@@ -11188,14 +11375,14 @@ def Bool2Integer(T):
     """
     Outputs the binary encoding of the boolean formula
     the integer is obtained by suming the output of 
-    evaluation scalled by distinct powers of two
+    evaluation scaled by distinct powers of two
 
     EXAMPLES:
 
     ::
 
         sage: Bool2Integer(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]])
-        10
+        16
         sage: X=var_list('x',2); Bool2Integer(x0)
         2
         sage: Bool2Integer(['NOT', x0])
@@ -11207,6 +11394,7 @@ def Bool2Integer(T):
 
 
     AUTHORS:
+
     - Edinah K. Gnang and Doron Zeilberger
     """
     # Initialization of the list of evaliations
@@ -11216,6 +11404,37 @@ def Bool2Integer(T):
     else: 
         # Adding up the geomertric like sum 
         return sum(2^(2^k) for k in rg(1,CountVariablesBool(T)))+sum(L[i]*2^i for i in rg(len(L)))
+
+def Bool2Poly(T):
+    """
+    Outputs the evaluation value of the output with binary assignement.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Bool2Poly(['AND', ['OR', var('x0'), ['OR', var('x1'), var('x2')]], ['AND', ['AND', var('x3'), var('x0')], ['NOT', var('x1')]]])
+        -((x1*x2 - x1 - x2)*x0 - x1*x2 + x0 + x1 + x2)*x0*(x1 - 1)*x3
+
+    AUTHORS:
+
+    - Edinah K. Gnang and Doron Zeilberger
+    """
+    if T == 1:
+        return SR(1)
+    elif T == 0:
+        return SR(0)
+    elif type(T) == type(x):
+        return T
+    elif T[0] == 'OR':
+        return Bool2Poly(T[1]) + Bool2Poly(T[2]) - Bool2Poly(T[1]) * Bool2Poly(T[2])
+    elif T[0] == 'AND':
+        return Bool2Poly(T[1]) * Bool2Poly(T[2])
+    elif T[0] == 'NOT':
+        return  1 - Bool2Poly(T[1])
+    else:
+        print 'IMPROPER INPUT !!!'
+ 
 
 def BoolTsize(T):
     """
@@ -11236,14 +11455,10 @@ def BoolTsize(T):
     - Try to implement faster version of this procedure
 
     """
-    if type(T)==type(x):
+    if T == 0 or T == 1:
         return 1
     elif T[0]=='NOT':
         return 1+BoolTsize(T[1])
-    elif T==0:
-        return 1
-    elif T==1:
-        return 1
     else:
         return 1+BoolTsize(T[1])+BoolTsize(T[2])
 
@@ -11259,7 +11474,7 @@ def ReducedNonMonotoneBooleanFormula(SZ):
     ::
 
         sage: ReducedNonMonotoneBooleanFormula(3)[0]
-        [[], [x0], [['NOT', x0]], []]
+        [[], [x0], [['NOT', x0]], [['AND', x0, x1], ['OR', x0, x1]]]
         sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormula(sz)[0]
         sage: Lr = [[] for i in rg(len(A))]
         sage: for i in rg(len(A)):
@@ -11273,24 +11488,25 @@ def ReducedNonMonotoneBooleanFormula(SZ):
          [(['NOT', x0], 1)],
          [(['AND', x0, x1], 12), (['OR', x0, x1], 18)],
          [(['AND', x0, ['NOT', x0]], 0),
-          (['AND', x0, ['NOT', x1]], 8),
-          (['AND', ['NOT', x0], x1], 6),
+          (['AND', x0, ['NOT', x1]], 6),
+          (['AND', ['NOT', x0], x1], 8),
           (['OR', x0, ['NOT', x0]], 3),
-          (['OR', x0, ['NOT', x1]], 17),
-          (['OR', ['NOT', x0], x1], 15),
+          (['OR', x0, ['NOT', x1]], 15),
+          (['OR', ['NOT', x0], x1], 17),
           (['NOT', ['AND', x0, x1]], 11),
           (['NOT', ['OR', x0, x1]], 5)],
          [(['AND', x0, ['AND', x1, x2]], 148),
-          (['AND', x0, ['OR', x0, x1]], 16),
-          (['AND', x0, ['OR', x1, x2]], 244),
-          (['AND', ['OR', x0, x1], x1], 14),
-          (['AND', ['OR', x0, x1], x2], 188),
-          (['OR', x0, ['AND', x1, x2]], 268),
+          (['AND', x0, ['OR', x0, x1]], 14),
+          (['AND', x0, ['OR', x1, x2]], 188),
+          (['AND', ['OR', x0, x1], x1], 16),
+          (['AND', ['OR', x0, x1], x2], 244),
+          (['OR', x0, ['AND', x1, x2]], 254),
           (['OR', x0, ['OR', x1, x2]], 274),
-          (['OR', ['AND', x0, x1], x2], 254)]]
+          (['OR', ['AND', x0, x1], x2], 268)]]
 
 
     AUTHORS:
+
     - Edinah K. Gnang and Doron Zeilberger
 
     To Do :
@@ -11300,12 +11516,12 @@ def ReducedNonMonotoneBooleanFormula(SZ):
     # Initialization of the list of variables
     X=var_list('x',SZ)
     # Initialization of the list which store the integer encodings
-    L = [Bool2Integer(X[0]), Bool2Integer(['NOT',var('x0')])]
+    L = [Bool2Integer(X[0]), Bool2Integer(['NOT',var('x0')]), Bool2Integer(['AND', var('x0'), var('x1')]), Bool2Integer(['OR', var('x0'), var('x1')])]
     if SZ <= 3:
-        return [[[], [X[0]], [['NOT',var('x0')]], []], L]
+        return [[[], [X[0]], [['NOT',var('x0')]], [['AND', var('x0'), var('x1')], ['OR', var('x0'), var('x1')]]], L]
     elif SZ > 3:
         # Initialization of the list of formula.
-        A=[[], [X[0]], [['NOT',var('x0')]]] + [[] for t in range(SZ-2)]
+        A=[[], [X[0]], [['NOT',var('x0')]], [['AND', var('x0'), var('x1')], ['OR', var('x0'), var('x1')]]] + [[] for t in range(SZ-3)]
         # Main loop.
         for sz in range(3,SZ+1):
             # Initialization of the fifth entry
@@ -11328,6 +11544,90 @@ def ReducedNonMonotoneBooleanFormula(SZ):
                     A[sz].append(['NOT', s])
                     L.append(Bool2Integer(['NOT', s]))
         return [A,L]
+
+@cached_function
+def ReducedNonMonotoneBooleanFormulaPoly(SZ):
+    """
+    Outputs the list of non-monotone boolean formula encoded as polynomial
+    stratified by the size of the corresponding boolean formula. 
+    The second output is the list of integer recording the tables
+    which have occured thus far.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ReducedNonMonotoneBooleanFormulaPoly(3)[0]
+        [[], [x0], [-x0 + 1], []]
+        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormula(sz)[0]
+        sage: Lr = [[] for i in rg(len(A))]
+        sage: for i in rg(len(A)):
+        ....:     if len(A[i])>0:
+        ....:         for T in A[i]:
+        ....:             Lr[i].append((Bool2Poly(T), Bool2Integer(T)))
+        ....:
+        sage: Lr
+        [[],
+         [(x0, 2)],
+         [(-x0 + 1, 1)],
+         [(x0*x1, 12), (-x0*x1 + x0 + x1, 18)],
+         [(-(x0 - 1)*x0, 0),
+          (-x0*(x1 - 1), 6),
+          (-(x0 - 1)*x1, 8),
+          ((x0 - 1)*x0 + 1, 3),
+          (x0*(x1 - 1) + x0 - x1 + 1, 15),
+          ((x0 - 1)*x1 - x0 + x1 + 1, 17),
+          (-x0*x1 + 1, 11),
+          (x0*x1 - x0 - x1 + 1, 5)],
+         [(x0*x1*x2, 148),
+          (-(x0*x1 - x0 - x1)*x0, 14),
+          (-(x1*x2 - x1 - x2)*x0, 188),
+          (-(x0*x1 - x0 - x1)*x1, 16),
+          (-(x0*x1 - x0 - x1)*x2, 244),
+          (-x0*x1*x2 + x1*x2 + x0, 254),
+          ((x1*x2 - x1 - x2)*x0 - x1*x2 + x0 + x1 + x2, 274),
+          (-x0*x1*x2 + x0*x1 + x2, 268)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Initialization of the list of variables
+    X=var_list('x',SZ)
+    # Initialization of the list which store the integer encodings
+    L = [Bool2Integer(X[0]), Bool2Integer(['NOT',var('x0')]), Bool2Integer(['AND', var('x0'), var('x1')]), Bool2Integer(['OR', var('x0'), var('x1')])]
+    if SZ <= 3:
+        return [[[], [X[0]], [1-var('x0')], [x0*x1, x0 + x1- x0*x1]], L]
+    elif SZ > 3:
+        # Initialization of the list of formula.
+        A=[[], [X[0]], [['NOT',var('x0')]], [['AND', var('x0'), var('x1')], ['OR', var('x0'), var('x1')]]] + [[] for t in range(SZ-3)]
+        # Main loop.
+        for sz in range(3,SZ+1):
+            # Initialization of the fifth entry
+            for i in rg(1,sz-1):
+                for s in A[i]:
+                    for t in A[sz-i-1]:
+                        for j in rg(CountVariablesBool(s)+1):
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Bool2Integer(['AND', s, IncrementVariablesBool(t,j)]) in L:
+                                A[sz].append(['AND', s, IncrementVariablesBool(t,j)])
+                                L.append(Bool2Integer(['AND', s, IncrementVariablesBool(t,j)]))
+            for i in range(1,sz-1):
+                for s in A[i]:
+                    for t in A[sz-i-1]:
+                        for j in rg(CountVariablesBool(s)+1):
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Bool2Integer(['OR', s, IncrementVariablesBool(t,j)]) in L:
+                                A[sz].append(['OR', s, IncrementVariablesBool(t,j)])
+                                L.append(Bool2Integer(['OR', s, IncrementVariablesBool(t,j)]))
+            for s in A[sz-1]:
+                if (len(A[sz-1])>0) and not Bool2Integer(['NOT',s]) in L:
+                    A[sz].append(['NOT', s])
+                    L.append(Bool2Integer(['NOT', s]))
+        # Returning Boolean formulas encoded as polynomials
+        return [[[Bool2Poly(F) for F in A[t]] for t in rg(SZ)], L]
 
 def GeneralDualHypermatrixProductB(*args):
     """
@@ -14387,7 +14687,7 @@ def default_multiplicative_linear_solverHM(EqL, Lv, Lf):
          [-a10/a00, a01/(a01*a10/a00 - a11), 1/a00, -1/(a01*a10/a00 - a11)]]
         sage: sz=2; Eq=[var('x'+str(i))*var('x'+str(sz+j))==var('a'+str(i)+str(j)) for i in range(sz) for j in range(sz)]
         sage: sz=2; default_multiplicative_linear_solverHM(Eq, var_list('x',2*sz), var_list('t',2*sz))
-        [[x0 == a00*a11/a10, x1 == a11, x2 == a10/a11, 1 == a01*a10/(a00*a11)], 0, []]
+        [[x0 == a01, x1 == a11, x2 == a00/a01, 1 == a01*a10/(a00*a11)], 0, []]
 
 
     AUTHORS:
@@ -19242,7 +19542,7 @@ def default_naught_solver(Eq, La, Lf):
     ::
 
         sage: sz=2; len(default_naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        3
+        2
 
 
     AUTHORS:
@@ -19365,7 +19665,10 @@ def naught_solver(EqL, La, Lf):
 def SecondOrderIndexRotation(Ha, T):
     """
     The function perform the rotation of angle T for the indices.
-    Ha is input second order hypermatrices.
+    Ha is input second order hypermatrices. The rotation is performed
+    clockwise by multiples of 2*pi/4.
+    [i,j] -> [(i-floor(sz/2))*cos(T)+(-j+floor(sz/2))*sin(T)+floor(sz/2), (i-floor(sz/2))*sin(T)-(-j+floor(sz/2))*cos(T)+floor(sz/2)] if sz is odd
+    [i,j] -> [(i-(sz-1)/2)*cos(T)+(-j+(sz-1)/2)*sin(T)+(sz-1)/2, (i-(sz-1)/2)*sin(T)-(-j+(sz-1)/2)*cos(T)+(sz-1)/2] if sz is even
 
 
     EXAMPLES:
@@ -19484,6 +19787,30 @@ def SelectThirdOrderIndexRotation(A, Langle, EntryList):
         sage: sz=4; A=HM(sz, sz, sz, 'a')
         sage: Langle=[2*pi/4, 0, 0]
         sage: SelectThirdOrderIndexRotation(A, Langle, [0,1]).printHM()
+        [:, :, 0]=
+        [a100 a110 a020 a030]
+        [a101 a111 a120 a130]
+        [a200 a210 a220 a230]
+        [a300 a310 a320 a330]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a000 a010 a021 a031]
+        [a001 a011 a121 a131]
+        [a201 a211 a221 a231]
+        [a301 a311 a321 a331]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a002 a012 a022 a032]
+        [a102 a112 a122 a132]
+        [a202 a212 a222 a232]
+        [a302 a312 a322 a332]
+        <BLANKLINE>
+        [:, :, 3]=
+        [a003 a013 a023 a033]
+        [a103 a113 a123 a133]
+        [a203 a213 a223 a233]
+        [a303 a313 a323 a333]
+        <BLANKLINE>
 
 
     AUTHORS:
@@ -19521,12 +19848,12 @@ def SelectSecondOrderIndexRotation(Ha, T, EntryList):
         sage: (Ha.tumble()-SelectSecondOrderIndexRotation(Ha, 2*pi/4, rg(sz))).is_zero()
         True
         sage: sz=5; Ha=HM(sz,sz,'a')
-        SelectSecondOrderIndexRotation(Ha, 2*pi/4, [0,1]).printHM()
+        sage: (Ha-SelectSecondOrderIndexRotation(Ha, 2*pi/4, [0,1])).printHM()
         [:, :]=
+        [ a00 - a10 -a00 + a01          0          0          0]
+        [ a10 - a11 -a01 + a11          0          0          0]
         [         0          0          0          0          0]
-        [         0  a11 - a31          0 -a11 + a13          0]
         [         0          0          0          0          0]
-        [         0  a31 - a33          0 -a13 + a33          0]
         [         0          0          0          0          0]
 
 
@@ -20767,7 +21094,7 @@ def RootedTupleClassTreeFunctionList(tp):
     # Computing the sum over modified permanents
     F=sum(mPer(A,T) for T in [switch_sink(tp,i) for i in rg(sz)])
     # converting term to tuple description of functional directed trees
-    return [Monomial2TII(mnm, A.list(), sz) for mnm in F.operands()]
+    return [Monomial2Tuple(mnm, A.list(), sz) for mnm in F.operands()]
 
 def BasicLagrangeInterpolation(L, x):
     """
@@ -21304,7 +21631,7 @@ def GeneralHypermatrixFlatten(A, Rg, ord):
         [a000 a010 a020 a001 a011 a021 a002 a012 a022]
         [a100 a110 a120 a101 a111 a121 a102 a112 a122]
         [a200 a210 a220 a201 a211 a221 a202 a212 a222]
-        sage: sz=2, B=HM(sz,sz,sz,'b')
+        sage: sz=2; B=HM(sz,sz,sz,'b')
         sage: GeneralHypermatrixFlatten(B, [2], 1)
         [b000, b001, b100, b101, b010, b011, b110, b111]
  
@@ -21344,15 +21671,15 @@ def KroneckerVectorOuterProduct(*args):
         [:, :, 0]=
         [u0*v0*w0 u0*v1*w0 u0*v2*w0]
         [u1*v0*w0 u1*v1*w0 u1*v2*w0]
-        
+        <BLANKLINE>
         [:, :, 1]=
         [u0*v0*w1 u0*v1*w1 u0*v2*w1]
         [u1*v0*w1 u1*v1*w1 u1*v2*w1]
-        
+        <BLANKLINE>
         [:, :, 2]=
         [u0*v0*w2 u0*v1*w2 u0*v2*w2]
         [u1*v0*w2 u1*v1*w2 u1*v2*w2]
-        
+        <BLANKLINE>
         [:, :, 3]=
         [u0*v0*w3 u0*v1*w3 u0*v2*w3]
         [u1*v0*w3 u1*v1*w3 u1*v2*w3]
@@ -21393,7 +21720,7 @@ def HypermatrixList(bnd, DmsL):
         [:, :, 0]=
         [0 0]
         [0 0]
-        
+        <BLANKLINE>
         [:, :, 1]=
         [0 0]
         [0 0]
@@ -21434,12 +21761,12 @@ def HypermatrixSn(L):
         [a001 a011 a021]
         [a101 a111 a121]
         [a201 a211 a221]
-        
+        <BLANKLINE>
         [:, :, 1]=
         [a002 a012 a022]
         [a102 a112 a122]
         [a202 a212 a222]
-        
+        <BLANKLINE>
         [:, :, 2]=
         [a000 a010 a020]
         [a100 a110 a120]
@@ -21459,4 +21786,155 @@ def HypermatrixSn(L):
         return [P0, P1]
     else :
         raise ValueError, "Input list must me non empty "
+
+def layer_rotation(M, v):
+    """
+    Performs a layered rotation which amounts to viewing the entries
+    as forming a spanning union of cycles whose cycles are made up
+    of layers of entries. The input matrix M must be square, the second
+    input v must be a character will will be used as the base symbol 
+    variable to be used to fill up the template matrix. It is 
+    important that indexings of v do not appear in M. In this current
+    implementation it will cause bugs.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: [U, V]=layer_rotation(HM(4,4,'c'), 'a')
+        sage: U.printHM()
+        [:, :]=
+        [c10 c00 c01 c02]
+        [c20 c21 c11 c03]
+        [c30 c22 c12 c13]
+        [c31 c32 c33 c23]
+        sage: V.printHM()
+        [:, :]=
+        [c01 c02 c03 c13]
+        [c00 c12 c22 c23]
+        [c10 c11 c21 c33]
+        [c20 c30 c31 c32]        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=min(M.dimensions())
+    # Iinitialization of the symbolic template matrix
+    # This codes collects all the layers into a list of lists
+    A=HM(sz, sz, v); L=[[] for i in rg(ceil(sz/2))]
+    for l in rg(ceil(sz/2)): 
+        TmpA = A.slice(rg(l,sz-l),0).slice(rg(l,sz-l),1)
+        for i in rg(3):
+            hA = TmpA.index_rotation(-2*i*pi/4)
+            tmpL=hA.listHM()[0]
+            for j in rg(hA.n(1)):
+                if not tmpL[j] in L[l]:
+                    L[l].append(tmpL[j])
+        tmpL=TmpA.transpose().listHM()[0]
+        tmpL.reverse()
+        for j in rg(hA.n(1)):
+            if not tmpL[j] in L[l]:
+                L[l].append(tmpL[j])
+    # Performing the cyclic permutation
+    Ln=[l[1:]+[l[0]] for l in L]
+    # Concatenating the lists
+    L0=L[0];L1=Ln[0]
+    for i in rg(1,len(L)):
+        L0=L0+L[i]; L1=L1+Ln[i]
+    # Performing the substition for the forward mapping
+    B=A.subs([L1[i]==L0[i] for i in rg(len(L0))])
+    # Performing the substition for the backward mapping
+    C=A.subs([L0[i]==L1[i] for i in rg(len(L0))])
+    return [B.subs([A[i,j]==M[i,j] for j in rg(sz) for i in rg(sz)]), C.subs([A[i,j]==M[i,j] for j in rg(sz) for i in rg(sz)])]
+ 
+def ThirdOrderIdentityPair(DimList):
+    """
+    Generates the left right identity pair for a midel third
+    order hypermatrix whose dimensions corresponds to the input
+    
+
+    EXAMPLES:
+
+    ::
+
+        sage: A=HM(2,3,4,'a')
+        sage: I0,I1 = ThirdOrderIdentityPair(A.dimensions())
+        sage: Prod(I0, A, I1).printHM()
+        [:, :, 0]=
+        [a000 a010 a020]
+        [a100 a110 a120]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001 a011 a021]
+        [a101 a111 a121]
+        <BLANKLINE>
+        [:, :, 2]=
+        [a002 a012 a022]
+        [a102 a112 a122]
+        <BLANKLINE>
+        [:, :, 3]=
+        [a003 a013 a023]
+        [a103 a113 a123]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the first of the two identity hypermatrix pairs
+    I0=HM(DimList[0], DimList[2], DimList[2], 'zero')
+    for i in rg(I0.n(0)):
+        for t in rg(I0.n(1)):
+            I0[i,t,t]=1
+    # Initialization of the second of the two identity hypermatrix pairs
+    I1=HM(DimList[2], DimList[1], DimList[2], 'zero')
+    for j in rg(I1.n(1)):
+        for t in rg(I1.n(0)):
+            I1[t,j,t]=1
+    return [I0, I1]
+
+def GeneralHypermatrixSupport(A):
+    """
+    Procedure for determining the support
+    of non-zero entries
+
+    EXAMPLES:
+
+    ::
+
+        sage: GeneralHypermatrixSupport(HM(2,2,2,'a')).printHM()
+        [:, :, 0]=
+        [1 1]
+        [1 1]
+        <BLANKLINE>
+        [:, :, 1]=
+        [1 1]
+        [1 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        if A[tuple(entry)].is_zero():
+            Rh[tuple(entry)]=Integer(0)
+        else:
+            Rh[tuple(entry)]=Integer(1)
+    return Rh
 
