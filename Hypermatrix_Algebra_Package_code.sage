@@ -5873,7 +5873,7 @@ def GeneralHypermatrixScaleRight(A,s):
     ::
 
         sage: Ha=HM(2,2,2,'a')
-        sage: GeneralHypermatrixScale(Ha,3)
+        sage: GeneralHypermatrixScaleRight(Ha,3)
         [[[3*a000, 3*a001], [3*a010, 3*a011]], [[3*a100, 3*a101], [3*a110, 3*a111]]]
 
     AUTHORS:
@@ -5895,8 +5895,6 @@ def GeneralHypermatrixScaleRight(A,s):
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         Rh[tuple(entry)]=A[tuple(entry)]*s
     return Rh
-
-
 
 def GeneralHypermatrixExponent(A,s):
     """
@@ -8914,7 +8912,6 @@ def FaPre(n):
     """
     return [T2Pre(g) for g in FaT(n)]
 
-
 @cached_function
 def FaP(n):
     """
@@ -8938,7 +8935,6 @@ def FaP(n):
 
     """
     return [T2P(g) for g in FaT(n)]
-
 
 @cached_function
 def Ca(n):
@@ -11558,7 +11554,7 @@ def ReducedNonMonotoneBooleanFormulaPoly(SZ):
     ::
 
         sage: ReducedNonMonotoneBooleanFormulaPoly(3)[0]
-        [[], [x0], [-x0 + 1], []]
+        [[], [x0], [-x0 + 1], [x0*x1, -x0*x1 + x0 + x1]]
         sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormula(sz)[0]
         sage: Lr = [[] for i in rg(len(A))]
         sage: for i in rg(len(A)):
@@ -19542,7 +19538,7 @@ def default_naught_solver(Eq, La, Lf):
     ::
 
         sage: sz=2; len(default_naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        2
+        3
 
 
     AUTHORS:
@@ -20376,7 +20372,7 @@ def Tuple2DiGraph(T,sz):
 def TupleFunctionList(sz):
     """
     Returns a list of edge tuple desctiption for all 
-    functional directed graphs.
+    functional directed graphs on sz vertices.
 
 
     EXAMPLES:
@@ -20917,6 +20913,99 @@ def RootedTupleTreeNonDecreasingFunctionList(sz):
                 Lg.append([(i, f[i]) for i in range(sz)])
     return [Lf, Lg]
 
+def RepresentativeTupleSpanningFunctionalTreeList(sz):
+    """
+    Returns a list of edge tuple desctiption for all 
+    spanning unions of functional trees. Outputing one
+    per isomorphism class the graph isomorphism routine
+    is doing the heavy lifting here. The number of
+    vertices size must be at least 2.
+
+
+    EXAMPLES:
+    ::
+        sage: RepresentativeTupleSpanningFunctionalTreeList(4)
+        [[(0, 0), (1, 0), (2, 0), (3, 0)],
+         [(0, 0), (1, 1), (2, 0), (3, 0)],
+         [(0, 0), (1, 0), (2, 1), (3, 0)],
+         [(0, 0), (1, 1), (2, 1), (3, 0)],
+         [(0, 0), (1, 1), (2, 2), (3, 0)],
+         [(0, 0), (1, 0), (2, 1), (3, 1)],
+         [(0, 0), (1, 0), (2, 2), (3, 1)],
+         [(0, 0), (1, 0), (2, 1), (3, 2)],
+         [(0, 0), (1, 1), (2, 2), (3, 3)]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    A=HM(sz,sz,'a')
+    L=[Monomial2Tuple(mnm, A.list(), sz) for mnm in expand(A[0,0]*prod(sum(A[i,j] for j in rg(i+1)) for i in rg(1,sz))).operands()]
+    # Initialization of the list storing the equivalence class of trees.
+    cL=[ L[0] ]
+    # Loop perfomring the isomorphism binning.
+    for tp in L:
+        nwT=True
+        for i in range(len(cL)):
+            if Tuple2DiGraph(tp,sz).is_isomorphic(Tuple2DiGraph(cL[i],sz)):
+                nwT=False
+                break
+        if nwT==True:
+            cL.append(tp)
+    return cL
+
+def TupleSpanningFunctionalTreeList(sz):
+    """
+    Returns a list of edge tuple desctiption for all 
+    spanning unions of functional trees. There are
+    (sz+1)^(sz-1) of them. 
+
+
+
+    EXAMPLES:
+    ::
+        sage: TupleSpanningFunctionalTreeList(3)
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 0), (1, 1), (2, 0)],
+         [(0, 1), (1, 1), (2, 0)],
+         [(0, 0), (1, 2), (2, 0)],
+         [(0, 0), (1, 0), (2, 1)],
+         [(0, 0), (1, 1), (2, 1)],
+         [(0, 1), (1, 1), (2, 1)],
+         [(0, 2), (1, 1), (2, 1)],
+         [(0, 0), (1, 0), (2, 2)],
+         [(0, 2), (1, 0), (2, 2)],
+         [(0, 0), (1, 1), (2, 2)],
+         [(0, 1), (1, 1), (2, 2)],
+         [(0, 2), (1, 1), (2, 2)],
+         [(0, 0), (1, 2), (2, 2)],
+         [(0, 1), (1, 2), (2, 2)],
+         [(0, 2), (1, 2), (2, 2)]] 
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    A=HM(sz, sz, 'a')
+    L =TupleFunctionList(sz)
+    # Initialization of the list storing the equivalence class of trees.
+    cL=[ ]
+    cL0=RepresentativeTupleSpanningFunctionalTreeList(sz)
+    # Loop perfomring the isomorphism binning.
+    for tp in L:
+        nwT=False
+        for tq in cL0:
+            if Tuple2DiGraph(tp,sz).is_isomorphic(Tuple2DiGraph(tq,sz)):
+                nwT=True
+                break
+        if nwT==True:
+            cL.append(tp)
+    return cL
+
 def TreeFunctionList(n):
     """
     Goes through all the functions and determines which ones
@@ -21214,6 +21303,33 @@ def compose_with(f, g, sz, vrbl):
             fk=fk*(vrbl-j)/(idx-j)
         TmpF=TmpF + f.subs(vrbl==g).subs(vrbl==idx)*fk
     g=TmpF
+    return g
+
+def composition_inverse(f, sz, vrbl):
+    """
+    This function computes the composition inverse of f.
+    The implementation test whether f is invertible.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: sz=3; f0=BasicLagrangeInterpolation([(0,1), (1,2), (2,0)], x)
+        sage: f1=composition_inverse(f0, sz, x)
+        sage: expand(compose_with(f0, f1, sz, x))
+        x
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of a tuple description for f
+    TpL=[(f.subs(vrbl==i), i) for i in rg(sz)]; TpL.sort()
+    if [t[0] for t in TpL] == rg(sz):
+        g = BasicLagrangeInterpolation(TpL, vrbl) 
+    else:
+        raise ValueError, "The input function must be invertible"
     return g
 
 def find_sink(tp):
@@ -21605,6 +21721,32 @@ def ModuloII(f, VrbL, Rlts):
     else:
         raise ValueError, "Expected univariate algebraic relations."
 
+def remainder_via_lagrange_interpolation(f, Lr, X):
+    """
+    Returns the canonical representative of the residue class
+    f modulo Ld. The input f is an arbitrary multivariate polynomial
+    in the variables stored in the list input X. Lr is is the list of distinct
+    roots of the monic univariate polynomial associated with each variable.
+    This implementation does not require the input polunomial to be in 
+    factored form
+
+
+    EXAMPLES:
+    ::
+
+        sage: sz=3; X=var_list('x',sz); f=expand(var('x0')^2*var('x1')+var('x2')^4); Lr=rg(sz)
+        sage: expand(remainder_via_lagrange_interpolation(f, Lr, X))
+        x0^2*x1 + 7*x2^2 - 6*x2
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization the number of variables
+    sz=len(X)
+    return sum(f.subs([X[i] == Lr[t[i][1]] for i in rg(sz)])*prod(prod((X[k]-jk)/(t[k][1]-jk) for jk in Lr if jk !=t[k][1]) for k in rg(sz) ) for t in TupleFunctionList(sz))
+
 def GeneralHypermatrixFlatten(A, Rg, ord):
     """
     Outputs a lower order flattened hypermatrix of the higher order input. 
@@ -21937,4 +22079,235 @@ def GeneralHypermatrixSupport(A):
         else:
             Rh[tuple(entry)]=Integer(1)
     return Rh
+
+def EliminationHMI(Ha,i):
+    """
+    Procedure for performing a row linear combination which cancels the first entry
+    of non-zero entries. This implementation can serve as the basis for a parallel
+    solver
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,1).canonicalize_radical()
+        sage: Hb.printHM()
+        [:, :]=
+        [                                                                              a00                                                                               a01                                                                               a02]
+        [                                                                                0 -1/2*a00*a10*a21*(I*sqrt(3) + 1) - 1/2*(a00*a11*(-I*sqrt(3) + 1) - 2*a01*a10)*a20 -1/2*a00*a10*a22*(I*sqrt(3) + 1) - 1/2*(a00*a12*(-I*sqrt(3) + 1) - 2*a02*a10)*a20]
+        [                                                                              a20                                                                               a21                                                                               a22]
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,2).canonicalize_radical()
+        sage: Hb.printHM()
+        [:, :]=
+        [                                                                             a00                                                                              a01                                                                              a02]
+        [                                                                             a10                                                                              a11                                                                              a12]
+        [                                                                               0 1/2*a00*a10*a21*(I*sqrt(3) - 1) + 1/2*(a00*a11*(-I*sqrt(3) - 1) + 2*a01*a10)*a20 1/2*a00*a10*a22*(I*sqrt(3) - 1) + 1/2*(a00*a12*(-I*sqrt(3) - 1) + 2*a02*a10)*a20] 
+        sage: Hb=EliminationHMI(Ha,1); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
+        [:, :]=
+        [0 0 0]
+        [1 0 0]
+        [0 0 0]
+        sage: Hb=EliminationHMI(Ha,2); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
+        [:, :]=
+        [0 0 0]
+        [0 0 0]
+        [1 0 0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=Ha.copy()
+    #Sm=sum([exp(I*2*pi*i*k/A.n(0))*prod([A[j,0] for j in rg(A.n(0)) if j!=k])*A.slice([k],'row') for k in rg(A.n(0))])
+    Sm=sum([exp(I*2*pi*i*k/A.n(0))*GeneralHypermatrixScaleRight(GeneralHypermatrixScale(A.slice([k],'row'),prod(A[j,0] for j in rg(A.n(0)) if j<k)), prod([A[j,0] for j in rg(A.n(0)) if j>k])) for k in rg(A.n(0))])
+    for jndx in rg(A.n(1)):
+        A[i,jndx]=Sm[0,jndx]
+    return A
+
+def EliminationHMII(Ha):
+    """
+    Procedure for clearing bellow the first pivot
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hc=EliminationHMII(Ha).canonicalize_radical()
+        sage: Hc.printHM()
+        [:, :]=
+        [                                                                              a00                                                                               a01                                                                               a02]
+        [                                                                                0 -1/2*a00*a10*a21*(I*sqrt(3) + 1) - 1/2*(a00*a11*(-I*sqrt(3) + 1) - 2*a01*a10)*a20 -1/2*a00*a10*a22*(I*sqrt(3) + 1) - 1/2*(a00*a12*(-I*sqrt(3) + 1) - 2*a02*a10)*a20]
+        [                                                                                0  1/2*a00*a10*a21*(I*sqrt(3) - 1) + 1/2*(a00*a11*(-I*sqrt(3) - 1) + 2*a01*a10)*a20  1/2*a00*a10*a22*(I*sqrt(3) - 1) + 1/2*(a00*a12*(-I*sqrt(3) - 1) + 2*a02*a10)*a20]
+        sage: Deter(Hc).is_zero()
+        False
+        sage: Ha = HM([[HM(2,2,'a'),HM(2,2,'b'),HM(2,2,'c')],[HM(2,2,'d'),HM(2,2,'e'),HM(2,2,'f')],[HM(2,2,'g'),HM(2,2,'h'),HM(2,2,'i')]])
+        sage: Hb=EliminationHMII(Ha); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
+        [:, :]=
+        [0 0 0]
+        [1 0 0]
+        [1 0 0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=Ha.copy(); B=Ha.copy()
+    for i in rg(1,A.n(0)):
+        # Zeroing out the first entry of row i
+        Tmp=EliminationHMI(A,i)
+        for jndx in rg(A.n(1)):
+            B[i,jndx]=Tmp[i,jndx]
+    return B
+
+def GaussEliminationHM(Ha):
+    """
+    Procedure for obtaining the Row Echelon Form (REF)
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hc=GaussEliminationHM(Ha).canonicalize_radical()
+        sage: Hc.printHM()
+        [:, :]=
+        [                                                                                                                                                                                        a00                                                                                                                                                                                         a01                                                                                                                                                                                         a02]
+        [                                                                                                                                                                                          0                                                                                                           -1/2*a00*a10*a21*(I*sqrt(3) + 1) - 1/2*(a00*a11*(-I*sqrt(3) + 1) - 2*a01*a10)*a20                                                                                                           -1/2*a00*a10*a22*(I*sqrt(3) + 1) - 1/2*(a00*a12*(-I*sqrt(3) + 1) - 2*a02*a10)*a20]
+        [                                                                                                                                                                                          0                                                                                                                                                                                           0 (-I*sqrt(3)*a00*a02*a10*a11 + I*sqrt(3)*a00*a01*a10*a12)*a20^2 + (I*sqrt(3)*a00*a02*a10^2 - I*sqrt(3)*a00^2*a10*a12)*a20*a21 + (-I*sqrt(3)*a00*a01*a10^2 + I*sqrt(3)*a00^2*a10*a11)*a20*a22]
+        sage: Ha = HM([[HM(2,2,'a'),HM(2,2,'b'),HM(2,2,'c')],[HM(2,2,'d'),HM(2,2,'e'),HM(2,2,'f')],[HM(2,2,'g'),HM(2,2,'h'),HM(2,2,'i')]])
+        sage: Hb=GaussEliminationHM(Ha); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
+        [:, :]=
+        [0 0 0]
+        [1 0 0]
+        [1 1 0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=Ha.copy()
+    for i in rg(A.n(0)-1):
+        A = A.fill_with(EliminationHMII(A.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),i)
+    return A
+
+def GaussJordanEliminationHM(Ha):
+    """
+    Procedure for obtaining the Reduced Row Echelon Form (RREF)
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; Ha=HM(sz,sz,'a'); Hd=GaussJordanEliminationHM(Ha).canonicalize_radical()
+        sage: Hd.printHM()
+        [:, :]=
+        [-a00*a01*a10 + a00^2*a11                        0]
+        [                       0        a01*a10 - a00*a11]
+        sage: Hb=GaussJordanEliminationHM(Ha); Hb[0,1].is_zero()
+        True
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=Ha.copy()
+    B=GaussEliminationHM(A).index_rotation(2*2*pi/4)
+    for i in rg(B.n(0)-1):
+        B=B.fill_with(GaussEliminationHM(B.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),i)
+    return B.index_rotation(2*2*pi/4)
+
+def general_derivative(f, v, od):
+    """
+    Returns the vector of generalized derivatives for the input function
+    f in the variable v of order od.
+
+
+    EXAMPLES:
+    ::
+
+        sage: f=x^2
+        sage: general_derivative(f, x, 2).printHM()
+        [:, :]=
+        [2*h^2 + 4*h*x + 2*x^2]
+        [                4*h*x]
+        sage: general_derivative(f, x, 3).printHM()
+        [:, :]=
+        [3*h^2 + 6*h*x + 3*x^2]
+        [                3*h^2]
+        [                3*h^2]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the step variable
+    h=var('h')
+    # Initialization of the DFT matrix
+    Ha=SecondOrderDFT(od,od)[0]
+    return HM(od, 1, [sum(Ha[i,j]*f.subs(v==v+Ha[i,j]*h) for j in rg(od)) for i in rg(od)]).expand()
+
+def Grph_EliminationHMII(Ha):
+    """
+    Procedure for clearing bellow the first pivot.
+    This implementation is motivated by functional directed graph listing
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; Ha=HM(sz,sz,'a'); Hc=Grph_EliminationHMII(Ha)
+        sage: Hc.printHM()
+        [:, :]=
+        [        2*a00*a10 a01*a10 + a00*a11]
+        [                0 a01*a10 - a00*a11]
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hc=Grph_EliminationHMII(Ha)
+        sage: Hc.printHM()
+        [:, :]=
+        [                                                                    3*a00*a10*a20                                           a01*a10*a20 + a00*a11*a20 + a00*a10*a21                                           a02*a10*a20 + a00*a12*a20 + a00*a10*a22]
+        [-1/2*a00*a10*a20*(I*sqrt(3) + 1) - 1/2*a00*a10*a20*(-I*sqrt(3) + 1) + a00*a10*a20 -1/2*a00*a10*a21*(I*sqrt(3) + 1) - 1/2*a00*a11*a20*(-I*sqrt(3) + 1) + a01*a10*a20 -1/2*a00*a10*a22*(I*sqrt(3) + 1) - 1/2*a00*a12*a20*(-I*sqrt(3) + 1) + a02*a10*a20]
+        [-1/2*a00*a10*a20*(I*sqrt(3) + 1) - 1/2*a00*a10*a20*(-I*sqrt(3) + 1) + a00*a10*a20 -1/2*a00*a11*a20*(I*sqrt(3) + 1) - 1/2*a00*a10*a21*(-I*sqrt(3) + 1) + a01*a10*a20 -1/2*a00*a12*a20*(I*sqrt(3) + 1) - 1/2*a00*a10*a22*(-I*sqrt(3) + 1) + a02*a10*a20]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=Ha.copy(); B=Ha.copy()
+    #for i in rg(1,A.n(0)):
+    for i in rg(A.n(0)):
+        # Zeroing out the first entry of row i
+        Tmp=EliminationHMI(A,i)
+        for jndx in rg(A.n(1)):
+            B[i,jndx]=Tmp[i,jndx]
+    return B
+
+def Grph_GaussEliminationHM(Ha):
+    """
+    Procedure for obtaining the Row Echelon Form (REF)
+    This implementation is motivated by functional directed graph listing
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hc=Grph_GaussEliminationHM(Ha)
+        sage: Hc.printHM()
+        [:, :]=
+        [                                                                                                                                                                                                                                                                                                                 3*a00*a10*a20                                                                                                                                                                                                                                                                                        a01*a10*a20 + a00*a11*a20 + a00*a10*a21                                                                                                                                                                                                                                                                                        a02*a10*a20 + a00*a12*a20 + a00*a10*a22]
+        [                                                                                                                                                                                                                                             -1/2*a00*a10*a20*(I*sqrt(3) + 1) - 1/2*a00*a10*a20*(-I*sqrt(3) + 1) + a00*a10*a20                                                                                                                                                                  1/2*(a00*a11*a20*(I*sqrt(3) + 1) + a00*a10*a21*(-I*sqrt(3) + 1) - 2*a01*a10*a20)*(a00*a10*a21*(I*sqrt(3) + 1) + a00*a11*a20*(-I*sqrt(3) + 1) - 2*a01*a10*a20)  1/4*(a00*a12*a20*(I*sqrt(3) + 1) + a00*a10*a22*(-I*sqrt(3) + 1) - 2*a02*a10*a20)*(a00*a10*a21*(I*sqrt(3) + 1) + a00*a11*a20*(-I*sqrt(3) + 1) - 2*a01*a10*a20) + 1/4*(a00*a11*a20*(I*sqrt(3) + 1) + a00*a10*a21*(-I*sqrt(3) + 1) - 2*a01*a10*a20)*(a00*a10*a22*(I*sqrt(3) + 1) + a00*a12*a20*(-I*sqrt(3) + 1) - 2*a02*a10*a20)]
+        [                                                                                                                                                                                                                                             -1/2*a00*a10*a20*(I*sqrt(3) + 1) - 1/2*a00*a10*a20*(-I*sqrt(3) + 1) + a00*a10*a20                                                                                                                                                                                                                                                                                                                              0 -1/4*(a00*a12*a20*(I*sqrt(3) + 1) + a00*a10*a22*(-I*sqrt(3) + 1) - 2*a02*a10*a20)*(a00*a10*a21*(I*sqrt(3) + 1) + a00*a11*a20*(-I*sqrt(3) + 1) - 2*a01*a10*a20) + 1/4*(a00*a11*a20*(I*sqrt(3) + 1) + a00*a10*a21*(-I*sqrt(3) + 1) - 2*a01*a10*a20)*(a00*a10*a22*(I*sqrt(3) + 1) + a00*a12*a20*(-I*sqrt(3) + 1) - 2*a02*a10*a20)]
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=Ha.copy()
+    for i in rg(A.n(0)-1):
+        A = A.fill_with(Grph_EliminationHMII(A.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),i)
+    return A
 
