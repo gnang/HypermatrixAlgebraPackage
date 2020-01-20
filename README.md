@@ -15,7 +15,7 @@ algebra package, simply download the [hypermatrix algebra package sage file](htt
 sage: load('Hypermatrix_Algebra_Package_code.sage')
 ```
 
-The hypermatrix package passes all tests on SageMath version 8.5. To run the hypermatrix tests on your local sage, 
+The hypermatrix package passes all tests on SageMath version 9.0. To run the hypermatrix tests on your local sage, 
 use the following command in a [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) shell session
 
 ```bash
@@ -247,7 +247,7 @@ is obtained as follows
 sage: sz=3; X=HM(sz, 1, HM(sz,'x').list()); Y=HM(sz, 1, HM(sz,'y').list()); L=[X, Y]
 sage: Prod(X.transpose(),Y)[0,0]
 x0*y0 + x1*y1 + x2*y2
-sage: apply(Prod,[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0]
+sage: Prod(*[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0]
 x0*y0 + x1*y1 + x2*y2
 ```
 
@@ -258,7 +258,7 @@ each of size 3 by 1 by 1
 sage: sz=3; X=HM(sz,1,1,HM(sz,'x').list()); Y=HM(sz,1,1,HM(sz,'y').list()); Z=HM(sz,1,1,HM(sz,'z').list()); L=[X, Y, Z]
 sage: Prod(X.transpose(2), Y.transpose(), Z)[0,0,0]
 x0*y0*z0 + x1*y1*z1 + x2*y2*z2
-sage: apply(Prod, [L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0,0]
+sage: Prod(*[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0,0]
 x0*y0*z0 + x1*y1*z1 + x2*y2*z2
 ```
 
@@ -267,8 +267,8 @@ Here is a similar command in a more general set up
 ```python
 sage: AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
 sage: od=4; sz=3 # Initialization of the order and size paramaters
-sage: L=[apply(HM, [sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()]) for j in range(od)]
-sage: apply(Prod, [L[i].transpose(i) for i in range(od-1,-1,-1)])
+sage: L=[HM(*([sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()])) for j in range(od)]
+sage: Prod(*[L[i].transpose(i) for i in range(od-1,-1,-1)])
 [[[[w0*x0*y0*z0 + w1*x1*y1*z1 + w2*x2*y2*z2]]]]
 ```
 
@@ -296,9 +296,9 @@ Here is the same command in a more general setup
 ```python
 sage: AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
 sage: od=3; sz=2 # Initialization of the order and size paramaters
-sage: L=[apply(HM, [sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()]) for j in range(od)]
+sage: L=[HM(*([sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()])) for j in range(od)]
 sage: A=HM(2,2,2,'a') # Initialization of the background hypermatrix
-sage: apply(ProdB, [L[i].transpose(i) for i in range(od-1,-1,-1)]+[A])[0,0,0]
+sage: ProdB(*([L[i].transpose(i) for i in range(od-1,-1,-1)]+[A]))[0,0,0]
 a000*x0*y0*z0 + a100*x1*y0*z0 + a010*x0*y1*z0 + a110*x1*y1*z0 + a001*x0*y0*z1 + a101*x1*y0*z1 + a011*x0*y1*z1 + a111*x1*y1*z1
 ```
 
@@ -346,7 +346,7 @@ obtained as follows
 
 ```python
 sage: Q=GeneralOrthogonalHypermatrix(3)
-sage: (apply(Prod,[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
+sage: (Prod(*[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
 True
 ```
 
@@ -355,7 +355,7 @@ as follows
 
 ```python
 sage: Q=GeneralOrthogonalHypermatrix(4)
-sage: (apply(Prod,[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
+sage: (Prod(*[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
 True
 ```
 
@@ -364,7 +364,7 @@ package also provides constructions of third order hypermatrix analog of Hadamar
 ```python
 sage: H=ThirdOrderHadamardBlockU(4); H
 [[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]], [[-1, 1, -1, 1], [1, 1, 1, 1], [-1, 1, -1, 1], [1, 1, 1, 1]], [[-1, -1, 1, 1], [-1, -1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]], [[1, -1, -1, 1], [-1, -1, 1, 1], [-1, 1, -1, 1], [1, 1, 1, 1]]]
-sage: (apply(Prod,[H.transpose(i) for i in range(H.order(),0,-1)])-4*HM(H.order(),4,'kronecker')).is_zero()
+sage: (Prod(*[H.transpose(i) for i in range(H.order(),0,-1)])-4*HM(H.order(),4,'kronecker')).is_zero()
 True
 ```
 
