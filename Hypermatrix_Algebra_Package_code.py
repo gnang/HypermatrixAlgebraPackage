@@ -24,6 +24,7 @@ _sage_const_8 = Integer(8)
 #                  http://www.gnu.org/licenses/                           #
 #*************************************************************************#
 
+
 # Definition of the hypermatrix class HM.
 class HM:
     """
@@ -45,7 +46,7 @@ class HM:
         sage: od=2; HM(od,[0,1,2],'perm')
         [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         sage: od=2; sz=2; HM(od,sz,'a','sym') # Creating a symmetric matrix
-        [[a00, a01], [a01, a11]]
+        [[a00, a10], [a10, a11]]
         sage: od=2; sz=2; HM(od,sz,'a','skewsym') # Creating a symmetric matrix
         [[0, a01], [-a01, 0]]
         sage: sz=2; HM(sz,sz,sz,'a','shift') # Creating a hypermatrix where the index are shifted by one
@@ -526,6 +527,25 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixLogarithmN(self, s, dgts)
+
+    def elementwise_transpose(self, k=1):
+        """
+        Outputs the hypermatrix of the same dimension
+        where each entry is applied the transpose k times.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(1,1,[HM(2,2,'a')]); Ha.elementwise_transpose()[0,0]
+            [[a00, a10], [a01, a11]]
+
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixEntryTranspose(self, k)
+
 
     def apply_map(self, phi):
         """
@@ -1270,6 +1290,24 @@ class HM:
             # Appending to the list
             lst.append(self[tuple(entry)])
         return lst
+
+    def set(self):
+        """
+        Returns the hypermatrix as a set going down by columns.
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(2,3,'a'); Ha.set().list()
+            [a10, a11, a12, a01, a00, a02]
+
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return Set(self.list())
 
     def listHM(self):
         """
@@ -2023,7 +2061,7 @@ def SymMatrixGenerate(nr, c):
     ::
 
         sage: M = SymMatrixGenerate(2, 'm'); M
-        [[m00, m01], [m01, m11]]
+        [[m00, m10], [m10, m11]]
 
     AUTHORS:
     - Edinah K. Gnang and Ori Parzanchevski
@@ -2039,7 +2077,8 @@ def SymMatrixGenerate(nr, c):
         for i in range(len(q)):
             for j in range(n_q_cols):
                 # Filling up the matrix
-                (q[i]).append(var(c+str(min(i,j))+str(max(i,j))))
+                #(q[i]).append(var(c+str(min(i,j))+str(max(i,j))))
+                (q[i]).append(var(c+str(max(i,j))+str(min(i,j))))
         return q
     else :
         raise ValueError("Input dimensions "+str(nr)+" must be a non-zero positive integers.")
@@ -2892,7 +2931,7 @@ def HypermatrixKroneckerDelta(nr):
     else :
         raise ValueError("Input dimensions "+str(nr)+" must be a non-zero positive integer.")
 
-def Vandermonde(l):
+def Vandermonde(l, shft=0):
     """
     Constructs a Vandermonde matrix from the input list
     assumed to be either numbers or symbolic variables
@@ -2910,7 +2949,47 @@ def Vandermonde(l):
     AUTHORS:
     - Edinah K. Gnang
     """
-    return HM(len(l),len(l),[l[j]^i for j in range(len(l)) for i in range(len(l))])
+    return HM(len(l),len(l),[l[j]^(i+shft) for j in range(len(l)) for i in range(len(l))])
+
+def inverse_vandermonde(X):
+    """
+    Constructs the symbolic inverse of the Vandermonde matrix
+    associated with the vandermonde matrix from the input list X.
+    Crucially the input is not of type HM just a list
+
+    EXAMPLES:
+
+    ::
+
+        sage: inverse_vandermonde(var_list('x',2))
+        [[-x1/(x0 - x1), 1/(x0 - x1)], [x0/(x0 - x1), -1/(x0 - x1)]]
+        sage: (inverse_vandermonde(var_list('x',2))*Vandermonde(var_list('x',2))).canonicalize_radical().printHM()
+        [:, :]=
+        [1 0]
+        [0 1] 
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the Vandermonde matrix
+    sz=len(X); V=Vandermonde(X)
+    # Initialization of the inverse
+    iV=HM(sz, sz, 'zero')
+    # Initialization of the set
+    S=Set(rg(sz))
+    # Filling up the inverse matrix
+    for i in rg(sz):
+        Dn_i=prod((X[k]-X[i]) for k in rg(sz) if k != i)
+        for j in rg(sz):
+            Nm_i=0
+            for St in S.subsets(sz-1-j):
+                if not i in St:
+                    Nm_i=Nm_i+(-1)^j*prod(X[u] for u in St)
+            # Updating the matrix entry
+            iV[i,j]=Nm_i/Dn_i
+    # Returning the result
+    return iV
 
 def var_list(c,sz):
     """
@@ -6072,6 +6151,42 @@ def GeneralHypermatrixCyclicPermute(A):
         Rh[tuple(entry)]=A[tuple([entry[len(entry)-1]]+entry[:len(entry)-1])]
     return Rh
 
+def GeneralHypermatrixEntryTranspose(A,s):
+    """
+    Outputs a list of lists associated with the transpose of each entry
+    without changing the dimention of the underlying hypermatrix.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(1,1,[HM(2,2,'a')]); GeneralHypermatrixEntryTranspose(Ha, 1)[0,0]
+        [[a00, a10], [a01, a11]]
+        sage: L=[HM(3,1,[1,2,2]), HM(3,1,[3,4,5])]; M=HM(1, len(L), L)
+        sage: (M.elementwise_transpose())[0,0].dimensions()
+        [1, 3]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [A.n(i) for i in range(A.order())]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=(A[tuple(entry)]).transpose(s)
+    return Rh
+
 def GeneralHypermatrixScale(A,s):
     """
     Outputs a list of lists associated with the scaling of a general hypermatrix.
@@ -7537,6 +7652,81 @@ def DeterII(A):
     # Computing the matrix
     M=prod(sum(A[i,j]*Lm[j] for j in rg(sz)) for i in rg(sz))
     return M[2^(sz)-1,0]
+
+def GPer(A, k, Dct={'x':x}):
+    """
+    Computes symbolically the partial expansion permanent via canonical matrix representation 
+    of Grassmanian vaiables
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=3; M=HM(sz, sz, 'm'); expand(GPer(M, 2, dict([(str(v), v) for v in M.list()])))
+        m02*m11*m20 + m01*m12*m20 - m02*m10*m21 - m00*m12*m21 + m01*m10*m22 + m00*m11*m22
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order and size parameters
+    od=2; sz=A.nrows()
+    # Initialization of the variables
+    X=var_list('x', sz); Y=var_list('y', sz); Lc=['y'+str(i) for i in rg(sz)]
+    # Initialization of the identity matrix
+    I2=HM(od,2,'kronecker')
+    # Initialization of the Pauli matrix
+    s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])
+    # Initialization of the center rank one matrix
+    c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])
+    # Initialization of the list of matrices
+    Lm=[s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]
+    # Computing the matrix
+    #f=expand(prod(sum(A[i,j]*X[j] for j in rg(sz)) for i in rg(sz)))
+    f=expand(prod(sum(A[i,j]*X[j] for j in rg(sz)) for i in rg(k)))*prod(sum(A[i,j]*X[j] for j in rg(sz)) for i in rg(k,sz))
+    # Updating the dictionary
+    Dct.update(dict([(Lc[i], Lm[i]) for i in rg(sz)]))
+    # Performing the matrix substitution
+    M=fast_reduceII(f, X, Y, Dct)
+    return M[2^(sz)-1, 0]
+
+def PerIII(A, Dct={'x':x}):
+    """
+    Computes symbolically the permanent via canonical matrix representation 
+    of Grassmanian vaiables
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; M=HM(sz, sz, 'm'); PerIII(M, dict([(str(v), v) for v in M.list()])) 
+        m01*m10 + m00*m11
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order and size parameters
+    od=2; sz=A.nrows()
+    # Initialization of the variables
+    X=var_list('x', sz); Y=var_list('y', sz); Lc=['y'+str(i) for i in rg(sz)]
+    # Initialization of the identity matrix
+    I2=HM(od,2,'kronecker')
+    # Initialization of the Pauli matrix
+    s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])
+    # Initialization of the center rank one matrix
+    c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])
+    # Initialization of the list of matrices
+    Lm=[s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]
+    # Computing the matrix
+    f=expand(prod(sum(A[i,j]*X[j] for j in rg(sz)) for i in rg(sz)))
+    # Updating the dictionary
+    Dct.update(dict([(Lc[i], Lm[i]) for i in rg(sz)]))
+    # Performing the matrix substitution
+    M=fast_reduceII(f, X, Y, Dct)
+    return M[2^(sz)-1, 0]
 
 def DeterHadamard(A):
     """
@@ -11926,6 +12116,43 @@ def Bool2HM(T):
         Rh[tuple(entry)]=SubsTBool(T, LstVar, entry)
     return Rh
 
+def Bool2HM2(T, LstVar):
+    """
+    Outputs the hypermatrix encoding of the boolean formula
+    the index correspond to the values assigned to the variables
+    and the entry itself corresponds the 
+
+    EXAMPLES:
+
+    ::
+
+        sage: Bool2HM2(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]],[var('x0') ,var('x1')]).printHM()
+        [:, :]=
+        [0 1]
+        [0 1]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang and Doron Zeilberger
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [2 for i in rg(len(LstVar))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    Rh = HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        Rh[tuple(entry)]=SubsTBool(T, LstVar, entry)
+    return Rh
+
 def Bool2Integer(T):
     """
     Outputs the binary encoding of the boolean formula
@@ -12368,6 +12595,116 @@ def ShortestNonMonotoneBooleanFormulaII(P,X):
                 break
         return [F for F in A[sz] if Ivl==Bool2Integer(F)]
 
+def Boolean_interpolant(iL, X):
+    """
+    This function expresses a polynomial interpolant.
+    determined by the variables assignements for which the Boolean
+    function outputs true. We use the Lagrange interpolation construction
+    to express express an interpolant and then proceed to use the reduction
+    to obtain the multilinear polynomial used to specify the PDE.
+    The first input list iL correspond to integers whose binary expansion express
+    indicator vector of variable assignment for which the Boolean function
+    evaluates to 1. The second input X is the list of variables.
+    The original polynomial is obtain via Lagrange interpolation.
+    then we reduce modulo algebrait relations to determine the 
+    corresponding multilinear polynomial
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: X=var_list('x',2); F=expand(Boolean_interpolant([0, 2, 3] ,X)); F
+        -1/2*x0^3 - 3*x0^2*x1 - 6*x0*x1^2 - 4*x1^3 + 5/2*x0^2 + 10*x0*x1 + 10*x1^2 - 3*x0 - 6*x1 + 1
+        sage: fast_reduce(F,[x0^3,x1^3,x0^2,x1^2],[x0,x1,x0,x1])
+        x0*x1 - x0 + 1
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Initialization of the the polynomial
+    return sum(prod((sum(2^k*X[k] for k in rg(len(X)))-j)/(i-j) for j in rg(2^len(X)) if j !=i) for i in iL)
+
+def fast_reduce_bool(f, VrbL):
+    """
+    computes the reduction by monomial substitution
+    by converting the symbolic expression into a string
+    of characters and performing the substition on the
+    string and converts back in the end the obtained
+    string back into a symbolic expression SR
+    This implementation is specialized to polynomial
+    interpolant to Boolean function.
+
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: x0, x1=var('x0, x1'); fast_reduce_bool(expand(Boolean_interpolant([0, 2, 3], [x0, x1])),[x0, x1])
+        x0*x1 + x0 + 1        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the monomial list
+    monom = []
+    for v in VrbL:
+        monom = monom + [v^(f.degree(v)-k) for k in rg(f.degree(v)-1)]
+    subst=[] 
+    for v in VrbL:
+        subst = subst + [v for k in rg(f.degree(v)-1)]
+    if len(monom) == len(subst):
+        s = str(f)
+        for i in range(len(monom)):
+            s=s.replace(str(monom[i]), '('+str(subst[i])+')')
+        g=expand((SR(s)).simplify_full())
+        return sum([Integer(mod(mnm.subs([v==1 for v in VrbL]),2))*(mnm/mnm.subs([v==1 for v in VrbL])) for mnm in g.operands()])
+    else:
+        print('Error the monomial list and the substitution list must have the same length')
+
+def Indicator_to_PDE_poly(iL, X):
+    """
+    The multilinear polynomial of a Boolean function is completly
+    determined by the variables assignements for which the Boolean
+    function outputs true. We use the Lagrange interpolation construction
+    to express express an interpolant and then proceed to use the reduction
+    to obtain the multilinear polynomial used to specify the PDE.
+    The first input list iL correspond to integers whose binary expansion express
+    indicator vector of variable assignment for which the Boolean function
+    evaluates to 1. The second input X is the list of variables.
+    The original polynomial is obtain via Lagrange interpolation.
+    then we reduce modulo algebrait relations to determine the 
+    corresponding multilinear polynomial
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: X=var_list('x',2);  Indicator_to_PDE_poly([0, 2, 3] ,X)
+        x0*x1 + x0 + 1
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Initialization of the the polynomial
+    F=expand(Boolean_interpolant(iL, X))
+    return fast_reduce_bool(F,X)
+
 def GeneralDualHypermatrixProductB(*args):
     """
     Outputs a list of lists associated with the general
@@ -12574,7 +12911,7 @@ def fast_reduceII(f, monom, subst, Dct):
         sage: I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)]); c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)]) # Initialization of the 2x2 matrices
         sage: Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)] # matrix representation of the Grassmanian variables
         sage: prm = expand(prod(A[u,0]*X[0] for u in rg(sz))*fast_reduce(f, [A[i,1]^(sz-j-1) for j in rg(sz-1) for i in rg(sz)],[A[i,sz-j-1]*X[sz-j-1]/(A[i,0]*X[0]) for j in rg(sz-1) for i in rg(sz)]))
-        sage: M = fast_reduceII(d,[x0,x1,x2],[U,V,W],{'U':Lm[0],'V':Lm[1],'W':Lm[2], 'a00':a00, 'a10':a10, 'a20':a20, 'a01':a01, 'a11':a11, 'a21':a21, 'a02':a02, 'a12':a12, 'a22':a22}) # Substitution
+        sage: M = fast_reduceII(prm,var_list('x',3),[U,V,W],{'U':Lm[0],'V':Lm[1],'W':Lm[2], 'a00':A[0,0], 'a10':A[1,0], 'a20':A[2,0], 'a01':A[0,1], 'a11':A[1,1], 'a21':A[2,1], 'a02':A[0,2], 'a12':A[1,2], 'a22':A[2,2]}) # Substitution
         sage: M[2^sz-1,0]
         a02*a11*a20 + a01*a12*a20 + a02*a10*a21 + a00*a12*a21 + a01*a10*a22 + a00*a11*a22
 
@@ -13765,8 +14102,7 @@ def gaussian_eliminationHM(Cf, rs):
                 Ta=A.slice(rg(i,A.n(0)),'row')
                 Tb=b.slice(rg(i,b.n(0)),'row')
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2, Ta.n(0), 'kronecker')
-                P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
+                P=HM(2,rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -13842,8 +14178,9 @@ def gaussian_eliminationHMII(Cf, rs):
                 Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                #Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -13918,8 +14255,9 @@ def gaussian_eliminationHMIII(Cf, rs):
                 Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                #Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -13987,8 +14325,9 @@ def gaussian_eliminationHMIV(Cf):
             while A[i,j].is_zero(): 
                 Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                #Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=HM(2, rg(1, Ta.n(0))+[0],'perm')
                 Ta=P*Ta
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -14011,6 +14350,168 @@ def gaussian_eliminationHMIV(Cf):
         # Incrementing the row and column index.
         i=i+1; j=j+1
     return A
+
+def gaussian_eliminationHMV(Cf, rs):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    This implementation works perfectly well if the entries are matrices or hypermatrices
+    associated with appropriate block partitions. The implmentation follows the spirit
+    of the Cauchy trick inspired by the Vandermonde determinant construction.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; [A, b, prd] = gaussian_eliminationHMV(HM(sz,sz,'a'), HM(sz,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [      1 a01/a00]
+        [      0       1]
+        sage: b.printHM()
+        [:, :]=
+        [                                b00/a00]
+        [(b00/a00 - b10/a10)/(a01/a00 - a11/a10)]
+        sage: prd
+        -a00*a10*(a01/a00 - a11/a10)
+        sage: Ta=HM(2,2,'a'); Tb=HM(2,1,'b') # Initialization of the factors.
+        sage: Ha=HM(2,2,[Ta[0,0]*HM(2,2,'kronecker'), Ta[1,0]*HM(2,2,'kronecker'), Ta[0,1]*HM(2,2,'kronecker'), Ta[1,1]*HM(2,2,'kronecker')])
+        sage: Hb=HM(2,1,[Tb[0,0]*HM(2,2,'kronecker'), Tb[1,0]*HM(2,2,'kronecker')])
+        sage: [A, b, prd]=gaussian_eliminationHMV(Ha,Hb) # performing the gaussian elimination where entries are hypermatrices.
+        sage: A
+        [[[[1, 0], [0, 1]], [[a01/a00, 0], [0, a01/a00]]], [[[0, 0], [0, 0]], [[1, 0], [0, 1]]]]
+        sage: b
+        [[[[b00/a00, 0], [0, b00/a00]]], [[[(b00/a00 - b10/a10)/(a01/a00 - a11/a10), 0], [0, (b00/a00 - b10/a10)/(a01/a00 - a11/a10)]]]]
+        sage: prd.printHM()
+        [:, :]=
+        [-a00*a10*(a01/a00 - a11/a10)                            0]
+        [                           0 -a00*a10*(a01/a00 - a11/a10)]
+        sage: sz=3; [A, b, prd] = gaussian_eliminationHMV(HM(sz,sz,'a'), HM(sz,1,'b'))
+        sage: prd
+        -a00*a10*a20*(a01/a00 - a11/a10)*(a01/a00 - a21/a20)*((a02/a00 - a12/a10)/(a01/a00 - a11/a10) - (a02/a00 - a22/a20)/(a01/a00 - a21/a20))
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy(); b=rs.copy()
+    # Initialization of the product
+    prd=1
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while A.slice(rg(i,A.n(0)),'row').slice([j],'col').is_zero() and j < A.n(1)-1:
+            # Incrementing the column index
+            j=j+1
+        if A.slice(rg(i,A.n(0)),'row').is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=A.slice(rg(i,A.n(0)),'row'); Tb=b.slice(rg(i,b.n(0)),'row')
+                # Initializing the cyclic shift permutation matrix
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
+                Ta=P*Ta; Tb=P*Tb
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i+i0,j0]=Tb[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]; prd = prd*cf1
+            for j0 in range(b.n(1)):
+                b[i,j0]=(cf1^(-1))*b[i,j0]
+            for j0 in range(A.n(1)):
+                A[i,j0]=(cf1^(-1))*A[i,j0]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]; prd = prd*cf2
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=-b[i,j0]+(cf2^(-1))*b[r,j0]
+                    for j0 in range(A.n(1)):
+                        A[r,j0]=-A[i,j0]+(cf2^(-1))*A[r,j0]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A, b, prd]
+
+def permanent_eliminationHM(Cf, rs):
+    """
+    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
+    This implementation works perfectly well if the entries are matrices or hypermatrices
+    associated with appropriate block partitions. The implmentation follows the spirit
+    of the Cauchy trick inspired by the Vandermonde determinant construction.
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=2; [A, b, prd] = permanent_eliminationHM(HM(sz,sz,'a'), HM(sz,1,'b'))
+        sage: A.printHM()
+        [:, :]=
+        [                    1               a01/a00]
+        [2/(a01/a00 + a11/a10)                     1]
+        sage: b.printHM()
+        [:, :]=
+        [                                b00/a00]
+        [(b00/a00 + b10/a10)/(a01/a00 + a11/a10)]
+        sage: prd
+        a00*a10*(a01/a00 + a11/a10)
+        sage: sz=3; [A, b, prd] = permanent_eliminationHM(HM(sz,sz,'a'), HM(sz,1,'b'))
+        sage: prd
+        a00*a10*a20*(a01/a00 + a11/a10)*(a01/a00 + a21/a20)*((a02/a00 + a12/a10)/(a01/a00 + a11/a10) + (a02/a00 + a22/a20)/(a01/a00 + a21/a20))
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing a copy of the input second order hypermatrices.
+    A=Cf.copy(); b=rs.copy()
+    # Initialization of the product
+    prd=1
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        while A.slice(rg(i,A.n(0)),'row').slice([j],'col').is_zero() and j < A.n(1)-1:
+            # Incrementing the column index
+            j=j+1
+        if A.slice(rg(i,A.n(0)),'row').is_zero()==False:
+            while A[i,j].is_zero(): 
+                Ta=A.slice(rg(i,A.n(0)),'row'); Tb=b.slice(rg(i,b.n(0)),'row')
+                # Initializing the cyclic shift permutation matrix
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
+                Ta=P*Ta; Tb=P*Tb
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+                for i0 in range(Tb.n(0)):
+                    for j0 in range(Tb.n(1)):
+                        b[i+i0,j0]=Tb[i0,j0]
+            # Performing the row operations.
+            cf1=A[i,j]; prd = prd*cf1
+            for j0 in range(b.n(1)):
+                b[i,j0]=(cf1^(-1))*b[i,j0]
+            for j0 in range(A.n(1)):
+                A[i,j0]=(cf1^(-1))*A[i,j0]
+            for r in range(i+1,A.nrows()):
+                # Taking care of the zero row
+                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                    r=r+1
+                else:
+                    # Initialization of the coefficient
+                    cf2=A[r,j]; prd = prd*cf2
+                    for j0 in range(b.n(1)):
+                        b[r,j0]=b[i,j0]+(cf2^(-1))*b[r,j0]
+                    for j0 in range(j):
+                        A[r,j0]=0
+                    for j0 in range(j,A.n(1)):
+                        A[r,j0]=A[i,j0]+(cf2^(-1))*A[r,j0]
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return [A, b, prd]
 
 def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
     """
@@ -14056,8 +14557,9 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
                 Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                #Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta; Tb=P*Tb
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -14136,7 +14638,7 @@ def gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts):
         sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
         sage: Rh=gaussian_elimination_ReductionHMII(M,[x],[x^(1+d)])
         sage: Rh[1,1]
-        a00*a01*a02*x^13 + a00*a02*a12*x^13 + a00*a01*a12*x^7
+        a00*a10*a20*x^13 + a00*a20*a21*x^13 + a00*a10*a21*x^7
 
 
     AUTHORS:
@@ -14155,8 +14657,9 @@ def gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts):
             while A[i,j].is_zero(): 
                 Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                #Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -14230,7 +14733,7 @@ def gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, RltsII):
         sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
         sage: Rh=gaussian_elimination_ReductionHMIII(M,[x],[x^(1+d)],[x^(1+d)])
         sage: Rh[1,1]
-        a00*a01*a02*x^13 + a00*a02*a12*x^13 + a00*a01*a12*x^7
+        a00*a10*a20*x^13 + a00*a20*a21*x^13 + a00*a10*a21*x^7
         sage: od=2; sz=4 # Initialization of the order and size parameter
         sage: Lx=var_list('x',sz) # Initialization of the list of vraiables
         sage: A=HM(od,sz,'a','sym') # Initialization of the adjacency matrix
@@ -14247,7 +14750,7 @@ def gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, RltsII):
         sage: M=(HM(od,[Lx[0]*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
         sage: d0=3; d1=2; Rh=gaussian_elimination_ReductionHMIII(M,Lx,[v^d0 for v in Lx],[v^d1 for v in Lx])
         sage: Rh[sz-2,sz-2]
-        a00*a01*a02*a03*x0*x1*x2*x3 + a00*a02*a03*a12*x0*x1*x2*x3 + a00*a03*a12*a13*x0*x1*x2*x3 + a00*a03*a13*a23*x0*x1*x2*x3
+        a00*a10*a20*a30*x0*x1*x2*x3 + a00*a20*a21*a30*x0*x1*x2*x3 + a00*a21*a30*a31*x0*x1*x2*x3 + a00*a30*a31*a32*x0*x1*x2*x3
         sage: od=2; sz=4 # Initialization of the order and size parameter
         sage: Lx=var_list('x',sz) # Initialization of the list of variables
         sage: A=HM(sz,sz,'a') # Initialization of part of the adjacency matrix
@@ -14274,8 +14777,9 @@ def gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, RltsII):
             while A[i,j].is_zero(): 
                 Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2, Ta.n(0), 'kronecker')
-                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                #Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta
                 for i0 in range(Ta.n(0)):
                     for j0 in range(Ta.n(1)):
@@ -14866,9 +15370,6 @@ def multiplicative_gaussian_eliminationHM(Cf,rs,jndx=0):
                 #Tb=b[i:,:]
                 Tb=b.slice(rg(i,b.n(0)),'row')
                 # Initializing the cyclic shift permutation matrix
-                #Id=identity_matrix(Ta.nrows())
-                Id=HM(2,Ta.n(0),'kronecker')
-                #P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
                 P=HM(2, [Integer(mod(fi-1, Ta.n(0))) for fi in rg(Ta.n(0))], 'perm')
                 Ta=P*Ta; Tb=P*Tb
                 #A[i:,:]=Ta
@@ -17520,7 +18021,7 @@ def ThirdOrdeCharpolyI(A, Mu, Mv, Mw):
 
         sage: Mu=HM(2,2,'f','sym'); Mv=HM(2,2,'g','sym'); Mw=HM(2,2,'h','sym')
         sage: ThirdOrdeCharpolyI(HM(2,2,2,'a'), Mu, Mv, Mw)
-        (f01^2*g01^2*h01^2 - a111)*a001*a010*a100 - (f00^2*g00^2*h00^2 - a000)*a011*a101*a110 
+        (f10^2*g10^2*h10^2 - a111)*a001*a010*a100 - (f00^2*g00^2*h00^2 - a000)*a011*a101*a110
  
 
     AUTHORS:
@@ -17565,7 +18066,7 @@ def ThirdOrdeCharpolyII(A, U, V, W, Du, Dv, Dw):
         sage: Wh[0,0,0]=Wh[0,0,0]/Hd[0,0,0]; Wh[1,0,0]=Wh[1,0,0]/Hd[0,0,0]
         sage: Wh[0,1,1]=Wh[0,1,1]/Hd[1,1,1]; Wh[1,1,1]=Wh[1,1,1]/Hd[1,1,1]
         sage: ThirdOrdeCharpolyII(HM(2,2,2,'a'), Uh, Vh, Wh, Du, Dv, Dw)[0]
-        -(f01^2*g01^2*h01^2*u111*v111*w000*w011*w101*w110/(u111*v111*w000*w011*w101*w110 - u111*v111*w001*w010*w100*w111) - a111)*(f00*f01*g00*g01*h00^2*u110*v101*w001*w010*w100*w111/(u010*v001*w000*w011*w101*w110 - u010*v001*w001*w010*w100*w111) - a100)*(f00*f01*g00^2*h00*h01*u011*v001*w101 + a001)*(f00^2*g00*g01*h00*h01*u010*v011*w110 + a010) + (f00^2*g00^2*h00^2*u010*v001*w000*w011*w101*w110/(u010*v001*w000*w011*w101*w110 - u010*v001*w001*w010*w100*w111) - a000)*(f00*f01*g00*g01*h01^2*u011*v011*w001*w010*w100*w111/(u111*v111*w000*w011*w101*w110 - u111*v111*w001*w010*w100*w111) - a011)*(f01^2*g00*g01*h00*h01*u111*v101*w101 + a101)*(f00*f01*g01^2*h00*h01*u110*v111*w110 + a110)
+        -(f10^2*g10^2*h10^2*u111*v111*w000*w011*w101*w110/(u111*v111*w000*w011*w101*w110 - u111*v111*w001*w010*w100*w111) - a111)*(f00*f10*g00*g10*h00^2*u110*v101*w001*w010*w100*w111/(u010*v001*w000*w011*w101*w110 - u010*v001*w001*w010*w100*w111) - a100)*(f00*f10*g00^2*h00*h10*u011*v001*w101 + a001)*(f00^2*g00*g10*h00*h10*u010*v011*w110 + a010) + (f00^2*g00^2*h00^2*u010*v001*w000*w011*w101*w110/(u010*v001*w000*w011*w101*w110 - u010*v001*w001*w010*w100*w111) - a000)*(f00*f10*g00*g10*h10^2*u011*v011*w001*w010*w100*w111/(u111*v111*w000*w011*w101*w110 - u111*v111*w001*w010*w100*w111) - a011)*(f10^2*g00*g10*h00*h10*u111*v101*w101 + a101)*(f00*f10*g10^2*h00*h10*u110*v111*w110 + a110)
 
 
     AUTHORS:
@@ -18992,7 +19493,8 @@ def i2x2(A):
 
 def inxn(A):
     """
-    Outputs the symbolic inverse of a 2x2 matrix.
+    Outputs the symbolic inverse of a nxn matrix.
+    Using the logarithmic gradient.
 
 
     EXAMPLES:
@@ -20436,7 +20938,7 @@ def kroneckerian_elimination(L, VrbL):
         sage: kroneckerian_elimination(L, VrbL)
         [[a00*x0 + a01*x1 - b0, a10*x0 + a11*x1 - b1],
          [-a01*a10*x1 + a00*a11*x1 + a10*b0 - a00*b1,
-          a01*a10*x1 - a00*a11*x1 - a10*b0 + a00*b1]]        
+          a01*a10*x1 - a00*a11*x1 - a10*b0 + a00*b1]]
 
 
     AUTHORS:
@@ -20541,8 +21043,7 @@ def naught_eliminationHM(Cf):
             while A[i,j].is_zero(): 
                 Ta=A.slice(rg(i,A.n(0)),'row')
                 # Initializing the cyclic shift permutation matrix
-                Id=HM(2,Ta.n(0), 'kronecker')
-                P=Matrix2HM(sum([Id.matrix()[:,k]*Id.matrix()[Integer(mod(k+1,Ta.nrows())),:] for k in rg(Ta.n(0))]))
+                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta
                 for i0 in rg(Ta.n(0)):
                     for j0 in rg(Ta.n(1)):
@@ -20609,66 +21110,6 @@ def naught_reduced_eliminationHM(Cf):
             i=i-1; j=0
     return A
 
-def default_naught_solver(Eq, La, Lf):
-    """
-    Formats the constraints performs and solves the multiplicatively linear constraints
-    where the right hand side equals zero. This function outputs the solutions. The input
-    EqL corresponds to a list of constraints. The input Lv corresponds to the list of 
-    variables appearing in the constraints. The input Lf corresponds to the list of free
-    varaibles each taken in correspondence with the entries of Lv. This implementation 
-    tacitly assumes that the  the input constraints are indeed multiplicatively linear.
-    This implementation performs cyclic permutations to the equations and all permutations
-    to the variables in the first constraints.
-
-
-    EXAMPLES:
- 
-    ::
-
-        sage: sz=2; len(default_naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        4
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Initialization of the list which stores the solutions
-    Sln=[]
-    for itr in rg(len(Eq)):
-        # Performing a cyclic permutation of the constraints
-        Eq.insert(0,Eq.pop())
-        # Obtaining the variables in the first equations
-        [TmpHa,hb]=multiplicativeConstraintFormatorIIHM(Eq[:1],La)
-        La1=(TmpHa*HM(len(La),1,La))[0,0].operands()
-        La2=Set(La).difference(Set(La1)).list()
-        # Initializing the permutation of the variables in the first constraints
-        P=Permutations(len(La1))
-        for p in P:
-            q=[p[i]-1 for i in rg(len(La1))]
-            # Updating the ordering of the variables
-            tLa=[La1[q[i]] for i in rg(len(La1))]+La2
-            # Formatting the constraints to obtain the coefficient matrix
-            [Ha, hb]=multiplicativeConstraintFormatorIIHM(Eq, tLa)
-            # Performing the Gaussian elimination procedure
-            tA=naught_reduced_eliminationHM(Ha)
-            # Identifying the non zero rows of the matrix
-            r=1
-            while HM(tA.n(0),tA.n(1),'zero').fill_with(tA.slice(rg(r),'row'),[0,0]) != tA:
-                r=r+1
-            # Taking only the nonzero rows
-            Ca=tA.slice(rg(r),'row')
-            # Initialization of the vector
-            #vA=HM(len(tLa),1,tLa)
-            # Obtaining the resulting constraints
-            #qE=(vA^Ca).list(); print 'Eq =', Eq,'qE =', qE, 'tLa =', tLa
-            # Obtaining a solution to the system
-            Mx=HM(Ca.n(1),1,tLa); Mv=HM(Ca.n(1),1,Lf) # Initialization of the pivot and free variables
-            tmpSln=multiplicative_linear_solverHM(Ca,HM(Ca.n(0),1,'zero'),Mx,Mv)
-            if (Set(tmpSln).list() in Sln) == False:
-                Sln.append(Set(tmpSln).list())
-    return Sln 
-
 def naught_solver(EqL, La, Lf):
     """
     Formats the constraints performs and solves the multiplicatively linear constraints
@@ -20686,7 +21127,7 @@ def naught_solver(EqL, La, Lf):
     ::
 
         sage: sz=2; len(naught_solver([var('x'+str(i))*var('x'+str(sz+j)) for i in range(sz) for j in range(sz)], var_list('x', 2*sz), var_list('t', 2*sz)))
-        9
+        2
 
 
     AUTHORS:
@@ -20736,7 +21177,9 @@ def naught_solver(EqL, La, Lf):
             tmpSln=multiplicative_linear_solverHM(Ca,HM(Ca.n(0),1,'zero'),Mx,Mv)
             if (Set(tmpSln).list() in Sln) == False:
                 Sln.append(Set(tmpSln).list())
-    return Sln
+    # Initializing the list of lengths
+    Ll=[len(s) for s in Sln]; mn=min(Ll)
+    return [s for s in Sln if len(s)==mn]
  
 def SecondOrderIndexRotation(Ha, T):
     """
@@ -21396,34 +21839,9 @@ def BaseExpN(L,dgts=50):
     else:
         raise ValueError("Expected list of two elements")
 
-def Sigmoid(L):
-    """
-    Outputs the sgmoid of the input list
-    This implementation check the validity of the inputs
-    When used with GProdIII it can only handle second order constructs
-
-
-    EXAMPLES:
- 
-    ::
-
-
-        sage: Exp(var_list('a',2))
-        a0^a1
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    if len(L) == 2:
-        return L[1]^L[0]/(L[1]^L[0]+1)
-    else:
-        raise ValueError("Expected list of two elements")
-
 def And(L):
     """
-    Outputs the conjuction of the input list of boolean values.
+    Outputs the conjunction of the input list of boolean values.
     This implementation does not check the validity of the inputs
 
 
@@ -21593,19 +22011,18 @@ def TupleFunctionList(sz):
          [(0, 2), (1, 2), (2, 2)]]
 
 
-
     AUTHORS:
 
     - Edinah K. Gnang
     """
     # Initialization of the lists
-    l=[sz for i in range(sz)]; Lf=[]
+    l=[sz for i in rg(sz)]; Lf=[]
     # Main loop performing the collecting the functions.
-    for i in range(prod(l)):
+    for i in rg(prod(l)):
         # Turning the index i into an hypermatrix array location using the decimal encoding trick
         entry = [Integer(mod(i,l[0]))]
         sm = Integer(mod(i,l[0]))
-        for k in range(len(l)-1):
+        for k in rg(len(l)-1):
             entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
             sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
         f=entry
@@ -21674,7 +22091,7 @@ def PermutationFunctionList(sz):
     """
     # Initialization of the list of permutations of elements from 1 to (n-1).
     P=Permutations(sz)
-    return [[(i,p[i]-1) for i in rg(sz)] for p in P]
+    return [[(i,Integer(p[i]-1)) for i in rg(sz)] for p in P]
 
 def RepresentativePermutationFunctionList(sz):
     """
@@ -22001,7 +22418,9 @@ def NonDecreasingFunctionList(sz):
 def DecreasingFunctionList(sz):
     """
     Goes through all the functions and determines which ones
-    are associated with pointwise decreasing functions.
+    are associated with functions which are below the line y=x
+    and never touch the line y=x for all x>0.
+    The set forms a semigroup of the transformation monoid.
 
     EXAMPLES:
     ::
@@ -22022,10 +22441,35 @@ def DecreasingFunctionList(sz):
     else:
         raise ValueError("Expected the size to be an integer >=1")
 
+def DecreasingFunctionListAdditivelyDistinct(sz):
+    """
+    Goes through all the functions pointwise decreasing functions
+    and determines which ones have distinct unmodulated induced 
+    additive edge labels.
+
+
+    EXAMPLES:
+    ::
+        sage: DecreasingFunctionListAdditivelyDistinct(3)
+        [[(0, 0), (1, 0), (2, 0)], [(0, 0), (1, 0), (2, 1)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=HM(sz,sz,'a')
+    # Initialization of the list
+    L=DecreasingFunctionList(sz); rL=[]
+    for T in L:
+        if ((Tuple_to_Adjacency([(i,i) for i in rg(sz)])+Tuple_to_Adjacency(T))*HM(sz,1,rg(sz))).set().cardinality()==sz:
+            rL.append(T)
+    return rL
+
 def NonIncreasingFunctionList(sz):
     """
     Goes through all the functions and determines which ones
-    are associated with non increasing functions.
+    are associated with functions which never cross the y=x
+    axis from bellow.
     They capture the isomorphism class of all spanning
     unions of functional trees.
 
@@ -24855,11 +25299,11 @@ def generate_unlabeled_listing_scriptII(sz,m):
         sage: generate_unlabeled_listing_scriptII(3,2)
         sage: load('Unlabeled_Listing_of_Directed_Graphs_on_3_vertices_and_2_edges.sage')
         sage: L
-        [3*d10^2*d20^2*g02^2*g12^2*l01^2*l21^2,
-         3*b20^2*b21^2*i01^2*i02^2*m10^2*m12^2,
-         6*c12*c20*e01*e20*f02*f21*h02*h10*k10*k21*n01*n12,
-         3*a02^2*a20^2*j12^2*j21^2*o01^2*o10^2]
-        
+        [3*d10^2*d20^2*g01^2*g21^2*l02^2*l12^2,
+         6*a10*a21*e02*e10*i02*i21*j01*j12*k12*k20*m01*m20,
+         3*b10^2*b12^2*h20^2*h21^2*n01^2*n02^2,
+         3*c01^2*c10^2*f12^2*f21^2*o02^2*o20^2]        
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -25254,7 +25698,10 @@ def generate_unlabeled_functional_forest_listing_script(sz):
         sage: generate_unlabeled_functional_forest_listing_script(3)
         sage: load('Unlabeled_Listing_of_Functional_Forest_Graphs_on_3_vertices.sage')
         sage: L
-       
+        [k00^6*k11^6*k22^6,
+        6*b00*b11*b20*f00*f11*f21*i00*i10*i22*l01*l11*l22*m02*m11*m22*n00*n12*n22,
+        6*c01*c11*c20*d00*d12*d20*e00*e10*e21*h02*h11*h21*j02*j10*j22*o01*o12*o22,
+        3*a00^2*a10^2*a20^2*g01^2*g11^2*g21^2*p02^2*p12^2*p22^2]
  
 
     AUTHORS:
@@ -25336,6 +25783,412 @@ def generate_unlabeled_functional_forest_listing_script(sz):
     # Closing the file
     f.close()
 
+def generate_unlabeled_undirected_tree_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which list unlabeled functional trees on sz vertices
+    having no loop edges this implementation is very slow.
+    The smallest number of vertices for which this works
+    is sz=5
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_unlabeled_undirected_tree_listing_script(5)
+        sage: load('Unlabeled_Listing_of_Undirected_Tree_Graphs_on_5_vertices.sage')
+        sage: L[2]
+        5*a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(sz^(sz-2), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_Listing_of_Undirected_Tree_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [Integer(1), Integer(2)]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Lc[cnt]+"','sym')]"+"\n")
+    f.write("\nBh=HM(od,sz,'a','sym')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Ll[cnt]+"','sym')]"+"\n")
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('A=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write("F=expand(Deter((HM(2,(A*HM(sz,1,'one')).list(),'diag')-A).slice(rg(1,sz),'row').slice(rg(1,sz),'col')))\n")
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpB)):\n')
+    f.write("    LstM=LstM+expand(Deter((HM(2,(TmpA[j]*HM(sz,1,'one')).list(),'diag')-TmpA[j]).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()\n")
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write("LtG=[Monomial2Tuple(mnm, HM(sz,sz,'a').list(), sz) for mnm in expand(Deter((HM(od, (Bh*HM(sz,1,'one')).list(),'diag')-Bh).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()]\n")
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_unlabeled_tree_semigroup_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which list unlabeled functional trees on sz vertices
+    steming from the semigroup on functional trees.
+    This is meant to be contrasted with the previous
+    directed matrix tree construction.
+    The smallest number of vertices for which this works
+    is sz=5
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_unlabeled_tree_semigroup_listing_script(5)
+        sage: load('Unlabeled_Listing_of_Tree_Semigroup_Graphs_on_5_vertices.sage')
+        sage: L[2]
+        2*a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(sz^(sz-2), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_Listing_of_Tree_Semigroup_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [Integer(1), Integer(2)]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Lc[cnt]+"','sym')]"+"\n")
+    f.write("\nBh=HM(od,sz,'a','sym')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Ll[cnt]+"','sym')]"+"\n")
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('A=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write("F=expand(prod(sum(A[i,j] for j in rg(i+1,sz)) for i in rg(sz-1)))\n")
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpB)):\n')
+    f.write("    LstM=LstM+expand(Deter((HM(2,(TmpA[j]*HM(sz,1,'one')).list(),'diag')-TmpA[j]).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()\n")
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write("LtG=[Monomial2Tuple(mnm, HM(sz,sz,'a').list(), sz) for mnm in expand(Deter((HM(od, (Bh*HM(sz,1,'one')).list(),'diag')-Bh).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()]\n")
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_unlabeled_tree_graceful_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which list unlabeled graceful trees on sz vertices
+    having no loop edges this implementation is very slow.
+    The smallest number of vertices for which this works
+    is sz=5
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_unlabeled_tree_graceful_listing_script(5)
+        sage: load('Unlabeled_Listing_of_Tree_Graceful_Graphs_on_5_vertices.sage')
+        sage: L[2]
+        a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(sz^(sz-2), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_Listing_of_Tree_Graceful_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [Integer(1), Integer(2)]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Lc[cnt]+"','sym')]"+"\n")
+    f.write("\nBh=HM(od,sz,'a','sym')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Ll[cnt]+"','sym')]"+"\n")
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Initializes the kronecker delta
+    f.write('\n# Initialization of the Kornecker delta\n')
+    f.write("D=HM(od, sz, 'kronecker')\n")
+    # Writing the part which initializes the list of functions which do not touch y=x from bellow
+    f.write('\n# Initialization of the list of functions\n')
+    f.write('L=[T+[(sz-1,0)] for T in DecreasingFunctionList(sz-1)]\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('A=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write("F=expand(sum(Deter((HM(2,(sum(A[T[i][1]+sz-1-i,T[i][1]]*(D.slice([T[i][1]+sz-1-i],'col')*D.slice([T[i][1]],'row')+D.slice([T[i][1]],'col')*D.slice([T[i][1]+sz-1-i],'row')) for i in rg(sz))*HM(sz,1,'one')).list(),'diag')+(-1)*sum(A[T[i][1]+sz-1-i,T[i][1]]*(D.slice([T[i][1]+sz-1-i],'col')*D.slice([T[i][1]],'row')+D.slice([T[i][1]],'col')*D.slice([T[i][1]+sz-1-i],'row')) for i in rg(sz))).slice(rg(1,sz),'row').slice(rg(1,sz),'col')) for T in L))\n")
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpB)):\n')
+    f.write("    LstM=LstM+expand(Deter((HM(2,(TmpA[j]*HM(sz,1,'one')).list(),'diag')-TmpA[j]).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()\n")
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write("LtG=[Monomial2Tuple(mnm, HM(sz,sz,'a').list(), sz) for mnm in expand(Deter((HM(od, (Bh*HM(sz,1,'one')).list(),'diag')-Bh).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()]\n")
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_unlabeled_tree_graceful_preimage_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which list pre-image unlabeled unlabeled orbit of graceful
+    trees on sz vertices having no loop edges this implementation is very slow.
+    The smallest number of vertices for which this works
+    is sz=5. This is in reference to the maping of trees in the semigroup
+    to gracefully labeled trees
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_unlabeled_tree_graceful_preimage_listing_script(5)
+        sage: load('Unlabeled_Listing_of_Tree_Graceful_Preimage_Graphs_on_5_vertices.sage')
+        sage: L[2]
+        a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(sz^(sz-2), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_Listing_of_Tree_Graceful_Preimage_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [Integer(1), Integer(2)]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Lc[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Lc[cnt]+"','sym')]"+"\n")
+    f.write("\nBh=HM(od,sz,'a','sym')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg((sz^(sz-2))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(od,sz,'"+Ll[cnt]+"','sym'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(od,sz,'"+Ll[cnt]+"','sym')]"+"\n")
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Initializes the kronecker delta
+    f.write('\n# Initialization of the Kornecker delta\n')
+    f.write("D=HM(od, sz, 'kronecker')\n")
+    # Writing the part which initializes the list of functions which do not touch y=x from bellow
+    f.write('\n# Initialization of the list of functions\n')
+    f.write('L=[T+[(sz-1,0)] for T in DecreasingFunctionList(sz-1)]\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('A=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write("F=expand(sum(Deter((HM(2,(sum(A[i,T[i][1]]*(D.slice([T[i][1]+sz-1-i],'col')*D.slice([T[i][1]],'row')+D.slice([T[i][1]],'col')*D.slice([T[i][1]+sz-1-i],'row')) for i in rg(sz))*HM(sz,1,'one')).list(),'diag')+(-1)*sum(A[i,T[i][1]]*(D.slice([T[i][1]+sz-1-i],'col')*D.slice([T[i][1]],'row')+D.slice([T[i][1]],'col')*D.slice([T[i][1]+sz-1-i],'row')) for i in rg(sz))).slice(rg(1,sz),'row').slice(rg(1,sz),'col')) for T in L)*A[sz-1,0]/A[0,0])\n")
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpB)):\n')
+    f.write("    LstM=LstM+expand(Deter((HM(2,(TmpA[j]*HM(sz,1,'one')).list(),'diag')-TmpA[j]).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()\n")
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write("LtG=[Monomial2Tuple(mnm, HM(sz,sz,'a').list(), sz) for mnm in expand(Deter((HM(od, (Bh*HM(sz,1,'one')).list(),'diag')-Bh).slice(rg(1,sz),'row').slice(rg(1,sz),'col'))).operands()]\n")
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
 def generate_unlabeled_permutation_listing_script(sz):
     """
     Creates a sage file which corresponds to a script
@@ -25365,5 +26218,1373 @@ def generate_unlabeled_permutation_listing_script(sz):
         for indx in rg(len(P)):
             Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,sum(P[:indx])+Integer(mod(u+1,P[indx]))] for u in rg(P[indx]))
     return Lm
+
+def ConjugateTuple(sz, T, P):
+    """
+    Returns the conjugation of T 
+    by the permutation P.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: ConjugateTuple(8, [(0, 0), (1, 2), (2, 3), (3, 4), (4, 5), (5, 1), (6, 7), (7, 6)], [(i, i)  for i in rg(8)])
+        [(0, 0), (1, 2), (2, 3), (3, 4), (4, 5), (5, 1), (6, 7), (7, 6)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list
+    L = [(P[t[0]][1], P[t[1]][1]) for t in T]
+    # Sorting the list
+    L.sort()
+    return L
+
+def generate_subgraph_unlabeled_listing_script(sz, T):
+    """
+    Creates a sage file which corresponds to a script
+    which list unlabeled directed subgraph on sz vertices
+    having no loop edges this implementation is very slow.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_subgraph_unlabeled_listing_script(3, [(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)])
+        sage: load('Unlabeled_subgraph_Listing_of_Directed_Graphs_on_3_vertices.sage')
+        sage: L
+        [a_a01^6*a_a02^6*a_a10^6*a_a12^6*a_a20^6*a_a21^6,
+         6*a_b01*a_b02*a_b10*a_b12*a_b20*a_c01*a_c02*a_c10*a_c12*a_c21*a_d01*a_d02*a_d10*a_d20*a_d21*a_e01*a_e02*a_e12*a_e20*a_e21*a_f01*a_f10*a_f12*a_f20*a_f21*a_g02*a_g10*a_g12*a_g20*a_g21,
+         3*a_l02^2*a_l10^2*a_l12^2*a_l20^2*a_n01^2*a_n02^2*a_n12^2*a_n21^2*a_r01^2*a_r10^2*a_r20^2*a_r21^2,
+         6*a_j01*a_j02*a_j12*a_j20*a_k01*a_k10*a_k12*a_k20*a_m01*a_m02*a_m10*a_m21*a_p02*a_p10*a_p12*a_p21*a_s02*a_s10*a_s20*a_s21*a_t01*a_t12*a_t20*a_t21,
+         3*a_i01^2*a_i02^2*a_i10^2*a_i20^2*a_o01^2*a_o10^2*a_o12^2*a_o21^2*a_u02^2*a_u12^2*a_u20^2*a_u21^2,
+         3*a_h01^2*a_h02^2*a_h10^2*a_h12^2*a_q01^2*a_q02^2*a_q20^2*a_q21^2*a_v10^2*a_v12^2*a_v20^2*a_v21^2,
+         2*b_d01^3*b_d12^3*b_d20^3*b_i02^3*b_i10^3*b_i21^3,
+         6*b_b01*b_b10*b_b20*b_c02*b_c10*b_c20*b_e02*b_e12*b_e20*b_h01*b_h10*b_h21*b_j01*b_j12*b_j21*b_k02*b_k12*b_k21,
+         6*a_x01*a_x02*a_x12*a_z02*a_z10*a_z12*b_f10*b_f12*b_f20*b_g01*b_g02*b_g21*b_m01*b_m20*b_m21*b_o10*b_o20*b_o21,
+         6*a_w01*a_w02*a_w10*a_y01*a_y10*a_y12*b_a01*b_a02*b_a20*b_l10*b_l12*b_l21*b_n02*b_n20*b_n21*b_p12*b_p20*b_p21,
+         3*b_u02^2*b_u12^2*b_y10^2*b_y20^2*c_a01^2*c_a21^2,
+         6*b_s02*b_s10*b_t01*b_t12*b_w01*b_w20*b_z12*b_z20*c_b02*c_b21*c_c10*c_c21,
+         3*b_r01^2*b_r10^2*b_x02^2*b_x20^2*c_d12^2*c_d21^2,
+         3*b_q01^2*b_q02^2*b_v10^2*b_v12^2*c_e20^2*c_e21^2,
+         6*c_f01*c_g02*c_h10*c_i12*c_j20*c_k21]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(2^(sz*(sz-1)), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_subgraph_Listing_of_Directed_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size parameter\n')
+    f.write('sz='+str(sz)+'\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Lc[cnt]+"')]"+"\n")
+    f.write("\nBh=HM(sz,sz,'a')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Ll[cnt]+"')]"+"\n")
+    # Writing the part which initializes the Tuple
+    f.write('\n# Initialization of the Tuple\n')
+    f.write('T='+str(T)+'\n')
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('\nA=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('SgPh=Set(expand(prod(1+Bh[t] for t in T)-1).operands())\n')
+    f.write('for p in PermutationFunctionList(sz)[1:]:\n')
+    f.write('    SgPh=SgPh.union(Set(expand(prod(1+Bh[t] for t in ConjugateTuple(sz, T, p))-1).operands()))\n')
+    f.write('LgPh=sum(SgPh).operands()\n')
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write('LtG=[Monomial2Tuple(mnm, Bh.list(), sz) for mnm in LgPh]\n')
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('F=sum(prod(A[t] for t in Tp) for Tp in LtG)\n')
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpA)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstM.append(prod(TmpA[j][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writing the last which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writing the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_supgraph_unlabeled_listing_script(sz,T):
+    """
+    Creates a sage file which corresponds to a script
+    which list unlabeled directed supgraph on sz vertices
+    having no loop edges this implementation is very slow.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_supgraph_unlabeled_listing_script(3, [])
+        sage: load('Unlabeled_supgraph_Listing_of_Directed_Graphs_on_3_vertices.sage')
+        sage: L
+        [a_a01^6*a_a02^6*a_a10^6*a_a12^6*a_a20^6*a_a21^6,
+         6*a_b01*a_b02*a_b10*a_b12*a_b20*a_c01*a_c02*a_c10*a_c12*a_c21*a_d01*a_d02*a_d10*a_d20*a_d21*a_e01*a_e02*a_e12*a_e20*a_e21*a_f01*a_f10*a_f12*a_f20*a_f21*a_g02*a_g10*a_g12*a_g20*a_g21,
+         3*a_l02^2*a_l10^2*a_l12^2*a_l20^2*a_n01^2*a_n02^2*a_n12^2*a_n21^2*a_r01^2*a_r10^2*a_r20^2*a_r21^2,
+         6*a_j01*a_j02*a_j12*a_j20*a_k01*a_k10*a_k12*a_k20*a_m01*a_m02*a_m10*a_m21*a_p02*a_p10*a_p12*a_p21*a_s02*a_s10*a_s20*a_s21*a_t01*a_t12*a_t20*a_t21,
+         3*a_i01^2*a_i02^2*a_i10^2*a_i20^2*a_o01^2*a_o10^2*a_o12^2*a_o21^2*a_u02^2*a_u12^2*a_u20^2*a_u21^2,
+         3*a_h01^2*a_h02^2*a_h10^2*a_h12^2*a_q01^2*a_q02^2*a_q20^2*a_q21^2*a_v10^2*a_v12^2*a_v20^2*a_v21^2,
+         2*b_d01^3*b_d12^3*b_d20^3*b_i02^3*b_i10^3*b_i21^3,
+         6*b_b01*b_b10*b_b20*b_c02*b_c10*b_c20*b_e02*b_e12*b_e20*b_h01*b_h10*b_h21*b_j01*b_j12*b_j21*b_k02*b_k12*b_k21,
+         6*a_x01*a_x02*a_x12*a_z02*a_z10*a_z12*b_f10*b_f12*b_f20*b_g01*b_g02*b_g21*b_m01*b_m20*b_m21*b_o10*b_o20*b_o21,
+         6*a_w01*a_w02*a_w10*a_y01*a_y10*a_y12*b_a01*b_a02*b_a20*b_l10*b_l12*b_l21*b_n02*b_n20*b_n21*b_p12*b_p20*b_p21,
+         3*b_u02^2*b_u12^2*b_y10^2*b_y20^2*c_a01^2*c_a21^2,
+         6*b_s02*b_s10*b_t01*b_t12*b_w01*b_w20*b_z12*b_z20*c_b02*c_b21*c_c10*c_c21,
+         3*b_r01^2*b_r10^2*b_x02^2*b_x20^2*c_d12^2*c_d21^2,
+         3*b_q01^2*b_q02^2*b_v10^2*b_v12^2*c_e20^2*c_e21^2,
+         6*c_f01*c_g02*c_h10*c_i12*c_j20*c_k21]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(2^(sz*(sz-1)), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_supgraph_Listing_of_Directed_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size parameter\n')
+    f.write('sz='+str(sz)+'\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Lc[cnt]+"')]"+"\n")
+    f.write("\nBh=HM(sz,sz,'a')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1))-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Ll[cnt]+"')]"+"\n")
+    # Writing the part which initializes the Tuple
+    f.write('\n# Initialization of the Tuple\n')
+    f.write('T='+str(T)+'\n')
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('\nA=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('if len(T)==0:\n')
+    f.write('    SgPh=Set(expand(prod(1+Bh[i,j] for i in rg(sz) for j in rg(sz) if i!=j)-1).operands())\n')
+    f.write('else:\n')
+    f.write('    SgPh=Set(expand(prod(1+Bh[i,j] for i in rg(sz) for j in rg(sz) if i!=j and not (i,j) in T)*prod(Bh[t] for t in T)).operands())\n')
+    f.write('    for p in PermutationFunctionList(sz)[1:]:\n')
+    f.write('        SgPh=SgPh.union(Set(expand(prod(1+Bh[i,j] for i in rg(sz) for j in rg(sz) if i!=j and not (i,j) in ConjugateTuple(sz, T, p))*prod(Bh[t] for t in ConjugateTuple(sz, T, p))).operands()))\n')
+    f.write('LgPh=sum(SgPh).operands()\n')
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write('LtG=[Monomial2Tuple(mnm, Bh.list(), sz) for mnm in LgPh]\n')
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('F=sum(prod(A[t] for t in Tp) for Tp in LtG)\n')
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpA)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstM.append(prod(TmpA[j][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_undirected_subgraph_unlabeled_listing_script(sz,T):
+    """
+    Creates a sage file which corresponds to a script
+    which list unlabeled undirected subgraph on sz vertices
+    having no loop edges this implementation is very slow.
+    The input list of edge tuple treats every directed edges
+    as if it was acompanied by its compnion edge.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_undirected_subgraph_unlabeled_listing_script(3, [(0, 1), (2, 1), (2, 0)])
+        sage: load('Unlabeled_subgraph_Listing_of_Undirected_Graphs_on_3_vertices.sage')
+        sage: L
+        [a01^6*a02^6*a10^6*a12^6*a20^6*a21^6,
+         3*b01^2*b02^2*b10^2*b20^2*c01^2*c10^2*c12^2*c21^2*d02^2*d12^2*d20^2*d21^2,
+         3*e01^2*e10^2*f02^2*f20^2*g12^2*g21^2]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(2^(sz*(sz-1)/2), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_subgraph_Listing_of_Undirected_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size parameter\n')
+    f.write('sz='+str(sz)+'\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1)/2)-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Lc[cnt]+"')]"+"\n")
+    f.write("\nBh=HM(sz,sz,'a'); Bht=Bh.transpose()\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1)/2)-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Ll[cnt]+"')]"+"\n")
+    # Writing the part which initializes the Tuple
+    f.write('\n# Initialization of the Tuple\n')
+    f.write('T='+str(T)+'\n')
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('\nA=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('SgPh=Set(expand(prod(1+Bh[t]*Bht[t] for t in T)-1).operands())\n')
+    f.write('for p in PermutationFunctionList(sz)[1:]:\n')
+    f.write('    SgPh=SgPh.union(Set(expand(prod(1+Bh[t]*Bht[t] for t in ConjugateTuple(sz, T, p))-1).operands()))\n')
+    f.write('LgPh=sum(SgPh).operands()\n')
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write('LtG=[Monomial2Tuple(mnm, Bh.list(), sz) for mnm in LgPh]\n')
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('F=sum(prod(A[t] for t in Tp) for Tp in LtG)\n')
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpA)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstM.append(prod(TmpA[j][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writing the last which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writing the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_undirected_supgraph_unlabeled_listing_script(sz,T):
+    """
+    Creates a sage file which corresponds to a script
+    which list unlabeled undirected supgraph on sz vertices
+    having no loop edges this implementation is very slow.
+    The input list of edge tuple treats every directed edges
+    as if it was acompanied by its compnion edge.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_undirected_supgraph_unlabeled_listing_script(3, [(0, 1), (2, 1)])
+        sage: load('Unlabeled_supgraph_Listing_of_Undirected_Graphs_on_3_vertices.sage')
+        sage: L
+        [a01^6*a02^6*a10^6*a12^6*a20^6*a21^6,
+         3*b01^2*b02^2*b10^2*b20^2*c01^2*c10^2*c12^2*c21^2*d02^2*d12^2*d20^2*d21^2]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    od = ceil(log(2^(sz*(sz-1)/2), 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Unlabeled_supgraph_Listing_of_Undirected_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size parameter\n')
+    f.write('sz='+str(sz)+'\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1)/2)-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Lc[cnt]+"')]"+"\n")
+    f.write("\nBh=HM(sz,sz,'a'); Bht=Bh.transpose()\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg(2^(sz*(sz-1)/2)-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Ll[cnt]+"')]"+"\n")
+    # Writing the part which initializes the Tuple
+    f.write('\n# Initialization of the Tuple\n')
+    f.write('T='+str(T)+'\n')
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('\nA=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('if len(T)==0:\n')
+    f.write('    SgPh=Set(expand(prod(1+Bh[i,j]*Bh[j,i] for i in rg(sz) for j in rg(sz) if i<j)-1).operands())\n')
+    f.write('else:\n')
+    f.write('    SgPh=Set(expand(prod(1+Bh[i,j]*Bh[j,i] for i in rg(sz) for j in rg(sz) if i<j and not (i,j) in T and not (j,i) in T)*prod(Bh[t]*Bht[t] for t in T)).operands())\n')
+    f.write('    for p in PermutationFunctionList(sz)[1:]:\n')
+    f.write('        SgPh=SgPh.union(Set(expand(prod(1+Bh[i,j]*Bh[j,i] for i in rg(sz) for j in rg(sz) if i<j and not (i,j) in ConjugateTuple(sz, T, p) and not (j,i) in ConjugateTuple(sz, T, p))*prod(Bh[t]*Bht[t] for t in ConjugateTuple(sz, T, p))).operands()))\n')
+    f.write('LgPh=sum(SgPh).operands()\n')
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write('LtG=[Monomial2Tuple(mnm, Bh.list(), sz) for mnm in LgPh]\n')
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('F=sum(prod(A[t] for t in Tp) for Tp in LtG)\n')
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpA)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstM.append(prod(TmpA[j][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_grassmanian_determinant_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution construction
+    for the determinant as a signed listing of spanning union
+    of directed cycles.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_determinant_listing_script(3)
+        sage: load('Grassmanian_Determinant_Listing_on_3_vertices.sage')
+        sage: rslt
+        -(a02*a11 - a01*a12)*a20 + (a02*a10 - a00*a12)*a21 - (a01*a10 - a00*a11)*a22
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Determinant_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = prod(sum(A[i,j]*X[j] for j in rg(sz)) for i in rg(sz))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+def generate_grassmanian_permanent_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution construction
+    for the permanent as a listing of spanning union
+    of directed cycles.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_permanent_listing_script(3)
+        sage: load('Grassmanian_Permanent_Listing_on_3_vertices.sage')
+        sage: rslt
+        a02*a11*a20 + a01*a12*a20 + a02*a10*a21 + a00*a12*a21 + a01*a10*a22 + a00*a11*a22
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Permanent_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = expand(prod(sum(A[i,j]*X[j] for j in rg(sz)) for i in rg(sz)))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+def generate_grassmanian_graceful_determinant_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution scheme
+    for the determinantal graceful listing construction as a 
+    signed listing of gracefully labeled graphs.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_graceful_determinant_listing_script(3)
+        sage: load('Grassmanian_Graceful_Determinant_Listing_on_3_vertices.sage')
+        sage: rslt
+        a02*a11*a21 - a02*(a10 + a12)*a22 + (a00*(a10 + a12) - a01*a11)*a20
+
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Graceful_Determinant_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = prod(sum(A[i,j]*X[abs(j-i)] for j in rg(sz)) for i in rg(sz))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+
+def generate_grassmanian_graceful_permanent_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution scheme
+    for the graceful permanental listing constructions.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_graceful_permanent_listing_script(3)
+        sage: load('Grassmanian_Graceful_Permanent_Listing_on_3_vertices.sage')
+        sage: rslt
+        a00*a10*a20 + a01*a11*a20 + a00*a12*a20 + a02*a11*a21 + a02*a10*a22 + a02*a12*a22
+    
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Graceful_Permanent_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = expand(prod(sum(A[i,j]*X[abs(j-i)] for j in rg(sz)) for i in rg(sz)))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+def generate_grassmanian_harmonious_determinant_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution scheme
+    for the determinantal harmonious listing construction as a 
+    signed listing of gracefully labeled graphs.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_harmonious_determinant_listing_script(3)
+        sage: load('Grassmanian_Harmonious_Determinant_Listing_on_3_vertices.sage')
+        sage: rslt
+        (a00*a10 - a01*a12)*a20 - (a02*a10 - a01*a11)*a21 - (a00*a11 - a02*a12)*a22
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Harmonious_Determinant_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = prod(sum(A[i,j]*X[Integer(mod(j+i,sz))] for j in rg(sz)) for i in rg(sz))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+def generate_grassmanian_harmonious_permanent_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution scheme
+    for the harmonious permanental listing constructions.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_harmonious_permanent_listing_script(3)
+        sage: load('Grassmanian_Harmonious_Permanent_Listing_on_3_vertices.sage')
+        sage: rslt
+        a00*a10*a20 + a01*a12*a20 + a02*a10*a21 + a01*a11*a21 + a00*a11*a22 + a02*a12*a22
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Harmonious_Permanent_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = expand(prod(sum(A[i,j]*X[Integer(mod(j+i,sz))] for j in rg(sz)) for i in rg(sz)))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+def generate_grassmanian_poised_determinant_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution scheme
+    for the determinantal poised listing construction as a 
+    signed listing of gracefully labeled graphs.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_poised_determinant_listing_script(3)
+        sage: load('Grassmanian_Poised_Determinant_Listing_on_3_vertices.sage')
+        sage: rslt
+        (a00 + a01 + a02)*a11*a21 - (a00 + a01 + a02)*a12*a22
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Poised_Determinant_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = prod(sum(A[i,j]*X[Integer(mod(j*i,sz))] for j in rg(sz)) for i in rg(sz))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+def generate_grassmanian_poised_permanent_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which implement the grassmanian substitution scheme
+    for the poised permanental listing constructions.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_grassmanian_poised_permanent_listing_script(3)
+        sage: load('Grassmanian_Poised_Permanent_Listing_on_3_vertices.sage')
+        sage: rslt
+        a00*a11*a21 + a01*a11*a21 + a02*a11*a21 + a00*a12*a22 + a01*a12*a22 + a02*a12*a22
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Creating the string storing the file name
+    filename = 'Grassmanian_Poised_Permanent_Listing_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size and order parameters\n')
+    f.write('sz='+str(sz)+'; od=2\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x',sz)\n")
+    f.write('\n# Initialization of the square matrix\n')
+    f.write("A=HM(sz, sz, 'a')\n")
+    f.write('\n# Initialization of the 2x2 matrices used to represent Grassmanian variables\n')
+    f.write("I2=HM(od,2,'kronecker'); s3=HM(2,2,[Integer(1),Integer(0),Integer(0),Integer(-1)])\n")
+    f.write("c=HM(2,2,[Integer(0),Integer(1),Integer(0),Integer(0)])\n")
+    f.write('\n# Initializing the matrix representation of the Grassmanian variables\n')
+    f.write("Lm = [s3.tensor_power(j).tensor_product(c).tensor_product(I2.tensor_power(sz-1-j)) for j in rg(sz)]\n")
+    f.write('\n# Initialization of the sum over functional directed graph keeping track in the in-degree\n')
+    f.write('d = expand(prod(sum(A[i,j]*X[Integer(mod(j*i,sz))] for j in rg(sz)) for i in rg(sz)))\n')
+    f.write('\n# Initialization of the substitution variables\n')
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"=var('")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"')\n")
+    # Writting the substitution into the matrix step
+    f.write('\n# Substituting the matrices into the poynomial\n')
+    f.write("M = fast_reduceII(d,X,[")
+    for i in rg(1,sz):
+        f.write(str(AlphaBc[i])+', ')
+    f.write(str(AlphaBc[sz+1])+"],{")
+    for i in rg(1,sz):
+        f.write("'"+str(AlphaBc[i])+"':Lm["+str(i-1)+"],")
+    f.write("'"+str(AlphaBc[sz+1])+"':Lm["+str(sz-1)+"],")
+    for u in rg(sz):
+        for v in rg(sz):
+            f.write("'"+str(A[u,v])+"':"+str(A[u,v])+",")
+    f.write("'x':x})\n")
+    # Writting the result
+    f.write('\n# Selecting the appropriate entry\n')
+    f.write("rslt=M[2^sz-1,0]\n")
+    # Closing the file
+    f.close()
+
+def span(X):
+    """
+    Creates the span of maps in X uses 
+    the FiniteSetMaps function to initialize
+    maps which are composed by the * operation.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; M=FiniteSetMaps(rg(sz)); m=[f for f in list(M) if not f.is_one()]
+        sage: span(m)
+        {map: 0 -> 0, 1 -> 0,
+         map: 0 -> 0, 1 -> 1,
+         map: 0 -> 1, 1 -> 0,
+         map: 0 -> 1, 1 -> 1}
+ 
+
+    AUTHORS:
+    - Ori Parzanchevski, Edinah K. Gnang
+    """
+    Y=set(X); s=0
+    while len(Y)>s:
+        s = len(Y); Z = copy(Y)
+        for y in Z:
+            for x in X:
+                Y.add(x*y)
+    return Y
+
+def span_tuple(X):
+    """
+    Creates the span of maps in X uses 
+    the FiniteSetMaps function to initialize
+    maps which are composed by the * operation.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; M=TupleFunctionList(sz)
+        sage: span_tuple(M)
+        Set of elements of [[(0, 0), (1, 0)], [(0, 1), (1, 0)], [(0, 0), (1, 1)], [(0, 1), (1, 1)]] 
+
+
+    AUTHORS:
+    - Ori Parzanchevski, Edinah K. Gnang
+    """
+    Y=Set(X); s=0
+    while Y.cardinality()>s:
+        s=Y.cardinality(); Z=copy(Y)
+        for y in Z:
+            for x in Z:
+                if not compose_tuple(x,y) in Y:
+                    Y.union(Set([compose_tuple(x,y)]))
+    return Y
+
+def count_submonoids(sz):
+    """
+    Counting the number of submonoids of functions
+    from rg(sz) to rg(sz). Is based upon the FiniteSetMaps
+    function to initialize maps which are composed by
+    the * operation.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: count_submonoids(2)
+        [(1, 1), (2, 3), (3, 1), (4, 1)]
+
+
+    AUTHORS:
+    - Ori Parzanchevski, Edinah K. Gnang
+    """
+    M=FiniteSetMaps(rg(sz)); m=[f for f in list(M) if not f.is_one() ]
+    o=M.one(); s=subsets(m); S=set(); size=0
+    for i,x in enumerate(s):
+        S.add(frozenset(span([o]+x)))
+        if len(S)!=size:
+            #print (i,"of",2^len(m),", found",len(S),"monoids")
+            size=len(S)
+    sizes = [len(x) for x in S]
+    return [(s,sizes.count(s)) for s in sorted(set(sizes))]
+
+def pseudo_inverse(Tp, k):
+    """
+    Goes through all the functions and determines which ones
+    are associated with k-th pseudo inverse of the function
+    specified by input tuple Tp and Hamming diameter k.
+    It outputs a list of pseudo-inverse
+
+
+    EXAMPLES:
+    ::
+        sage: pseudo_inverse([(0, 0), (1, 0), (2, 1)], 1)
+        [[(0, 0), (1, 2), (2, 0)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 0), (1, 2), (2, 1)],
+         [(0, 1), (1, 2), (2, 1)],
+         [(0, 0), (1, 2), (2, 2)],
+         [(0, 1), (1, 2), (2, 2)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size
+    sz=len(Tp)
+    # Initialization of the list of functional
+    L=TupleFunctionList(sz)
+    # Loop going through functions
+    RsLt=[]
+    for T in L:
+        if (Tuple_to_Adjacency(compose_tuple(T,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2 <= 2*k:
+            RsLt.append(T)
+    return RsLt 
+
+def pseudo_inverseII(Tp):
+    """
+    Goes through all the functions and determines which ones
+    are associated with canonical pseudo inverse of the function
+    specified by input tuple Tp. It outputs the pseudo-inverse
+    breaking the symmetry using the lexicographic order.
+
+
+    EXAMPLES:
+    ::
+        sage: pseudo_inverseII([(0, 0), (1, 0), (2, 1)])
+        [(0, 1), (1, 2), (2, 2)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size
+    sz=len(Tp)
+    # Initialization of the list of functional
+    L=TupleFunctionList(sz)
+    # Loop going through functions
+    mn=(Tuple_to_Adjacency(compose_tuple(Tp,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2; TT=Tp
+    for T in L:
+        if (Tuple_to_Adjacency(compose_tuple(T,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2 < mn:
+            TT=T; mn=(Tuple_to_Adjacency(compose_tuple(T,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2
+    #print('The Hamming distance is ',mn)
+    return TT 
+
+def semigroup_tree_graceful_map(sz):
+    """
+    Lists terms wihich describe the mapping from trees
+    in the semigroup of function which do not touch the line 
+    y=x when x ranges from (0,sz-1] to gracefully labeled trees.
+
+
+    EXAMPLES:
+    ::
+        sage: semigroup_tree_graceful_map(5)
+        a00*a10*a20*a30*a40*b00*b10*b20*b30*b40 + a00*a10*a20*a31*a40*b00*b20*b21*b30*b40 + a00*a10*a21*a31*a40*b00*b21*b30*b31*b40 + a00*a10*a21*a32*a40*b00*b30*b31*b32*b40
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the variables which track the degree
+    X=var_list('x', sz)
+    # Initiaization of the hypermatrix
+    A=HM(sz, sz, 'a'); B=HM(sz, sz, 'b')
+    # Initialization of the identity matrix
+    D=HM(2, sz, 'kronecker')
+    # Initialization of the functions which never touch the line y=x from bellow
+    L=[T+[(sz-1, 0)] for T in DecreasingFunctionList(sz-1)]
+    # Initialization of the polynomial construction
+    return expand(A[sz-1,0]*B[0,0]*sum(Deter((HM(2,(sum(A[i,T[i][1]]*B[T[i][1]+sz-1-i,T[i][1]]*(D.slice([T[i][1]+sz-1-i],'col')*D.slice([T[i][1]],'row')+D.slice([T[i][1]],'col')*D.slice([T[i][1]+sz-1-i],'row')) for i in rg(sz))*HM(sz,1,'one')).list(),'diag')+(-1)*sum(A[i,T[i][1]]*B[T[i][1]+sz-1-i,T[i][1]]*(D.slice([T[i][1]+sz-1-i],'col')*D.slice([T[i][1]],'row')+D.slice([T[i][1]],'col')*D.slice([T[i][1]+sz-1-i],'row')) for i in rg(sz))).slice(rg(1,sz),'row').slice(rg(1,sz),'col')) for T in L))
+
+def semigroup_graceful_map(sz):
+    """
+    Lists terms wihich describe the mapping from trees
+    in the semigroup of function which do not touch the line 
+    y=x when x ranges from (0,sz-1] to gracefully labeled
+    directed acyclic graphs whose edges are orriented in
+    deacreasing order.
+
+
+    EXAMPLES:
+    ::
+        sage: semigroup_graceful_map(5)
+        a00*a10*a20*a30*a40*b00*b10*b20*b30*b40 + a00*a10*a20*a31*a40*b00*b20*b21*b30*b40 + a00*a10*a21*a30*a40*b00*b10*b30*b31*b40 + a00*a10*a21*a31*a40*b00*b21*b30*b31*b40 + a00*a10*a20*a32*a40*b00*b20*b30*b32*b40 + a00*a10*a21*a32*a40*b00*b30*b31*b32*b40
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the variables which track the degree
+    X=var_list('x', sz)
+    # Initiaization of the hypermatrix
+    A=HM(sz, sz, 'a'); B=HM(sz, sz, 'b')
+    # Initialization of the identity matrix
+    D=HM(2, sz, 'kronecker')
+    # Initialization of the functions which never touch the line y=x from bellow
+    L=[T+[(sz-1, 0)] for T in DecreasingFunctionList(sz-1)]
+    # Initialization of the polynomial construction
+    return expand(A[0,0]*B[sz-1,0]*A[sz-1,0]*B[0,0]*prod(sum(A[i,j]*B[j+sz-1-i,j] for j in rg(i)) for i in rg(1,sz-1))) 
+
+def functionalize_Tree(T, sz):
+    """
+    Reverses the orientation of edges to obtain a functional
+    tree. If the input tuple is such that the edges can not
+    be re-orriented to form a functional tree then
+    the input is returned unchanged and warning message is
+    displayed on screen.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: functionalize_Tree([(0, 0), (2, 0), (2, 1), (3, 0), (4, 0)], 5)
+        [(0, 0), (2, 0), (3, 0), (1, 2), (4, 0)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the identity matrix
+    Id=identity_matrix(sz)
+    if not is_Tree(sum([Id[:,T[j][0]]*Id[T[j][1],:]+Id[:,T[j][1]]*Id[T[j][0],:] for j in rg(sz)])):
+        # displaying the warning message  
+        raise ValueError("Expected a tree")
+    else:
+        # Finding the loop edge
+        for t in T:
+            if t[1]==t[0]:
+                break
+        # Initialization of the current list of vertices
+        Lv=[t[0]]
+        Tp=[t]; T.remove(t)
+        #for k in rg(sz):
+        while len(T)>0:
+            for tp in T:
+                if tp[0] in Lv:
+                    Tp.append((tp[1],tp[0]))
+                    Lv.append(tp[1]); T.remove(tp)
+                elif tp[1] in Lv:
+                    Tp.append(tp)
+                    Lv.append(tp[0]); T.remove(tp)
+        return Tp
+
+def GracefulPreImageFunctionList(sz):
+    """
+    Goes through all the functions and determines which ones
+    are associated with functions which do not cross the y=x
+    axis and map to gracefully labeled connected graphs
+    under the edged permutation A[i,j] |-> A[n-1-i+j,i].
+
+    EXAMPLES:
+    ::
+        sage: GracefulPreImageFunctionList(3)
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 0), (1, 1), (2, 0)],
+         [(0, 0), (1, 0), (2, 1)],
+         [(0, 0), (1, 1), (2, 1)],
+         [(0, 0), (1, 0), (2, 2)],
+         [(0, 0), (1, 1), (2, 2)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list storing the member of the monoid.
+    L=[]
+    for Tf in NonIncreasingFunctionList(sz)[0]:
+        # Initialization of the Super vertex set
+        S = [ Tf[sz-1][1] ]
+        # Running the first test of the stoping criteria
+        Test=0
+        for w in [u for u in rg(sz) if not u in S]:
+            for x in S:
+                if ((sz-1-w+x, x) in Tf) or ((sz-1-x+w, w) in Tf):
+                    Test=1; S.append(w); break; break
+        # Main Loop of the algorithm
+        while (len(S) < sz) and Test==1:
+            Test=0
+            # Testing the stoping criteria.
+            for w in [u for u in rg(sz) if not u in S]:
+                for x in S:
+                    if ((sz-1-w+x, x) in Tf) or ((sz-1-x+w, w) in Tf):
+                        Test=1; S.append(w); break; break
+        if len(S)==sz:
+            L.append(Tf)
+    return L
+
+def GracefulbidirectedTreeList(sz):
+    """
+    Uses the Graceful Preimage set to obtain the listing
+    of gracefully labeled bi-directed graphs.
+    The mapping is obtained using the edged permutation
+    A[i,j] |-> A[n-1-i+j,i].
+
+
+    EXAMPLES:
+    ::
+        sage: GracefulbidirectedTreeList(3)
+        [[(0, 0), (1, 0), (2, 0), (0, 1), (0, 2)],
+         [(0, 0), (2, 1), (2, 0), (1, 2), (0, 2)],
+         [(1, 1), (1, 0), (2, 0), (0, 1), (0, 2)],
+         [(1, 1), (2, 1), (2, 0), (1, 2), (0, 2)],
+         [(2, 2), (1, 0), (2, 0), (0, 1), (0, 2)],
+         [(2, 2), (2, 1), (2, 0), (1, 2), (0, 2)]]        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list storing the member of the monoid.
+    L=[]
+    for Tf in GracefulPreImageFunctionList(sz):
+        L.append([(Tf[sz-1][1], Tf[sz-1][1])]+[(i+Tf[sz-1-i][1],Tf[sz-1-i][1]) for i in rg(1,sz)]+[(Tf[sz-1-i][1],i+Tf[sz-1-i][1]) for i in rg(1,sz)])
+    return L
 
 
