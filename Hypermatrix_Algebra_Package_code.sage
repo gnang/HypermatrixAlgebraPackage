@@ -1,5 +1,5 @@
 #*************************************************************************#
-#    Copyright (C) 2017, 18, 19, 20 Edinah K.Gnang <kgnang@gmail.com>,    #
+#    Copyright (C) 2018, 19, 20, 21 Edinah K.Gnang <kgnang@gmail.com>,    #
 #                          Ori Parzanchevski,                             #
 #                          Yuval Filmus,                                  #
 #                          Doron Zeilberger,                              #
@@ -16,6 +16,8 @@
 #                  http://www.gnu.org/licenses/                           #
 #*************************************************************************#
 
+# Imports
+import itertools
 
 # Definition of the hypermatrix class HM.
 class HM:
@@ -97,8 +99,11 @@ class HM:
         [a102 a112 a122]
         [a202 a212 a222] 
         <BLANKLINE>
+        sage: List_of_Integers([1,2,3])
+        [[0, 0, 0], [0, 1, 0], [0, 0, 1], [0, 1, 1], [0, 0, 2], [0, 1, 2]]
+
     """
-    def __init__(self,*args):
+    def __init__(self,*args,func=None):
         if len(args) == 1:
             inp = args[0]
             if type(inp)==type(Matrix(SR,2,1,[var('xxi'),var('yyj')])) or type(inp)==type(Matrix(RR,2,1,[1,2])) or type(inp)==type(Matrix(CC,2,1,[1,1])):
@@ -172,6 +177,8 @@ class HM:
                 raise ValueError("SkewSymHypermatrixGenerate not supported for order %d hypermatrices" % dims[0])
         elif type(s) == list:
             self.hm=(List2Hypermatrix(*args)).listHM()
+        elif func is not None:
+            self.hm=HypermatrixGenerateFunc(*args[:-1], symbol=args[-1], digits=len(str(max(args[:-1])-1)), func=func)
         else:
             self.hm=HypermatrixGenerate(*args)
     def __repr__(self):
@@ -661,6 +668,28 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixKroneckerSum(self, V)
+
+    def pseudo_block_sum(self, V):
+        """
+        Returns the pseudo block sum of two hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: HM(2,2,'a').pseudo_block_sum(HM(2,2,'b'))
+            [[a00, a01, 0], [a10, a11, b01], [0, b10, b11]]
+
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixPseudoKroneckerSum(self, V)
 
     def expand(self):
         """
@@ -1158,10 +1187,12 @@ class HM:
         else:
             raise ValueError("not supported for order %d hypermatrices" %self.order())
 
-    def printHM(self):
+    def printHM(self, dim1=0, dim2=1, dpths=None):
         """
-        Conveniently displays matrices and third order hypermatrices
-        one depth slice at a time.
+        Conveniently displays matrices and higher order hypermatrices
+        one depth slice at a time. For order 4 or greater
+        hypermatrices, you may choose 2 dimensions along which a
+        slice is taken, and specify specific depths to take the slices
 
         EXAMPLES:
 
@@ -1177,11 +1208,48 @@ class HM:
             [a001 a011]
             [a101 a111]
             <BLANKLINE>
+            
+            sage: Hb=HM(1,2,3,2,'b')
+            sage: Hb.printHM(1,2)
+            [0, :, :, 0]=
+            [b0000 b0010 b0020]
+            [b0100 b0110 b0120]
+            <BLANKLINE>
+            [0, :, :, 1]=
+            [b0001 b0011 b0021]
+            [b0101 b0111 b0121]
+            <BLANKLINE>
+            sage: Hb.printHM(2,1)
+            [0, :, :, 0]=
+            [b0000 b0100]
+            [b0010 b0110]
+            [b0020 b0120]
+            <BLANKLINE>
+            [0, :, :, 1]=
+            [b0001 b0101]
+            [b0011 b0111]
+            [b0021 b0121]
+            <BLANKLINE>
+            sage: Hb.printHM(2,0,dpths=[(0,1),(1,1),(1,0)])
+            [:, 0, :, 1]=
+            [b0001]
+            [b0011]
+            [b0021]
+            <BLANKLINE>
+            [:, 1, :, 1]=
+            [b0101]
+            [b0111]
+            [b0121]
+            <BLANKLINE>
+            [:, 1, :, 0]=
+            [b0100]
+            [b0110]
+            [b0120]
 
 
         AUTHORS:
 
-        - Edinah K. Gnang
+        - Edinah K. Gnang and Ricky Cheng
         """
         if self.order()==2:
             L=self.listHM()
@@ -1190,8 +1258,29 @@ class HM:
             L=self.listHM()
             for dpth in range(self.n(2)):
                 print('[:, :, '+str(dpth)+']=\n'+Matrix(SR,self.n(0),self.n(1),[L[i][j][dpth] for i in range(self.n(0)) for j in range(self.n(1))]).str()+'\n')
+        elif dim1 != dim2:
+            getFullTuple = (lambda tuple, i, j: tuple[:dim1] + (i,) + tuple[dim1:dim2-1] + (j,) + tuple[dim2-1:]) \
+                       if   dim1 < dim2 \
+                       else lambda tuple, i, j: tuple[:dim2] + (j,) + tuple[dim2:dim1-1] + (i,) + tuple[dim1-1:]
+            def getEntry(list, tuple, i, j):
+                tuple = getFullTuple(tuple, i, j)
+                for i in tuple:
+                    list = list[i]
+                return list
+        
+            L=self.listHM()
+            if dpths is None:
+               dpths = itertools.product(*(range(self.n(i)) for i in range(self.order()) if i != dim1 and i != dim2))
+            for dpth in dpths:
+                # print(dpth)
+                depth_to_print = ', '.join(str(s) for s in getFullTuple(dpth,':',':'))
+                slice_to_print = [getEntry(L, dpth, i, j) for i in range(self.n(dim1)) for j in range(self.n(dim2))]
+                
+                print('['+depth_to_print+']=\n'+Matrix(SR, self.n(dim1),self.n(dim2),slice_to_print).str()+'\n')
         else:
-            raise ValueError("not supported for order %d hypermatrices" %self.order())
+            # raise ValueError("not supported for order %d hypermatrices" %self.order())
+            raise ValueError("invalid slice dimensions; dim1 and dim2 must be distinct")
+
 
     def latexHM(self):
         """
@@ -1542,6 +1631,12 @@ class HM:
         else:
             raise ValueError("Expect a real number greater or equal to 0 or Infinity")
 
+    def degree(self,vrbl):
+        if type(vrbl)==type(var('x')):
+            return max([i.degree(vrbl) for i in self.list() if not i.is_zero()])
+        else:
+            raise ValueError("Expect a real number greater or equal to 0 or Infinity")
+
     def trace(self):
         if self.order()==2:
             return sum(self[i,i] for i in range(min(self.n(0),self.n(1))))
@@ -1553,6 +1648,10 @@ class HM:
 
     def fast_reduce(self, monom, subst):
         AtmpL=self.dimensions()+[[fast_reduce(self.list()[i], monom, subst) for i in rg(prod(self.dimensions()))]]
+        return HM(*AtmpL)
+
+    def diff(self, VrbL):
+        AtmpL=self.dimensions()+[[diff(self.list()[i], VrbL) for i in rg(prod(self.dimensions()))]]
         return HM(*AtmpL)
 
     def operands(self):
@@ -1972,20 +2071,12 @@ class HM:
         """
         return GeneralHypermatrixSlicer(self, L, strg)
 
-    def flatten(self, Rg, ord):
+    def flatten(self, dms, indx):
         """
-        Outputs a lower order flattened hypermatrix of the higher order input.             
-        The first input is the hypermatrix to be flattened. The second input 
-        corresponds to the indices that will remain unchanged after flattening. 
-        The third input is the order of the desired output hypermatrix. When 
-        flatten an higher order input hypermatrix to order 1, the result is a list.
-        
-        In the example of A.flatten([0, 1], 2) for flattening 
-        the order 3 hypermatrix A into a matrix, the input [0, 1] tells us that the
-        column and the row indices will be left unchanged, and we are stacking depth
-        slices along the row direction. 
-        
-        The flattening of hypermatrices with ord>2 is obtained recursively. 
+        Outputs a lower order flattened hypermatrix computed from the higher order 
+        input. The second input corresponds to the desired dimensions for the 
+        flattened hypermatrix. The third input is the index of the most significant
+        index. The default flatteing scheme is the column major order.
 
 
         EXAMPLES:
@@ -1993,24 +2084,35 @@ class HM:
         ::
 
 
-            sage: sz=3; A=HM(sz, sz, sz, 'a')
-            sage: A.flatten([0, 1], 2).dimensions()
-            [3, 9]
-            sage: A.flatten([0, 1], 2).printHM()
+            sage: sz=3; A=HM(sz,sz,sz,'a')
+            sage: A.flatten([sz, sz^2], 0).printHM() # Flattening scheme with the most significant index being 0
             [:, :]=
             [a000 a010 a020 a001 a011 a021 a002 a012 a022]
             [a100 a110 a120 a101 a111 a121 a102 a112 a122]
             [a200 a210 a220 a201 a211 a221 a202 a212 a222]
-            sage: sz=2; B=HM(sz,sz,sz,'b')
-            sage: B.flatten([2], 1)
-            [b000, b001, b100, b101, b010, b011, b110, b111]
+            sage: HM(sz,sz,sz, A.flatten([sz, sz^2], 0).list())-A # Checking the folding
+            [[[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]
+            sage: A.flatten([sz, sz^2], 1).printHM()
+            [:, :]=
+            [a000 a001 a002 a100 a101 a102 a200 a201 a202]
+            [a010 a011 a012 a110 a111 a112 a210 a211 a212]
+            [a020 a021 a022 a120 a121 a122 a220 a221 a222]
+            sage: HM(sz,sz,sz, A.flatten([sz, sz^2], 1).list())-A.transpose() # Checking the folding
+            [[[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]
+            sage: A.flatten([sz, sz^2], 2).printHM()
+            [:, :]=
+            [a000 a100 a200 a010 a110 a210 a020 a120 a220]
+            [a001 a101 a201 a011 a111 a211 a021 a121 a221]
+            [a002 a102 a202 a012 a112 a212 a022 a122 a222] 
+            sage: HM(sz,sz,sz, A.flatten([sz, sz^2], 2).list())-A.transpose(2) # Checking the folding
+            [[[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]
   
 
         AUTHORS:
         - Edinah K. Gnang and Fan Tian
         - To Do: 
         """
-        return GeneralHypermatrixFlatten(self, Rg, ord)
+        return GeneralHypermatrixFlatten(self, dms, indx)
 
 def MatrixGenerate(nr, nc, c):
     """
@@ -2155,6 +2257,59 @@ def HypermatrixGenerateII(*args):
     if len(args) == 1:
         return var(args[0])
     return [HypermatrixGenerateII( *(args[1:-1]+(args[-1]+str(i),)) ) for i in range(1,1+args[0])]
+
+def HypermatrixGenerateDigits(*args, symbol, digits=1):
+    """
+    Generates a list of lists associated with a symbolic arbitrary
+    order hypematrix of size specified by the input using and the
+    entries are determined by the last input character
+
+    EXAMPLES:
+
+    ::
+
+        sage: N = HypermatrixGenerateDigits(12, 5, symbol='N', digits=2); N
+        [[N0000, N0001, N0002, N0003, N0004],
+         [N0100, N0101, N0102, N0103, N0104],
+         [N0200, N0201, N0202, N0203, N0204],
+         [N0300, N0301, N0302, N0303, N0304],
+         [N0400, N0401, N0402, N0403, N0404],
+         [N0500, N0501, N0502, N0503, N0504],
+         [N0600, N0601, N0602, N0603, N0604],
+         [N0700, N0701, N0702, N0703, N0704],
+         [N0800, N0801, N0802, N0803, N0804],
+         [N0900, N0901, N0902, N0903, N0904],
+         [N1000, N1001, N1002, N1003, N1004],
+         [N1100, N1101, N1102, N1103, N1104]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Ricky Cheng
+    """
+    if len(args) == 0:
+        return var(symbol)
+    return [HypermatrixGenerateDigits(*(args[1:]), symbol=symbol+str(i).zfill(digits), digits=digits) for i in range(args[0])]
+
+def HypermatrixGenerateFunc(*args, symbol, digits=1, func):
+    """
+    Generates a list of lists associated with a symbolic arbitrary
+    order hypematrix of size specified by the input using and the
+    entries are determined by the last input character
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: N = HypermatrixGenerateFunc
+
+
+    AUTHORS:
+    - Edinah K. Gnang, Ricky Cheng
+    """
+    if len(args) == 0:
+        return var(symbol+func(digits))
+    return [HypermatrixGenerateFunc(*(args[1:]), symbol=symbol+str(i).zfill(digits), digits=digits, func=func(i)) for i in range(args[0])]
 
 def HypermatrixGenerateAllOne(*args):
     """
@@ -2942,6 +3097,27 @@ def Vandermonde(l, shft=0):
     - Edinah K. Gnang
     """
     return HM(len(l),len(l),[l[j]^(i+shft) for j in range(len(l)) for i in range(len(l))])
+
+def VandermondeHM(l, shft=0):
+    """
+    Constructs a Vandermonde matrix from the input list
+    assumed to be either numbers or symbolic variables
+    nothing breaks however if one presents as input a list of
+    hypermatrices. Differs from the previous function in the 
+    fact that the input is an object of type HM
+
+    EXAMPLES:
+
+    ::
+
+        sage: VandermondeHM(HM(2,1,var_list('x',2)))
+        [[1, 1], [x0, x1]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return Vandermonde(l.list(), shft)
 
 def inverse_vandermonde(X):
     """
@@ -5907,6 +6083,12 @@ def CProd(Lh, Op, F):
         [:, :]=
         [a10*b01       0]
         [      0 a11*b11]
+        sage: A=HM([[0, 1/2, 1], [1/2, 0, 1],[1, 1, 0]]) # Example of a disimilarity matrix
+        sage: (CProd([A,A], max, max)-A).printHM() # Checking the strong triangle or ultrametric inequality for a finite Ultrametric space
+        [:, :]=
+        [  1 1/2   0]
+        [1/2   1   0]
+        [  0   0   1]
 
 
     AUTHORS:
@@ -6192,6 +6374,7 @@ def GeneralHypermatrixScale(A,s):
         sage: GeneralHypermatrixScale(Ha,3)
         [[[3*a000, 3*a001], [3*a010, 3*a011]], [[3*a100, 3*a101], [3*a110, 3*a111]]]
 
+
     AUTHORS:
     - Edinah K. Gnang
     """
@@ -6368,7 +6551,7 @@ def GeneralHypermatrixLogarithm(A,s=e):
 
     AUTHORS:
     - Edinah K. Gnang
-    """   
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -6403,7 +6586,7 @@ def GeneralHypermatrixLogarithmN(A,s=e, dgts=50):
 
     AUTHORS:
     - Edinah K. Gnang
-    """   
+    """
     # Initialization of the list specifying the dimensions of the output
     l = [A.n(i) for i in range(A.order())]
     # Initializing the input for generating a symbolic hypermatrix
@@ -7951,6 +8134,40 @@ def Tuple_to_Adjacency(T):
     Id=HM(2,len(T),'kronecker')
     return (sum([Id.slice([t[0]],'col')*Id.slice([t[1]],'row') for t in T]))
 
+def Adjacency_to_Tuple(A):
+    """
+    The method returns the adjacency matrix of input edge tuple
+    description of the input directed graph.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Adjacency_to_Tuple(HM([[0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1]]))
+        [(0, 1), (1, 2), (2, 0), (3, 3)]
+        sage: Tuple_to_Adjacency(Adjacency_to_Tuple(HM([[0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1]]))).printHM()
+        [:, :]= 
+        [0 1 0 0]
+        [0 0 1 0]
+        [1 0 0 0]
+        [0 0 0 1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initlization of the tuple list
+    T=[]
+    # Loop running througgh the matrix entries
+    for i in rg(A.n(0)):
+        for j in rg(A.n(1)):
+            if A[i,j]==1:
+                T.append((i,j))
+    # Sorting the tuples
+    T.sort()
+    return T
+
 def Tuple_to_PseudoTuple(tp):
     """
     Returns list of unidrected edge tuple desctiption associated with the 
@@ -9426,6 +9643,39 @@ def GeneralHypermatrixKroneckerSum(A,B):
     else:
         raise ValueError("The order of the input hypermatrices must match.")
 
+def GeneralHypermatrixPseudoKroneckerSum(A,B):
+    """
+    Computes the Pseudo Kronecker sum for arbitrary order hypermatrix.
+    The operation ammounts to a blowup of the 0,0 entry of B into a matrix
+    this came in up in the undiagonalization infimum analysis
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: GeneralHypermatrixPseudoKroneckerSum(HM(2,2,'a'), HM(2,2,'b'))
+        [[a00, a01, 0], [a10, a11, b01], [0, b10, b11]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.order()==B.order() and A.is_cubical() and B.is_cubical():
+        # Initialization of the dimensions of the hypermatrix container
+        dms=(HM(1,A.order(),A.dimensions())+HM(1,B.order(),B.dimensions())-HM(1,A.order(),'one')).list()
+        # Initialization of  the arguments to passed on to the HM constructor
+        inpts=dms+['zero']
+        # Initialization of the hypermatrix container
+        Ht=HM(*inpts)
+        # Filling up the container with B
+        Ht=Ht.fill_with(B,[v-1 for v in A.dimensions()])
+        # Filling up the container with A
+        Ht=Ht.fill_with(A,[0 for v in rg(A.order())])
+        return Ht 
+    else:
+        raise ValueError("The order of the input hypermatrices must match.")
+
 def GeneralHypermatrixKroneckerProduct(A,B):
     """
     Computes the  Kronecker product of arbitrary hypermatrices A, B of the same order.
@@ -10811,8 +11061,8 @@ def get_permutation(la,lb):
     L = list()
 
     # Loop performing the evaluation.
-    for i1 in range(len(la)):
-        for i2 in range(len(lb)):
+    for i1 in rg(len(la)):
+        for i2 in rg(len(lb)):
             if la[i1] == lb[i2]:
                 L.append(i2)
                 break
@@ -12086,27 +12336,32 @@ def Bool2HM(T):
 
     - Edinah K. Gnang and Doron Zeilberger
     """
-    # Initialization of the list specifying the dimensions of the output
-    l = [2 for i in rg(CountVariablesBool(T))]
-    # Initializing the input for generating a symbolic hypermatrix
-    inpts = l+['zero']
-    # Initialization of the hypermatrix
-    Rh = HM(*inpts)
-    # Main loop performing the transposition of the entries
-    for i in range(prod(l)):
-        # Turning the index i into an hypermatrix array location using the decimal encoding trick
-        entry = [Integer(mod(i,l[0]))]
-        sm = Integer(mod(i,l[0]))
-        for k in range(len(l)-1):
-            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
-            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
-        # Sorting the list of variables
-        if VariablesBool(T).cardinality() == 1:
-            LstVar=VariablesBool(T).list()
-        else:
-            LstVar=sum(VariablesBool(T)).operands()
-        Rh[tuple(entry)]=SubsTBool(T, LstVar, entry)
-    return Rh
+    if CountVariablesBool(T) == 0:
+        return HM(1,1,[Bool2Poly(T)])
+    elif T == 1:
+        return HM(1,1,[Bool2Poly(T)])
+    else:
+        # Initialization of the list specifying the dimensions of the output
+        l = [2 for i in rg(CountVariablesBool(T))]
+        # Initializing the input for generating a symbolic hypermatrix
+        inpts = l+['zero']
+        # Initialization of the hypermatrix
+        Rh = HM(*inpts)
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            # Sorting the list of variables
+            if VariablesBool(T).cardinality() == 1:
+                LstVar=VariablesBool(T).list()
+            else:
+                LstVar=sum(VariablesBool(T)).operands()
+            Rh[tuple(entry)]=SubsTBool(T, LstVar, entry)
+        return Rh
 
 def Bool2HM2(T, LstVar):
     """
@@ -12158,26 +12413,37 @@ def Bool2Integer(T):
         sage: Bool2Integer(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]])
         16
         sage: X=var_list('x',2); Bool2Integer(x0)
-        2
+        4
+        sage: Bool2Integer(['NOT',['NOT', x0]])
+        4
         sage: Bool2Integer(['NOT', x0])
+        3
+        sage: Bool2Integer(0)
+        0
+        sage: Bool2Integer(1)
         1
         sage: Bool2Integer(['OR', x0, ['NOT', x0]])
-        3
+        5
         sage: Bool2Integer(['AND', x0, ['NOT', x0]])
-        0
+        2
 
 
     AUTHORS:
 
     - Edinah K. Gnang and Doron Zeilberger
     """
-    # Initialization of the list of evaliations
-    L=Bool2HM(T).list()
-    if CountVariablesBool(T) == 1:
-        return sum(L[i]*2^i for i in rg(len(L)))
-    else: 
-        # Adding up the geomertric like sum 
-        return sum(2^(2^k) for k in rg(1,CountVariablesBool(T)))+sum(L[i]*2^i for i in rg(len(L)))
+    if T == 0:
+        return Integer(0)
+    elif T == 1:
+        return Integer(1)
+    else:
+        # Initialization of the list of evaliations
+        L=Bool2HM(T).list()
+        if CountVariablesBool(T) == 1:
+            return Integer(2)+sum(L[i]*2^i for i in rg(len(L)))
+        else: 
+            # Adding up the geomertric like sum 
+            return sum(2^(2^k) for k in rg(1,CountVariablesBool(T)))+sum(L[i]*2^i for i in rg(len(L)))
 
 def Bool2Poly(T):
     """
@@ -12208,6 +12474,41 @@ def Bool2Poly(T):
         return  1 - Bool2Poly(T[1])
     else:
         print('IMPROPER INPUT !!!')
+
+def Bool2Poly2(T, LstVar):
+    """
+    Outputs the hypermatrix encoding of the boolean formula
+    the index correspond to the values assigned to the variables
+    and the entry itself corresponds the 
+
+    EXAMPLES:
+
+    ::
+
+        sage: Bool2Poly2(['AND', ['OR', var('x0'), ['OR', var('x0'), 1]], ['AND', ['AND', 1, var('x1')], 1]],[var('x0') ,var('x1')])
+        -(x0 - 1)*x1 + x0*x1
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang and Doron Zeilberger
+    """
+    # Initialization of the list specifying the dimensions of the output
+    l = [2 for i in rg(len(LstVar))]
+    # Initializing the input for generating a symbolic hypermatrix
+    inpts = l+['zero']
+    # Initialization of the hypermatrix
+    F = 0
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        F=F+SubsTBool(T, LstVar, entry)*prod( (LstVar[u]-(1-entry[u]))/(2*entry[u]-1) for u in rg(len(LstVar)))
+    return F
  
 def BoolTsize(T):
     """
@@ -12247,9 +12548,11 @@ def ReducedNonMonotoneBooleanFormula(SZ):
     ::
 
         sage: ReducedNonMonotoneBooleanFormula(3)[0]
-        [[], [x0], [['NOT', x0]], [['AND', x0, x1], ['OR', x0, x1]]]
-        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormula(sz)[0]
-        sage: Lr = [[] for i in rg(len(A))]
+        [[],
+         [0, 1, x0],
+         [['NOT', x0]],
+         [['AND', 0, x0], ['AND', x0, x1], ['OR', 1, x0], ['OR', x0, x1]]]
+        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormula(sz)[0]; Lr = [[] for i in rg(len(A))]
         sage: for i in rg(len(A)):
         ....:     if len(A[i])>0:
         ....:         for T in A[i]:
@@ -12257,22 +12560,23 @@ def ReducedNonMonotoneBooleanFormula(SZ):
         ....:
         sage: Lr
         [[],
-         [(x0, 2)],
-         [(['NOT', x0], 1)],
-         [(['AND', x0, x1], 12), (['OR', x0, x1], 18)],
-         [(['AND', x0, ['NOT', x0]], 0),
-          (['AND', x0, ['NOT', x1]], 6),
+         [(0, 0), (1, 1), (x0, 4)],
+         [(['NOT', x0], 3)],
+         [(['AND', 0, x0], 2),
+          (['AND', x0, x1], 12),
+          (['OR', 1, x0], 5),
+          (['OR', x0, x1], 18)],
+         [(['AND', x0, ['NOT', x1]], 6),
           (['AND', ['NOT', x0], x1], 8),
-          (['OR', x0, ['NOT', x0]], 3),
           (['OR', x0, ['NOT', x1]], 15),
           (['OR', ['NOT', x0], x1], 17),
-          (['NOT', ['AND', x0, x1]], 11),
-          (['NOT', ['OR', x0, x1]], 5)],
+          (['NOT', ['AND', x0, x1]], 11)],
          [(['AND', x0, ['AND', x1, x2]], 148),
-          (['AND', x0, ['OR', x0, x1]], 14),
+          (['AND', x0, ['OR', 1, x1]], 14),
           (['AND', x0, ['OR', x1, x2]], 188),
-          (['AND', ['OR', x0, x1], x1], 16),
+          (['AND', ['OR', 1, x0], x1], 16),
           (['AND', ['OR', x0, x1], x2], 244),
+          (['OR', 1, ['AND', x0, x1]], 19),
           (['OR', x0, ['AND', x1, x2]], 254),
           (['OR', x0, ['OR', x1, x2]], 274),
           (['OR', ['AND', x0, x1], x2], 268)]]
@@ -12289,14 +12593,14 @@ def ReducedNonMonotoneBooleanFormula(SZ):
     # Initialization of the list of variables
     X=var_list('x',SZ)
     # Initialization of the list which store the integer encodings
-    L = [Bool2Integer(X[0]), Bool2Integer(['NOT',var('x0')]), Bool2Integer(['AND', var('x0'), var('x1')]), Bool2Integer(['OR', var('x0'), var('x1')])]
-    if SZ <= 3:
-        return [[[], [X[0]], [['NOT',var('x0')]], [['AND', var('x0'), var('x1')], ['OR', var('x0'), var('x1')]]], L]
-    elif SZ > 3:
+    L = [Integer(0), Integer(1), Bool2Integer(X[0]), Bool2Integer(['NOT',X[0]])]
+    if SZ <= 2:
+        return [[[], [Integer(0), Integer(1), X[0]], [['NOT',X[0]]]], L]
+    elif SZ > 2:
         # Initialization of the list of formula.
-        A=[[], [X[0]], [['NOT',var('x0')]], [['AND', var('x0'), var('x1')], ['OR', var('x0'), var('x1')]]] + [[] for t in range(SZ-3)]
+        A=[[], [Integer(0), Integer(1), X[0]],  [['NOT',X[0]]]] + [[] for t in range(SZ-2)]
         # Main loop.
-        for sz in range(3,SZ+1):
+        for sz in range(2,SZ+1):
             # Initialization of the fifth entry
             for i in rg(1,sz-1):
                 for s in A[i]:
@@ -12319,6 +12623,89 @@ def ReducedNonMonotoneBooleanFormula(SZ):
         return [A,L]
 
 @cached_function
+def ReducedNonMonotoneBooleanFormulaII(SZ):
+    """
+    Outputs the list of non-monotone boolean formula encoded as polynomial
+    stratified by the size of the corresponding boolean formula. 
+    The second output is the list of integer recording the tables
+    which have occured thus far.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ReducedNonMonotoneBooleanFormulaII(3)[0]
+        [[], [0, 1, x0], [['NOT', x0]], [['AND', x0, x1], ['OR', x0, x1]]]
+        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormulaII(sz)[0]; Lr = [[] for i in rg(len(A))]
+        sage: for i in rg(len(A)):
+        ....:     if len(A[i])>0:
+        ....:         for T in A[i]:
+        ....:             Lr[i].append((T, Bool2Integer(T)))
+        ....:
+        sage: Lr
+        [[],
+         [(0, 0), (1, 1), (x0, 4)],
+         [(['NOT', x0], 3)],
+         [(['AND', x0, x1], 12), (['OR', x0, x1], 18)],
+         [(['AND', x0, ['NOT', x1]], 6),
+          (['AND', ['NOT', x0], x1], 8),
+          (['OR', x0, ['NOT', x1]], 15),
+          (['OR', ['NOT', x0], x1], 17),
+          (['NOT', ['AND', x0, x1]], 11),
+          (['NOT', ['OR', x0, x1]], 5)],
+         [(['AND', x0, ['AND', x1, x2]], 148),
+          (['AND', x0, ['OR', x1, x2]], 188),
+          (['AND', ['OR', x0, x1], x1], 16),
+          (['AND', ['OR', x0, x1], x2], 244),
+          (['OR', x0, ['AND', x1, x2]], 254),
+          (['OR', x0, ['OR', x1, x2]], 274),
+          (['OR', ['AND', x0, x1], x2], 268)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Initialization of the list of variables
+    X=var_list('x',SZ)
+    # Initialization of the list which store the integer encodings
+    L = [SR(0), SR(1), X[0], 1-X[0]]
+    if SZ <= 2:
+        return [[[], [Integer(0), Integer(1), X[0]],  [['NOT',X[0]]]], L]
+    elif SZ > 2:
+        # Initialization of the list of formula.
+        A=[[], [Integer(0), Integer(1), X[0]],  [['NOT',X[0]]]] + [[] for t in range(SZ-2)]
+        # Main loop.
+        for sz in range(2,SZ+1):
+            # Initialization of the fifth entry
+            for i in rg(1,sz-1):
+                for s in A[i]:
+                    for t in A[sz-i-1]:
+                        for j in rg(CountVariablesBool(s)+1):
+                            Ft=expand(Bool2Poly2(['AND', s, IncrementVariablesBool(t,j)],X))
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Ft in L:
+                                A[sz].append(['AND', s, IncrementVariablesBool(t,j)])
+                                L.append(Ft)
+            for i in range(1,sz-1):
+                for s in A[i]:
+                    for t in A[sz-i-1]:
+                        for j in rg(CountVariablesBool(s)+1):
+                            Ft=expand(Bool2Poly2(['OR', s, IncrementVariablesBool(t,j)],X))
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Ft in L:
+                                A[sz].append(['OR', s, IncrementVariablesBool(t,j)])
+                                L.append(Ft)
+            for s in A[sz-1]:
+                Ft=expand(Bool2Poly2(['NOT',s],X))
+                if (len(A[sz-1])>0) and not Ft in L:
+                    A[sz].append(['NOT', s])
+                    L.append(Ft)
+        # Returning Boolean formulas encoded as polynomials
+        return [A, L]
+
+@cached_function
 def ReducedNonMonotoneBooleanFormulaPoly(SZ):
     """
     Outputs the list of non-monotone boolean formula encoded as polynomial
@@ -12332,34 +12719,18 @@ def ReducedNonMonotoneBooleanFormulaPoly(SZ):
 
         sage: ReducedNonMonotoneBooleanFormulaPoly(3)[0]
         [[], [x0], [-x0 + 1], [x0*x1, -x0*x1 + x0 + x1]]
-        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormula(sz)[0]
-        sage: Lr = [[] for i in rg(len(A))]
+        sage: sz=5; X=var_list('x',sz); [A, Lp, Li]=ReducedNonMonotoneBooleanFormulaPoly(sz)[0]
+        sage: Lp
+        sage: Li
+        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormulaPolyII(sz)[0]; Lr = [[] for i in rg(len(A))]
         sage: for i in rg(len(A)):
         ....:     if len(A[i])>0:
         ....:         for T in A[i]:
-        ....:             Lr[i].append((Bool2Poly(T), Bool2Integer(T)))
+        ....:             Lr[i].append((T, Bool2Integer(T)))
         ....:
         sage: Lr
-        [[],
-         [(x0, 2)],
-         [(-x0 + 1, 1)],
-         [(x0*x1, 12), (-x0*x1 + x0 + x1, 18)],
-         [(-(x0 - 1)*x0, 0),
-          (-x0*(x1 - 1), 6),
-          (-(x0 - 1)*x1, 8),
-          ((x0 - 1)*x0 + 1, 3),
-          (x0*(x1 - 1) + x0 - x1 + 1, 15),
-          ((x0 - 1)*x1 - x0 + x1 + 1, 17),
-          (-x0*x1 + 1, 11),
-          (x0*x1 - x0 - x1 + 1, 5)],
-         [(x0*x1*x2, 148),
-          (-(x0*x1 - x0 - x1)*x0, 14),
-          (-(x1*x2 - x1 - x2)*x0, 188),
-          (-(x0*x1 - x0 - x1)*x1, 16),
-          (-(x0*x1 - x0 - x1)*x2, 244),
-          (-x0*x1*x2 + x1*x2 + x0, 254),
-          ((x1*x2 - x1 - x2)*x0 - x1*x2 + x0 + x1 + x2, 274),
-          (-x0*x1*x2 + x0*x1 + x2, 268)]]
+
+
 
 
     AUTHORS:
@@ -12372,14 +12743,14 @@ def ReducedNonMonotoneBooleanFormulaPoly(SZ):
     # Initialization of the list of variables
     X=var_list('x',SZ)
     # Initialization of the list which store the integer encodings
-    L = [Bool2Integer(X[0]), Bool2Integer(['NOT',var('x0')]), Bool2Integer(['AND', var('x0'), var('x1')]), Bool2Integer(['OR', var('x0'), var('x1')])]
-    if SZ <= 3:
-        return [[[], [X[0]], [1-var('x0')], [x0*x1, x0 + x1- x0*x1]], L]
-    elif SZ > 3:
+    L = [Integer(0), Integer(1), Bool2Integer(X[0]), Bool2Integer(['NOT',X[0]])]
+    if SZ <= 2:
+        return [[[], [SR(0), SR(1), X[0]], [1-X[0]]], L]
+    elif SZ > 2:
         # Initialization of the list of formula.
-        A=[[], [X[0]], [['NOT',var('x0')]], [['AND', var('x0'), var('x1')], ['OR', var('x0'), var('x1')]]] + [[] for t in range(SZ-3)]
+        A=[[], [Integer(0), Integer(1), X[0]],  [['NOT',X[0]]]] + [[] for t in range(SZ-2)]
         # Main loop.
-        for sz in range(3,SZ+1):
+        for sz in range(2,SZ+1):
             # Initialization of the fifth entry
             for i in rg(1,sz-1):
                 for s in A[i]:
@@ -12400,7 +12771,78 @@ def ReducedNonMonotoneBooleanFormulaPoly(SZ):
                     A[sz].append(['NOT', s])
                     L.append(Bool2Integer(['NOT', s]))
         # Returning Boolean formulas encoded as polynomials
-        return [[[Bool2Poly(F) for F in A[t]] for t in rg(SZ)], L]
+        return [[[Bool2Poly(F) for F in A[t]] for t in rg(SZ+1)], L]
+
+@cached_function
+def ReducedNonMonotoneBooleanFormulaPolyII(SZ):
+    """
+    Outputs the list of non-monotone boolean formula encoded as polynomial
+    stratified by the size of the corresponding boolean formula. 
+    The second output is the list of integer recording the tables
+    which have occured thus far.
+
+    EXAMPLES:
+
+    ::
+
+        sage: ReducedNonMonotoneBooleanFormulaPolyII(3)[0]
+        [[], [0, 1, x0], [['NOT', x0]], [x0*x1, -x0*x1 + x0 + x1]]
+        sage: sz=5; X=var_list('x',sz); [A, Lp, Li]=ReducedNonMonotoneBooleanFormulaPoly(sz)[0]
+        sage: Lp
+        sage: Li
+        sage: sz=5; X=var_list('x',sz); A=ReducedNonMonotoneBooleanFormulaPolyII(sz)[0]
+        sage: Lr = [[] for i in rg(len(A))]
+        sage: for i in rg(len(A)):
+        ....:     if len(A[i])>0:
+        ....:         for T in A[i]:
+        ....:             Lr[i].append((Bool2Poly(T), Bool2Integer(T)))
+        ....:
+        sage: Lr
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Doron Zeilberger
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Initialization of the list of variables
+    X=var_list('x',SZ)
+    # Initialization of the list which store the integer encodings
+    L = [SR(0), SR(1), X[0], 1-X[0]]
+    if SZ <= 2:
+        return [[[], [SR(0), SR(1), X[0]], [1-X[0]]], L]
+    elif SZ > 2:
+        # Initialization of the list of formula.
+        A=[[], [Integer(0), Integer(1), X[0]],  [['NOT',X[0]]]] + [[] for t in range(SZ-2)]
+        # Main loop.
+        for sz in range(2,SZ+1):
+            # Initialization of the fifth entry
+            for i in rg(1,sz-1):
+                for s in A[i]:
+                    for t in A[sz-i-1]:
+                        for j in rg(CountVariablesBool(s)+1):
+                            Ft=expand(Bool2Poly2(['AND', s, IncrementVariablesBool(t,j)],X))
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Ft in L:
+                                A[sz].append(['AND', s, IncrementVariablesBool(t,j)])
+                                L.append(Ft)
+            for i in range(1,sz-1):
+                for s in A[i]:
+                    for t in A[sz-i-1]:
+                        for j in rg(CountVariablesBool(s)+1):
+                            Ft=expand(Bool2Poly2(['OR', s, IncrementVariablesBool(t,j)],X))
+                            if (len(A[i])>0) and (len(A[sz-i-1])>0) and not Ft in L:
+                                A[sz].append(['OR', s, IncrementVariablesBool(t,j)])
+                                L.append(Ft)
+            for s in A[sz-1]:
+                Ft=expand(Bool2Poly2(['NOT',s],X))
+                if (len(A[sz-1])>0) and not Ft in L:
+                    A[sz].append(['NOT', s])
+                    L.append(Ft)
+        # Returning Boolean formulas encoded as polynomials
+        return [[[Bool2Poly(F) for F in A[t]] for t in rg(SZ+1)], L]
 
 def ShortestNonMonotoneBooleanFormula(T):
     """
@@ -16637,6 +17079,49 @@ def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
          x11 == -1/2*(u10*v00 - u11*v10)/y10]
         sage: Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))
         [[1/2*(u00*v01 - u01*v11)*y00/y01 - 1/2*(u00*v01 - u01*v11)*y10/y11, 0], [0, 1/2*(u10*v00 - u11*v10)*y01/y00 - 1/2*(u10*v00 - u11*v10)*y11/y10]]
+        sage: sz=2; od=2; Hl=[HM(sz,sz,'u'),HM(sz,sz,'v')]; Xl=[HM(sz,sz,'x'),HM(sz,sz,'y')]
+        sage: Sln=GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl) 
+        sage: (HM(sz,sz,'one')-HM(od,sz,'kronecker')).elementwise_product(Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])))).printHM()
+        [0 0]
+        [0 0]
+        sage: sz=3; od=2; Hl=[HM(sz,sz,'u'),HM(sz,sz,'v')]; Xl=[HM(sz,sz,'x'),HM(sz,sz,'y')];  Sln=GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl)
+        sage: Sln
+        [x00 == 1/3*(2*u00*v02 - u01*v12 - u02*v22)/y02,
+         x10 == 1/3*(2*u10*v02 - u11*v12 - u12*v22)/y02,
+         x20 == 1/3*(2*u20*v00 - u21*v10 - u22*v20)*(2*u10*v02 - u11*v12 - u12*v22)/((2*u10*v00 - u11*v10 - u12*v20)*y02),
+         x01 == -1/3*(u00*v02 - 2*u01*v12 + u02*v22)/y12,
+         x11 == -1/3*(u10*v02 - 2*u11*v12 + u12*v22)/y12,
+         x21 == -1/3*(u20*v00 - 2*u21*v10 + u22*v20)*(u10*v02 - 2*u11*v12 + u12*v22)/((u10*v00 - 2*u11*v10 + u12*v20)*y12),
+         x02 == -1/3*(u00*v02 + u01*v12 - 2*u02*v22)/y22,
+         x12 == -1/3*(u10*v02 + u11*v12 - 2*u12*v22)/y22,
+         x22 == -1/3*(u20*v01 + u21*v11 - 2*u22*v21)*(u00*v02 + u01*v12 - 2*u02*v22)/((u00*v01 + u01*v11 - 2*u02*v21)*y22),
+         y00 == (2*u10*v00 - u11*v10 - u12*v20)*y02/(2*u10*v02 - u11*v12 - u12*v22),
+         y10 == (u10*v00 - 2*u11*v10 + u12*v20)*y12/(u10*v02 - 2*u11*v12 + u12*v22),
+         y20 == (u20*v00 + u21*v10 - 2*u22*v20)*(u00*v01 + u01*v11 - 2*u02*v21)*y22/((u20*v01 + u21*v11 - 2*u22*v21)*(u00*v02 + u01*v12 - 2*u02*v22)),
+         y01 == (2*u10*v00 - u11*v10 - u12*v20)*(2*u20*v01 - u21*v11 - u22*v21)*y02/((2*u20*v00 - u21*v10 - u22*v20)*(2*u10*v02 - u11*v12 - u12*v22)),
+         y11 == (u10*v00 - 2*u11*v10 + u12*v20)*(u20*v01 - 2*u21*v11 + u22*v21)*y12/((u20*v00 - 2*u21*v10 + u22*v20)*(u10*v02 - 2*u11*v12 + u12*v22)),
+         y21 == (u00*v01 + u01*v11 - 2*u02*v21)*y22/(u00*v02 + u01*v12 - 2*u02*v22),
+         1 == (u20*v00 - 2*u21*v10 + u22*v20)*(u00*v01 - 2*u01*v11 + u02*v21)*(u10*v02 - 2*u11*v12 + u12*v22)/((u10*v00 - 2*u11*v10 + u12*v20)*(u20*v01 - 2*u21*v11 + u22*v21)*(u00*v02 - 2*u01*v12 + u02*v22)),
+         1 == (u10*v00 + u11*v10 - 2*u12*v20)*(u20*v01 + u21*v11 - 2*u22*v21)*(u00*v02 + u01*v12 - 2*u02*v22)/((u20*v00 + u21*v10 - 2*u22*v20)*(u00*v01 + u01*v11 - 2*u02*v21)*(u10*v02 + u11*v12 - 2*u12*v22)),
+         1 == (2*u20*v00 - u21*v10 - u22*v20)*(2*u00*v01 - u01*v11 - u02*v21)*(2*u10*v02 - u11*v12 - u12*v22)/((2*u10*v00 - u11*v10 - u12*v20)*(2*u20*v01 - u21*v11 - u22*v21)*(2*u00*v02 - u01*v12 - u02*v22))]
+        sage: (HM(sz,sz,'one')-HM(od,sz,'kronecker')).elementwise_product(Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln]))))
+        [[0, -1/3*u00*v01 - 1/3*u01*v11 + 2/3*u02*v21 + 1/3*(2*u10*v00 - u11*v10 - u12*v20)*(2*u20*v01 - u21*v11 - u22*v21)*(2*u00*v02 - u01*v12 - u02*v22)/((2*u20*v00 - u21*v10 - u22*v20)*(2*u10*v02 - u11*v12 - u12*v22)) - 1/3*(u10*v00 - 2*u11*v10 + u12*v20)*(u20*v01 - 2*u21*v11 + u22*v21)*(u00*v02 - 2*u01*v12 + u02*v22)/((u20*v00 - 2*u21*v10 + u22*v20)*(u10*v02 - 2*u11*v12 + u12*v22)), 0], [1/3*u10*v00 + 1/3*u11*v10 - 2/3*u12*v20 - 1/3*(u20*v00 + u21*v10 - 2*u22*v20)*(u00*v01 + u01*v11 - 2*u02*v21)*(u10*v02 + u11*v12 - 2*u12*v22)/((u20*v01 + u21*v11 - 2*u22*v21)*(u00*v02 + u01*v12 - 2*u02*v22)), 0, 0], [0, 0, 0]]
+        sage: sz=2; od=3; Hl=[HM(sz,sz,sz,'u'),HM(sz,sz,sz,'v'),HM(sz,sz,sz,'w')]; Xl=[HM(sz,sz,sz,'x'),HM(sz,sz,sz,'y'),HM(sz,sz,sz,'z')]
+        sage: Sln=GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl); Sln
+        [x000 == 1/2*(u000*v010*w010 - u010*v011*w110)/(y010*z010),
+         x100 == 1/2*(u100*v110*w010 - u110*v111*w110)/(y110*z010),
+         x010 == -1/2*(u000*v010*w010 - u010*v011*w110)/(y011*z110),
+         x110 == -1/2*(u100*v110*w010 - u110*v111*w110)/(y111*z110),
+         x001 == 1/2*(u001*v010*w011 - u011*v011*w111)/(y010*z011),
+         x101 == 1/2*(u101*v100*w001 - u111*v101*w101)*(u100*v110*w010 - u110*v111*w110)*z000/((u100*v100*w000 - u110*v101*w100)*y110*z001*z010),
+         x011 == -1/2*(u001*v010*w011 - u011*v011*w111)/(y011*z111),
+         x111 == -1/2*(u101*v100*w001 - u111*v101*w101)*(u100*v110*w010 - u110*v111*w110)*z100/((u100*v100*w000 - u110*v101*w100)*y111*z101*z110),
+         y000 == (u001*v000*w001 - u011*v001*w101)*y010*z011/((u001*v010*w011 - u011*v011*w111)*z001),
+         y100 == (u100*v100*w000 - u110*v101*w100)*y110*z010/((u100*v110*w010 - u110*v111*w110)*z000),
+         y001 == (u001*v000*w001 - u011*v001*w101)*y011*z111/((u001*v010*w011 - u011*v011*w111)*z101),
+         y101 == (u100*v100*w000 - u110*v101*w100)*y111*z110/((u100*v110*w010 - u110*v111*w110)*z100)]
+        sage: (HM(sz,sz,sz,'one')-HM(od,sz,'kronecker')).elementwise_product(Prod(Xl[0].subs(dict([(s.lhs(),s.rhs()) for s in Sln])), Xl[1].subs(dict([(s.lhs(),s.rhs()) for s in Sln])),Xl[2].subs(dict([(s.lhs(),s.rhs()) for s in Sln]))))
+        [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]
 
 
     AUTHORS:
@@ -16650,10 +17135,8 @@ def GeneralHypermatrixConstrainedUncorrelatedTuples(Hl, Xl):
     # Loop initializing the hypermartrix enrtry list 
     Lx=[]; Lh=[]
     for t in range(Hl[0].n(1)):
-        #Lx=Lx+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lx=Lx+((HM(*(dimL[t]+['one']))-Dlt).elementwise_product(ProdB(*([X for X in Xl]+[DltL[t]])))).list()
-        #Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(1/Hl[0].n(1))*apply(Prod,[H for H in Hl]))).list()
-        Lh=Lh+((HM(*(dimL[t]+['one']))-Dlt).elementwise_product(ProdB(*([H for H in Hl]+[DltL[t]]))-(1/Hl[0].n(1))*Prod(*[H for H in Hl]))).list()
+        Lx=Lx+((HM(*(min(dimL)+['one']))-Dlt).elementwise_product(ProdB(*([X for X in Xl]+[DltL[t]])))).list()
+        Lh=Lh+((HM(*(min(dimL)+['one']))-Dlt).elementwise_product(ProdB(*([H for H in Hl]+[DltL[t]]))-(1/Hl[0].n(1))*Prod(*[H for H in Hl]))).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not Lx[i].is_zero()]).list()
     # Formating the constraints
@@ -16701,9 +17184,9 @@ def GeneralHypermatrixConstrainedUncorrelatedTuplesII(Hl, Xl, sz):
     Lx=[]; Lh=[]
     for t in range(Hl[0].n(1)):
         #Lx=Lx+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[X for X in Xl]+[DltL[t]]))).list()
-        Lx=Lx+((HM(*(dimL[t]+['one']))-Dlt).elementwise_product(ProdB(*([X for X in Xl]+[DltL[t]])))).list()
+        Lx=Lx+((HM(*(min(dimL)+['one']))-Dlt).elementwise_product(ProdB(*([X for X in Xl]+[DltL[t]])))).list()
         #Lh=Lh+((apply(HM,dimL[t]+['one'])-Dlt).elementwise_product(apply(ProdB,[H for H in Hl]+[DltL[t]])-(1/sz)*apply(Prod,[H for H in Hl]))).list()
-        Lh=Lh+((HM(*(dimL[t]+['one']))-Dlt).elementwise_product(ProdB(*([H for H in Hl]+[DltL[t]]))-(1/sz)*Prod(*[H for H in Hl]))).list()
+        Lh=Lh+((HM(*(min(dimL)+['one']))-Dlt).elementwise_product(ProdB(*([H for H in Hl]+[DltL[t]]))-(1/sz)*Prod(*[H for H in Hl]))).list()
     # Initialization of the equation
     EqL=Set([Lx[i]==Lh[i] for i in range(len(Lx)) if not (Lx[i].is_zero() and Lh[i].is_zero())]).list()
     # Formating the constraints
@@ -18220,8 +18703,8 @@ def Form2Hypermatrix(f, Vrbls):
 
     ::
 
-        sage: sz=2; od=2; A=HM(sz,sz,'a'); B=HM(sz,sz,'b'); X=HM(od,'x').list()
-        sage: Hv0=HM(sz, 1, [X[0]^0, X[0]^1]); Hv1=HM(sz, 1, [X[1]^0,X[1]^1])
+        sage: sz=2; od=2; A=HM(sz,sz,'a'); B=HM(sz,sz,'b'); X=var_list('x',od)
+        sage: Hv0=HM(sz, 1, [X[0]^0, X[0]^1]); Hv1=HM(sz, 1, [X[1]^0, X[1]^1])
         sage: f=ProdB(Hv0.transpose(),Hv1,A)[0,0]; f
         a11*x0*x1 + a10*x0 + a01*x1 + a00
         sage: Form2Hypermatrix(f, X).printHM()
@@ -18234,7 +18717,7 @@ def Form2Hypermatrix(f, Vrbls):
         [:, :]=
         [b00 b01]
         [b10 b11]
-        sage: sz=2; od=3; A=HM(sz, sz, sz,'a'); X=HM(od, 'x').list()
+        sage: sz=2; od=3; A=HM(sz, sz, sz,'a'); X=var_list('x',od)
         sage: Hv0=HM(sz, 1, 1, [1,X[0]]); Hv1=HM(sz, 1, 1, [1,X[1]]); Hv2=HM(sz, 1, 1, [1,X[2]])
         sage: f=ProdB(Hv0.transpose(2), Hv1.transpose(), Hv2, A)[0,0,0]; f
         a111*x0*x1*x2 + a110*x0*x1 + a101*x0*x2 + a011*x1*x2 + a100*x0 + a010*x1 + a001*x2 + a000
@@ -18246,8 +18729,8 @@ def Form2Hypermatrix(f, Vrbls):
         [:, :, 1]=
         [a001 a011]
         [a101 a111]
-        sage: sz=3; A=HM(sz,sz,'a'); X=var_list('x',2)
-        sage: Hv0=HM(sz,1,[X[0]^i for i in range(sz)]); Hv1=HM(sz,1,[X[1]^j for j in range(sz)])
+        sage: sz=3; d=2; A=HM(sz,sz,'a'); X=var_list('x',d)
+        sage: Hv0=HM(sz,1,[X[0]^i for i in range(d+1)]); Hv1=HM(sz,1,[X[1]^j for j in range(d+1)])
         sage: f=ProdB(Hv0.transpose(),Hv1,A)[0,0]; f
         a22*x0^2*x1^2 + a21*x0^2*x1 + a12*x0*x1^2 + a20*x0^2 + a11*x0*x1 + a02*x1^2 + a10*x0 + a01*x1 + a00
         sage: Form2Hypermatrix(f, X).printHM()
@@ -18255,6 +18738,25 @@ def Form2Hypermatrix(f, Vrbls):
         [a00 a01 a02]
         [a10 a11 a12]
         [a20 a21 a22]
+        sage: sz=3; d=3; A=HM(sz,sz,sz,'a'); X=var_list('x',d)
+        sage: Hv0=HM(sz,1,1,[X[0]^i for i in range(d+1)]); Hv1=HM(sz,1,1,[X[1]^j for j in range(d+1)]); Hv2=HM(sz,1,1,[X[2]^j for j in range(d+1)])
+        sage: f=ProdB(Hv0.transpose(2), Hv1.transpose(), Hv2, A)[0,0,0]; f
+        a222*x0^2*x1^2*x2^2 + a221*x0^2*x1^2*x2 + a212*x0^2*x1*x2^2 + a122*x0*x1^2*x2^2 + a220*x0^2*x1^2 + a211*x0^2*x1*x2 + a121*x0*x1^2*x2 + a202*x0^2*x2^2 + a112*x0*x1*x2^2 + a022*x1^2*x2^2 + a210*x0^2*x1 + a120*x0*x1^2 + a201*x0^2*x2 + a111*x0*x1*x2 + a021*x1^2*x2 + a102*x0*x2^2 + a012*x1*x2^2 + a200*x0^2 + a110*x0*x1 + a020*x1^2 + a101*x0*x2 + a011*x1*x2 + a002*x2^2 + a100*x0 + a010*x1 + a001*x2 + a000
+        sage: Form2Hypermatrix(f, X).printHM()
+        [:, :, 0]=
+        [a000 a010 a020]
+        [a100 a110 a120]
+        [a200 a210 a220]
+        <BLANKLINE> 
+        [:, :, 1]=
+        [a001 a011 a021]
+        [a101 a111 a121]
+        [a201 a211 a221]
+        <BLANKLINE> 
+        [:, :, 2]=
+        [a002 a012 a022]
+        [a102 a112 a122]
+        [a202 a212 a222]
 
 
     AUTHORS:
@@ -19504,8 +20006,8 @@ def inxn(A):
     - To Do: 
     """
     # Initialization of the computation of the determinant
-    G=Deter(A); sz=A.n(0)
-    return HM(sz, sz, [diff(ln(G),A[j,i]) for j in rg(sz) for i in rg(sz)])
+    sz=A.n(0); X=HM(sz,sz,'x'); G=Deter(X); Xi=HM(sz, sz, [diff(ln(G),X[j,i]) for j in rg(sz) for i in rg(sz)])
+    return Xi.subs([X[i,j]==A[i,j] for j in rg(sz) for i in rg(sz)])
 
 def LeftRightDiagonalDependence3x3x3(A):
     """
@@ -20216,6 +20718,9 @@ def multivariate_division(f, List, Xv, Pp):
     division algorithm and the list of variables
     used. The last input is a list of primes which
     determines the monomial ordering.
+    The functions outputs a list. The last entry of
+    list being the remainder and the rest are quotients
+    identified in order with the divisor list.
  
 
     EXAMPLES:
@@ -20436,10 +20941,10 @@ def prime_induced_grobner_basis(Idl, Xv, Pp):
     while l_old != l_new and finished == False:
         # Computes the single pass of the substraction polynomials
         S  = multivariate_S_polynomials(I_curr, Xv, Pp)
-        #print '\n\n The subtraction polynomials yield'
+        #print('\n\n The subtraction polynomials yield')
         for i in rg(len(S)):
             S[i] = multivariate_reduce_polynomial(S[i], Xv, Pp)
-            #print 'S[',i,']= ',S[i]
+            #print('S[',i,']= ',S[i])
         # The instruction bellow is the lazy way of getting rid of the duplicates.
         St = Set(S)
         S = list(St)
@@ -20450,7 +20955,7 @@ def prime_induced_grobner_basis(Idl, Xv, Pp):
             if tmp_list[len(tmp_list)-1]!=0:
                 I_curr.append(tmp_list[len(tmp_list)-1])
         # Printing the result of the first pass of the Buchberger algorithm.
-        #print '\n\n The Current generator for the Ideal is given by'
+        #print('\n\n The Current generator for the Ideal is given by')
         for i in rg(len(I_curr)):
             #print I_curr[i]
             if I_curr[i] == I_curr[i].subs([Xv[j]==0 for j in rg(sz)]) and not I_curr[i].subs([Xv[j]==0 for j in rg(sz)]).is_zero():
@@ -20552,7 +21057,10 @@ def GeneralHypermatrixSlicer(A, Rg, indx):
     - To Do: 
     """
     # Initialization of the desired permutation
-    Pmt=get_permutation(sorted(Rg),Rg)
+    if sorted(Rg) == rg(len(Rg)):
+        Pmt=Rg
+    else:
+        Pmt = get_permutation(sorted(Rg),Rg)
     # Initialization of a number for the test
     nb=2
     if type(indx) == type(nb):
@@ -20596,7 +21104,7 @@ def GeneralHypermatrixSlicer(A, Rg, indx):
                     # Turning the index i into an hypermatrix array location using the decimal encoding trick
                     entry = [Integer(mod(i,l[0]))]
                     sm = Integer(mod(i,l[0]))
-                    for k in range(len(l)-1):
+                    for k in rg(len(l)-1):
                         entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
                         sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
                     if entry[indx] in Rg:
@@ -21900,6 +22408,28 @@ def MinSum(L):
     """
     return min(1, sum(L))
 
+def identity(L):
+    """
+    Outputs the input L without any changes.
+    This implementation does not check the validity of the inputs
+
+
+    EXAMPLES:
+ 
+    ::
+
+
+        sage: identity([2,3])
+        [2, 3]
+        sage: identity((2, -3, 1))
+        (2, -3, 1)
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return list(L)
+
 def is_Tree(A):
     """
     Returns an boolean value determining if the input unweighted
@@ -22792,6 +23322,45 @@ def TupleSpanningFunctionalTreeListII(sz):
     F=fast_reduce(tmpF, [A[i,sz] for i in rg(sz)], [A[i,i] for i in rg(sz)])
     return [Monomial2Tuple(mnm, As.list(), sz) for mnm in F.operands()]
 
+def List_of_Integers(l):
+    """
+    The function takes as input a list l of positive integers > 0.
+    The function outputs the list of distinct integer list of lenght
+    len(l) where the list entry indexed by i ranges from 0 inclusively
+    to l[i] excluded.
+
+
+    EXAMPLES:
+    ::
+        sage: List_of_Integers([2,2,2])
+        [[0, 0, 0],
+         [1, 0, 0],
+         [0, 1, 0],
+         [1, 1, 0],
+         [0, 0, 1],
+         [1, 0, 1],
+         [0, 1, 1],
+         [1, 1, 1]]
+        sage: List_of_Integers([1,2,3])
+        [[0, 0, 0], [0, 1, 0], [0, 0, 1], [0, 1, 1], [0, 0, 2], [0, 1, 2]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list which will be returned 
+    L=[]
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        L.append(entry)
+    return L
+
 def TreeFunctionList(n):
     """
     Goes through all the functions and determines which ones
@@ -23113,6 +23682,29 @@ def compose_tuple(T0, T1):
     else:
         return [(i, T0[T1[i][1]][1]) for i in rg(len(T0))]
 
+def compose_tuple_list(L):
+    """
+    This function performs the composition of the input tuple function list.
+    This implementation assume that the input list  of tuples describes 
+    composable functions.
+
+    EXAMPLES:
+    ::
+
+
+        sage: T0=[(0,1), (1,2), (2,0)]; T1=[(0,2), (1,0), (2,1)]; L=[T0, T1]
+        sage: compose_tuple_list(L)
+        [(0, 0), (1, 1), (2, 2)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    T=L[0]
+    for i in rg(1,len(L)):
+        T=compose_tuple(T,L[i])
+    return T
+
 def compose_tuple_power(T, pwr):
     """
     This function performs the composition of the input tuple functions.
@@ -23169,6 +23761,28 @@ def invert_tuple(T):
         return TpL
     else:
         raise ValueError("The input function must be invertible")
+
+def is_invertible(T):
+    """
+    Determines whether or not the input tuple describes
+    an invertible function
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: sz=3; T=[(0, 1), (1, 2), (2, 0)]; is_invertible(T)
+        True
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if Tuple_to_Adjacency(T).det() == 0:
+        return False
+    else:
+        return True
 
 def compose_tuple_pow(T, k):
     """
@@ -23670,54 +24284,50 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
     sz=len(X)
     return sum(f.subs([X[i] == Lr[t[i][1]] for i in rg(sz)])*prod(prod((X[k]-jk)/(t[k][1]-jk) for jk in Lr if jk !=t[k][1]) for k in rg(sz) ) for t in TupleFunctionList(sz))
 
-def GeneralHypermatrixFlatten(A, Rg, ord):
+def GeneralHypermatrixFlatten(A, dms, indx):
     """
-    Outputs a lower order flattened hypermatrix of the higher order input. 
-    The first input is the hypermatrix to be flattened. The second input 
-    corresponds to the indices that will remain unchanged after flattening. 
-    The third input is the order of the desired output hypermatrix. When 
-    flatten an higher order input hypermatrix to order 1, the result is a list.
+    Outputs a lower order flattened hypermatrix computed from the higher order 
+    input. The second input corresponds to the desired dimensions for the 
+    flattened hypermatrix. The third input is the index of the most significant
+    index. The default flatteing scheme is the column major order 
     
-    In the example of GeneralHypermatrixFlatten(A, [0, 1], 2) for flattening 
-    the order 3 hypermatrix A into a matrix, the input [0, 1] tells us that the
-    column and the row indices will be left unchanged, and we are stacking depth 
-    slices along the row direction. 
-    
-    The flattening of hypermatrices with ord>2 is obtained recursively.
 
     EXAMPLES:
 
     ::
         sage: sz=3; A=HM(sz,sz,sz,'a')
-        sage: GeneralHypermatrixFlatten(A, [0, 1], 2).dimensions()
-        [3, 9]
-        sage: GeneralHypermatrixFlatten(A, [0, 1], 2).printHM()
+        sage: GeneralHypermatrixFlatten(A, [sz, sz^2], 0).printHM() # Flattening scheme with the most significant index being 0
         [:, :]=
         [a000 a010 a020 a001 a011 a021 a002 a012 a022]
         [a100 a110 a120 a101 a111 a121 a102 a112 a122]
         [a200 a210 a220 a201 a211 a221 a202 a212 a222]
-        sage: sz=2; B=HM(sz,sz,sz,'b')
-        sage: GeneralHypermatrixFlatten(B, [2], 1)
-        [b000, b001, b100, b101, b010, b011, b110, b111]
- 
+        sage: HM(sz,sz,sz,GeneralHypermatrixFlatten(A, [sz, sz^2], 0).list())-A # Checking the folding
+        [[[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]
+        sage: GeneralHypermatrixFlatten(A, [sz, sz^2], 1).printHM()
+        [:, :]=
+        [a000 a001 a002 a100 a101 a102 a200 a201 a202]
+        [a010 a011 a012 a110 a111 a112 a210 a211 a212]
+        [a020 a021 a022 a120 a121 a122 a220 a221 a222]
+        sage: HM(sz,sz,sz,GeneralHypermatrixFlatten(A, [sz, sz^2], 1).list())-A.transpose() # Checking the folding
+        [[[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]
+        sage: GeneralHypermatrixFlatten(A, [sz, sz^2], 2).printHM()
+        [:, :]=
+        [a000 a100 a200 a010 a110 a210 a020 a120 a220]
+        [a001 a101 a201 a011 a111 a211 a021 a121 a221]
+        [a002 a102 a202 a012 a112 a212 a022 a122 a222] 
+        sage: HM(sz,sz,sz,GeneralHypermatrixFlatten(A, [sz, sz^2], 2).list())-A.transpose(2) # Checking the folding
+        [[[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]
  
 
     AUTHORS:
     - Edinah K. Gnang and Fan Tian
     - To Do: 
     """
-    if A.order() <= ord:
-        return A
-    elif ord == 1:
-        return HM(prod(A.dimensions()),A.transpose(Rg[0]).list())
-    elif ord == 2:
-        return HM([GeneralHypermatrixFlatten(A.slice([t],Rg[0]),[Rg[1]],1).list() for t in rg(A.n(Rg[0]))])
-    elif ord == 3:
-        return HM([GeneralHypermatrixFlatten(A.slice([t],Rg[0]),[Rg[1],Rg[2]],2).listHM() for t in rg(A.n(Rg[0]))])
-    elif ord == 4:
-        return HM([GeneralHypermatrixFlatten(A.slice([t],Rg[0]),[Rg[1],Rg[2],Rg[3]],3).listHM() for t in rg(A.n(Rg[0]))])
-    elif ord == 5:
-        return HM([GeneralHypermatrixFlatten(A.slice([t],Rg[0]),[Rg[1],Rg[2],Rg[3],Rg[4]],4).listHM() for t in rg(A.n(Rg[0]))])
+    if len(dms) >= A.order() or prod(dms) != prod(A.dimensions()):
+        raise ValueError("Expected smaller order dimensions which match in their products")
+    else:
+        Ls=dms+[A.transpose(indx).list()]
+        return HM(*Ls)
 
 def KroneckerVectorOuterProduct(*args):
     """
@@ -26269,7 +26879,7 @@ def generate_subgraph_unlabeled_listing_script(sz, T):
     - Edinah K. Gnang
     """
     # Initialization of the order
-    od = ceil(log(2^(sz*(sz-1)), 26))
+    od = ceil(log(2^(sz^2), 26))
     # Initialization of the alphabet of characters
     AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
     AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
@@ -26288,7 +26898,7 @@ def generate_subgraph_unlabeled_listing_script(sz, T):
     # Writing the symbols in capital letters
     f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
     cnt = 0
-    for i in rg(2^(sz*(sz-1))-1):
+    for i in rg(2^(sz^2)-1):
         if Integer(mod(cnt,4)) == 0:
             f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
             cnt=cnt+1
@@ -26304,7 +26914,7 @@ def generate_subgraph_unlabeled_listing_script(sz, T):
     # Writing the symbols in lower case letters
     f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
     cnt = 0
-    for i in rg(2^(sz*(sz-1))-1):
+    for i in rg(2^(sz^2)-1):
         if Integer(mod(cnt,4)) == 0:
             f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
             cnt=cnt+1
@@ -27376,20 +27986,49 @@ def pseudo_inverse(Tp, k):
     for T in L:
         if (Tuple_to_Adjacency(compose_tuple(T,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2 <= 2*k:
             RsLt.append(T)
-    return RsLt 
+    return RsLt
 
-def pseudo_inverseII(Tp):
+def pseudo_inverse_order(T):
     """
-    Goes through all the functions and determines which ones
-    are associated with canonical pseudo inverse of the function
-    specified by input tuple Tp. It outputs the pseudo-inverse
-    breaking the symmetry using the lexicographic order.
+    Determines the largest pseudoinverse order.
 
 
     EXAMPLES:
     ::
-        sage: pseudo_inverseII([(0, 0), (1, 0), (2, 1)])
-        [(0, 1), (1, 2), (2, 2)]
+
+
+        sage: sz=3; T=[(0, 1), (1, 2), (2, 0)]; pseudo_inverse_order(T)
+        3
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the adjacency matrix
+    A = Tuple_to_Adjacency(T)
+    # Initialization of the indegree list
+    L = [v for v in (A.transpose()*HM(A.nrows(),1,'one')).list() if v==0]
+    return len(T)-len(L)
+
+def canonical_pseudo_inverse(Tp):
+    """
+    Goes through all the permutations and determines which ones
+    are associated with canonical pseudo inverse set of the function
+    specified by input tuple Tp and Hamming diameter n-pseudoinverse order.
+    It outputs a list of pseudo-inverse
+
+
+    EXAMPLES:
+    ::
+        sage: sz=4; T=[(Integer(0),Integer(0))]+[(i,i-Integer(1)) for i in rg(1,sz)]; canonical_pseudo_inverse(T)
+        [[(0, 0), (1, 2), (2, 3), (3, 1)], [(0, 1), (1, 2), (2, 3), (3, 0)]]
+        sage: sz=3; T=[(i,Integer(0)) for i in rg(sz)]; canonical_pseudo_inverse(T)
+        [[(0, 0), (1, 1), (2, 2)],
+         [(0, 0), (1, 2), (2, 1)],
+         [(0, 1), (1, 0), (2, 2)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 2), (1, 0), (2, 1)],
+         [(0, 2), (1, 1), (2, 0)]]
 
 
     AUTHORS:
@@ -27398,14 +28037,13 @@ def pseudo_inverseII(Tp):
     # Initialization of the size
     sz=len(Tp)
     # Initialization of the list of functional
-    L=TupleFunctionList(sz)
+    L=PermutationFunctionList(sz)
     # Loop going through functions
-    mn=(Tuple_to_Adjacency(compose_tuple(Tp,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2; TT=Tp
+    RsLt=[]
     for T in L:
-        if (Tuple_to_Adjacency(compose_tuple(T,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2 < mn:
-            TT=T; mn=(Tuple_to_Adjacency(compose_tuple(T,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2
-    #print('The Hamming distance is ',mn)
-    return TT 
+        if (Tuple_to_Adjacency(compose_tuple(T,Tp))-Tuple_to_Adjacency([(i, i) for i in rg(sz)])).norm()^2 <= 2*(sz-pseudo_inverse_order(Tp)):
+            RsLt.append(T)
+    return RsLt
 
 def semigroup_tree_graceful_map(sz):
     """
@@ -27577,5 +28215,44 @@ def GracefulbidirectedTreeList(sz):
     L=[]
     for Tf in GracefulPreImageFunctionList(sz):
         L.append([(Tf[sz-1][1], Tf[sz-1][1])]+[(i+Tf[sz-1-i][1],Tf[sz-1-i][1]) for i in rg(1,sz)]+[(Tf[sz-1-i][1],i+Tf[sz-1-i][1]) for i in rg(1,sz)])
+    return L
+
+def weaving_submatrices(A):
+    """
+    The fucntion outputs a list of submatrices with
+    entries scaled for the weaving construction.
+    The input HM must be a square matrix with three
+    or more rows.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: sz=3; A=HM(sz,sz,'a'); L=weaving_submatrices(A); L[0]
+        [[0, 0, 0], [0, 1/2*a11, a12], [0, a21, 1/2*a22]]
+        sage: sum(L)
+        [[a00, a01, a02], [a10, a11, a12], [a20, a21, a22]]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz = min(A.n(0), A.n(1))
+    # Initialization of the output list
+    L = []
+    for k in rg(sz):
+        # Initilization of the output matrix
+        Tmp = HM(sz, sz, 'zero')
+        for i in rg(sz):
+            for j in rg(sz):
+                if i != k and j != k:
+                    if i==j:
+                        Tmp[i,j] = A[i,j]/(sz-1)
+                    else:
+                        Tmp[i,j] = A[i,j]/(sz-2)
+        L.append(Tmp.copy())
     return L
 
