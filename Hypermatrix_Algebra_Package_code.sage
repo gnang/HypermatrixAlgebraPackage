@@ -16,9 +16,9 @@
 #                  http://www.gnu.org/licenses/                           #
 #*************************************************************************#
 
-
 # Imports
 import itertools
+
 
 # Definition of the hypermatrix class HM.
 class HM:
@@ -158,8 +158,12 @@ class HM:
                 Id=HM(2,sz,'kronecker')
                 # The permutation acts on columns
                 self.hm=sum(HM(sz,1,[Id[i,dims[1][k]] for i in range(sz)])*HM(1,sz,[Id[k,j] for j in range(sz)]) for k in range(sz)).transpose().listHM()
+            elif dims[0]==3:
+                # Initialization of the size parameter
+                sz=len(dims[1])
+                self.hm=HypermatrixPermutation(dims[1])
             else:
-                raise ValueError("not supported for order %d hypermatrices" % len(dims))
+                raise ValueError("not supported for order %d hypermatrices" % dims[0])
         elif s == 'kronecker':
             AtmpL=args[:-1]
             self.hm=GeneralHypermatrixKroneckerDelta(*AtmpL).listHM()
@@ -4875,7 +4879,7 @@ def substituteHM(p, vrbl, A):
     else:
         raise ValueError("Must be a polynomial in the input variable.")
 
-def OuterHypermatrixInversePair(U, V):
+def OuterHypermatrixInversePair(U,V):
     """
     Outputs the pseudo inverse pairs associated with the input pairs of hypermatrices
     The implementation does not assume that the input third order hypermatrices are
@@ -4915,6 +4919,14 @@ def OuterHypermatrixInversePair(U, V):
          a031,
          ((a131*u001*u010*u101*u110*v001*v031*v100 - a131*u000*u011*u101*u110*v000*v031*v101)*v130 - (a131*u001*u010*u100*u111*v001*v030*v100 - a131*u000*u011*u100*u111*v000*v030*v101)*v131)/((u001*u010*u101*u110*v001*v031*v100 - u001*u010*u100*u111*v000*v031*v101)*v130 - (u000*u011*u101*u110*v001*v030*v100 - u000*u011*u100*u111*v000*v030*v101)*v131),
          ((a231*u001*u010*u201*u210*v001*v031*v100 - a231*u000*u011*u201*u210*v000*v031*v101)*v130 - (a231*u001*u010*u200*u211*v001*v030*v100 - a231*u000*u011*u200*u211*v000*v030*v101)*v131)/((u001*u010*u201*u210*v001*v031*v100 - u001*u010*u200*u211*v000*v031*v101)*v130 - (u000*u011*u201*u210*v001*v030*v100 - u000*u011*u200*u211*v000*v030*v101)*v131)]
+        sage: sz=2; Mu=HM(sz,sz,'u'); Mv=HM(sz,sz,'v') # Initialization of the sizes and matrices which undelie the Vandermonde hypermatrix pairs
+        sage: U=HM(sz,sz,sz, [(Mu[j,k])^(i+1) for k in rg(sz) for j in rg(sz) for i in rg(sz)]).subs(Mu[0,0] == Mu[0,1]*Mu[1,0]/Mu[1,1])
+        sage: V=HM(sz,sz,sz, [(Mv[i,k])^(j+1) for k in rg(sz) for j in rg(sz) for i in rg(sz)]); A=HM(sz,sz,sz,'a')
+        sage: [Sln,Tx,Ty]=OuterHypermatrixInversePair(U,V)[0] # Computing the inverse pairs
+        sage: Hx=Tx.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1])) # Performing the subsitution
+        sage: Hy=Ty.subs(dict([(s.lhs(),s.rhs()) for s in Sln if s.lhs()!=1])) # performing the substiution
+        sage: A==Prod(Hx,Prod(U,A,V),Hy).simplify_full()
+        True
 
  
     AUTHORS:
@@ -8782,7 +8794,7 @@ def ProbabilitySymHMII(sz, xi=0):
     M[sz-1,sz-1]=1-sum([M[j,sz-1] for j in range(sz-1)])
     return M
 
-def ProbabilityHMIV(sz,c):
+def ProbabilityHMIV(A):
     """
     Outputs a symbolic parametrization of a doubly stochastic matrix.
     Using the analog of the adjoint matrix based upon the permanent.
@@ -8794,7 +8806,7 @@ def ProbabilityHMIV(sz,c):
 
     ::
 
-        sage: ProbabilityHMIV(2,'a').printHM()
+        sage: ProbabilityHMIV(HM(2,2,'a')).printHM()
         [:, :]=
         [a00*a11/(a01*a10 + a00*a11) a01*a10/(a01*a10 + a00*a11)]
         [a01*a10/(a01*a10 + a00*a11) a00*a11/(a01*a10 + a00*a11)]
@@ -8803,12 +8815,10 @@ def ProbabilityHMIV(sz,c):
     AUTHORS:
     - Edinah K. Gnang
     """
-    # Initialization of the symbolic matrix
-    A = HM(sz, sz, c)
     # Computing the permanent of the matrix
     F = PerII(A)
     # Initialization of the desired matrix
-    return (1/F)*HM(sz, sz, [A[i,j]*diff(F,A[i,j]) for j in rg(sz) for i in rg(sz)])
+    return A.transpose().elementwise_product(jnxn(A))
 
 def GenerateRandomOneZeroHM(sz, k):
     """
@@ -11088,7 +11098,6 @@ def get_permutation(la,lb):
     """
     # Initializing the output
     L = list()
-
     # Loop performing the evaluation.
     for i1 in rg(len(la)):
         for i2 in rg(len(lb)):
@@ -11096,6 +11105,33 @@ def get_permutation(la,lb):
                 L.append(i2)
                 break
     return L
+
+def get_tuple_permutation(la,lb):
+    """
+    Obtains a permutation list from two lists of the same size.
+    No check is performed here the user must be very carefull
+    to input lists of the same size
+    
+    EXAMPLES:
+
+    ::
+
+        sage: get_tuple_permutation([1, 2, 3, 4, 6, 8],[1, 2, 4, 8, 3, 6])
+        [(0, 0), (1, 1), (2, 4), (3, 2), (4, 5), (5, 3)]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initializing the output
+    L = list()
+    # Loop performing the evaluation.
+    for i1 in rg(len(la)):
+        for i2 in rg(len(lb)):
+            if la[i1] == lb[i2]:
+                L.append(i2)
+                break
+    return [(i,L[i]) for i in rg(len(L))]
 
 def permute(l,p):
     """
@@ -13093,6 +13129,55 @@ def Boolean_interpolant(iL, X):
     """
     # Initialization of the the polynomial
     return sum(prod((sum(2^k*X[k] for k in rg(len(X)))-j)/(i-j) for j in rg(2^len(X)) if j !=i) for i in iL)
+
+def Boolean_interpolantII(H, X):
+    """
+    This function expresses the multilinear polynomial interpolant.
+    determined by the variables assignements for which the Boolean
+    function outputs true. 
+    The first input is a side length two hypermatrix correspond to 
+    integers whose binary expansion express indicator vector of 
+    variable assignment for which the Boolean function
+    evaluates to 1. The second input X is the list of variables.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: od=Integer(2); X=var_list('x',od); F=expand(Boolean_interpolantII(HM(od,2,'kronecker') ,X)); F
+        x0*x1 - x0 + 1
+        sage: od=Integer(3); X=var_list('x',od); F=expand(Boolean_interpolantII(HM(od,2,'kronecker') ,X)); F
+        x0*x1 + x0*x2 + x1*x2 - x0 - x1 - x2 + 1
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+
+    To Do :
+    - Try to implement faster version of this procedure
+
+    """
+    # Initialization of the order parameter
+    ord=Integer(H.order())
+    if ord == len(X):
+        # Initialization of the list specifying the dimensions of the output
+        l=[Integer(2) for i in rg(ord)]
+        # Initialization of the the polynomial
+        F=SR(0)
+        # Main loop performing the transposition of the entries
+        for i in range(prod(l)):
+            # Turning the index i into an hypermatrix array location using the decimal encoding trick
+            entry = [Integer(mod(i,l[0]))]
+            sm = Integer(mod(i,l[0]))
+            for k in range(len(l)-1):
+                entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+                sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+            F=F+H[tuple(entry)]*prod((X[i]-(Integer(1)-entry[i]))/(Integer(2)*entry[i]-1) for i in rg(ord))
+        return F
+    else:
+        raise ValueError("Expected the order of the hypermatrix to match the number of variables")
 
 def fast_reduce_bool(f, VrbL):
     """
@@ -17950,7 +18035,10 @@ def ThirdOrderDFT(m,n):
         sage: [Ha, Hb, Hc]=ThirdOrderDFT(5,5)
         sage: Prod(Ha,Hb,Hc).simplify_full()
         [[[5, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 5, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 5, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 5, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 5]]]
-        
+        sage: Prod(Ha,Ha.transpose(2),Ha.transpose()).simplify_full().printHM()
+        [[[5, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 5, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 5, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 5, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 5]]]    
+
+ 
     AUTHORS:
     - Edinah K. Gnang
     - To Do: 
@@ -18690,12 +18778,17 @@ def Form2TotallySymmetricHypermatrix(f, od, Vrbls):
     ::
 
         sage: sz=2; od=2; X=HM(sz,sz,var_list('x',sz^2)); f=X.det()
+        sage: f
+        -x1*x2 + x0*x3
         sage: H=Form2TotallySymmetricHypermatrix(f, 2, X.list()); H.printHM()
         [:, :]=
         [   0    0    0  1/2]
         [   0    0 -1/2    0]
         [   0 -1/2    0    0]
         [ 1/2    0    0    0]
+        sage: (HM(sz^2,1,X.list()).transpose()*H*HM(sz^2,1,X.list()))[0,0] # Checking the  bilinear form
+        -x1*x2 + x0*x3
+        
 
 
     AUTHORS:
@@ -18758,7 +18851,7 @@ def Form2Hypermatrix(f, Vrbls):
         [:, :, 1]=
         [a001 a011]
         [a101 a111]
-        sage: sz=3; d=2; A=HM(sz,sz,'a'); X=var_list('x',d)
+        sage: sz=3; od=2; d=2; A=HM(sz,sz,'a'); X=var_list('x',od)
         sage: Hv0=HM(sz,1,[X[0]^i for i in range(d+1)]); Hv1=HM(sz,1,[X[1]^j for j in range(d+1)])
         sage: f=ProdB(Hv0.transpose(),Hv1,A)[0,0]; f
         a22*x0^2*x1^2 + a21*x0^2*x1 + a12*x0*x1^2 + a20*x0^2 + a11*x0*x1 + a02*x1^2 + a10*x0 + a01*x1 + a00
@@ -18767,7 +18860,7 @@ def Form2Hypermatrix(f, Vrbls):
         [a00 a01 a02]
         [a10 a11 a12]
         [a20 a21 a22]
-        sage: sz=3; d=3; A=HM(sz,sz,sz,'a'); X=var_list('x',d)
+        sage: sz=3; od=3; d=3; A=HM(sz,sz,sz,'a'); X=var_list('x',od)
         sage: Hv0=HM(sz,1,1,[X[0]^i for i in range(d+1)]); Hv1=HM(sz,1,1,[X[1]^j for j in range(d+1)]); Hv2=HM(sz,1,1,[X[2]^j for j in range(d+1)])
         sage: f=ProdB(Hv0.transpose(2), Hv1.transpose(), Hv2, A)[0,0,0]; f
         a222*x0^2*x1^2*x2^2 + a221*x0^2*x1^2*x2 + a212*x0^2*x1*x2^2 + a122*x0*x1^2*x2^2 + a220*x0^2*x1^2 + a211*x0^2*x1*x2 + a121*x0*x1^2*x2 + a202*x0^2*x2^2 + a112*x0*x1*x2^2 + a022*x1^2*x2^2 + a210*x0^2*x1 + a120*x0*x1^2 + a201*x0^2*x2 + a111*x0*x1*x2 + a021*x1^2*x2 + a102*x0*x2^2 + a012*x1*x2^2 + a200*x0^2 + a110*x0*x1 + a020*x1^2 + a101*x0*x2 + a011*x1*x2 + a002*x2^2 + a100*x0 + a010*x1 + a001*x2 + a000
@@ -18812,6 +18905,60 @@ def Form2Hypermatrix(f, Vrbls):
         #print [factorial(Tmplst[b]) for b in range(1,len(Tmplst),2)]
         Rh[tuple(entry)]=f.diff(*Tmplst).subs([v==0 for v in Vrbls])/prod(factorial(Tmplst[b]) for b in range(1,len(Tmplst),2))
     return Rh
+
+def Form2HypermatrixII(f, od, Vrbls, c):
+    """
+    Procedure for extracting a Hypermatrix from a multivariate
+    homogeneous multilinear from the order corresponds to
+    the degree of the homogeneous form and the side length is
+    determined by the number of variables. The input c is 
+    character or a string
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; od=2; X=HM(sz,sz,var_list('x',sz^2)); f=X.det()
+        sage: H=Form2HypermatrixII(f, 2, X.list(), 'a')[0]; H.printHM()
+        [:, :]=
+        [         0          0          0  a03 + 1/2]
+        [         0          0  a12 - 1/2          0]
+        [         0 -a12 - 1/2          0          0]
+        [-a03 + 1/2          0          0          0]
+        sage: Form2HypermatrixII(f, 2, X.list(), 'a')[1]
+        [a03, a12]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of variables to be returned
+    Lv=[]
+    # Initialization of the list 
+    l=[len(Vrbls) for i in range(od)]
+    # Initialization of the hypermatrix 
+    inpts=l+['zero']; Rh=HM(*inpts)
+    # Main loop performing the transposition of the entries
+    for i in range(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry=[Integer(mod(i,l[0]))]
+        sm=Integer(mod(i,l[0]))
+        for k in range(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm=sm+prod(l[0:k+1])*entry[len(entry)-1]
+        cpt=f.diff([Vrbls[v] for v in entry])
+        if cpt == 0:
+            Rh[tuple(entry)]=SR(0)
+        elif Set(entry).cardinality()<len(entry):
+            Rh[tuple(entry)]=f.diff([Vrbls[v] for v in entry])/factorial(od)  
+        else:
+            indxL=copy(entry); indxL.sort(); lex=Permutation_lex(get_tuple_permutation(indxL,entry))
+            Rh[tuple(entry)]=f.diff([Vrbls[v] for v in entry])/factorial(od)+exp(Integer(2)*pi*sqrt(-Integer(1))*lex/factorial(od))*var(c+str(indxL).replace(', ','').replace(']','').replace('[',''))
+            # Updating the list of variables
+            if not (var(c+str(indxL).replace(', ','').replace(']','').replace('[','')) in Lv):
+                Lv.append(var(c+str(indxL).replace(', ','').replace(']','').replace('[','')))
+    return [Rh, Lv]
 
 def diagonal_coef_gaussian_eliminationHM(Cf1, Vx, Cf2, rs):
     """
@@ -19778,8 +19925,8 @@ def eulerian_eliminationHM(PolyLst, VrbLst):
         sage: Lf=eulerian_eliminationHM(CnstrLst, VrbLst)
         sage: Lf
         [a00*x0 + a01*x1 + a02*x2 - b0,
-         -(a11*x1 + a12*x2 - b1)*a00 + (a01*x1 + a02*x2 - b0)*a10,
-         ((a22*x2 - b2)*a00 - (a02*x2 - b0)*a20)*(a01*a10 - a00*a11) - ((a12*x2 - b1)*a00 - (a02*x2 - b0)*a10)*(a01*a20 - a00*a21)]
+         a01*a10*x1 - a00*a11*x1 + a02*a10*x2 - a00*a12*x2 - a10*b0 + a00*b1,
+         a00*a02*a11*a20*x2 - a00*a01*a12*a20*x2 - a00*a02*a10*a21*x2 + a00^2*a12*a21*x2 + a00*a01*a10*a22*x2 - a00^2*a11*a22*x2 - a00*a11*a20*b0 + a00*a10*a21*b0 + a00*a01*a20*b1 - a00^2*a21*b1 - a00*a01*a10*b2 + a00^2*a11*b2]
         sage: degree_matrix(Lf, var_list('x',sz)).printHM()
         [:, :]=
         [1 1 1]
@@ -19854,7 +20001,7 @@ def eulerian_eliminationHM(PolyLst, VrbLst):
                 else:
                     if CnstrLst[r].degree(VrbLst[j])*CnstrLst[i].degree(VrbLst[j])!=0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                         if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
-                            CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                            CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().expand()
                             #print('i=', i,'j=', j,' r=', r)
                             # Updating the degree matrix
                             A=degree_matrix(CnstrLst,VrbLst)
@@ -19883,9 +20030,7 @@ def euler_sylvester_eliminationHM(PolyLst, VrbLst):
         sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
         sage: Lf=euler_sylvester_eliminationHM(CnstrLst, VrbLst)
         sage: Lf
-        [-((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(a00*x0 - b0) + ((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*a02)*(a01*a10 - a00*a11) + (((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*(a02*a10 - a00*a12) - ((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*(a10*b0 - a00*b1))*((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*a01,
-         ((a02*a10 - a00*a12)*(a01*a20 - a00*a21) - (a01*a10 - a00*a11)*(a02*a20 - a00*a22))*((a11*x1 - b1)*a00 - (a01*x1 - b0)*a10) - ((a01*a20 - a00*a21)*(a10*b0 - a00*b1) - (a01*a10 - a00*a11)*(a20*b0 - a00*b2))*(a02*a10 - a00*a12),
-         ((a22*x2 - b2)*a00 - (a02*x2 - b0)*a20)*(a01*a10 - a00*a11) - ((a12*x2 - b1)*a00 - (a02*x2 - b0)*a10)*(a01*a20 - a00*a21)]
+        
 
 
     AUTHORS:
@@ -19910,7 +20055,175 @@ def euler_sylvester_eliminationHM(PolyLst, VrbLst):
             for r in range(i-1,-1,-1):
                 if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
                     if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
-                        CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                        CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().expand()
+                        A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
+            i=i-1; j=0
+    return CnstrLst
+
+def eulerian_eliminationHMII(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation rids of extraneous zero solutions 
+    This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrbLst=HM(sz,'x').list(); Ha=HM(sz,sz,'a'); Hb=HM(sz,1,HM(sz,'b').list())
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=eulerian_eliminationHMII(CnstrLst, VrbLst)
+        sage: Lf
+        [a00*x0 + a01*x1 + a02*x2 - b0,
+ a01*a10*x1 - a00*a11*x1 + a02*a10*x2 - a00*a12*x2 - a10*b0 + a00*b1,
+ a00*a02*a11*a20*x2 - a00*a01*a12*a20*x2 - a00*a02*a10*a21*x2 + a00^2*a12*a21*x2 + a00*a01*a10*a22*x2 - a00^2*a11*a22*x2 - a00*a11*a20*b0 + a00*a10*a21*b0 + a00*a01*a20*b1 - a00^2*a21*b1 - a00*a01*a10*b2 + a00^2*a11*b2]
+        sage: degree_matrix(Lf, var_list('x',sz)).printHM()
+        [:, :]=
+        [1 1 1]
+        [0 1 1]
+        [0 0 1]
+        sage: sz=2;X=var_list('x',sz);Y=var_list('y',sz);Z=var_list('z',sz)
+        sage: EqL=(HM(sz,sz,sz,[X[i]*Y[j]*Z[k] for k in rg(sz) for j in rg(sz) for i in rg(sz)])-HM(sz,sz,sz,'a')).list()
+        sage: Lf=eulerian_eliminationHMII(EqL,X+Y+Z)
+        sage: degree_matrix(Lf,X+Y+Z).printHM()
+        [:, :]=
+        [1 0 1 0 1 0]
+        [0 1 1 0 1 0]
+        [0 0 1 1 0 0]
+        [0 0 0 1 1 1]
+        [0 0 0 0 0 0]
+        [0 0 0 0 0 0]
+        [0 0 0 0 0 0]
+        [0 0 0 0 0 0]
+        sage: Lf
+        [x0*y0*z0 - a000,
+         x1*y0*z0 - a100,
+         a010*y0 - a000*y1,
+         -(a001*z0 - a000*z1)*a000*y1,
+         0,
+         0,
+         0,
+         a010*a100 - a000*a110]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the list of polynomials
+    CnstrLst=copy(PolyLst)
+    # Initializing the degree matrix.
+    A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in rg(len(VrbLst))] for indx in rg(len(CnstrLst))])
+    # Displaying the matrix on screen
+    #A.printHM()
+    # Initialization of the row and column index
+    i=0; j=0
+    while i < A.n(0) and j < A.n(1):
+        #while HM(A.n(0)-i, 1, [A[i0,j] for i0 in rg(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+        while (A.slice([j],1).slice(rg(i,A.n(0)),0)).is_zero() and j < A.n(1)-1:
+            # Incrementing the column index
+            j=j+1
+        #if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+        if A.slice(rg(A.n(1)),1).slice(rg(i,A.n(0)),0).is_zero()==False:
+            while A[i,j].is_zero(): 
+                #Ta=A[i:,:]
+                #Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
+                Ta=A.slice(rg(i,A.n(0)),0)
+                # Initializing the cyclic shift permutation matrix
+                #Id=identity_matrix(Ta.nrows())
+                Id=HM(2, Ta.n(0), 'kronecker')
+                #P=sum([Id[:,k]*Id[mod(k+1,Ta.nrows()),:] for k in range(Ta.nrows())])
+                P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
+                Ta=P*Ta; CnstrLst=CnstrLst[:i]+(P*HM(len(CnstrLst[i:]), 1, CnstrLst[i:])).list()
+                #A[i:,:]=Ta
+                for i0 in range(Ta.n(0)):
+                    for j0 in range(Ta.n(1)):
+                        A[i+i0,j0]=Ta[i0,j0]
+            # Performing the row operations.
+            for r in rg(i+1,A.nrows()):
+                # Taking care of the zero row
+                #if HM(1, A.n(1), [A[r,j0] for j0 in range(A.n(1))]).is_zero():
+                if A.slice([r],0).is_zero():
+                    r=r+1
+                else:
+                    if CnstrLst[r].degree(VrbLst[j])*CnstrLst[i].degree(VrbLst[j])!=0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                        if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                            # Getting rid of zero solutions
+                            tmp_cnstr=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().expand()
+                            if r < min(len(VrbLst),len(CnstrLst)):
+                                for rt in rg(r,min(len(VrbLst),len(CnstrLst))):
+                                    while tmp_cnstr.subs(VrbLst[rt]==0).is_zero():
+                                        tmp_cnstr=expand(tmp_cnstr/VrbLst[rt])
+                                CnstrLst[r]=tmp_cnstr
+                            else:
+                                CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().expand()
+                            #print('i=', i,'j=', j,' r=', r)
+                            # Updating the degree matrix
+                            A=degree_matrix(CnstrLst,VrbLst)
+                            #A.printHM()
+                        else:
+                            CnstrLst[r]=SR(0)
+                            # Updating the degree matrix
+                            A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in rg(len(VrbLst))] for indx in rg(len(CnstrLst))])
+        # Incrementing the row and column index.
+        i=i+1; j=j+1
+    return CnstrLst
+
+def euler_sylvester_eliminationHMII(PolyLst, VrbLst):
+    """
+    Outputs list of contraints whose degree matrix is in reduced row echelon form.
+    The general problem of determining the existence of solutions to a
+    system of polynomial equations having at most finitely many solutions
+    is NP hard. This implementation rids us of extraneous zero roots
+    This implementation should therefore be used with caution.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; VrbLst=HM(sz,'x').list(); Ha=HM(sz,sz,'a'); Hb=HM(sz,1,HM(sz,'b').list())
+        sage: CnstrLst=(Ha*HM(sz,1,VrbLst)-Hb).list()
+        sage: Lf=euler_sylvester_eliminationHMII(CnstrLst, VrbLst)
+        sage: Lf
+        [-a00^3*a01*a02^2*a10*a11^2*a20^2*x0 + a00^4*a02^2*a11^3*a20^2*x0 + 2*a00^3*a01^2*a02*a10*a11*a12*a20^2*x0 - 2*a00^4*a01*a02*a11^2*a12*a20^2*x0 - a00^3*a01^3*a10*a12^2*a20^2*x0 + a00^4*a01^2*a11*a12^2*a20^2*x0 + 2*a00^3*a01*a02^2*a10^2*a11*a20*a21*x0 - 2*a00^4*a02^2*a10*a11^2*a20*a21*x0 - 2*a00^3*a01^2*a02*a10^2*a12*a20*a21*x0 + 2*a00^5*a02*a11^2*a12*a20*a21*x0 + 2*a00^4*a01^2*a10*a12^2*a20*a21*x0 - 2*a00^5*a01*a11*a12^2*a20*a21*x0 - a00^3*a01*a02^2*a10^3*a21^2*x0 + a00^4*a02^2*a10^2*a11*a21^2*x0 + 2*a00^4*a01*a02*a10^2*a12*a21^2*x0 - 2*a00^5*a02*a10*a11*a12*a21^2*x0 - a00^5*a01*a10*a12^2*a21^2*x0 + a00^6*a11*a12^2*a21^2*x0 - 2*a00^3*a01^2*a02*a10^2*a11*a20*a22*x0 + 4*a00^4*a01*a02*a10*a11^2*a20*a22*x0 - 2*a00^5*a02*a11^3*a20*a22*x0 + 2*a00^3*a01^3*a10^2*a12*a20*a22*x0 - 4*a00^4*a01^2*a10*a11*a12*a20*a22*x0 + 2*a00^5*a01*a11^2*a12*a20*a22*x0 + 2*a00^3*a01^2*a02*a10^3*a21*a22*x0 - 4*a00^4*a01*a02*a10^2*a11*a21*a22*x0 + 2*a00^5*a02*a10*a11^2*a21*a22*x0 - 2*a00^4*a01^2*a10^2*a12*a21*a22*x0 + 4*a00^5*a01*a10*a11*a12*a21*a22*x0 - 2*a00^6*a11^2*a12*a21*a22*x0 - a00^3*a01^3*a10^3*a22^2*x0 + 3*a00^4*a01^2*a10^2*a11*a22^2*x0 - 3*a00^5*a01*a10*a11^2*a22^2*x0 + a00^6*a11^3*a22^2*x0 + a00^3*a01*a02*a10*a11*a12*a20*a21*b0 - a00^4*a02*a11^2*a12*a20*a21*b0 - a00^3*a01^2*a10*a12^2*a20*a21*b0 + a00^4*a01*a11*a12^2*a20*a21*b0 - a00^3*a01*a02*a10^2*a12*a21^2*b0 + a00^4*a02*a10*a11*a12*a21^2*b0 + a00^4*a01*a10*a12^2*a21^2*b0 - a00^5*a11*a12^2*a21^2*b0 - a00^3*a01*a02*a10*a11^2*a20*a22*b0 + a00^4*a02*a11^3*a20*a22*b0 + a00^3*a01^2*a10*a11*a12*a20*a22*b0 - a00^4*a01*a11^2*a12*a20*a22*b0 + a00^3*a01*a02*a10^2*a11*a21*a22*b0 - a00^4*a02*a10*a11^2*a21*a22*b0 + a00^3*a01^2*a10^2*a12*a21*a22*b0 - 3*a00^4*a01*a10*a11*a12*a21*a22*b0 + 2*a00^5*a11^2*a12*a21*a22*b0 - a00^3*a01^2*a10^2*a11*a22^2*b0 + 2*a00^4*a01*a10*a11^2*a22^2*b0 - a00^5*a11^3*a22^2*b0 - a00^3*a01*a02^2*a10*a11*a20*a21*b1 + a00^4*a02^2*a11^2*a20*a21*b1 + a00^3*a01^2*a02*a10*a12*a20*a21*b1 - a00^4*a01*a02*a11*a12*a20*a21*b1 + a00^3*a01*a02^2*a10^2*a21^2*b1 - a00^4*a02^2*a10*a11*a21^2*b1 - a00^4*a01*a02*a10*a12*a21^2*b1 + a00^5*a02*a11*a12*a21^2*b1 + a00^3*a01^2*a02*a10*a11*a20*a22*b1 - a00^4*a01*a02*a11^2*a20*a22*b1 - a00^3*a01^3*a10*a12*a20*a22*b1 + a00^4*a01^2*a11*a12*a20*a22*b1 - 2*a00^3*a01^2*a02*a10^2*a21*a22*b1 + 3*a00^4*a01*a02*a10*a11*a21*a22*b1 - a00^5*a02*a11^2*a21*a22*b1 + a00^4*a01^2*a10*a12*a21*a22*b1 - a00^5*a01*a11*a12*a21*a22*b1 + a00^3*a01^3*a10^2*a22^2*b1 - 2*a00^4*a01^2*a10*a11*a22^2*b1 + a00^5*a01*a11^2*a22^2*b1 + a00^3*a01*a02^2*a10*a11^2*a20*b2 - a00^4*a02^2*a11^3*a20*b2 - 2*a00^3*a01^2*a02*a10*a11*a12*a20*b2 + 2*a00^4*a01*a02*a11^2*a12*a20*b2 + a00^3*a01^3*a10*a12^2*a20*b2 - a00^4*a01^2*a11*a12^2*a20*b2 - a00^3*a01*a02^2*a10^2*a11*a21*b2 + a00^4*a02^2*a10*a11^2*a21*b2 + a00^3*a01^2*a02*a10^2*a12*a21*b2 - a00^5*a02*a11^2*a12*a21*b2 - a00^4*a01^2*a10*a12^2*a21*b2 + a00^5*a01*a11*a12^2*a21*b2 + a00^3*a01^2*a02*a10^2*a11*a22*b2 - 2*a00^4*a01*a02*a10*a11^2*a22*b2 + a00^5*a02*a11^3*a22*b2 - a00^3*a01^3*a10^2*a12*a22*b2 + 2*a00^4*a01^2*a10*a11*a12*a22*b2 - a00^5*a01*a11^2*a12*a22*b2,
+ -a00*a01*a02*a10*a11*a20*x1 + a00^2*a02*a11^2*a20*x1 + a00*a01^2*a10*a12*a20*x1 - a00^2*a01*a11*a12*a20*x1 + a00*a01*a02*a10^2*a21*x1 - a00^2*a02*a10*a11*a21*x1 - a00^2*a01*a10*a12*a21*x1 + a00^3*a11*a12*a21*x1 - a00*a01^2*a10^2*a22*x1 + 2*a00^2*a01*a10*a11*a22*x1 - a00^3*a11^2*a22*x1 - a00*a01*a10*a12*a20*b0 + a00^2*a11*a12*a20*b0 + a00*a01*a10^2*a22*b0 - a00^2*a10*a11*a22*b0 + a00*a01*a02*a10*a20*b1 - a00^2*a02*a11*a20*b1 - a00^2*a01*a10*a22*b1 + a00^3*a11*a22*b1 - a00*a01*a02*a10^2*b2 + a00^2*a02*a10*a11*b2 + a00^2*a01*a10*a12*b2 - a00^3*a11*a12*b2,
+ ((a22*x2 - b2)*a00 - (a02*x2 - b0)*a20)*(a01*a10 - a00*a11) - ((a12*x2 - b1)*a00 - (a02*x2 - b0)*a10)*(a01*a20 - a00*a21)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    CnstrLst=copy(eulerian_eliminationHMII(PolyLst, VrbLst))
+    # Initializing the degree matrix.
+    A=HM(len(CnstrLst), len(VrbLst), [SR(CnstrLst[i].degree(VrbLst[j])) for j in range(len(VrbLst)) for i in range(len(CnstrLst))])
+    # Initialization of the row and column index
+    i=A.nrows()-1; j=0
+    while i>0 or j>0:
+        #if (A[i,:]).is_zero():
+        if HM(1,A.n(1),[A[i,j0] for j0 in range(A.n(1))]).is_zero():
+            # decrementing the row index and initializing the column index
+            i=i-1; j=0
+        else :
+            while (A[i,j]).is_zero():
+                # Incrementing the column index
+                j = j + 1
+            # performing row operations
+            for r in range(i-1,-1,-1):
+                if (CnstrLst[r].degree(VrbLst[j]))*(CnstrLst[i].degree(VrbLst[j]))>0 and not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).is_empty():
+                    if not SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().is_zero():
+                        #CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det()
+                        tmp_cnstr=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().expand()
+                        if r < min(len(VrbLst),len(CnstrLst)):
+                            while tmp_cnstr.subs(VrbLst[r]==0).is_zero():
+                                tmp_cnstr=expand(tmp_cnstr/VrbLst[r])
+                            CnstrLst[r]=tmp_cnstr
+                        else:
+                            CnstrLst[r]=SylvesterHM(CnstrLst[r], CnstrLst[i], VrbLst[j]).det().expand()
                         A=HM([[SR(CnstrLst[indx].degree(VrbLst[jndx])) for jndx in range(len(VrbLst))] for indx in range(len(CnstrLst))])
             i=i-1; j=0
     return CnstrLst
@@ -20079,7 +20392,7 @@ def inxn(A):
 
 def adjoint(A):
     """
-    Outputs the symbolic inverse of a nxn matrix.
+    Outputs the symbolic adjoint of a nxn matrix.
     Using the gradient.
 
 
@@ -20101,6 +20414,76 @@ def adjoint(A):
     sz=A.n(0); X=HM(sz,sz,'x'); G=Deter(X); Xi=HM(sz, sz, [diff(G,X[j,i]) for j in rg(sz) for i in rg(sz)])
     return Xi.subs([X[i,j]==A[i,j] for j in rg(sz) for i in rg(sz)])
 
+def j2x2(A):
+    """
+    Outputs the symbolic jnverse of a 2x2 matrix. In otther words expresses the permanent based construction
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: j2x2(HM(2,2,'a')).printHM()
+        [:, :]=
+        [a11/(a01*a10 + a00*a11) a01/(a01*a10 + a00*a11)]
+        [a10/(a01*a10 + a00*a11) a00/(a01*a10 + a00*a11)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    return HM([\
+[A[1,1]/(A[0,0]*A[1,1]+A[0,1]*A[1,0]), A[0,1]/(A[0,0]*A[1,1]+A[0,1]*A[1,0])],\
+[A[1,0]/(A[0,0]*A[1,1]+A[0,1]*A[1,0]), A[0,0]/(A[0,0]*A[1,1]+A[0,1]*A[1,0])]])
+
+def jnxn(A):
+    """
+    Outputs the symbolic jnverse of a nxn matrix.
+    Using the logarithmic gradient. Computes the permanent gradiant analog of the inverse
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: jnxn(HM(2,2,'a')).printHM()
+        [:, :]=
+        [a11/(a01*a10 + a00*a11) a01/(a01*a10 + a00*a11)]
+        [a10/(a01*a10 + a00*a11) a00/(a01*a10 + a00*a11)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the computation of the determinant
+    sz=A.n(0); X=HM(sz,sz,'x'); G=PerII(X); Xi=HM(sz, sz, [diff(ln(G),X[j,i]) for j in rg(sz) for i in rg(sz)])
+    return Xi.subs([X[i,j]==A[i,j] for j in rg(sz) for i in rg(sz)])
+
+def bdjoint(A):
+    """
+    Outputs the symbolic adjoint of a nxn matrix.
+    Using the gradient.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: bdjoint(HM(2,2,'a')).printHM()
+        [:, :]=
+        [a11  a01]
+        [a10  a00]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the computation of the determinant
+    sz=A.n(0); X=HM(sz,sz,'x'); G=Per(X); Xi=HM(sz, sz, [diff(G,X[j,i]) for j in rg(sz) for i in rg(sz)])
+    return Xi.subs([X[i,j]==A[i,j] for j in rg(sz) for i in rg(sz)])
 
 def LeftRightDiagonalDependence3x3x3(A):
     """
@@ -22829,6 +23212,29 @@ def RepresentativePermutationFunctionList(sz):
             cL.append(tp)
     return cL
 
+def TranspositionPermutation(pl, sz):
+    """
+    Returns a tuple list description of the transposition
+    specified by the first input pl which list of lenght 2
+    indicating the element to be transposed. The second
+    input is an integer which indicate the length of the
+    output list.
+
+
+    EXAMPLES:
+    ::
+        sage: sz=3; TranspositionPermutation([0,1],sz)
+        [(0, 1), (1, 0), (2, 2)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the tuple list
+    T=[(i,i) for i in rg(sz)]
+    T[pl[0]]=(pl[0], pl[1]); T[pl[1]]=(pl[1], pl[0])
+    return T
+
 def is_permutation(T):
     """
     Dertermines whether or not the input tuple describes a permutation
@@ -23754,6 +24160,32 @@ def BasicLagrangeInterpolation(L, x):
             fk = fk*((x-L[j][0])/(L[idx][0]-L[j][0]))
         f = f + L[idx][1]*fk
     return f
+
+def LagrangeInterpolationZn(F, X):
+    """
+    Implements the basic lagrange interpolation
+    over Zn where the input F is a multivariate
+    polynomial in the entries of the list of 
+    variable X.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: sz=Integer(2); X=var_list('x', sz); F=X[0]^5*X[1]^7 - 3*X[0]^2*X[1] + 7
+        sage: G=LagrangeInterpolationZn(F, X); G
+        -2*x0*x1 + 7
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(X))
+    # Initialization of the list of Tuple
+    Lt=TupleFunctionList(sz)
+    return sum(F.subs([X[i]==T[i][1] for i in rg(sz)])*prod(prod((X[k]-jk)/(T[k][1]-jk) for jk in rg(sz) if jk != T[k][1]) for k in rg(sz)) for T in Lt)
 
 def composition(f, x, k, sz):
     """
@@ -25212,6 +25644,40 @@ def HM2Poly(A, Lr):
     X=var_list('x', A.order()); sz=len(X)
     return sum(A[tuple([Lr[t[i][1]] for i in rg(sz)])]*prod(prod((X[k]-jk)/(t[k][1]-jk) for jk in Lr if jk !=t[k][1]) for k in rg(sz) ) for t in TupleFunctionList(sz))
 
+def HM2PolyII(A,y0,y1):
+    """
+    Encodes a matrix as bivariate polynomial whose entries
+    are determined by evaluation over roots of unity.
+    The method takes as input a square martrix and
+    the two symblic variables respectively associated
+    with th row and column index.
+    This implentation only handles square matrices.
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(2); A=HM(sz,sz,'a'); x,y=var('x,y'); HM2PolyII(A,x,y)
+        1/4*(a00 - a01 - a10 + a11)*x*y + 1/4*(a00 + a01 - a10 - a11)*x + 1/4*(a00 - a01 + a10 - a11)*y + 1/4*a00 + 1/4*a01 + 1/4*a10 + 1/4*a11
+        sage: sz=Integer(2); A=HM(sz,sz,'a'); x,y=var('x,y'); F=HM2PolyII(A,x,y)
+        sage: B=HM(sz,sz,[F.subs([x==(-1)^i, y==(-1)^j]) for j in rg(sz) for i in rg(sz)]); B.printHM()
+        [:, :]=
+        [a00 a01]
+        [a10 a11]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the sisze and order and parameter
+    sz=min(A.dimensions()); od=Integer(2)
+    # Initialization of the list vector of conjugates of roots of unity
+    Hw=HM(sz,1,[exp(sqrt(-1)*2*k*pi/sz) for k in rg(sz)])
+    # Initialization of the list of functions
+    Lf=TupleFunctionListII(od, sz)
+    # Initialization of the polynomial
+    return sum((A*Hw.elementwise_exponent(-T[0][1])*Hw.elementwise_exponent(-T[1][1]).transpose()).trace()*y0^T[1][1]*y1^T[0][1] for T in Lf)/sz^2
+
 def svd_numeric2x2(A, dgts=15):
     """
     Returns the matrix of left singular vectors and the matrix of
@@ -25364,7 +25830,6 @@ def svd_symbolic2x2(A):
         for v00 in Sln_y00:
             Sln_z1=Sln_z1+[eq for eq in solve(L1[0].subs([y01==v01.rhs(), y00==v00.rhs()])==0, z) if eq.rhs()!=0]
     return [Sln_x00,Sln_x10,Sln_z0,Sln_y00,Sln_y01,Sln_z1]
-
 
 def EuclidsPolynomialGCD(a, b, v):
     """
@@ -25618,6 +26083,33 @@ def Permutation_lex(T):
                 cnt=cnt+1
         sm=sm+cnt*factorial(k) 
     return sm
+
+def Permutation_Pair_lex(L):
+    """
+    Outputs the lexicographic ordering of the permutaions.
+    The lexicographic ordering is based upon the invertion
+    count.
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: T=[(0, 0), (1, 2), (2, 3), (3, 0)]; Permutation_Pair_lex([T,T])
+        450
+        sage: T=[(0, 0), (1, 1), (2, 2), (3, 3)]; Permutation_Pair_lex([T,[(i,i) for i in rg(4)]])
+        432
+        sage: Permutation_Pair_lex([[(i,i) for i in rg(4)], [(i,i) for i in rg(4)]])
+        0
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if len(L[0]) == len(L[1]):
+        return factorial(len(L[0]))*Permutation_lex(L[0])+Permutation_lex(L[1])
+    else:
+        raise ValueError("Expected Tuples descriptions of permutations should be of the same size.")
 
 def Function_lex(T):
     """
@@ -26865,8 +27357,10 @@ def generate_unlabeled_undirected_tree_listing_script(sz):
 
         sage: generate_unlabeled_undirected_tree_listing_script(5)
         sage: load('Unlabeled_Listing_of_Undirected_Tree_Graphs_on_5_vertices.sage')
-        sage: L[2]
-        5*a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
+        sage: L
+        [60*a_f20^2*a_f21^2*a_f31^2*a_f40^2*a_h21^2*a_h30^2*a_h31^2*a_h40^2*a_j10^2*a_j21^2*a_j32^2*a_j40^2*a_m21^2*a_m30^2*a_m32^2*a_m40^2*a_n10^2*a_n31^2*a_n32^2*a_n40^2*a_o20^2*a_o31^2*a_o32^2*a_o40^2*a_s20^2*a_s21^2*a_s30^2*a_s41^2*a_w20^2*a_w30^2*a_w31^2*a_w41^2*a_y10^2*a_y20^2*a_y32^2*a_y41^2*b_b10^2*b_b30^2*b_b32^2*b_b41^2*b_c21^2*b_c30^2*b_c32^2*b_c41^2*b_e20^2*b_e31^2*b_e32^2*b_e41^2*b_h21^2*b_h30^2*b_h40^2*b_h41^2*b_i20^2*b_i31^2*b_i40^2*b_i41^2*b_k20^2*b_k32^2*b_k40^2*b_k41^2*b_l21^2*b_l32^2*b_l40^2*b_l41^2*b_m30^2*b_m32^2*b_m40^2*b_m41^2*b_n31^2*b_n32^2*b_n40^2*b_n41^2*b_p10^2*b_p21^2*b_p30^2*b_p42^2*b_r10^2*b_r20^2*b_r31^2*b_r42^2*b_u20^2*b_u30^2*b_u31^2*b_u42^2*b_v21^2*b_v30^2*b_v31^2*b_v42^2*b_z10^2*b_z30^2*b_z32^2*b_z42^2*c_b10^2*c_b31^2*c_b32^2*c_b42^2*c_f21^2*c_f30^2*c_f40^2*c_f42^2*c_g10^2*c_g31^2*c_g40^2*c_g42^2*c_h21^2*c_h31^2*c_h40^2*c_h42^2*c_i30^2*c_i31^2*c_i40^2*c_i42^2*c_j10^2*c_j32^2*c_j40^2*c_j42^2*c_l31^2*c_l32^2*c_l40^2*c_l42^2*c_m10^2*c_m30^2*c_m41^2*c_m42^2*c_n20^2*c_n30^2*c_n41^2*c_n42^2*c_p20^2*c_p31^2*c_p41^2*c_p42^2*c_q30^2*c_q31^2*c_q41^2*c_q42^2*c_r10^2*c_r32^2*c_r41^2*c_r42^2*c_t30^2*c_t32^2*c_t41^2*c_t42^2*c_y10^2*c_y21^2*c_y30^2*c_y43^2*c_z20^2*c_z21^2*c_z30^2*c_z43^2*d_a10^2*d_a20^2*d_a31^2*d_a43^2*d_c20^2*d_c21^2*d_c31^2*d_c43^2*d_f10^2*d_f20^2*d_f32^2*d_f43^2*d_g10^2*d_g21^2*d_g32^2*d_g43^2*d_o10^2*d_o21^2*d_o40^2*d_o43^2*d_p20^2*d_p21^2*d_p40^2*d_p43^2*d_q20^2*d_q31^2*d_q40^2*d_q43^2*d_r21^2*d_r31^2*d_r40^2*d_r43^2*d_s10^2*d_s32^2*d_s40^2*d_s43^2*d_t21^2*d_t32^2*d_t40^2*d_t43^2*d_v10^2*d_v20^2*d_v41^2*d_v43^2*d_x20^2*d_x21^2*d_x41^2*d_x43^2*d_y20^2*d_y30^2*d_y41^2*d_y43^2*d_z21^2*d_z30^2*d_z41^2*d_z43^2*e_a10^2*e_a32^2*e_a41^2*e_a43^2*e_b20^2*e_b32^2*e_b41^2*e_b43^2*e_g10^2*e_g20^2*e_g42^2*e_g43^2*e_h10^2*e_h21^2*e_h42^2*e_h43^2*e_j10^2*e_j30^2*e_j42^2*e_j43^2*e_k21^2*e_k30^2*e_k42^2*e_k43^2*e_l10^2*e_l31^2*e_l42^2*e_l43^2*e_m20^2*e_m31^2*e_m42^2*e_m43^2,
+ 60*a_b10^2*a_b21^2*a_b30^2*a_b40^2*a_c20^2*a_c21^2*a_c30^2*a_c40^2*a_d10^2*a_d20^2*a_d31^2*a_d40^2*a_e10^2*a_e21^2*a_e31^2*a_e40^2*a_g20^2*a_g30^2*a_g31^2*a_g40^2*a_i10^2*a_i20^2*a_i32^2*a_i40^2*a_k20^2*a_k21^2*a_k32^2*a_k40^2*a_l10^2*a_l30^2*a_l32^2*a_l40^2*a_p30^2*a_p31^2*a_p32^2*a_p40^2*a_q10^2*a_q20^2*a_q30^2*a_q41^2*a_r10^2*a_r21^2*a_r30^2*a_r41^2*a_t10^2*a_t20^2*a_t31^2*a_t41^2*a_v20^2*a_v21^2*a_v31^2*a_v41^2*a_x21^2*a_x30^2*a_x31^2*a_x41^2*a_z10^2*a_z21^2*a_z32^2*a_z41^2*b_a20^2*b_a21^2*b_a32^2*b_a41^2*b_d10^2*b_d31^2*b_d32^2*b_d41^2*b_f30^2*b_f31^2*b_f32^2*b_f41^2*b_g20^2*b_g30^2*b_g40^2*b_g41^2*b_j21^2*b_j31^2*b_j40^2*b_j41^2*b_o10^2*b_o20^2*b_o30^2*b_o42^2*b_q20^2*b_q21^2*b_q30^2*b_q42^2*b_s10^2*b_s21^2*b_s31^2*b_s42^2*b_t20^2*b_t21^2*b_t31^2*b_t42^2*b_w10^2*b_w20^2*b_w32^2*b_w42^2*b_x10^2*b_x21^2*b_x32^2*b_x42^2*c_a21^2*c_a30^2*c_a32^2*c_a42^2*c_c20^2*c_c31^2*c_c32^2*c_c42^2*c_d30^2*c_d31^2*c_d32^2*c_d42^2*c_e10^2*c_e30^2*c_e40^2*c_e42^2*c_k21^2*c_k32^2*c_k40^2*c_k42^2*c_o10^2*c_o31^2*c_o41^2*c_o42^2*c_s20^2*c_s32^2*c_s41^2*c_s42^2*c_u30^2*c_u40^2*c_u41^2*c_u42^2*c_v31^2*c_v40^2*c_v41^2*c_v42^2*c_w32^2*c_w40^2*c_w41^2*c_w42^2*c_x10^2*c_x20^2*c_x30^2*c_x43^2*d_b10^2*d_b21^2*d_b31^2*d_b43^2*d_d20^2*d_d30^2*d_d31^2*d_d43^2*d_e21^2*d_e30^2*d_e31^2*d_e43^2*d_h20^2*d_h21^2*d_h32^2*d_h43^2*d_i10^2*d_i30^2*d_i32^2*d_i43^2*d_j21^2*d_j30^2*d_j32^2*d_j43^2*d_k10^2*d_k31^2*d_k32^2*d_k43^2*d_l20^2*d_l31^2*d_l32^2*d_l43^2*d_n10^2*d_n20^2*d_n40^2*d_n43^2*d_u31^2*d_u32^2*d_u40^2*d_u43^2*d_w10^2*d_w21^2*d_w41^2*d_w43^2*e_c30^2*e_c32^2*e_c41^2*e_c43^2*e_d20^2*e_d40^2*e_d41^2*e_d43^2*e_e21^2*e_e40^2*e_e41^2*e_e43^2*e_f32^2*e_f40^2*e_f41^2*e_f43^2*e_i20^2*e_i21^2*e_i42^2*e_i43^2*e_n30^2*e_n31^2*e_n42^2*e_n43^2*e_o10^2*e_o40^2*e_o42^2*e_o43^2*e_p21^2*e_p40^2*e_p42^2*e_p43^2*e_q31^2*e_q40^2*e_q42^2*e_q43^2*e_r10^2*e_r41^2*e_r42^2*e_r43^2*e_s20^2*e_s41^2*e_s42^2*e_s43^2*e_t30^2*e_t41^2*e_t42^2*e_t43^2,
+ 5*a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24]
         
 
     AUTHORS:
@@ -26965,8 +27459,10 @@ def generate_unlabeled_tree_semigroup_listing_script(sz):
 
         sage: generate_unlabeled_tree_semigroup_listing_script(5)
         sage: load('Unlabeled_Listing_of_Tree_Semigroup_Graphs_on_5_vertices.sage')
-        sage: L[2]
-        2*a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
+        sage: L
+        [8*a_f20^2*a_f21^2*a_f31^2*a_f40^2*a_h21^2*a_h30^2*a_h31^2*a_h40^2*a_j10^2*a_j21^2*a_j32^2*a_j40^2*a_m21^2*a_m30^2*a_m32^2*a_m40^2*a_n10^2*a_n31^2*a_n32^2*a_n40^2*a_o20^2*a_o31^2*a_o32^2*a_o40^2*a_s20^2*a_s21^2*a_s30^2*a_s41^2*a_w20^2*a_w30^2*a_w31^2*a_w41^2*a_y10^2*a_y20^2*a_y32^2*a_y41^2*b_b10^2*b_b30^2*b_b32^2*b_b41^2*b_c21^2*b_c30^2*b_c32^2*b_c41^2*b_e20^2*b_e31^2*b_e32^2*b_e41^2*b_h21^2*b_h30^2*b_h40^2*b_h41^2*b_i20^2*b_i31^2*b_i40^2*b_i41^2*b_k20^2*b_k32^2*b_k40^2*b_k41^2*b_l21^2*b_l32^2*b_l40^2*b_l41^2*b_m30^2*b_m32^2*b_m40^2*b_m41^2*b_n31^2*b_n32^2*b_n40^2*b_n41^2*b_p10^2*b_p21^2*b_p30^2*b_p42^2*b_r10^2*b_r20^2*b_r31^2*b_r42^2*b_u20^2*b_u30^2*b_u31^2*b_u42^2*b_v21^2*b_v30^2*b_v31^2*b_v42^2*b_z10^2*b_z30^2*b_z32^2*b_z42^2*c_b10^2*c_b31^2*c_b32^2*c_b42^2*c_f21^2*c_f30^2*c_f40^2*c_f42^2*c_g10^2*c_g31^2*c_g40^2*c_g42^2*c_h21^2*c_h31^2*c_h40^2*c_h42^2*c_i30^2*c_i31^2*c_i40^2*c_i42^2*c_j10^2*c_j32^2*c_j40^2*c_j42^2*c_l31^2*c_l32^2*c_l40^2*c_l42^2*c_m10^2*c_m30^2*c_m41^2*c_m42^2*c_n20^2*c_n30^2*c_n41^2*c_n42^2*c_p20^2*c_p31^2*c_p41^2*c_p42^2*c_q30^2*c_q31^2*c_q41^2*c_q42^2*c_r10^2*c_r32^2*c_r41^2*c_r42^2*c_t30^2*c_t32^2*c_t41^2*c_t42^2*c_y10^2*c_y21^2*c_y30^2*c_y43^2*c_z20^2*c_z21^2*c_z30^2*c_z43^2*d_a10^2*d_a20^2*d_a31^2*d_a43^2*d_c20^2*d_c21^2*d_c31^2*d_c43^2*d_f10^2*d_f20^2*d_f32^2*d_f43^2*d_g10^2*d_g21^2*d_g32^2*d_g43^2*d_o10^2*d_o21^2*d_o40^2*d_o43^2*d_p20^2*d_p21^2*d_p40^2*d_p43^2*d_q20^2*d_q31^2*d_q40^2*d_q43^2*d_r21^2*d_r31^2*d_r40^2*d_r43^2*d_s10^2*d_s32^2*d_s40^2*d_s43^2*d_t21^2*d_t32^2*d_t40^2*d_t43^2*d_v10^2*d_v20^2*d_v41^2*d_v43^2*d_x20^2*d_x21^2*d_x41^2*d_x43^2*d_y20^2*d_y30^2*d_y41^2*d_y43^2*d_z21^2*d_z30^2*d_z41^2*d_z43^2*e_a10^2*e_a32^2*e_a41^2*e_a43^2*e_b20^2*e_b32^2*e_b41^2*e_b43^2*e_g10^2*e_g20^2*e_g42^2*e_g43^2*e_h10^2*e_h21^2*e_h42^2*e_h43^2*e_j10^2*e_j30^2*e_j42^2*e_j43^2*e_k21^2*e_k30^2*e_k42^2*e_k43^2*e_l10^2*e_l31^2*e_l42^2*e_l43^2*e_m20^2*e_m31^2*e_m42^2*e_m43^2,
+ 14*a_b10^2*a_b21^2*a_b30^2*a_b40^2*a_c20^2*a_c21^2*a_c30^2*a_c40^2*a_d10^2*a_d20^2*a_d31^2*a_d40^2*a_e10^2*a_e21^2*a_e31^2*a_e40^2*a_g20^2*a_g30^2*a_g31^2*a_g40^2*a_i10^2*a_i20^2*a_i32^2*a_i40^2*a_k20^2*a_k21^2*a_k32^2*a_k40^2*a_l10^2*a_l30^2*a_l32^2*a_l40^2*a_p30^2*a_p31^2*a_p32^2*a_p40^2*a_q10^2*a_q20^2*a_q30^2*a_q41^2*a_r10^2*a_r21^2*a_r30^2*a_r41^2*a_t10^2*a_t20^2*a_t31^2*a_t41^2*a_v20^2*a_v21^2*a_v31^2*a_v41^2*a_x21^2*a_x30^2*a_x31^2*a_x41^2*a_z10^2*a_z21^2*a_z32^2*a_z41^2*b_a20^2*b_a21^2*b_a32^2*b_a41^2*b_d10^2*b_d31^2*b_d32^2*b_d41^2*b_f30^2*b_f31^2*b_f32^2*b_f41^2*b_g20^2*b_g30^2*b_g40^2*b_g41^2*b_j21^2*b_j31^2*b_j40^2*b_j41^2*b_o10^2*b_o20^2*b_o30^2*b_o42^2*b_q20^2*b_q21^2*b_q30^2*b_q42^2*b_s10^2*b_s21^2*b_s31^2*b_s42^2*b_t20^2*b_t21^2*b_t31^2*b_t42^2*b_w10^2*b_w20^2*b_w32^2*b_w42^2*b_x10^2*b_x21^2*b_x32^2*b_x42^2*c_a21^2*c_a30^2*c_a32^2*c_a42^2*c_c20^2*c_c31^2*c_c32^2*c_c42^2*c_d30^2*c_d31^2*c_d32^2*c_d42^2*c_e10^2*c_e30^2*c_e40^2*c_e42^2*c_k21^2*c_k32^2*c_k40^2*c_k42^2*c_o10^2*c_o31^2*c_o41^2*c_o42^2*c_s20^2*c_s32^2*c_s41^2*c_s42^2*c_u30^2*c_u40^2*c_u41^2*c_u42^2*c_v31^2*c_v40^2*c_v41^2*c_v42^2*c_w32^2*c_w40^2*c_w41^2*c_w42^2*c_x10^2*c_x20^2*c_x30^2*c_x43^2*d_b10^2*d_b21^2*d_b31^2*d_b43^2*d_d20^2*d_d30^2*d_d31^2*d_d43^2*d_e21^2*d_e30^2*d_e31^2*d_e43^2*d_h20^2*d_h21^2*d_h32^2*d_h43^2*d_i10^2*d_i30^2*d_i32^2*d_i43^2*d_j21^2*d_j30^2*d_j32^2*d_j43^2*d_k10^2*d_k31^2*d_k32^2*d_k43^2*d_l20^2*d_l31^2*d_l32^2*d_l43^2*d_n10^2*d_n20^2*d_n40^2*d_n43^2*d_u31^2*d_u32^2*d_u40^2*d_u43^2*d_w10^2*d_w21^2*d_w41^2*d_w43^2*e_c30^2*e_c32^2*e_c41^2*e_c43^2*e_d20^2*e_d40^2*e_d41^2*e_d43^2*e_e21^2*e_e40^2*e_e41^2*e_e43^2*e_f32^2*e_f40^2*e_f41^2*e_f43^2*e_i20^2*e_i21^2*e_i42^2*e_i43^2*e_n30^2*e_n31^2*e_n42^2*e_n43^2*e_o10^2*e_o40^2*e_o42^2*e_o43^2*e_p21^2*e_p40^2*e_p42^2*e_p43^2*e_q31^2*e_q40^2*e_q42^2*e_q43^2*e_r10^2*e_r41^2*e_r42^2*e_r43^2*e_s20^2*e_s41^2*e_s42^2*e_s43^2*e_t30^2*e_t41^2*e_t42^2*e_t43^2,
+ 2*a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24]
         
 
     AUTHORS:
@@ -27064,8 +27560,10 @@ def generate_unlabeled_tree_graceful_listing_script(sz):
         sage: generate_unlabeled_tree_graceful_listing_script(5)
         sage: load('Unlabeled_Listing_of_Tree_Graceful_Graphs_on_5_vertices.sage')
         sage: L[2]
-        a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
-        
+        [a_f20^2*a_f21^2*a_f31^2*a_f40^2*a_h21^2*a_h30^2*a_h31^2*a_h40^2*a_j10^2*a_j21^2*a_j32^2*a_j40^2*a_m21^2*a_m30^2*a_m32^2*a_m40^2*a_n10^2*a_n31^2*a_n32^2*a_n40^2*a_o20^2*a_o31^2*a_o32^2*a_o40^2*a_s20^2*a_s21^2*a_s30^2*a_s41^2*a_w20^2*a_w30^2*a_w31^2*a_w41^2*a_y10^2*a_y20^2*a_y32^2*a_y41^2*b_b10^2*b_b30^2*b_b32^2*b_b41^2*b_c21^2*b_c30^2*b_c32^2*b_c41^2*b_e20^2*b_e31^2*b_e32^2*b_e41^2*b_h21^2*b_h30^2*b_h40^2*b_h41^2*b_i20^2*b_i31^2*b_i40^2*b_i41^2*b_k20^2*b_k32^2*b_k40^2*b_k41^2*b_l21^2*b_l32^2*b_l40^2*b_l41^2*b_m30^2*b_m32^2*b_m40^2*b_m41^2*b_n31^2*b_n32^2*b_n40^2*b_n41^2*b_p10^2*b_p21^2*b_p30^2*b_p42^2*b_r10^2*b_r20^2*b_r31^2*b_r42^2*b_u20^2*b_u30^2*b_u31^2*b_u42^2*b_v21^2*b_v30^2*b_v31^2*b_v42^2*b_z10^2*b_z30^2*b_z32^2*b_z42^2*c_b10^2*c_b31^2*c_b32^2*c_b42^2*c_f21^2*c_f30^2*c_f40^2*c_f42^2*c_g10^2*c_g31^2*c_g40^2*c_g42^2*c_h21^2*c_h31^2*c_h40^2*c_h42^2*c_i30^2*c_i31^2*c_i40^2*c_i42^2*c_j10^2*c_j32^2*c_j40^2*c_j42^2*c_l31^2*c_l32^2*c_l40^2*c_l42^2*c_m10^2*c_m30^2*c_m41^2*c_m42^2*c_n20^2*c_n30^2*c_n41^2*c_n42^2*c_p20^2*c_p31^2*c_p41^2*c_p42^2*c_q30^2*c_q31^2*c_q41^2*c_q42^2*c_r10^2*c_r32^2*c_r41^2*c_r42^2*c_t30^2*c_t32^2*c_t41^2*c_t42^2*c_y10^2*c_y21^2*c_y30^2*c_y43^2*c_z20^2*c_z21^2*c_z30^2*c_z43^2*d_a10^2*d_a20^2*d_a31^2*d_a43^2*d_c20^2*d_c21^2*d_c31^2*d_c43^2*d_f10^2*d_f20^2*d_f32^2*d_f43^2*d_g10^2*d_g21^2*d_g32^2*d_g43^2*d_o10^2*d_o21^2*d_o40^2*d_o43^2*d_p20^2*d_p21^2*d_p40^2*d_p43^2*d_q20^2*d_q31^2*d_q40^2*d_q43^2*d_r21^2*d_r31^2*d_r40^2*d_r43^2*d_s10^2*d_s32^2*d_s40^2*d_s43^2*d_t21^2*d_t32^2*d_t40^2*d_t43^2*d_v10^2*d_v20^2*d_v41^2*d_v43^2*d_x20^2*d_x21^2*d_x41^2*d_x43^2*d_y20^2*d_y30^2*d_y41^2*d_y43^2*d_z21^2*d_z30^2*d_z41^2*d_z43^2*e_a10^2*e_a32^2*e_a41^2*e_a43^2*e_b20^2*e_b32^2*e_b41^2*e_b43^2*e_g10^2*e_g20^2*e_g42^2*e_g43^2*e_h10^2*e_h21^2*e_h42^2*e_h43^2*e_j10^2*e_j30^2*e_j42^2*e_j43^2*e_k21^2*e_k30^2*e_k42^2*e_k43^2*e_l10^2*e_l31^2*e_l42^2*e_l43^2*e_m20^2*e_m31^2*e_m42^2*e_m43^2,
+ 2*a_b10^2*a_b21^2*a_b30^2*a_b40^2*a_c20^2*a_c21^2*a_c30^2*a_c40^2*a_d10^2*a_d20^2*a_d31^2*a_d40^2*a_e10^2*a_e21^2*a_e31^2*a_e40^2*a_g20^2*a_g30^2*a_g31^2*a_g40^2*a_i10^2*a_i20^2*a_i32^2*a_i40^2*a_k20^2*a_k21^2*a_k32^2*a_k40^2*a_l10^2*a_l30^2*a_l32^2*a_l40^2*a_p30^2*a_p31^2*a_p32^2*a_p40^2*a_q10^2*a_q20^2*a_q30^2*a_q41^2*a_r10^2*a_r21^2*a_r30^2*a_r41^2*a_t10^2*a_t20^2*a_t31^2*a_t41^2*a_v20^2*a_v21^2*a_v31^2*a_v41^2*a_x21^2*a_x30^2*a_x31^2*a_x41^2*a_z10^2*a_z21^2*a_z32^2*a_z41^2*b_a20^2*b_a21^2*b_a32^2*b_a41^2*b_d10^2*b_d31^2*b_d32^2*b_d41^2*b_f30^2*b_f31^2*b_f32^2*b_f41^2*b_g20^2*b_g30^2*b_g40^2*b_g41^2*b_j21^2*b_j31^2*b_j40^2*b_j41^2*b_o10^2*b_o20^2*b_o30^2*b_o42^2*b_q20^2*b_q21^2*b_q30^2*b_q42^2*b_s10^2*b_s21^2*b_s31^2*b_s42^2*b_t20^2*b_t21^2*b_t31^2*b_t42^2*b_w10^2*b_w20^2*b_w32^2*b_w42^2*b_x10^2*b_x21^2*b_x32^2*b_x42^2*c_a21^2*c_a30^2*c_a32^2*c_a42^2*c_c20^2*c_c31^2*c_c32^2*c_c42^2*c_d30^2*c_d31^2*c_d32^2*c_d42^2*c_e10^2*c_e30^2*c_e40^2*c_e42^2*c_k21^2*c_k32^2*c_k40^2*c_k42^2*c_o10^2*c_o31^2*c_o41^2*c_o42^2*c_s20^2*c_s32^2*c_s41^2*c_s42^2*c_u30^2*c_u40^2*c_u41^2*c_u42^2*c_v31^2*c_v40^2*c_v41^2*c_v42^2*c_w32^2*c_w40^2*c_w41^2*c_w42^2*c_x10^2*c_x20^2*c_x30^2*c_x43^2*d_b10^2*d_b21^2*d_b31^2*d_b43^2*d_d20^2*d_d30^2*d_d31^2*d_d43^2*d_e21^2*d_e30^2*d_e31^2*d_e43^2*d_h20^2*d_h21^2*d_h32^2*d_h43^2*d_i10^2*d_i30^2*d_i32^2*d_i43^2*d_j21^2*d_j30^2*d_j32^2*d_j43^2*d_k10^2*d_k31^2*d_k32^2*d_k43^2*d_l20^2*d_l31^2*d_l32^2*d_l43^2*d_n10^2*d_n20^2*d_n40^2*d_n43^2*d_u31^2*d_u32^2*d_u40^2*d_u43^2*d_w10^2*d_w21^2*d_w41^2*d_w43^2*e_c30^2*e_c32^2*e_c41^2*e_c43^2*e_d20^2*e_d40^2*e_d41^2*e_d43^2*e_e21^2*e_e40^2*e_e41^2*e_e43^2*e_f32^2*e_f40^2*e_f41^2*e_f43^2*e_i20^2*e_i21^2*e_i42^2*e_i43^2*e_n30^2*e_n31^2*e_n42^2*e_n43^2*e_o10^2*e_o40^2*e_o42^2*e_o43^2*e_p21^2*e_p40^2*e_p42^2*e_p43^2*e_q31^2*e_q40^2*e_q42^2*e_q43^2*e_r10^2*e_r41^2*e_r42^2*e_r43^2*e_s20^2*e_s41^2*e_s42^2*e_s43^2*e_t30^2*e_t41^2*e_t42^2*e_t43^2,
+ a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24]
+ 
 
     AUTHORS:
     - Edinah K. Gnang
@@ -27168,8 +27666,10 @@ def generate_unlabeled_tree_graceful_preimage_listing_script(sz):
 
         sage: generate_unlabeled_tree_graceful_preimage_listing_script(5)
         sage: load('Unlabeled_Listing_of_Tree_Graceful_Preimage_Graphs_on_5_vertices.sage')
-        sage: L[2]
-        a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24
+        sage: L
+        [a_f20^2*a_f21^2*a_f31^2*a_f40^2*a_h21^2*a_h30^2*a_h31^2*a_h40^2*a_j10^2*a_j21^2*a_j32^2*a_j40^2*a_m21^2*a_m30^2*a_m32^2*a_m40^2*a_n10^2*a_n31^2*a_n32^2*a_n40^2*a_o20^2*a_o31^2*a_o32^2*a_o40^2*a_s20^2*a_s21^2*a_s30^2*a_s41^2*a_w20^2*a_w30^2*a_w31^2*a_w41^2*a_y10^2*a_y20^2*a_y32^2*a_y41^2*b_b10^2*b_b30^2*b_b32^2*b_b41^2*b_c21^2*b_c30^2*b_c32^2*b_c41^2*b_e20^2*b_e31^2*b_e32^2*b_e41^2*b_h21^2*b_h30^2*b_h40^2*b_h41^2*b_i20^2*b_i31^2*b_i40^2*b_i41^2*b_k20^2*b_k32^2*b_k40^2*b_k41^2*b_l21^2*b_l32^2*b_l40^2*b_l41^2*b_m30^2*b_m32^2*b_m40^2*b_m41^2*b_n31^2*b_n32^2*b_n40^2*b_n41^2*b_p10^2*b_p21^2*b_p30^2*b_p42^2*b_r10^2*b_r20^2*b_r31^2*b_r42^2*b_u20^2*b_u30^2*b_u31^2*b_u42^2*b_v21^2*b_v30^2*b_v31^2*b_v42^2*b_z10^2*b_z30^2*b_z32^2*b_z42^2*c_b10^2*c_b31^2*c_b32^2*c_b42^2*c_f21^2*c_f30^2*c_f40^2*c_f42^2*c_g10^2*c_g31^2*c_g40^2*c_g42^2*c_h21^2*c_h31^2*c_h40^2*c_h42^2*c_i30^2*c_i31^2*c_i40^2*c_i42^2*c_j10^2*c_j32^2*c_j40^2*c_j42^2*c_l31^2*c_l32^2*c_l40^2*c_l42^2*c_m10^2*c_m30^2*c_m41^2*c_m42^2*c_n20^2*c_n30^2*c_n41^2*c_n42^2*c_p20^2*c_p31^2*c_p41^2*c_p42^2*c_q30^2*c_q31^2*c_q41^2*c_q42^2*c_r10^2*c_r32^2*c_r41^2*c_r42^2*c_t30^2*c_t32^2*c_t41^2*c_t42^2*c_y10^2*c_y21^2*c_y30^2*c_y43^2*c_z20^2*c_z21^2*c_z30^2*c_z43^2*d_a10^2*d_a20^2*d_a31^2*d_a43^2*d_c20^2*d_c21^2*d_c31^2*d_c43^2*d_f10^2*d_f20^2*d_f32^2*d_f43^2*d_g10^2*d_g21^2*d_g32^2*d_g43^2*d_o10^2*d_o21^2*d_o40^2*d_o43^2*d_p20^2*d_p21^2*d_p40^2*d_p43^2*d_q20^2*d_q31^2*d_q40^2*d_q43^2*d_r21^2*d_r31^2*d_r40^2*d_r43^2*d_s10^2*d_s32^2*d_s40^2*d_s43^2*d_t21^2*d_t32^2*d_t40^2*d_t43^2*d_v10^2*d_v20^2*d_v41^2*d_v43^2*d_x20^2*d_x21^2*d_x41^2*d_x43^2*d_y20^2*d_y30^2*d_y41^2*d_y43^2*d_z21^2*d_z30^2*d_z41^2*d_z43^2*e_a10^2*e_a32^2*e_a41^2*e_a43^2*e_b20^2*e_b32^2*e_b41^2*e_b43^2*e_g10^2*e_g20^2*e_g42^2*e_g43^2*e_h10^2*e_h21^2*e_h42^2*e_h43^2*e_j10^2*e_j30^2*e_j42^2*e_j43^2*e_k21^2*e_k30^2*e_k42^2*e_k43^2*e_l10^2*e_l31^2*e_l42^2*e_l43^2*e_m20^2*e_m31^2*e_m42^2*e_m43^2,
+ 2*a_b10^2*a_b21^2*a_b30^2*a_b40^2*a_c20^2*a_c21^2*a_c30^2*a_c40^2*a_d10^2*a_d20^2*a_d31^2*a_d40^2*a_e10^2*a_e21^2*a_e31^2*a_e40^2*a_g20^2*a_g30^2*a_g31^2*a_g40^2*a_i10^2*a_i20^2*a_i32^2*a_i40^2*a_k20^2*a_k21^2*a_k32^2*a_k40^2*a_l10^2*a_l30^2*a_l32^2*a_l40^2*a_p30^2*a_p31^2*a_p32^2*a_p40^2*a_q10^2*a_q20^2*a_q30^2*a_q41^2*a_r10^2*a_r21^2*a_r30^2*a_r41^2*a_t10^2*a_t20^2*a_t31^2*a_t41^2*a_v20^2*a_v21^2*a_v31^2*a_v41^2*a_x21^2*a_x30^2*a_x31^2*a_x41^2*a_z10^2*a_z21^2*a_z32^2*a_z41^2*b_a20^2*b_a21^2*b_a32^2*b_a41^2*b_d10^2*b_d31^2*b_d32^2*b_d41^2*b_f30^2*b_f31^2*b_f32^2*b_f41^2*b_g20^2*b_g30^2*b_g40^2*b_g41^2*b_j21^2*b_j31^2*b_j40^2*b_j41^2*b_o10^2*b_o20^2*b_o30^2*b_o42^2*b_q20^2*b_q21^2*b_q30^2*b_q42^2*b_s10^2*b_s21^2*b_s31^2*b_s42^2*b_t20^2*b_t21^2*b_t31^2*b_t42^2*b_w10^2*b_w20^2*b_w32^2*b_w42^2*b_x10^2*b_x21^2*b_x32^2*b_x42^2*c_a21^2*c_a30^2*c_a32^2*c_a42^2*c_c20^2*c_c31^2*c_c32^2*c_c42^2*c_d30^2*c_d31^2*c_d32^2*c_d42^2*c_e10^2*c_e30^2*c_e40^2*c_e42^2*c_k21^2*c_k32^2*c_k40^2*c_k42^2*c_o10^2*c_o31^2*c_o41^2*c_o42^2*c_s20^2*c_s32^2*c_s41^2*c_s42^2*c_u30^2*c_u40^2*c_u41^2*c_u42^2*c_v31^2*c_v40^2*c_v41^2*c_v42^2*c_w32^2*c_w40^2*c_w41^2*c_w42^2*c_x10^2*c_x20^2*c_x30^2*c_x43^2*d_b10^2*d_b21^2*d_b31^2*d_b43^2*d_d20^2*d_d30^2*d_d31^2*d_d43^2*d_e21^2*d_e30^2*d_e31^2*d_e43^2*d_h20^2*d_h21^2*d_h32^2*d_h43^2*d_i10^2*d_i30^2*d_i32^2*d_i43^2*d_j21^2*d_j30^2*d_j32^2*d_j43^2*d_k10^2*d_k31^2*d_k32^2*d_k43^2*d_l20^2*d_l31^2*d_l32^2*d_l43^2*d_n10^2*d_n20^2*d_n40^2*d_n43^2*d_u31^2*d_u32^2*d_u40^2*d_u43^2*d_w10^2*d_w21^2*d_w41^2*d_w43^2*e_c30^2*e_c32^2*e_c41^2*e_c43^2*e_d20^2*e_d40^2*e_d41^2*e_d43^2*e_e21^2*e_e40^2*e_e41^2*e_e43^2*e_f32^2*e_f40^2*e_f41^2*e_f43^2*e_i20^2*e_i21^2*e_i42^2*e_i43^2*e_n30^2*e_n31^2*e_n42^2*e_n43^2*e_o10^2*e_o40^2*e_o42^2*e_o43^2*e_p21^2*e_p40^2*e_p42^2*e_p43^2*e_q31^2*e_q40^2*e_q42^2*e_q43^2*e_r10^2*e_r41^2*e_r42^2*e_r43^2*e_s20^2*e_s41^2*e_s42^2*e_s43^2*e_t30^2*e_t41^2*e_t42^2*e_t43^2,
+ a_a10^24*a_a20^24*a_a30^24*a_a40^24*a_u10^24*a_u21^24*a_u31^24*a_u41^24*b_y20^24*b_y21^24*b_y32^24*b_y42^24*d_m30^24*d_m31^24*d_m32^24*d_m43^24*e_u40^24*e_u41^24*e_u42^24*e_u43^24]
 
     AUTHORS:
     - Edinah K. Gnang
@@ -27289,18 +27789,18 @@ def generate_unlabeled_permutation_listing_script(sz):
 def generate_unlabeled_curtailement_functional_listing_script(Tp):
     """
     Creates a sage file which corresponds to a script
-    which list unlabeled functional directed graph on sz vertices
-    having no loop edges this implementation is very slow.
+    which list unlabeled curtailed functional directed graph on sz vertices
+    the curtailment is dont by replacing non-loop leaf edges by loop edges
 
 
     EXAMPLES:
 
     ::
 
-        sage: T=[(0, 0), (1, 0), (2, 0), (3, 0), (4, 3)]; generate_unlabeled_curtailement_functional_listing_script(T)
-        sage: load('Unlabeled_curtailement_Listing_of_Functional_Graphs_on_5_vertices.sage')
+        sage: T=[(0, 0), (1, 0), (2, 0), (3, 2)]; generate_unlabeled_curtailement_functional_listing_script(T)
+        sage: load('Unlabeled_curtailement_Listing_of_Functional_Graphs_on_4_vertices.sage')
         sage: G
-        20*a_q_o00^6*a_q_o11^6*a_q_o22^6*a_q_o33^6*a_q_o40^6*b_o_p00^6*b_o_p11^6*b_o_p22^6*b_o_p33^6*b_o_p41^6*c_m_q00^6*c_m_q11^6*c_m_q22^6*c_m_q33^6*c_m_q42^6*d_k_r00^6*d_k_r11^6*d_k_r22^6*d_k_r33^6*d_k_r43^6*d_u_h00^6*d_u_h11^6*d_u_h22^6*d_u_h30^6*d_u_h44^6*d_z_c00^6*d_z_c11^6*d_z_c22^6*d_z_c31^6*d_z_c44^6*e_d_x00^6*e_d_x11^6*e_d_x22^6*e_d_x32^6*e_d_x44^6*e_g_u00^6*e_g_u11^6*e_g_u20^6*e_g_u33^6*e_g_u44^6*e_h_t00^6*e_h_t11^6*e_h_t21^6*e_h_t33^6*e_h_t44^6*e_i_n00^6*e_i_n10^6*e_i_n22^6*e_i_n33^6*e_i_n44^6*e_i_t01^6*e_i_t11^6*e_i_t22^6*e_i_t33^6*e_i_t44^6*e_i_u02^6*e_i_u11^6*e_i_u22^6*e_i_u33^6*e_i_u44^6*e_i_v03^6*e_i_v11^6*e_i_v22^6*e_i_v33^6*e_i_v44^6*e_i_w04^6*e_i_w11^6*e_i_w22^6*e_i_w33^6*e_i_w44^6*e_i_x00^6*e_i_x12^6*e_i_x22^6*e_i_x33^6*e_i_x44^6*e_j_c00^6*e_j_c13^6*e_j_c22^6*e_j_c33^6*e_j_c44^6*e_j_h00^6*e_j_h14^6*e_j_h22^6*e_j_h33^6*e_j_h44^6*e_j_r00^6*e_j_r11^6*e_j_r23^6*e_j_r33^6*e_j_r44^6*e_k_q00^6*e_k_q11^6*e_k_q24^6*e_k_q33^6*e_k_q44^6*e_n_n00^6*e_n_n11^6*e_n_n22^6*e_n_n34^6*e_n_n44^6 + 60*a_q_p01^2*a_q_p11^2*a_q_p22^2*a_q_p33^2*a_q_p40^2*a_q_q02^2*a_q_q11^2*a_q_q22^2*a_q_q33^2*a_q_q40^2*a_q_r03^2*a_q_r11^2*a_q_r22^2*a_q_r33^2*a_q_r40^2*a_r_d00^2*a_r_d14^2*a_r_d22^2*a_r_d33^2*a_r_d40^2*a_s_m00^2*a_s_m11^2*a_s_m24^2*a_s_m33^2*a_s_m40^2*a_v_j00^2*a_v_j11^2*a_v_j22^2*a_v_j34^2*a_v_j40^2*b_o_k00^2*b_o_k10^2*b_o_k22^2*b_o_k33^2*b_o_k41^2*b_o_t04^2*b_o_t11^2*b_o_t22^2*b_o_t33^2*b_o_t41^2*b_o_u00^2*b_o_u12^2*b_o_u22^2*b_o_u33^2*b_o_u41^2*b_o_z00^2*b_o_z13^2*b_o_z22^2*b_o_z33^2*b_o_z41^2*b_q_n00^2*b_q_n11^2*b_q_n24^2*b_q_n33^2*b_q_n41^2*b_t_k00^2*b_t_k11^2*b_t_k22^2*b_t_k34^2*b_t_k41^2*c_k_s00^2*c_k_s11^2*c_k_s20^2*c_k_s33^2*c_k_s42^2*c_l_r00^2*c_l_r11^2*c_l_r21^2*c_l_r33^2*c_l_r42^2*c_m_u04^2*c_m_u11^2*c_m_u22^2*c_m_u33^2*c_m_u42^2*c_n_f00^2*c_n_f14^2*c_n_f22^2*c_n_f33^2*c_n_f42^2*c_n_p00^2*c_n_p11^2*c_n_p23^2*c_n_p33^2*c_n_p42^2*c_r_l00^2*c_r_l11^2*c_r_l22^2*c_r_l34^2*c_r_l42^2*c_w_g00^2*c_w_g11^2*c_w_g22^2*c_w_g30^2*c_w_g43^2*d_b_b00^2*d_b_b11^2*d_b_b22^2*d_b_b31^2*d_b_b43^2*d_f_w00^2*d_f_w11^2*d_f_w22^2*d_f_w32^2*d_f_w43^2*d_k_v04^2*d_k_v11^2*d_k_v22^2*d_k_v33^2*d_k_v43^2*d_l_g00^2*d_l_g14^2*d_l_g22^2*d_l_g33^2*d_l_g43^2*d_m_p00^2*d_m_p11^2*d_m_p24^2*d_m_p33^2*d_m_p43^2*d_u_i01^2*d_u_i11^2*d_u_i22^2*d_u_i30^2*d_u_i44^2*d_u_j02^2*d_u_j11^2*d_u_j22^2*d_u_j30^2*d_u_j44^2*d_u_l04^2*d_u_l11^2*d_u_l22^2*d_u_l30^2*d_u_l44^2*d_u_r00^2*d_u_r13^2*d_u_r22^2*d_u_r30^2*d_u_r44^2*d_v_g00^2*d_v_g11^2*d_v_g23^2*d_v_g30^2*d_v_g44^2*d_y_x00^2*d_y_x10^2*d_y_x22^2*d_y_x31^2*d_y_x44^2*d_z_f03^2*d_z_f11^2*d_z_f22^2*d_z_f31^2*d_z_f44^2*d_z_h00^2*d_z_h12^2*d_z_h22^2*d_z_h31^2*d_z_h44^2*d_z_r00^2*d_z_r14^2*d_z_r22^2*d_z_r31^2*d_z_r44^2*e_a_b00^2*e_a_b11^2*e_a_b23^2*e_a_b31^2*e_a_b44^2*e_b_z00^2*e_b_z11^2*e_b_z20^2*e_b_z32^2*e_b_z44^2*e_c_y00^2*e_c_y11^2*e_c_y21^2*e_c_y32^2*e_c_y44^2*e_e_a03^2*e_e_a11^2*e_e_a22^2*e_e_a32^2*e_e_a44^2*e_e_h00^2*e_e_h13^2*e_e_h22^2*e_e_h32^2*e_e_h44^2*e_f_v00^2*e_f_v11^2*e_f_v24^2*e_f_v32^2*e_f_v44^2*e_g_v01^2*e_g_v11^2*e_g_v20^2*e_g_v33^2*e_g_v44^2*e_g_x03^2*e_g_x11^2*e_g_x20^2*e_g_x33^2*e_g_x44^2*e_g_y04^2*e_g_y11^2*e_g_y20^2*e_g_y33^2*e_g_y44^2*e_g_z00^2*e_g_z12^2*e_g_z20^2*e_g_z33^2*e_g_z44^2*e_h_o00^2*e_h_o10^2*e_h_o21^2*e_h_o33^2*e_h_o44^2*e_h_v02^2*e_h_v11^2*e_h_v21^2*e_h_v33^2*e_h_v44^2*e_i_d00^2*e_i_d13^2*e_i_d21^2*e_i_d33^2*e_i_d44^2*e_i_i00^2*e_i_i14^2*e_i_i21^2*e_i_i33^2*e_i_i44^2*e_i_p02^2*e_i_p10^2*e_i_p22^2*e_i_p33^2*e_i_p44^2*e_i_q03^2*e_i_q10^2*e_i_q22^2*e_i_q33^2*e_i_q44^2*e_i_r04^2*e_i_r10^2*e_i_r22^2*e_i_r33^2*e_i_r44^2*e_i_y01^2*e_i_y12^2*e_i_y22^2*e_i_y33^2*e_i_y44^2*e_j_d01^2*e_j_d13^2*e_j_d22^2*e_j_d33^2*e_j_d44^2*e_j_i01^2*e_j_i14^2*e_j_i22^2*e_j_i33^2*e_j_i44^2*e_j_t02^2*e_j_t11^2*e_j_t23^2*e_j_t33^2*e_j_t44^2*e_j_w00^2*e_j_w12^2*e_j_w23^2*e_j_w33^2*e_j_w44^2*e_k_s02^2*e_k_s11^2*e_k_s24^2*e_k_s33^2*e_k_s44^2*e_k_v00^2*e_k_v12^2*e_k_v24^2*e_k_v33^2*e_k_v44^2*e_n_q03^2*e_n_q11^2*e_n_q22^2*e_n_q34^2*e_n_q44^2*e_n_x00^2*e_n_x13^2*e_n_x22^2*e_n_x34^2*e_n_x44^2*e_o_m00^2*e_o_m11^2*e_o_m23^2*e_o_m34^2*e_o_m44^2 + 30*a_c_d00^4*a_c_d11^4*a_c_d22^4*a_c_d30^4*a_c_d40^4*a_o_q00^4*a_o_q11^4*a_o_q20^4*a_o_q33^4*a_o_q40^4*a_q_j00^4*a_q_j10^4*a_q_j22^4*a_q_j33^4*a_q_j40^4*b_e_z00^4*b_e_z11^4*b_e_z22^4*b_e_z31^4*b_e_z41^4*b_n_q00^4*b_n_q11^4*b_n_q21^4*b_n_q33^4*b_n_q41^4*b_o_q01^4*b_o_q11^4*b_o_q22^4*b_o_q33^4*b_o_q41^4*c_h_v00^4*c_h_v11^4*c_h_v22^4*c_h_v32^4*c_h_v42^4*c_m_s02^4*c_m_s11^4*c_m_s22^4*c_m_s33^4*c_m_s42^4*c_m_v00^4*c_m_v12^4*c_m_v22^4*c_m_v33^4*c_m_v42^4*d_k_u03^4*d_k_u11^4*d_k_u22^4*d_k_u33^4*d_k_u43^4*d_l_b00^4*d_l_b13^4*d_l_b22^4*d_l_b33^4*d_l_b43^4*d_l_q00^4*d_l_q11^4*d_l_q23^4*d_l_q33^4*d_l_q43^4*d_s_j00^4*d_s_j11^4*d_s_j20^4*d_s_j30^4*d_s_j44^4*d_u_c00^4*d_u_c10^4*d_u_c22^4*d_u_c30^4*d_u_c44^4*d_y_d00^4*d_y_d11^4*d_y_d21^4*d_y_d31^4*d_y_d44^4*d_z_d01^4*d_z_d11^4*d_z_d22^4*d_z_d31^4*d_z_d44^4*e_d_z02^4*e_d_z11^4*e_d_z22^4*e_d_z32^4*e_d_z44^4*e_e_c00^4*e_e_c12^4*e_e_c22^4*e_e_c32^4*e_e_c44^4*e_g_p00^4*e_g_p10^4*e_g_p20^4*e_g_p33^4*e_g_p44^4*e_h_u01^4*e_h_u11^4*e_h_u21^4*e_h_u33^4*e_h_u44^4*e_i_z02^4*e_i_z12^4*e_i_z22^4*e_i_z33^4*e_i_z44^4*e_j_f03^4*e_j_f13^4*e_j_f22^4*e_j_f33^4*e_j_f44^4*e_j_l04^4*e_j_l14^4*e_j_l22^4*e_j_l33^4*e_j_l44^4*e_j_u03^4*e_j_u11^4*e_j_u23^4*e_j_u33^4*e_j_u44^4*e_k_b00^4*e_k_b13^4*e_k_b23^4*e_k_b33^4*e_k_b44^4*e_k_u04^4*e_k_u11^4*e_k_u24^4*e_k_u33^4*e_k_u44^4*e_l_f00^4*e_l_f14^4*e_l_f24^4*e_l_f33^4*e_l_f44^4*e_n_r04^4*e_n_r11^4*e_n_r22^4*e_n_r34^4*e_n_r44^4*e_o_c00^4*e_o_c14^4*e_o_c22^4*e_o_c34^4*e_o_c44^4*e_p_l00^4*e_p_l11^4*e_p_l24^4*e_p_l34^4*e_p_l44^4 + 120*a_c_n00*a_c_n13*a_c_n22*a_c_n30*a_c_n40*a_c_s00*a_c_s14*a_c_s22*a_c_s30*a_c_s40*a_d_c00*a_d_c11*a_d_c23*a_d_c30*a_d_c40*a_e_b00*a_e_b11*a_e_b24*a_e_b30*a_e_b40*a_g_t00*a_g_t10*a_g_t22*a_g_t31*a_g_t40*a_g_z01*a_g_z11*a_g_z22*a_g_z31*a_g_z40*a_j_v00*a_j_v11*a_j_v20*a_j_v32*a_j_v40*a_l_v02*a_l_v11*a_l_v22*a_l_v32*a_l_v40*a_o_v00*a_o_v12*a_o_v20*a_o_v33*a_o_v40*a_p_f00*a_p_f14*a_p_f20*a_p_f33*a_p_f40*a_p_k00*a_p_k10*a_p_k21*a_p_k33*a_p_k40*a_p_q01*a_p_q11*a_p_q21*a_p_q33*a_p_q40*a_q_v02*a_q_v12*a_q_v22*a_q_v33*a_q_v40*a_r_b03*a_r_b13*a_r_b22*a_r_b33*a_r_b40*a_r_q03*a_r_q11*a_r_q23*a_r_q33*a_r_q40*a_s_h00*a_s_h10*a_s_h24*a_s_h33*a_s_h40*a_t_l00*a_t_l11*a_t_l20*a_t_l34*a_t_l40*a_v_e00*a_v_e10*a_v_e22*a_v_e34*a_v_e40*a_z_z00*a_z_z10*a_z_z22*a_z_z30*a_z_z41*b_a_f01*b_a_f11*b_a_f22*b_a_f30*b_a_f41*b_f_c03*b_f_c11*b_f_c22*b_f_c31*b_f_c41*b_f_d04*b_f_d11*b_f_d22*b_f_d31*b_f_d41*b_f_y00*b_f_y11*b_f_y23*b_f_y31*b_f_y41*b_g_x00*b_g_x11*b_g_x24*b_g_x31*b_g_x41*b_i_v00*b_i_v11*b_i_v21*b_i_v32*b_i_v41*b_j_z00*b_j_z12*b_j_z22*b_j_z32*b_j_z41*b_m_m00*b_m_m10*b_m_m20*b_m_m33*b_m_m41*b_m_s01*b_m_s11*b_m_s20*b_m_s33*b_m_s41*b_n_s02*b_n_s11*b_n_s21*b_n_s33*b_n_s41*b_n_u04*b_n_u11*b_n_u21*b_n_u33*b_n_u41*b_o_w02*b_o_w12*b_o_w22*b_o_w33*b_o_w41*b_p_c03*b_p_c13*b_p_c22*b_p_c33*b_p_c41*b_p_y00*b_p_y13*b_p_y23*b_p_y33*b_p_y41*b_q_o01*b_q_o11*b_q_o24*b_q_o33*b_q_o41*b_s_l00*b_s_l11*b_s_l21*b_s_l34*b_s_l41*b_t_l01*b_t_l11*b_t_l22*b_t_l34*b_t_l41*b_w_h00*b_w_h11*b_w_h20*b_w_h30*b_w_h42*b_y_h02*b_y_h11*b_y_h22*b_y_h30*b_y_h42*c_c_b00*c_c_b11*c_c_b21*c_c_b31*c_c_b42*c_d_f00*c_d_f12*c_d_f22*c_d_f31*c_d_f42*c_h_y03*c_h_y11*c_h_y22*c_h_y32*c_h_y42*c_h_z04*c_h_z11*c_h_z22*c_h_z32*c_h_z42*c_i_f00*c_i_f13*c_i_f22*c_i_f32*c_i_f42*c_i_k00*c_i_k14*c_i_k22*c_i_k32*c_i_k42*c_k_n00*c_k_n10*c_k_n20*c_k_n33*c_k_n42*c_l_s01*c_l_s11*c_l_s21*c_l_s33*c_l_s42*c_m_n02*c_m_n10*c_m_n22*c_m_n33*c_m_n42*c_m_w01*c_m_w12*c_m_w22*c_m_w33*c_m_w42*c_m_z04*c_m_z12*c_m_z22*c_m_z33*c_m_z42*c_n_h02*c_n_h14*c_n_h22*c_n_h33*c_n_h42*c_n_s03*c_n_s11*c_n_s23*c_n_s33*c_n_s42*c_n_z00*c_n_z13*c_n_z23*c_n_z33*c_n_z42*c_r_n02*c_r_n11*c_r_n22*c_r_n34*c_r_n42*c_r_q00*c_r_q12*c_r_q22*c_r_q34*c_r_q42*c_u_i00*c_u_i11*c_u_i20*c_u_i30*c_u_i43*c_w_b00*c_w_b10*c_w_b22*c_w_b30*c_w_b43*d_a_c00*d_a_c11*d_a_c21*d_a_c31*d_a_c43*d_b_c01*d_b_c11*d_b_c22*d_b_c31*d_b_c43*d_f_y02*d_f_y11*d_f_y22*d_f_y32*d_f_y43*d_g_b00*d_g_b12*d_g_b22*d_g_b32*d_g_b43*d_i_w03*d_i_w11*d_i_w20*d_i_w33*d_i_w43*d_k_c00*d_k_c13*d_k_c21*d_k_c33*d_k_c43*d_k_p03*d_k_p10*d_k_p22*d_k_p33*d_k_p43*d_l_c01*d_l_c13*d_l_c22*d_l_c33*d_l_c43*d_l_f04*d_l_f13*d_l_f22*d_l_f33*d_l_f43*d_l_j03*d_l_j14*d_l_j22*d_l_j33*d_l_j43*d_l_s02*d_l_s11*d_l_s23*d_l_s33*d_l_s43*d_l_u04*d_l_u11*d_l_u23*d_l_u33*d_l_u43*d_l_v00*d_l_v12*d_l_v23*d_l_v33*d_l_v43*d_m_f00*d_m_f14*d_m_f23*d_m_f33*d_m_f43*d_m_s03*d_m_s11*d_m_s24*d_m_s33*d_m_s43*d_m_z00*d_m_z13*d_m_z24*d_m_z33*d_m_z43*d_s_o00*d_s_o12*d_s_o20*d_s_o30*d_s_o44*d_s_t00*d_s_t13*d_s_t20*d_s_t30*d_s_t44*d_t_d00*d_t_d10*d_t_d21*d_t_d30*d_t_d44*d_t_j01*d_t_j11*d_t_j21*d_t_j30*d_t_j44*d_u_o02*d_u_o12*d_u_o22*d_u_o30*d_u_o44*d_v_a04*d_v_a14*d_v_a22*d_v_a30*d_v_a44*d_v_b00*d_v_b10*d_v_b23*d_v_b30*d_v_b44*d_w_j04*d_w_j11*d_w_j24*d_w_j30*d_w_j44*d_w_z00*d_w_z10*d_w_z20*d_w_z31*d_w_z44*d_x_f01*d_x_f11*d_x_f20*d_x_f31*d_x_f44*d_y_f02*d_y_f11*d_y_f21*d_y_f31*d_y_f44*d_y_g03*d_y_g11*d_y_g21*d_y_g31*d_y_g44*d_z_j02*d_z_j12*d_z_j22*d_z_j31*d_z_j44*d_z_v04*d_z_v14*d_z_v22*d_z_v31*d_z_v44*e_a_c01*e_a_c11*e_a_c23*e_a_c31*e_a_c44*e_b_p00*e_b_p14*e_b_p24*e_b_p31*e_b_p44*e_b_u00*e_b_u10*e_b_u20*e_b_u32*e_b_u44*e_c_z01*e_c_z11*e_c_z21*e_c_z32*e_c_z44*e_d_u02*e_d_u10*e_d_u22*e_d_u32*e_d_u44*e_e_d01*e_e_d12*e_e_d22*e_e_d32*e_e_d44*e_e_f03*e_e_f12*e_e_f22*e_e_f32*e_e_f44*e_e_j02*e_e_j13*e_e_j22*e_e_j32*e_e_j44*e_f_z04*e_f_z11*e_f_z24*e_f_z32*e_f_z44*e_g_k00*e_g_k14*e_g_k24*e_g_k32*e_g_k44*e_h_h03*e_h_h13*e_h_h20*e_h_h33*e_h_h44*e_h_n04*e_h_n14*e_h_n20*e_h_n33*e_h_n44*e_i_g03*e_i_g13*e_i_g21*e_i_g33*e_i_g44*e_i_m04*e_i_m14*e_i_m21*e_i_m33*e_i_m44*e_j_p03*e_j_p10*e_j_p23*e_j_p33*e_j_p44*e_j_z03*e_j_z12*e_j_z23*e_j_z33*e_j_z44*e_k_c01*e_k_c13*e_k_c23*e_k_c33*e_k_c44*e_k_d02*e_k_d13*e_k_d23*e_k_d33*e_k_d44*e_k_p04*e_k_p10*e_k_p24*e_k_p33*e_k_p44*e_k_z04*e_k_z12*e_k_z24*e_k_z33*e_k_z44*e_l_g01*e_l_g14*e_l_g24*e_l_g33*e_l_g44*e_l_h02*e_l_h14*e_l_h24*e_l_h33*e_l_h44*e_l_t04*e_l_t11*e_l_t20*e_l_t34*e_l_t44*e_n_d00*e_n_d14*e_n_d21*e_n_d34*e_n_d44*e_n_m04*e_n_m10*e_n_m22*e_n_m34*e_n_m44*e_o_b04*e_o_b13*e_o_b22*e_o_b34*e_o_b44*e_o_d01*e_o_d14*e_o_d22*e_o_d34*e_o_d44*e_o_f03*e_o_f14*e_o_f22*e_o_f34*e_o_f44*e_o_q04*e_o_q11*e_o_q23*e_o_q34*e_o_q44*e_p_b00*e_p_b14*e_p_b23*e_p_b34*e_p_b44*e_p_n02*e_p_n11*e_p_n24*e_p_n34*e_p_n44*e_p_o03*e_p_o11*e_p_o24*e_p_o34*e_p_o44*e_p_q00*e_p_q12*e_p_q24*e_p_q34*e_p_q44*e_p_v00*e_p_v13*e_p_v24*e_p_v34*e_p_v44 + 20*a_a_f00^6*a_a_f11^6*a_a_f20^6*a_a_f30^6*a_a_f40^6*a_b_y00^6*a_b_y10^6*a_b_y22^6*a_b_y30^6*a_b_y40^6*a_o_l00^6*a_o_l10^6*a_o_l20^6*a_o_l33^6*a_o_l40^6*b_e_a00^6*b_e_a11^6*b_e_a21^6*b_e_a31^6*b_e_a41^6*b_f_a01^6*b_f_a11^6*b_f_a22^6*b_f_a31^6*b_f_a41^6*b_n_r01^6*b_n_r11^6*b_n_r21^6*b_n_r33^6*b_n_r41^6*c_h_x02^6*c_h_x11^6*c_h_x22^6*c_h_x32^6*c_h_x42^6*c_i_a00^6*c_i_a12^6*c_i_a22^6*c_i_a32^6*c_i_a42^6*c_m_x02^6*c_m_x12^6*c_m_x22^6*c_m_x33^6*c_m_x42^6*d_l_e03^6*d_l_e13^6*d_l_e22^6*d_l_e33^6*d_l_e43^6*d_l_t03^6*d_l_t11^6*d_l_t23^6*d_l_t33^6*d_l_t43^6*d_m_a00^6*d_m_a13^6*d_m_a23^6*d_m_a33^6*d_m_a43^6*d_s_e00^6*d_s_e10^6*d_s_e20^6*d_s_e30^6*d_s_e44^6*d_y_e01^6*d_y_e11^6*d_y_e21^6*d_y_e31^6*d_y_e44^6*e_e_e02^6*e_e_e12^6*e_e_e22^6*e_e_e32^6*e_e_e44^6*e_k_e03^6*e_k_e13^6*e_k_e23^6*e_k_e33^6*e_k_e44^6*e_l_j04^6*e_l_j14^6*e_l_j24^6*e_l_j33^6*e_l_j44^6*e_o_g04^6*e_o_g14^6*e_o_g22^6*e_o_g34^6*e_o_g44^6*e_p_p04^6*e_p_p11^6*e_p_p24^6*e_p_p34^6*e_p_p44^6*e_q_a00^6*e_q_a14^6*e_q_a24^6*e_q_a34^6*e_q_a44^6 + 60*a_a_k00^2*a_a_k12^2*a_a_k20^2*a_a_k30^2*a_a_k40^2*a_a_p00^2*a_a_p13^2*a_a_p20^2*a_a_p30^2*a_a_p40^2*a_a_u00^2*a_a_u14^2*a_a_u20^2*a_a_u30^2*a_a_u40^2*a_a_z00^2*a_a_z10^2*a_a_z21^2*a_a_z30^2*a_a_z40^2*a_c_x00^2*a_c_x10^2*a_c_x23^2*a_c_x30^2*a_c_x40^2*a_d_w00^2*a_d_w10^2*a_d_w24^2*a_d_w30^2*a_d_w40^2*a_e_v00^2*a_e_v10^2*a_e_v20^2*a_e_v31^2*a_e_v40^2*a_g_a01^2*a_g_a11^2*a_g_a21^2*a_g_a31^2*a_g_a40^2*a_j_q00^2*a_j_q10^2*a_j_q20^2*a_j_q32^2*a_j_q40^2*a_m_a02^2*a_m_a12^2*a_m_a22^2*a_m_a32^2*a_m_a40^2*a_s_a03^2*a_s_a13^2*a_s_a23^2*a_s_a33^2*a_s_a40^2*a_t_g00^2*a_t_g10^2*a_t_g20^2*a_t_g34^2*a_t_g40^2*a_y_b00^2*a_y_b10^2*a_y_b20^2*a_y_b30^2*a_y_b41^2*a_z_g01^2*a_z_g11^2*a_z_g21^2*a_z_g30^2*a_z_g41^2*b_d_c01^2*b_d_c11^2*b_d_c20^2*b_d_c31^2*b_d_c41^2*b_e_c02^2*b_e_c11^2*b_e_c21^2*b_e_c31^2*b_e_c41^2*b_e_d03^2*b_e_d11^2*b_e_d21^2*b_e_d31^2*b_e_d41^2*b_e_e04^2*b_e_e11^2*b_e_e21^2*b_e_e31^2*b_e_e41^2*b_f_z01^2*b_f_z11^2*b_f_z23^2*b_f_z31^2*b_f_z41^2*b_g_y01^2*b_g_y11^2*b_g_y24^2*b_g_y31^2*b_g_y41^2*b_i_w01^2*b_i_w11^2*b_i_w21^2*b_i_w32^2*b_i_w41^2*b_k_b02^2*b_k_b12^2*b_k_b22^2*b_k_b32^2*b_k_b41^2*b_q_b03^2*b_q_b13^2*b_q_b23^2*b_q_b33^2*b_q_b41^2*b_s_m01^2*b_s_m11^2*b_s_m21^2*b_s_m34^2*b_s_m41^2*b_w_c00^2*b_w_c10^2*b_w_c20^2*b_w_c30^2*b_w_c42^2*b_y_m02^2*b_y_m12^2*b_y_m22^2*b_y_m30^2*b_y_m42^2*c_c_c01^2*c_c_c11^2*c_c_c21^2*c_c_c31^2*c_c_c42^2*c_d_h02^2*c_d_h12^2*c_d_h22^2*c_d_h31^2*c_d_h42^2*c_h_s02^2*c_h_s10^2*c_h_s22^2*c_h_s32^2*c_h_s42^2*c_i_b01^2*c_i_b12^2*c_i_b22^2*c_i_b32^2*c_i_b42^2*c_i_d03^2*c_i_d12^2*c_i_d22^2*c_i_d32^2*c_i_d42^2*c_i_e04^2*c_i_e12^2*c_i_e22^2*c_i_e32^2*c_i_e42^2*c_i_h02^2*c_i_h13^2*c_i_h22^2*c_i_h32^2*c_i_h42^2*c_i_m02^2*c_i_m14^2*c_i_m22^2*c_i_m32^2*c_i_m42^2*c_o_c03^2*c_o_c13^2*c_o_c23^2*c_o_c33^2*c_o_c42^2*c_r_s02^2*c_r_s12^2*c_r_s22^2*c_r_s34^2*c_r_s42^2*c_u_d00^2*c_u_d10^2*c_u_d20^2*c_u_d30^2*c_u_d43^2*d_a_d01^2*d_a_d11^2*d_a_d21^2*d_a_d31^2*d_a_d43^2*d_g_d02^2*d_g_d12^2*d_g_d22^2*d_g_d32^2*d_g_d43^2*d_j_g03^2*d_j_g13^2*d_j_g20^2*d_j_g33^2*d_j_g43^2*d_k_f03^2*d_k_f13^2*d_k_f21^2*d_k_f33^2*d_k_f43^2*d_l_o03^2*d_l_o10^2*d_l_o23^2*d_l_o33^2*d_l_o43^2*d_l_y03^2*d_l_y12^2*d_l_y23^2*d_l_y33^2*d_l_y43^2*d_m_b01^2*d_m_b13^2*d_m_b23^2*d_m_b33^2*d_m_b43^2*d_m_c02^2*d_m_c13^2*d_m_c23^2*d_m_c33^2*d_m_c43^2*d_m_e04^2*d_m_e13^2*d_m_e23^2*d_m_e33^2*d_m_e43^2*d_m_i03^2*d_m_i14^2*d_m_i23^2*d_m_i33^2*d_m_i43^2*d_n_c03^2*d_n_c13^2*d_n_c24^2*d_n_c33^2*d_n_c43^2*d_w_y04^2*d_w_y14^2*d_w_y24^2*d_w_y30^2*d_w_y44^2*e_b_t04^2*e_b_t14^2*e_b_t24^2*e_b_t31^2*e_b_t44^2*e_g_o04^2*e_g_o14^2*e_g_o24^2*e_g_o32^2*e_g_o44^2*e_m_i04^2*e_m_i14^2*e_m_i20^2*e_m_i34^2*e_m_i44^2*e_n_h04^2*e_n_h14^2*e_n_h21^2*e_n_h34^2*e_n_h44^2*e_p_f04^2*e_p_f14^2*e_p_f23^2*e_p_f34^2*e_p_f44^2*e_p_k04^2*e_p_k10^2*e_p_k24^2*e_p_k34^2*e_p_k44^2*e_p_u04^2*e_p_u12^2*e_p_u24^2*e_p_u34^2*e_p_u44^2*e_p_z04^2*e_p_z13^2*e_p_z24^2*e_p_z34^2*e_p_z44^2*e_q_b01^2*e_q_b14^2*e_q_b24^2*e_q_b34^2*e_q_b44^2*e_q_c02^2*e_q_c14^2*e_q_c24^2*e_q_c34^2*e_q_c44^2*e_q_d03^2*e_q_d14^2*e_q_d24^2*e_q_d34^2*e_q_d44^2
+        12*b_k00^2*b_k11^2*b_k22^2*b_k30^2*d_w00^2*d_w11^2*d_w22^2*d_w31^2*g_i00^2*g_i11^2*g_i22^2*g_i32^2*h_o00^2*h_o11^2*h_o20^2*h_o33^2*i_e00^2*i_e11^2*i_e21^2*i_e33^2*i_q00^2*i_q10^2*i_q22^2*i_q33^2*i_v01^2*i_v11^2*i_v22^2*i_v33^2*i_w02^2*i_w11^2*i_w22^2*i_w33^2*i_x03^2*i_x11^2*i_x22^2*i_x33^2*i_y00^2*i_y12^2*i_y22^2*i_y33^2*j_c00^2*j_c13^2*j_c22^2*j_c33^2*j_k00^2*j_k11^2*j_k23^2*j_k33^2 + 24*b_l01*b_l11*b_l22*b_l30*b_m02*b_m11*b_m22*b_m30*b_s00*b_s13*b_s22*b_s30*c_a00*c_a11*c_a23*c_a30*d_s00*d_s10*d_s22*d_s31*d_z03*d_z11*d_z22*d_z31*e_a00*e_a12*e_a22*e_a31*e_m00*e_m11*e_m23*e_m31*f_c00*f_c11*f_c20*f_c32*f_s00*f_s11*f_s21*f_s32*g_l03*g_l11*g_l22*g_l32*g_q00*g_q13*g_q22*g_q32*h_p01*h_p11*h_p20*h_p33*h_r03*h_r11*h_r20*h_r33*h_s00*h_s12*h_s20*h_s33*i_a00*i_a10*i_a21*i_a33*i_g02*i_g11*i_g21*i_g33*i_m00*i_m13*i_m21*i_m33*i_s02*i_s10*i_s22*i_s33*i_t03*i_t10*i_t22*i_t33*i_z01*i_z12*i_z22*i_z33*j_d01*j_d13*j_d22*j_d33*j_m02*j_m11*j_m23*j_m33*j_o00*j_o12*j_o23*j_o33 + 12*a_e00^2*a_e11^2*a_e20^2*a_e30^2*b_g00^2*b_g10^2*b_g22^2*b_g30^2*d_g00^2*d_g11^2*d_g21^2*d_g31^2*d_x01^2*d_x11^2*d_x22^2*d_x31^2*g_k02^2*g_k11^2*g_k22^2*g_k32^2*g_m00^2*g_m12^2*g_m22^2*g_m32^2*h_k00^2*h_k10^2*h_k20^2*h_k33^2*i_f01^2*i_f11^2*i_f21^2*i_f33^2*j_a02^2*j_a12^2*j_a22^2*j_a33^2*j_f03^2*j_f13^2*j_f22^2*j_f33^2*j_n03^2*j_n11^2*j_n23^2*j_n33^2*j_s00^2*j_s13^2*j_s23^2*j_s33^2 + 24*a_i00*a_i12*a_i20*a_i30*a_m00*a_m13*a_m20*a_m30*a_q00*a_q10*a_q21*a_q30*a_v01*a_v11*a_v21*a_v30*b_q02*b_q12*b_q22*b_q30*b_w00*b_w10*b_w23*b_w30*c_m00*c_m10*c_m20*c_m31*c_r01*c_r11*c_r20*c_r31*d_i02*d_i11*d_i21*d_i31*d_j03*d_j11*d_j21*d_j31*e_c02*e_c12*e_c22*e_c31*e_n01*e_n11*e_n23*e_n31*e_y00*e_y10*e_y20*e_y32*f_t01*f_t11*f_t21*f_t32*g_g02*g_g10*g_g22*g_g32*g_n01*g_n12*g_n22*g_n32*g_p03*g_p12*g_p22*g_p32*g_s02*g_s13*g_s22*g_s32*h_z03*h_z13*h_z20*h_z33*i_p03*i_p13*i_p21*i_p33*j_j03*j_j10*j_j23*j_j33*j_r03*j_r12*j_r23*j_r33*j_t01*j_t13*j_t23*j_t33*j_u02*j_u13*j_u23*j_u33
 
 
     AUTHORS:
@@ -27371,8 +27871,8 @@ def generate_unlabeled_curtailement_functional_listing_script(Tp):
     f.write('cL=CurtailmentTupleList(Tp)\n')
     f.write('for p in PermutationFunctionList(sz)[1:]:\n')
     f.write('    for T in CurtailmentTupleList(Tp):\n')
-    f.write('        if not ConjugateTuple(sz, T, p) in cL:\n')
-    f.write('            cL.append(ConjugateTuple(sz, T, p))\n')
+    f.write('        if not ConjugateTuple(T, p) in cL:\n')
+    f.write('            cL.append(ConjugateTuple(T, p))\n')
     # Writting the part which initializes the list of graphs
     f.write('\n# Initialization of listing of directed graphs\n')
     f.write('F=sum(prod(A[tp[i][0],tp[i][1]] for i in rg(sz)) for tp in cL)\n')
@@ -27406,10 +27906,11 @@ def generate_unlabeled_contraction_functional_listing_script(Tp):
 
     ::
 
-        sage: T=[(0, 0), (1, 0), (2, 0), (3, 0), (4, 3)];generate_unlabeled_contraction_functional_listing_script(T)
-        sage: load('Unlabeled_contraction_Listing_of_Functional_Graphs_on_5_vertices.sage')
+        sage: T=[(0, 0), (1, 0), (2, 0), (3, 2)];generate_unlabeled_contraction_functional_listing_script(T)
+        sage: load('Unlabeled_contraction_Listing_of_Functional_Graphs_on_4_vertices.sage')
         sage: G
-        60*a_q_p01^2*a_q_p11^2*a_q_p22^2*a_q_p33^2*a_q_p40^2*a_q_q02^2*a_q_q11^2*a_q_q22^2*a_q_q33^2*a_q_q40^2*a_q_r03^2*a_q_r11^2*a_q_r22^2*a_q_r33^2*a_q_r40^2*a_r_d00^2*a_r_d14^2*a_r_d22^2*a_r_d33^2*a_r_d40^2*a_s_m00^2*a_s_m11^2*a_s_m24^2*a_s_m33^2*a_s_m40^2*a_v_j00^2*a_v_j11^2*a_v_j22^2*a_v_j34^2*a_v_j40^2*b_o_k00^2*b_o_k10^2*b_o_k22^2*b_o_k33^2*b_o_k41^2*b_o_t04^2*b_o_t11^2*b_o_t22^2*b_o_t33^2*b_o_t41^2*b_o_u00^2*b_o_u12^2*b_o_u22^2*b_o_u33^2*b_o_u41^2*b_o_z00^2*b_o_z13^2*b_o_z22^2*b_o_z33^2*b_o_z41^2*b_q_n00^2*b_q_n11^2*b_q_n24^2*b_q_n33^2*b_q_n41^2*b_t_k00^2*b_t_k11^2*b_t_k22^2*b_t_k34^2*b_t_k41^2*c_k_s00^2*c_k_s11^2*c_k_s20^2*c_k_s33^2*c_k_s42^2*c_l_r00^2*c_l_r11^2*c_l_r21^2*c_l_r33^2*c_l_r42^2*c_m_u04^2*c_m_u11^2*c_m_u22^2*c_m_u33^2*c_m_u42^2*c_n_f00^2*c_n_f14^2*c_n_f22^2*c_n_f33^2*c_n_f42^2*c_n_p00^2*c_n_p11^2*c_n_p23^2*c_n_p33^2*c_n_p42^2*c_r_l00^2*c_r_l11^2*c_r_l22^2*c_r_l34^2*c_r_l42^2*c_w_g00^2*c_w_g11^2*c_w_g22^2*c_w_g30^2*c_w_g43^2*d_b_b00^2*d_b_b11^2*d_b_b22^2*d_b_b31^2*d_b_b43^2*d_f_w00^2*d_f_w11^2*d_f_w22^2*d_f_w32^2*d_f_w43^2*d_k_v04^2*d_k_v11^2*d_k_v22^2*d_k_v33^2*d_k_v43^2*d_l_g00^2*d_l_g14^2*d_l_g22^2*d_l_g33^2*d_l_g43^2*d_m_p00^2*d_m_p11^2*d_m_p24^2*d_m_p33^2*d_m_p43^2*d_u_i01^2*d_u_i11^2*d_u_i22^2*d_u_i30^2*d_u_i44^2*d_u_j02^2*d_u_j11^2*d_u_j22^2*d_u_j30^2*d_u_j44^2*d_u_l04^2*d_u_l11^2*d_u_l22^2*d_u_l30^2*d_u_l44^2*d_u_r00^2*d_u_r13^2*d_u_r22^2*d_u_r30^2*d_u_r44^2*d_v_g00^2*d_v_g11^2*d_v_g23^2*d_v_g30^2*d_v_g44^2*d_y_x00^2*d_y_x10^2*d_y_x22^2*d_y_x31^2*d_y_x44^2*d_z_f03^2*d_z_f11^2*d_z_f22^2*d_z_f31^2*d_z_f44^2*d_z_h00^2*d_z_h12^2*d_z_h22^2*d_z_h31^2*d_z_h44^2*d_z_r00^2*d_z_r14^2*d_z_r22^2*d_z_r31^2*d_z_r44^2*e_a_b00^2*e_a_b11^2*e_a_b23^2*e_a_b31^2*e_a_b44^2*e_b_z00^2*e_b_z11^2*e_b_z20^2*e_b_z32^2*e_b_z44^2*e_c_y00^2*e_c_y11^2*e_c_y21^2*e_c_y32^2*e_c_y44^2*e_e_a03^2*e_e_a11^2*e_e_a22^2*e_e_a32^2*e_e_a44^2*e_e_h00^2*e_e_h13^2*e_e_h22^2*e_e_h32^2*e_e_h44^2*e_f_v00^2*e_f_v11^2*e_f_v24^2*e_f_v32^2*e_f_v44^2*e_g_v01^2*e_g_v11^2*e_g_v20^2*e_g_v33^2*e_g_v44^2*e_g_x03^2*e_g_x11^2*e_g_x20^2*e_g_x33^2*e_g_x44^2*e_g_y04^2*e_g_y11^2*e_g_y20^2*e_g_y33^2*e_g_y44^2*e_g_z00^2*e_g_z12^2*e_g_z20^2*e_g_z33^2*e_g_z44^2*e_h_o00^2*e_h_o10^2*e_h_o21^2*e_h_o33^2*e_h_o44^2*e_h_v02^2*e_h_v11^2*e_h_v21^2*e_h_v33^2*e_h_v44^2*e_i_d00^2*e_i_d13^2*e_i_d21^2*e_i_d33^2*e_i_d44^2*e_i_i00^2*e_i_i14^2*e_i_i21^2*e_i_i33^2*e_i_i44^2*e_i_p02^2*e_i_p10^2*e_i_p22^2*e_i_p33^2*e_i_p44^2*e_i_q03^2*e_i_q10^2*e_i_q22^2*e_i_q33^2*e_i_q44^2*e_i_r04^2*e_i_r10^2*e_i_r22^2*e_i_r33^2*e_i_r44^2*e_i_y01^2*e_i_y12^2*e_i_y22^2*e_i_y33^2*e_i_y44^2*e_j_d01^2*e_j_d13^2*e_j_d22^2*e_j_d33^2*e_j_d44^2*e_j_i01^2*e_j_i14^2*e_j_i22^2*e_j_i33^2*e_j_i44^2*e_j_t02^2*e_j_t11^2*e_j_t23^2*e_j_t33^2*e_j_t44^2*e_j_w00^2*e_j_w12^2*e_j_w23^2*e_j_w33^2*e_j_w44^2*e_k_s02^2*e_k_s11^2*e_k_s24^2*e_k_s33^2*e_k_s44^2*e_k_v00^2*e_k_v12^2*e_k_v24^2*e_k_v33^2*e_k_v44^2*e_n_q03^2*e_n_q11^2*e_n_q22^2*e_n_q34^2*e_n_q44^2*e_n_x00^2*e_n_x13^2*e_n_x22^2*e_n_x34^2*e_n_x44^2*e_o_m00^2*e_o_m11^2*e_o_m23^2*e_o_m34^2*e_o_m44^2 + 120*a_c_n00*a_c_n13*a_c_n22*a_c_n30*a_c_n40*a_c_s00*a_c_s14*a_c_s22*a_c_s30*a_c_s40*a_d_c00*a_d_c11*a_d_c23*a_d_c30*a_d_c40*a_e_b00*a_e_b11*a_e_b24*a_e_b30*a_e_b40*a_g_t00*a_g_t10*a_g_t22*a_g_t31*a_g_t40*a_g_z01*a_g_z11*a_g_z22*a_g_z31*a_g_z40*a_j_v00*a_j_v11*a_j_v20*a_j_v32*a_j_v40*a_l_v02*a_l_v11*a_l_v22*a_l_v32*a_l_v40*a_o_v00*a_o_v12*a_o_v20*a_o_v33*a_o_v40*a_p_f00*a_p_f14*a_p_f20*a_p_f33*a_p_f40*a_p_k00*a_p_k10*a_p_k21*a_p_k33*a_p_k40*a_p_q01*a_p_q11*a_p_q21*a_p_q33*a_p_q40*a_q_v02*a_q_v12*a_q_v22*a_q_v33*a_q_v40*a_r_b03*a_r_b13*a_r_b22*a_r_b33*a_r_b40*a_r_q03*a_r_q11*a_r_q23*a_r_q33*a_r_q40*a_s_h00*a_s_h10*a_s_h24*a_s_h33*a_s_h40*a_t_l00*a_t_l11*a_t_l20*a_t_l34*a_t_l40*a_v_e00*a_v_e10*a_v_e22*a_v_e34*a_v_e40*a_z_z00*a_z_z10*a_z_z22*a_z_z30*a_z_z41*b_a_f01*b_a_f11*b_a_f22*b_a_f30*b_a_f41*b_f_c03*b_f_c11*b_f_c22*b_f_c31*b_f_c41*b_f_d04*b_f_d11*b_f_d22*b_f_d31*b_f_d41*b_f_y00*b_f_y11*b_f_y23*b_f_y31*b_f_y41*b_g_x00*b_g_x11*b_g_x24*b_g_x31*b_g_x41*b_i_v00*b_i_v11*b_i_v21*b_i_v32*b_i_v41*b_j_z00*b_j_z12*b_j_z22*b_j_z32*b_j_z41*b_m_m00*b_m_m10*b_m_m20*b_m_m33*b_m_m41*b_m_s01*b_m_s11*b_m_s20*b_m_s33*b_m_s41*b_n_s02*b_n_s11*b_n_s21*b_n_s33*b_n_s41*b_n_u04*b_n_u11*b_n_u21*b_n_u33*b_n_u41*b_o_w02*b_o_w12*b_o_w22*b_o_w33*b_o_w41*b_p_c03*b_p_c13*b_p_c22*b_p_c33*b_p_c41*b_p_y00*b_p_y13*b_p_y23*b_p_y33*b_p_y41*b_q_o01*b_q_o11*b_q_o24*b_q_o33*b_q_o41*b_s_l00*b_s_l11*b_s_l21*b_s_l34*b_s_l41*b_t_l01*b_t_l11*b_t_l22*b_t_l34*b_t_l41*b_w_h00*b_w_h11*b_w_h20*b_w_h30*b_w_h42*b_y_h02*b_y_h11*b_y_h22*b_y_h30*b_y_h42*c_c_b00*c_c_b11*c_c_b21*c_c_b31*c_c_b42*c_d_f00*c_d_f12*c_d_f22*c_d_f31*c_d_f42*c_h_y03*c_h_y11*c_h_y22*c_h_y32*c_h_y42*c_h_z04*c_h_z11*c_h_z22*c_h_z32*c_h_z42*c_i_f00*c_i_f13*c_i_f22*c_i_f32*c_i_f42*c_i_k00*c_i_k14*c_i_k22*c_i_k32*c_i_k42*c_k_n00*c_k_n10*c_k_n20*c_k_n33*c_k_n42*c_l_s01*c_l_s11*c_l_s21*c_l_s33*c_l_s42*c_m_n02*c_m_n10*c_m_n22*c_m_n33*c_m_n42*c_m_w01*c_m_w12*c_m_w22*c_m_w33*c_m_w42*c_m_z04*c_m_z12*c_m_z22*c_m_z33*c_m_z42*c_n_h02*c_n_h14*c_n_h22*c_n_h33*c_n_h42*c_n_s03*c_n_s11*c_n_s23*c_n_s33*c_n_s42*c_n_z00*c_n_z13*c_n_z23*c_n_z33*c_n_z42*c_r_n02*c_r_n11*c_r_n22*c_r_n34*c_r_n42*c_r_q00*c_r_q12*c_r_q22*c_r_q34*c_r_q42*c_u_i00*c_u_i11*c_u_i20*c_u_i30*c_u_i43*c_w_b00*c_w_b10*c_w_b22*c_w_b30*c_w_b43*d_a_c00*d_a_c11*d_a_c21*d_a_c31*d_a_c43*d_b_c01*d_b_c11*d_b_c22*d_b_c31*d_b_c43*d_f_y02*d_f_y11*d_f_y22*d_f_y32*d_f_y43*d_g_b00*d_g_b12*d_g_b22*d_g_b32*d_g_b43*d_i_w03*d_i_w11*d_i_w20*d_i_w33*d_i_w43*d_k_c00*d_k_c13*d_k_c21*d_k_c33*d_k_c43*d_k_p03*d_k_p10*d_k_p22*d_k_p33*d_k_p43*d_l_c01*d_l_c13*d_l_c22*d_l_c33*d_l_c43*d_l_f04*d_l_f13*d_l_f22*d_l_f33*d_l_f43*d_l_j03*d_l_j14*d_l_j22*d_l_j33*d_l_j43*d_l_s02*d_l_s11*d_l_s23*d_l_s33*d_l_s43*d_l_u04*d_l_u11*d_l_u23*d_l_u33*d_l_u43*d_l_v00*d_l_v12*d_l_v23*d_l_v33*d_l_v43*d_m_f00*d_m_f14*d_m_f23*d_m_f33*d_m_f43*d_m_s03*d_m_s11*d_m_s24*d_m_s33*d_m_s43*d_m_z00*d_m_z13*d_m_z24*d_m_z33*d_m_z43*d_s_o00*d_s_o12*d_s_o20*d_s_o30*d_s_o44*d_s_t00*d_s_t13*d_s_t20*d_s_t30*d_s_t44*d_t_d00*d_t_d10*d_t_d21*d_t_d30*d_t_d44*d_t_j01*d_t_j11*d_t_j21*d_t_j30*d_t_j44*d_u_o02*d_u_o12*d_u_o22*d_u_o30*d_u_o44*d_v_a04*d_v_a14*d_v_a22*d_v_a30*d_v_a44*d_v_b00*d_v_b10*d_v_b23*d_v_b30*d_v_b44*d_w_j04*d_w_j11*d_w_j24*d_w_j30*d_w_j44*d_w_z00*d_w_z10*d_w_z20*d_w_z31*d_w_z44*d_x_f01*d_x_f11*d_x_f20*d_x_f31*d_x_f44*d_y_f02*d_y_f11*d_y_f21*d_y_f31*d_y_f44*d_y_g03*d_y_g11*d_y_g21*d_y_g31*d_y_g44*d_z_j02*d_z_j12*d_z_j22*d_z_j31*d_z_j44*d_z_v04*d_z_v14*d_z_v22*d_z_v31*d_z_v44*e_a_c01*e_a_c11*e_a_c23*e_a_c31*e_a_c44*e_b_p00*e_b_p14*e_b_p24*e_b_p31*e_b_p44*e_b_u00*e_b_u10*e_b_u20*e_b_u32*e_b_u44*e_c_z01*e_c_z11*e_c_z21*e_c_z32*e_c_z44*e_d_u02*e_d_u10*e_d_u22*e_d_u32*e_d_u44*e_e_d01*e_e_d12*e_e_d22*e_e_d32*e_e_d44*e_e_f03*e_e_f12*e_e_f22*e_e_f32*e_e_f44*e_e_j02*e_e_j13*e_e_j22*e_e_j32*e_e_j44*e_f_z04*e_f_z11*e_f_z24*e_f_z32*e_f_z44*e_g_k00*e_g_k14*e_g_k24*e_g_k32*e_g_k44*e_h_h03*e_h_h13*e_h_h20*e_h_h33*e_h_h44*e_h_n04*e_h_n14*e_h_n20*e_h_n33*e_h_n44*e_i_g03*e_i_g13*e_i_g21*e_i_g33*e_i_g44*e_i_m04*e_i_m14*e_i_m21*e_i_m33*e_i_m44*e_j_p03*e_j_p10*e_j_p23*e_j_p33*e_j_p44*e_j_z03*e_j_z12*e_j_z23*e_j_z33*e_j_z44*e_k_c01*e_k_c13*e_k_c23*e_k_c33*e_k_c44*e_k_d02*e_k_d13*e_k_d23*e_k_d33*e_k_d44*e_k_p04*e_k_p10*e_k_p24*e_k_p33*e_k_p44*e_k_z04*e_k_z12*e_k_z24*e_k_z33*e_k_z44*e_l_g01*e_l_g14*e_l_g24*e_l_g33*e_l_g44*e_l_h02*e_l_h14*e_l_h24*e_l_h33*e_l_h44*e_l_t04*e_l_t11*e_l_t20*e_l_t34*e_l_t44*e_n_d00*e_n_d14*e_n_d21*e_n_d34*e_n_d44*e_n_m04*e_n_m10*e_n_m22*e_n_m34*e_n_m44*e_o_b04*e_o_b13*e_o_b22*e_o_b34*e_o_b44*e_o_d01*e_o_d14*e_o_d22*e_o_d34*e_o_d44*e_o_f03*e_o_f14*e_o_f22*e_o_f34*e_o_f44*e_o_q04*e_o_q11*e_o_q23*e_o_q34*e_o_q44*e_p_b00*e_p_b14*e_p_b23*e_p_b34*e_p_b44*e_p_n02*e_p_n11*e_p_n24*e_p_n34*e_p_n44*e_p_o03*e_p_o11*e_p_o24*e_p_o34*e_p_o44*e_p_q00*e_p_q12*e_p_q24*e_p_q34*e_p_q44*e_p_v00*e_p_v13*e_p_v24*e_p_v34*e_p_v44
+        24*b_l01*b_l11*b_l22*b_l30*b_m02*b_m11*b_m22*b_m30*b_s00*b_s13*b_s22*b_s30*c_a00*c_a11*c_a23*c_a30*d_s00*d_s10*d_s22*d_s31*d_z03*d_z11*d_z22*d_z31*e_a00*e_a12*e_a22*e_a31*e_m00*e_m11*e_m23*e_m31*f_c00*f_c11*f_c20*f_c32*f_s00*f_s11*f_s21*f_s32*g_l03*g_l11*g_l22*g_l32*g_q00*g_q13*g_q22*g_q32*h_p01*h_p11*h_p20*h_p33*h_r03*h_r11*h_r20*h_r33*h_s00*h_s12*h_s20*h_s33*i_a00*i_a10*i_a21*i_a33*i_g02*i_g11*i_g21*i_g33*i_m00*i_m13*i_m21*i_m33*i_s02*i_s10*i_s22*i_s33*i_t03*i_t10*i_t22*i_t33*i_z01*i_z12*i_z22*i_z33*j_d01*j_d13*j_d22*j_d33*j_m02*j_m11*j_m23*j_m33*j_o00*j_o12*j_o23*j_o33
+
 
     AUTHORS:
     - Edinah K. Gnang
@@ -27478,8 +27979,8 @@ def generate_unlabeled_contraction_functional_listing_script(Tp):
     f.write('cL=ContractionTupleList(Tp)\n')
     f.write('for p in PermutationFunctionList(sz)[1:]:\n')
     f.write('    for T in ContractionTupleList(Tp):\n')
-    f.write('        if not ConjugateTuple(sz, T, p) in cL:\n')
-    f.write('            cL.append(ConjugateTuple(sz, T, p))\n')
+    f.write('        if not ConjugateTuple(T, p) in cL:\n')
+    f.write('            cL.append(ConjugateTuple(T, p))\n')
     # Writting the part which initializes the list of graphs
     f.write('\n# Initialization of listing of directed graphs\n')
     f.write('F=sum(prod(A[tp[i][0],tp[i][1]] for i in rg(sz)) for tp in cL)\n')
@@ -27502,7 +28003,7 @@ def generate_unlabeled_contraction_functional_listing_script(Tp):
     # Closing the file
     f.close()
 
-def ConjugateTuple(sz, T, P):
+def ConjugateTuple(T, P):
     """
     Returns the conjugation of T 
     by the permutation P.
@@ -27513,7 +28014,7 @@ def ConjugateTuple(sz, T, P):
     ::
 
 
-        sage: ConjugateTuple(8, [(0, 0), (1, 2), (2, 3), (3, 4), (4, 5), (5, 1), (6, 7), (7, 6)], [(i, i)  for i in rg(8)])
+        sage: ConjugateTuple([(0, 0), (1, 2), (2, 3), (3, 4), (4, 5), (5, 1), (6, 7), (7, 6)], [(i, i)  for i in rg(8)])
         [(0, 0), (1, 2), (2, 3), (3, 4), (4, 5), (5, 1), (6, 7), (7, 6)]
 
 
@@ -27526,6 +28027,28 @@ def ConjugateTuple(sz, T, P):
     L.sort()
     return L
 
+def LeftRightActionTuple(T, P, Q):
+    """
+    Returns the result of the left action on T by the permutation P
+    followed by the right action by Q.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: sz=Integer(5); LeftRightActionTuple([(0,0)]+[(i,i-1) for i in rg(1,sz)], [(i,Integer(mod(i+1,sz))) for i in rg(sz)], [(i,Integer(mod(i+2,sz))) for i in rg(sz)])
+        [(0, 2), (1, 3), (2, 4), (3, 0), (4, 2)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return Adjacency_to_Tuple(Tuple_to_Adjacency(P)*Tuple_to_Adjacency(T)*Tuple_to_Adjacency(Q))
+
+
+
 def generate_subgraph_unlabeled_listing_script(sz, T):
     """
     Creates a sage file which corresponds to a script
@@ -27537,24 +28060,12 @@ def generate_subgraph_unlabeled_listing_script(sz, T):
 
     ::
 
-        sage: generate_subgraph_unlabeled_listing_script(3, [(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)])
+        sage: generate_subgraph_unlabeled_listing_script(4, [(0, 1), (1, 0)])
         sage: load('Unlabeled_subgraph_Listing_of_Directed_Graphs_on_3_vertices.sage')
         sage: L
-        [a_a01^6*a_a02^6*a_a10^6*a_a12^6*a_a20^6*a_a21^6,
-         6*a_b01*a_b02*a_b10*a_b12*a_b20*a_c01*a_c02*a_c10*a_c12*a_c21*a_d01*a_d02*a_d10*a_d20*a_d21*a_e01*a_e02*a_e12*a_e20*a_e21*a_f01*a_f10*a_f12*a_f20*a_f21*a_g02*a_g10*a_g12*a_g20*a_g21,
-         3*a_l02^2*a_l10^2*a_l12^2*a_l20^2*a_n01^2*a_n02^2*a_n12^2*a_n21^2*a_r01^2*a_r10^2*a_r20^2*a_r21^2,
-         6*a_j01*a_j02*a_j12*a_j20*a_k01*a_k10*a_k12*a_k20*a_m01*a_m02*a_m10*a_m21*a_p02*a_p10*a_p12*a_p21*a_s02*a_s10*a_s20*a_s21*a_t01*a_t12*a_t20*a_t21,
-         3*a_i01^2*a_i02^2*a_i10^2*a_i20^2*a_o01^2*a_o10^2*a_o12^2*a_o21^2*a_u02^2*a_u12^2*a_u20^2*a_u21^2,
-         3*a_h01^2*a_h02^2*a_h10^2*a_h12^2*a_q01^2*a_q02^2*a_q20^2*a_q21^2*a_v10^2*a_v12^2*a_v20^2*a_v21^2,
-         2*b_d01^3*b_d12^3*b_d20^3*b_i02^3*b_i10^3*b_i21^3,
-         6*b_b01*b_b10*b_b20*b_c02*b_c10*b_c20*b_e02*b_e12*b_e20*b_h01*b_h10*b_h21*b_j01*b_j12*b_j21*b_k02*b_k12*b_k21,
-         6*a_x01*a_x02*a_x12*a_z02*a_z10*a_z12*b_f10*b_f12*b_f20*b_g01*b_g02*b_g21*b_m01*b_m20*b_m21*b_o10*b_o20*b_o21,
-         6*a_w01*a_w02*a_w10*a_y01*a_y10*a_y12*b_a01*b_a02*b_a20*b_l10*b_l12*b_l21*b_n02*b_n20*b_n21*b_p12*b_p20*b_p21,
-         3*b_u02^2*b_u12^2*b_y10^2*b_y20^2*c_a01^2*c_a21^2,
-         6*b_s02*b_s10*b_t01*b_t12*b_w01*b_w20*b_z12*b_z20*c_b02*c_b21*c_c10*c_c21,
-         3*b_r01^2*b_r10^2*b_x02^2*b_x20^2*c_d12^2*c_d21^2,
-         3*b_q01^2*b_q02^2*b_v10^2*b_v12^2*c_e20^2*c_e21^2,
-         6*c_f01*c_g02*c_h10*c_i12*c_j20*c_k21]
+        [6*a_a_a_a01^4*a_a_a_a10^4*a_a_a_b02^4*a_a_a_b20^4*a_a_a_c12^4*a_a_a_c21^4*a_a_a_d03^4*a_a_a_d30^4*a_a_a_e13^4*a_a_a_e31^4*a_a_a_f23^4*a_a_a_f32^4,
+         12*a_a_a_g01^2*a_a_a_h02^2*a_a_a_i03^2*a_a_a_j10^2*a_a_a_k12^2*a_a_a_l13^2*a_a_a_m20^2*a_a_a_n21^2*a_a_a_o23^2*a_a_a_p30^2*a_a_a_q31^2*a_a_a_r32^2]
+        
 
     AUTHORS:
     - Edinah K. Gnang
@@ -27620,7 +28131,7 @@ def generate_subgraph_unlabeled_listing_script(sz, T):
     f.write('\n# Initialization of listing of directed graphs\n')
     f.write('SgPh=Set(expand(prod(1+Bh[t] for t in T)-1).operands())\n')
     f.write('for p in PermutationFunctionList(sz)[1:]:\n')
-    f.write('    SgPh=SgPh.union(Set(expand(prod(1+Bh[t] for t in ConjugateTuple(sz, T, p))-1).operands()))\n')
+    f.write('    SgPh=SgPh.union(Set(expand(prod(1+Bh[t] for t in ConjugateTuple(T, p))-1).operands()))\n')
     f.write('LgPh=sum(SgPh).operands()\n')
     # Writting the part which initializes the list of graphs
     f.write('\n# Initialization of the list of graphs\n')
@@ -27741,7 +28252,7 @@ def generate_supgraph_unlabeled_listing_script(sz,T):
     f.write('else:\n')
     f.write('    SgPh=Set(expand(prod(1+Bh[i,j] for i in rg(sz) for j in rg(sz) if i!=j and not (i,j) in T)*prod(Bh[t] for t in T)).operands())\n')
     f.write('    for p in PermutationFunctionList(sz)[1:]:\n')
-    f.write('        SgPh=SgPh.union(Set(expand(prod(1+Bh[i,j] for i in rg(sz) for j in rg(sz) if i!=j and not (i,j) in ConjugateTuple(sz, T, p))*prod(Bh[t] for t in ConjugateTuple(sz, T, p))).operands()))\n')
+    f.write('        SgPh=SgPh.union(Set(expand(prod(1+Bh[i,j] for i in rg(sz) for j in rg(sz) if i!=j and not (i,j) in ConjugateTuple(T, p))*prod(Bh[t] for t in ConjugateTuple(T, p))).operands()))\n')
     f.write('LgPh=sum(SgPh).operands()\n')
     # Writting the part which initializes the list of graphs
     f.write('\n# Initialization of the list of graphs\n')
@@ -27849,7 +28360,7 @@ def generate_undirected_subgraph_unlabeled_listing_script(sz,T):
     f.write('\n# Initialization of listing of directed graphs\n')
     f.write('SgPh=Set(expand(prod(1+Bh[t]*Bht[t] for t in T)-1).operands())\n')
     f.write('for p in PermutationFunctionList(sz)[1:]:\n')
-    f.write('    SgPh=SgPh.union(Set(expand(prod(1+Bh[t]*Bht[t] for t in ConjugateTuple(sz, T, p))-1).operands()))\n')
+    f.write('    SgPh=SgPh.union(Set(expand(prod(1+Bh[t]*Bht[t] for t in ConjugateTuple(T, p))-1).operands()))\n')
     f.write('LgPh=sum(SgPh).operands()\n')
     # Writting the part which initializes the list of graphs
     f.write('\n# Initialization of the list of graphs\n')
@@ -27958,7 +28469,7 @@ def generate_undirected_supgraph_unlabeled_listing_script(sz,T):
     f.write('else:\n')
     f.write('    SgPh=Set(expand(prod(1+Bh[i,j]*Bh[j,i] for i in rg(sz) for j in rg(sz) if i<j and not (i,j) in T and not (j,i) in T)*prod(Bh[t]*Bht[t] for t in T)).operands())\n')
     f.write('    for p in PermutationFunctionList(sz)[1:]:\n')
-    f.write('        SgPh=SgPh.union(Set(expand(prod(1+Bh[i,j]*Bh[j,i] for i in rg(sz) for j in rg(sz) if i<j and not (i,j) in ConjugateTuple(sz, T, p) and not (j,i) in ConjugateTuple(sz, T, p))*prod(Bh[t]*Bht[t] for t in ConjugateTuple(sz, T, p))).operands()))\n')
+    f.write('        SgPh=SgPh.union(Set(expand(prod(1+Bh[i,j]*Bh[j,i] for i in rg(sz) for j in rg(sz) if i<j and not (i,j) in ConjugateTuple(T, p) and not (j,i) in ConjugateTuple(T, p))*prod(Bh[t]*Bht[t] for t in ConjugateTuple(T, p))).operands()))\n')
     f.write('LgPh=sum(SgPh).operands()\n')
     # Writting the part which initializes the list of graphs
     f.write('\n# Initialization of the list of graphs\n')
@@ -27978,6 +28489,281 @@ def generate_undirected_supgraph_unlabeled_listing_script(sz,T):
     f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
     f.write('\n#Initialization of the operand list\n')
     f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def generate_tensorial_functional_listing_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which list tensorial functional directed graph on sz vertices
+    having no loop edges this implementation is very slow.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_tensorial_functional_listing_script(2)
+        sage: load('Tensorial_Listing_of_Functional_Graphs_on_2_vertices.sage')
+        sage: L
+        [2*b01^2*b10^2*c00^2*c11^2, 2*a00^2*a10^2*d01^2*d11^2]       
+        sage: generate_tensorial_functional_listing_script(3)
+        sage: load('Tensorial_Listing_of_Functional_Graphs_on_3_vertices.sage')
+        sage: L
+        [6*a_f02^6*a_f11^6*a_f20^6*a_h01^6*a_h12^6*a_h20^6*a_l02^6*a_l10^6*a_l21^6*a_p00^6*a_p12^6*a_p21^6*a_t01^6*a_t10^6*a_t22^6*a_v00^6*a_v11^6*a_v22^6, 18*a_b01^2*a_b10^2*a_b20^2*a_c02^2*a_c10^2*a_c20^2*a_d00^2*a_d11^2*a_d20^2*a_e01^2*a_e11^2*a_e20^2*a_g00^2*a_g12^2*a_g20^2*a_i02^2*a_i12^2*a_i20^2*a_j00^2*a_j10^2*a_j21^2*a_k01^2*a_k10^2*a_k21^2*a_m00^2*a_m11^2*a_m21^2*a_o02^2*a_o11^2*a_o21^2*a_q01^2*a_q12^2*a_q21^2*a_r02^2*a_r12^2*a_r21^2*a_s00^2*a_s10^2*a_s22^2*a_u02^2*a_u10^2*a_u22^2*a_w01^2*a_w11^2*a_w22^2*a_x02^2*a_x11^2*a_x22^2*a_y00^2*a_y12^2*a_y22^2*a_z01^2*a_z12^2*a_z22^2, 3*a_a00^12*a_a10^12*a_a20^12*a_n01^12*a_n11^12*a_n21^12*b_a02^12*b_a12^12*b_a22^12]
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the order
+    #od = ceil(log(sz^sz, 26))
+    od = ceil(log(factorial(sz)^2, 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Creating the string storing the file name
+    filename = 'Tensorial_Listing_of_Functional_Graphs_on_'+str(sz)+'_vertices.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size parameter
+    f.write('# Initializing the size parameter\n')
+    f.write('sz='+str(sz)+'\n')
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg(factorial(sz)^2-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Lc[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Lc[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Lc[cnt]+"')]"+"\n")
+    f.write("\nBh=HM(sz,sz,'a')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg(factorial(sz)^2-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(sz,sz,'"+Ll[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(sz,sz,'"+Ll[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(sz,sz,'"+Ll[cnt]+"')]"+"\n")
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations\n')
+    f.write('P=Permutations(sz)\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('\nA=HM(sz,sz,[prod(TmpA[factorial(sz)*indx0+indx1][P[indx0][i]-1,P[indx1][j]-1] for indx0 in rg(factorial(sz)) for indx1 in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    f.write('F=expand(prod(sum(A[i,j] for j in rg(sz)) for i in rg(sz)))\n')
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpB)):\n')
+    f.write('    LstM=LstM+expand(prod(sum(TmpA[j][u,v] for v in rg(sz)) for u in rg(sz))).operands()\n')
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write('LtG=[Monomial2Tuple(mnm, Bh.list(), sz) for mnm in expand(prod(sum(Bh[i,j] for j in rg(sz)) for i in rg(sz))).operands()]\n')
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n')
+    # Closing the file
+    f.close()
+
+def Endo_tensorial_GL_Fp_action_script(p, sz):
+    """
+    Creates a sage file which yields the orbit list
+    generating polynomial for the left right action
+    of GLn on the monoid of endormphism of sz x sz
+    matrix over the finite filed with two elements.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Endo_tensorial_GL_Fp_action_script(2,2)
+        sage: load('Endo_tensorial_orbit_GL_F2_action_4.sage')
+        sage: G
+        sage: a_a00^36*a_a10^36*a_a20^36*a_a30^36 + 6*a_g00^6*a_g13^6*a_g22^6*a_g31^6*a_h00^6*a_h12^6*a_h23^6*a_h31^6*a_j00^6*a_j13^6*a_j21^6*a_j32^6*a_l00^6*a_l11^6*a_l23^6*a_l32^6*a_n00^6*a_n12^6*a_n21^6*a_n33^6*a_o00^6*a_o11^6*a_o22^6*a_o33^6 + 9*a_b00^4*a_b11^4*a_b21^4*a_b30^4*a_c00^4*a_c12^4*a_c22^4*a_c30^4*a_d00^4*a_d13^4*a_d23^4*a_d30^4*a_e00^4*a_e11^4*a_e20^4*a_e31^4*a_f00^4*a_f10^4*a_f21^4*a_f31^4*a_i00^4*a_i12^4*a_i20^4*a_i32^4*a_k00^4*a_k10^4*a_k22^4*a_k32^4*a_m00^4*a_m13^4*a_m20^4*a_m33^4*a_p00^4*a_p10^4*a_p23^4*a_p33^4
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # FIRST PART INITIALIZING THE MEMBERS OF THE GENERAL LINEAR GROUP
+    # Creating the string storing the file name
+    filename = 'Endo_tensorial_orbit_GL_F'+str(p)+'_action_'+str(p^sz)+'.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size\n')
+    f.write('sz='+str(sz)+'\n\n')
+    f.write('# Initializing the prime characteristic of the field\n')
+    f.write('p='+str(p)+'\n\n')
+    if sz==2:
+        f.write('# Initialization of the list which stores the members of our group\n')
+        f.write('Lm=[HM(2,2,m) for m in List_of_Integers([p for i in rg(2^2)]) if mod(Deter(HM(2,2,m)),p)!=mod(0,p)]\n\n')
+    else:
+        # Writing the variables
+        f.write('\n# Initialization of the list which stores the members of our group\n')
+        f.write("Lm=[]\n")
+        f.write('\n# Initialization of the list of binary lists\n')
+        f.write("Li=List_of_Integers([p for i in rg(sz)])\n")
+        f.write('\n# Looping through the vector with field elements\n')
+        f.write("cnt=0; F=0; L0=List_of_Integers([p for i in rg(sz)])[1:]\n")
+        f.write('for l0 in L0:\n')
+        f.write('    L1=copy(L0); L1.remove(l0)\n')
+        # Begining of the loop
+        # Initialization of the indentation space
+        spc_indt=''
+        for i in rg(1,sz-1):
+            # Updateing the space indentation
+            spc_indt=spc_indt+'    '
+            f.write(spc_indt+'for l'+str(i)+' in L'+str(i)+':\n')
+            f.write(spc_indt+'    L'+str(i+1)+'=copy(L'+str(i)+')\n')
+            f.write(spc_indt+'    for lc'+str(i+1)+' in List_of_Integers([p for i in rg('+str(i+1)+')])[1:]:\n')
+            # Writing the if condition
+            f.write(spc_indt+'        if (')
+            for j in rg(i):
+                f.write('lc'+str(i+1)+'['+str(j)+']*HM(sz,1,l'+str(j)+')+')
+            f.write('lc'+str(i+1)+'['+str(i)+']*HM(sz,1,l'+str(i)+')).mod(p).list() in L2:\n')
+            f.write(spc_indt+'            L'+str(i+1)+'.remove((')
+            for j in rg(i):
+                f.write('lc'+str(i+1)+'['+str(j)+']*HM(sz,1,l'+str(j)+')+')
+            f.write('lc'+str(i+1)+'['+str(i)+']*HM(sz,1,l'+str(i)+')).mod(p).list())\n')
+        # End the loop
+        f.write(spc_indt+'    for l'+str(i+1)+' in L'+str(i+1)+':\n')
+        f.write(spc_indt+'        # Initializing the matrix representation of the Grassmanian variables\n')
+        f.write(spc_indt+'        M=HM(sz,sz,')
+        for j in rg(i+1):
+            f.write('l'+str(j)+'+')
+        f.write('l'+str(i+1)+'); Lm.append(M)\n')
+        f.write(spc_indt+'        # Incrementing the counter\n') 
+        f.write(spc_indt+'        cnt=cnt+1\n\n') 
+    # SECOND PART FOR THE ACTION
+    f.write('# Initialization of the order parameters\n')
+    f.write('od=Integer(2)\n\n')
+    f.write('# Initialization of the list of variables\n')
+    f.write("X=var_list('x',sz)\n\n")
+    f.write('# Initialization of Background hypermatrix\n')
+    f.write("iL=[sz for i in rg(od)]+['a']; A=HM(*iL)\n\n")
+    f.write('# Initialization of the list of projectors\n')
+    f.write('DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)\n\n')
+    f.write('# Performing the projectors\n')
+    f.write('Lh=[ProdB(*([A.transpose(j) for j in rg(od)]+[DltL[i]])) for i in rg(sz)]\n\n')
+    f.write('# Initialization of the list of transpose of the vectors\n')
+    f.write("Lv=[HM(*([sz]+[1 for i in rg(od-1)]+[var_list('x',sz)])) for j in rg(od)]\n\n")
+    f.write('# Initialization of the vector\n')
+    f.write('Y=HM(*([sz]+[1 for i in rg(od-1)]+[[ProdB(*([Lv[i].transpose(i) for i in rg(od-1,-1,-1)]+[Lh[j]])).list()[0] for j in rg(sz)]])).factor().elementwise_exponent(1/od)\n\n')
+    f.write('# Initializing the list of integer lists associated with the hypermatrix choices\n')
+    f.write('Li=List_of_Integers([p for i in rg(sz^od)])\n\n')
+    f.write('# Initialization of the list of integer lists associated with evaluation points\n')
+    f.write('Lev=List_of_Integers([p for i in rg(sz)])\n\n')
+    f.write('# Tuple list description of the elements of the transformation monoid\n')
+    f.write('Lt=[]\n\n')
+    f.write('# Looping over the hypermatrix choices\n')
+    f.write('for al in Li:\n')
+    f.write('    Lt.append([(sum(l[k]*p^k for k in rg(sz)), sum(p^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(p).list()[k] for k in rg(sz))) for l in Lev])\n\n')
+    f.write('# Tuple list description of the elements of the transformation monoid\n')
+    f.write('Lmt=[]\n\n')
+    f.write('# Looping over the hypermatrix choices\n')
+    f.write('for al in [m.list() for m in Lm]:\n')
+    f.write('    Lmt.append([(sum(l[k]*p^k for k in rg(sz)), sum(p^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(p).list()[k] for k in rg(sz))) for l in Lev])\n\n')
+    f.write('# Displaying the graphs on screen\n')
+    f.write('for T in Lt:\n')
+    f.write('    Tuple2DiGraph(T,p^sz).plot().show()\n\n')
+    # THIRD PART FOR THE ORBIT LISTING
+    # Initialization of the order
+    od = ceil(log(prod(p^sz-p^k for k in rg(sz))^2, 26))
+    # Initialization of the alphabet of characters
+    AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+    # Inflating the alphabet to the appropriate size
+    Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
+    for i in rg(od-1):
+        Ll=[a+'_'+b for a in Ll for b in AlphaBl]
+        Lc=[A+'_'+B for A in Lc for B in AlphaBc]
+    # Writing the symbols in capital letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
+    cnt = 0
+    for i in rg(prod(p^sz-p^k for k in rg(sz))^2-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(p^sz,p^sz,'"+Lc[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(p^sz,p^sz,'"+Lc[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(p^sz,p^sz,'"+Lc[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(p^sz,p^sz,'"+Lc[cnt]+"')]"+"\n")
+    f.write("\nBh=HM(p^sz,p^sz,'a')\n")
+    # Writing the symbols in lower case letters
+    f.write('\n# Initialization of the symbolic edge weights\nTmpB=[\\\n')
+    cnt = 0
+    for i in rg(prod(p^sz-p^k for k in rg(sz))^2-1):
+        if Integer(mod(cnt,4)) == 0:
+            f.write("HM(p^sz,p^sz,'"+Ll[cnt]+"'),")
+            cnt=cnt+1
+        elif Integer(mod(cnt,4)) in [1, 2]:
+            for k in rg(2):
+                f.write("HM(p^sz,p^sz,'"+Ll[cnt]+"'),")
+                cnt=cnt+1
+        else:
+            f.write("HM(p^sz,p^sz,'"+Ll[cnt]+"'),\\"+"\n")
+            cnt=cnt+1
+    f.write("HM(p^sz,p^sz,'"+Ll[cnt]+"')]"+"\n")
+    # Writing the part which initializes the permutations
+    f.write('\n# Initialization of the permutations associated with the GLn(Fp)\n')
+    f.write('P=[[t[i][1] for i in rg(p^sz)]  for t in Lmt]\n')
+    # Writting the part which initializes the symbolic adjacency matrices
+    f.write('\n# Initialization of the Adjacency matrix\n')
+    f.write('\nA=HM(p^sz,p^sz,[prod(TmpA[prod(p^sz-p^k for k in rg(sz))*indx0+indx1][P[indx0][i],P[indx1][j]] for indx0 in rg(len(Lmt)) for indx1 in rg(len(Lmt))) for j in rg(p^sz) for i in rg(p^sz)])\n')
+    # Writting the critical piece of the code
+    f.write('\n# Initialization of listing of directed graphs\n')
+    #f.write('F=expand(prod(sum(A[i,j] for j in rg(sz)) for i in rg(sz)))\n')
+    f.write('F=sum(prod(A[i,T[i][1]] for i in rg(p^sz)) for T in Lt)\n')
+    # Writing the loop which initializes the first list
+    f.write('\n# Initiallization of the list of monomials to be substituted\n')
+    f.write('LstM=[]\nfor j in rg(len(TmpB)):\n')
+    f.write('    LstM=LstM+sum(prod(TmpA[j][i,T[i][1]] for i in rg(p^sz)) for T in Lt).operands()\n')
+    # Writting the part which initializes the list of graphs
+    f.write('\n# Initialization of the list of graphs\n')
+    f.write('LtG=[Monomial2Tuple(mnm, Bh.list(), p^sz) for mnm in sum(prod(Bh[i,T[i][1]] for i in rg(p^sz)) for T in Lt).operands()]\n')
+    # Writtin the lart which initializes the substituting monomials
+    f.write('\n# Initialization of the list of monomial sbstituting\n')
+    f.write('LstSubs=[]\nfor j in rg(len(TmpB)):\n    for k in rg(len(LtG)):\n')
+    f.write('        LstSubs.append(prod(TmpB[k][LtG[k][i]] for i in rg(len(LtG[k]))))\n')
+    # Writting the piece of the code which performs the substitution
+    f.write('\n# Performing the substitution\n')
+    f.write('G=fast_reduce_no_expand(F, LstM, LstSubs)\n')
+    f.write('\n#Initialization of the operand list\n')
+    f.write('L=G.operands()\n\n')
     # Closing the file
     f.close()
 
@@ -28483,6 +29269,9 @@ def generate_grassmanian_poised_permanent_listing_script(sz):
     Creates a sage file which corresponds to a script
     which implement the grassmanian substitution scheme
     for the poised permanental listing constructions.
+    Meaning that the induced edge labels are distcint.
+    edges are multiplicatively induced modulo the number
+    of vertices.
 
 
     EXAMPLES:
@@ -28936,6 +29725,75 @@ def weaving_submatrices(A):
         L.append(Tmp.copy())
     return L
 
+def generate_GL_Fp_script(p, sz):
+    """
+    Creates a sage file which corresponds to a script
+    which computes the members of the general linear
+    group over the field of prime order p. It is not
+    checked that p in prime. Also sz must be > 2 
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_GL_Fp_script(2, 3)
+        sage: load('GL_F2_3.sage')
+        sage: len(Lm)
+        168 
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Creating the string storing the file name
+    filename = 'GL_F'+str(p)+'_'+str(sz)+'.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size\n')
+    f.write('sz='+str(sz)+'\n')
+    f.write('# Initializing the prime characteristic of the field\n')
+    f.write('p='+str(p)+'\n')
+    # Writing the variables
+    f.write('\n# Initialization of the list which stores the members of our group\n')
+    f.write("Lm=[]\n")
+    f.write('\n# Initialization of the list of binary lists\n')
+    f.write("Li=List_of_Integers([p for i in rg(sz)])\n")
+    f.write('\n# Looping through the vector with field elements\n')
+    f.write("cnt=0; F=0; L0=List_of_Integers([p for i in rg(sz)])[1:]\n")
+    f.write('for l0 in L0:\n')
+    f.write('    L1=copy(L0); L1.remove(l0)\n')
+    # Begining of the loop
+    # Initialization of the indentation space
+    spc_indt=''
+    for i in rg(1,sz-1):
+        # Updateing the space indentation
+        spc_indt=spc_indt+'    '
+        f.write(spc_indt+'for l'+str(i)+' in L'+str(i)+':\n')
+        f.write(spc_indt+'    L'+str(i+1)+'=copy(L'+str(i)+')\n')
+        f.write(spc_indt+'    for lc'+str(i+1)+' in List_of_Integers([p for i in rg('+str(i+1)+')])[1:]:\n')
+        # Writing the if condition
+        f.write(spc_indt+'        if (')
+        for j in rg(i):
+            f.write('lc'+str(i+1)+'['+str(j)+']*HM(sz,1,l'+str(j)+')+')
+        f.write('lc'+str(i+1)+'['+str(i)+']*HM(sz,1,l'+str(i)+')).mod(p).list() in L2:\n')
+        f.write(spc_indt+'            L'+str(i+1)+'.remove((')
+        for j in rg(i):
+            f.write('lc'+str(i+1)+'['+str(j)+']*HM(sz,1,l'+str(j)+')+')
+        f.write('lc'+str(i+1)+'['+str(i)+']*HM(sz,1,l'+str(i)+')).mod(p).list())\n')
+    # End the loop
+    f.write(spc_indt+'    for l'+str(i+1)+' in L'+str(i+1)+':\n')
+    f.write(spc_indt+'        # Initializing the matrix representation of the Grassmanian variables\n')
+    f.write(spc_indt+'        M=HM(sz,sz,')
+    for j in rg(i+1):
+        f.write('l'+str(j)+'+')
+    f.write('l'+str(i+1)+'); Lm.append(M)\n')
+    f.write(spc_indt+'        # Incrementing the counter\n') 
+    f.write(spc_indt+'        cnt=cnt+1\n') 
+    # Closing the file
+    f.close()
+
 def generate_GL_F2_cycle_index_script(sz):
     """
     Creates a sage file which corresponds to a script
@@ -29096,7 +29954,7 @@ def HaL(T):
 
 def CompostionalPowerList(sz, pwr):
     """
-    Return a symbolic listing of tuple description of functions which are conpositional
+    Return a symbolic listing of tuple description of functions which are compositional
     pwr-th power in (Z_sz)^Z_sz.
 
 
@@ -29462,7 +30320,7 @@ def SymPoly_Expansion(F, Xv, Pv, Sv):
 
     ::
 
-        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
         sage: f=Xv[1]*Xv[2]^2 - Xv[1]^2 + Xv[1]*Xv[2] # Initial non-symmetric polynomial 
         sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
         sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
@@ -29588,6 +30446,28 @@ def SymPoly_ExpansionII(F, Xv, Pv, Sv):
           p4 == x0^4 + x1^4 + x2^4 + x3^4]]
         sage: F-expand((-1/6*p1^5 + 5/3*p1^3*p2 - 5/2*p1*p2^2 - 4/3*p1^2*p3 + 2*p1*p2 + 4/3*p2*p3 + p1*p4 - 2*p3 + 120).subs(p1==x0+x1+x2+x3, p2==x0^2+x1^2+x2^2+x3^2, p3==x0^3+x1^3+x2^3+x3^3, p4==x0^4+x1^4+x2^4+x3^4))
         0
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: F=-expand(prod(Xv[j]-Xv[i] for j in rg(sz) for i in rg(sz) if i<j)^2) # Vandermonde square 
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: SymPoly_ExpansionII(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1))
+        [1/6*p1^6 - 3/2*p1^4*p2 + 7/2*p1^2*p2^2 + 4/3*p1^3*p3 - 1/2*p2^3 - 6*p1*p2*p3 + 3*p3^2,
+         [p1 == x0 + x1 + x2, p2 == x0^2 + x1^2 + x2^2, p3 == x0^3 + x1^3 + x2^3]]
+        sage: F-expand((1/6*p1^6 - 3/2*p1^4*p2 + 7/2*p1^2*p2^2 + 4/3*p1^3*p3 - 1/2*p2^3 - 6*p1*p2*p3 + 3*p3^2).subs(p1==x0+x1+x2, p2==x0^2+x1^2+x2^2, p3==x0^3+x1^3+x2^3, p4==x0^4+x1^4+x2^4))
+        0
+        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: f=prod(Xv[i]^(i+1) for i in rg(sz))
+        sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in TupleFunctionList(sz)) # Symmetrized polynomial
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: expand(SymPoly_ExpansionII(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1))[0])
+        p1*p2*p3
+        sage: sz=3; A=HM(sz,sz,'a'); Xv=A.slice([1],1).list(); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: F=Per(VandermondeHM(A.slice([1],1)))
+        sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
+        sage: SymPoly_ExpansionII(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1))
+        [p1*p2 - p3,
+         [p1 == a01 + a11 + a21,
+          p2 == a01^2 + a11^2 + a21^2,
+          p3 == a01^3 + a11^3 + a21^3]]
 
 
     AUTHORS:
@@ -29715,4 +30595,129 @@ def Girard_Identities(Xv, Pv, Sv):
         GiL.append( Pv[bnd]==bnd*(-1)^bnd*sum( ( factorial(sum(l)-1)/prod(factorial(l[j]) for j in rg(len(l)))) * prod( (-Sv[i])^l[i-1] for i in rg(1,bnd+1) ) for l in eL ) )
     return [GiL, [Pv[i]==sum(Xv[j]^i for j in rg(sz)) for i in rg(1,1+sz)], [Sv[i]==sum(prod(s) for s in Set(Xv).subsets(i)) for i in rg(1,sz+1)]]
 
+def hypermatrix_action_over_F2_conj(sz, od):
+    """
+    Implements the hypermatrix action on vector spaces
+    over the field of two elements. The inputs to the
+    function are the size and order parameters. 
+    The function outputs the list of representative of
+    conjugacy classes of functional directed graphs
+    as well as the list of all functional directed graphs
+    associated with hypermatrix transforms.
+    vertex labels arise from the canonical lexicographic
+    map on binary vectors in F2^sz.
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; od=2; hypermatrix_action_over_F2_conj(sz, od)[0]
+        [[(0, 0), (1, 0), (2, 0), (3, 0)],
+         [(0, 0), (1, 1), (2, 0), (3, 1)],
+         [(0, 0), (1, 0), (2, 1), (3, 1)],
+         [(0, 0), (1, 2), (2, 1), (3, 3)],
+         [(0, 0), (1, 3), (2, 1), (3, 2)],
+         [(0, 0), (1, 1), (2, 2), (3, 3)]] 
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of variables
+    X=var_list('x',sz)
+    # Initialization of Background hypermatrix
+    iL=[sz for i in rg(od)]+['a']; A=HM(*iL)
+    # Initialization of the list of projectors
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    # Performing the projectors
+    Lh=[ProdB(*([A.transpose(j) for j in rg(od)]+[DltL[i]])) for i in rg(sz)]
+    # Initialization of the list of transpose of the vectors
+    Lv=[HM(*([sz]+[1 for i in rg(od-1)]+[var_list('x',sz)])) for j in rg(od)]
+    # Initialization of the vector
+    Y=HM(*([sz]+[1 for i in rg(od-1)]+[[ProdB(*([Lv[i].transpose(i) for i in rg(od-1,-1,-1)]+[Lh[j]])).list()[0] for j in rg(sz)]])).factor()
+    # Initializing the list of integer lists associated with the hypermatrix choices
+    Li=List_of_Integers([2 for i in rg(sz^od)])
+    # Initialization of the list of integer lists associated with evaluation points
+    Lev=List_of_Integers([2 for i in rg(sz)])
+    # Tuple list description of the elements of the transformation monoid
+    Lt=[]
+    # Looping over the hypermatrix choices
+    for al in Li:
+        Lt.append([(sum(l[k]*2^k for k in rg(sz)), sum(2^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(2).list()[k] for k in rg(sz))) for l in Lev])
+    # Initialization of the list storing the rpresentatives of conjugacy classes of functional digraphs.
+    cL=[]
+    # Loop perfomring the binning by conjugacy classes.
+    for T in Lt:
+        nwT=True
+        for i in range(len(cL)):
+            if Tuple2DiGraph(T,2^sz).is_isomorphic(Tuple2DiGraph(cL[i],2^sz)):
+                nwT=False
+                break
+        if nwT==True:
+            cL.append(T)
+    return [cL, Lt]
+
+def hypermatrix_action_over_F2(sz, od):
+    """
+    Implements the hypermatrix action on vector spaces
+    over the field of two elements. The inputs to the
+    function are the size and order parameters. 
+    The function outputs the list of representative of
+    of the left right action classes of functional directed
+    graphs as well as the list of all functional directed
+    graphs associated with hypermatrix transforms.
+    vertex labels arise from the canonical lexicographic
+    map on binary vectors in F2^sz.
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: sz=2; od=2; hypermatrix_action_over_F2(sz, od)[0]
+        [[(0, 0), (1, 0), (2, 0), (3, 0)],
+         [(0, 0), (1, 1), (2, 0), (3, 1)],
+         [(0, 0), (1, 2), (2, 1), (3, 3)]] 
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of variables
+    X=var_list('x',sz)
+    # Initialization of Background hypermatrix
+    iL=[sz for i in rg(od)]+['a']; A=HM(*iL)
+    # Initialization of the list of projectors
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    # Performing the projectors
+    Lh=[ProdB(*([A.transpose(j) for j in rg(od)]+[DltL[i]])) for i in rg(sz)]
+    # Initialization of the list of transpose of the vectors
+    Lv=[HM(*([sz]+[1 for i in rg(od-1)]+[var_list('x',sz)])) for j in rg(od)]
+    # Initialization of the vector
+    Y=HM(*([sz]+[1 for i in rg(od-1)]+[[ProdB(*([Lv[i].transpose(i) for i in rg(od-1,-1,-1)]+[Lh[j]])).list()[0] for j in rg(sz)]])).factor()
+    # Initializing the list of integer lists associated with the hypermatrix choices
+    Li=List_of_Integers([2 for i in rg(sz^od)])
+    # Initialization of the list of integer lists associated with evaluation points
+    Lev=List_of_Integers([2 for i in rg(sz)])
+    # Tuple list description of the elements of the transformation monoid
+    Lt=[]
+    # Looping over the hypermatrix choices
+    for al in Li:
+        Lt.append([(sum(l[k]*2^k for k in rg(sz)), sum(2^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(2).list()[k] for k in rg(sz))) for l in Lev])
+    # Initialization of the list storing the rpresentatives of conjugacy classes of functional digraphs.
+    cL=[]
+    # Loop perfomring the binning by conjugacy classes.
+    for T in Lt:
+        nwT=True
+        for i in range(len(cL)):
+            # Initialization of the bipartite adjacency matrices
+            Aadj=(Tuple_to_Adjacency(T).index_rotation(-pi/2).block_sum(HM(2^sz,2^sz,'zero')).index_rotation(pi/2)).matrix()
+            Badj=(Tuple_to_Adjacency(cL[i]).index_rotation(-pi/2).block_sum(HM(2^sz,2^sz,'zero')).index_rotation(pi/2)).matrix()
+            if DiGraph(Aadj).is_isomorphic(DiGraph(Badj)):
+                nwT=False
+                break
+        if nwT==True:
+            cL.append(T)
+    return [cL, Lt]
 
