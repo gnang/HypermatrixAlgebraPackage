@@ -1,9 +1,12 @@
 #*************************************************************************#
-# Copyright (C) 2018, 19, 20, 21, 22 Edinah K.Gnang <kgnang@gmail.com>,   #
+# Copyright (C) 2018, 19, 20, 21, 22, 23 Edinah K. Gnang kgnang@gmail.com #
 #                          Ori Parzanchevski,                             #
 #                          Yuval Filmus,                                  #
 #                          Doron Zeilberger,                              #
 #                          Fan Tian,                                      #
+#                          Ricky Cheng,                                   #
+#                          Jonathan Earl,                                 #
+#                          Harry Crane,                                   #
 #                                                                         #
 #  Distributed under the terms of the GNU General Public License (GPL)    #
 #                                                                         #
@@ -105,8 +108,6 @@ class HM:
         <BLANKLINE>
         sage: sz=2; [A,B]=GeneralUncorrelatedHypermatrixTuple([HM(sz,sz,'u'),HM(sz,sz,'v')]); Prod(A,B).simplify_full()
         [[1, 0], [0, 1]]
-        sage: List_of_Integers([1,2,3])
-        [[0, 0, 0], [0, 1, 0], [0, 0, 1], [0, 1, 1], [0, 0, 2], [0, 1, 2]]
         sage: sz=2; od=3; J0=Prod(HM(sz,sz,sz,'one'), HM(sz,sz,sz,'one'), HM(od,sz,'kronecker')); J1=Prod(HM(od,sz,'kronecker'), HM(sz,sz,sz,'one'), HM(sz,sz,sz,'one'))
         sage: Prod(J0,HM(sz,sz,sz,'a'),J1)-HM(sz,sz,sz,'a')
         [[[0, 0], [0, 0]], [[0, 0], [0, 0]]]
@@ -114,6 +115,53 @@ class HM:
         sage: X0=HM([[0, X[0]], [0, 0]]); X1=HM([[0, X[1]], [0, 0]]); X2=HM([[0, X[2]], [0, 0]]) # Initialization of 2x2 matrices to be substituted into F to list directed 4-cycles
         sage: F_x0=(X0.substituteHMinto(F, X[0]).expand())[0,1]; F_x0_x1=(X1.substituteHMinto(F_x0,X[1]).expand())[0,1]; F_x0_x1_x2=(X2.substituteHMinto(F_x0_x1,X[2]).expand())[0,1]; F_x0_x1_x2
         4*a02*a13*a21*a30*x0*x1*x2*x3 + 4*a01*a12*a23*a30*x0*x1*x2*x3 + 4*a03*a12*a20*a31*x0*x1*x2*x3 + 4*a02*a10*a23*a31*x0*x1*x2*x3 + 4*a01*a13*a20*a32*x0*x1*x2*x3 + 4*a03*a10*a21*a32*x0*x1*x2*x3
+        sage: sz=2; od=2; X=HM(sz,sz,var_list('x',sz^2)); f=X.det(); H=Form2TotallySymmetricHypermatrix(f, 2, X.list()); H.printHM()
+        [:, :]=
+        [   0    0    0  1/2]
+        [   0    0 -1/2    0]
+        [   0 -1/2    0    0]
+        [ 1/2    0    0    0]
+        sage: sz=Integer(2); Li=List_of_Integers([2 for i in rg(sz)]); Li
+        [[0, 0], [1, 0], [0, 1], [1, 1]]
+        sage: P = 4*x^3 + 3*x^2 + 2*x + 1 # Initialization of the "dividend"
+        sage: D = 5*x^2 + 3*x + 7 # Initialization of the "divisor"
+        sage: [Lq, Rem] = CompositionalDivision(P, D, x) # Performing the compositional division
+        sage: (GProd([D*HM(1,len(Lq),'one'),HM(len(Lq),1,Lq)], sum, [x])[0,0]+Rem).canonicalize_radical()
+        4*x^3 + 3*x^2 + 2*x + 1
+        sage: x,y=var('x,y'); Ha=x*y*HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=GProd([Ha,Hb,Hc], sum, [x,y]); Rslt.printHM()
+        [:, :, 0]=
+        [a000*b000*c000 + a010*b001*c100 a000*b010*c010 + a010*b011*c110]
+        [a100*b100*c000 + a110*b101*c100 a100*b110*c010 + a110*b111*c110]
+        <BLANKLINE>
+        [:, :, 1]=
+        [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
+        [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        <BLANKLINE>
+        sage: x=var('x'); Ha=x*HM(2,2,'a'); Hb=HM(2,2,'b'); GProd([Ha, Hb], sum, [x])
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+        sage: Ha=HM(2,2,'a').elementwise_exponent(x); Hb=HM(2,2,'b'); GProd([Ha, Hb], prod, [x])
+        [[a00^b00*a01^b10, a00^b01*a01^b11], [a10^b00*a11^b10, a10^b01*a11^b11]]
+        sage: sz=3; l=2; Lx=var_list('x',l); La=HM(sz,l,'a').list(); Lb=HM(sz,l,'b').list(); Lc=var_list('c',sz); z=var('z')
+        sage: F=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]),La+Lx+Lb+Lc+[z])
+        sage: F.<a00, a10, a20, a01, a11, a21, x0, x1, b00, b10, b20, b01, b11, b21, c0, c1, c2, z>=FreeAlgebra(QQ,len(La+Lx+Lb+Lc+[z]))
+        sage: Ha=HM(sz,l,[a00, a10, a20, a01, a11, a21]); Hx=HM(l,1,[x0, x1])
+        sage: Hb=HM(sz,l,[b00, b10, b20, b01, b11, b21])
+        sage: Hr=Ha.elementwise_product(z*Hb)-HM(sz,1,[c0, c1, c2])*HM(1,l,[QQ(1/2) for i in rg(l)])
+        sage: GProd([Hr, Hx], sum, [z]).printHM()
+        [:, :]=
+        [-c0 + a00*x0*b00 + a01*x1*b01]
+        [-c1 + a10*x0*b10 + a11*x1*b11]
+        [-c2 + a20*x0*b20 + a21*x1*b21]
+        sage : sz=Integer(3); A=HM(sz,sz,'a') # Initializing a lower triangular matrix
+        sage : for i in rg(sz-1):
+        .... :     for j in rg(i+1,sz):
+        .... :         A[i,j]=0
+        sage : A.p()
+        [:, :]=
+        [a00   0   0]
+        [a10 a11   0]
+        [a20 a21 a22] 
     """
     def __init__(self,*args,func=None):
         if len(args) == 1:
@@ -684,6 +732,27 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixKroneckerSum(self, V)
+
+    def block_sum_list(self, L):
+        """
+        Returns the block sum of a list of hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: HM(2,2,'a').block_sum_list([HM(2,2,'b'), HM(2,2,'c')])
+            [[a00, a01, 0, 0, 0, 0], [a10, a11, 0, 0, 0, 0], [0, 0, b00, b01, 0, 0], [0, 0, b10, b11, 0, 0], [0, 0, 0, 0, c00, c01], [0, 0, 0, 0, c10, c11]]
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixKroneckerSumList([self]+L)
 
     def pseudo_block_sum(self, V):
         """
@@ -1882,6 +1951,10 @@ class HM:
 
     def fast_reduce(self, monom, subst):
         AtmpL=self.dimensions()+[[fast_reduce(self.list()[i], monom, subst) for i in rg(prod(self.dimensions()))]]
+        return HM(*AtmpL)
+
+    def reduce_modulo_binomial_ideal(self, monom, subst):
+        AtmpL=self.dimensions()+[[reduce_modulo_binomial_ideal(self.list()[i], monom, subst) for i in rg(prod(self.dimensions()))]]
         return HM(*AtmpL)
 
     def diff(self, VrbL):
@@ -3331,6 +3404,27 @@ def Vandermonde(l, shft=0):
     - Edinah K. Gnang
     """
     return HM(len(l),len(l),[l[j]^(i+shft) for j in range(len(l)) for i in range(len(l))])
+
+def Circulant(l):
+    """
+    Constructs a circulant matrix from the input list
+    assumed to be either numbers or symbolic variables
+    nothing breaks however if one presents as input a list of
+    hypermatrices.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Circulant(var_list('x',2))
+        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    P=HM(Integer(2),rg(1,len(l))+[0],'perm')
+    return HM([(P^i*HM(len(l),1,l)).list() for i in rg(len(l))])
 
 def VandermondeHM(l, shft=0):
     """
@@ -5997,6 +6091,11 @@ def GeneralHypermatrixProductV(Lh, Op, Lv, indx):
         [:, :, 1]=
         [a001*b000*c001 + a011*b001*c101 a001*b010*c011 + a011*b011*c111]
         [a101*b100*c001 + a111*b101*c101 a101*b110*c011 + a111*b111*c111]
+        sage: P = 4*x^3 + 3*x^2 + 2*x + 1 # Initialization of the "dividend"
+        sage: D = 5*x^2 + 3*x + 7 # Initialization of the "divisor"
+        sage: [Lq, Rem] = CompositionalDivision(P, D, x) # Performing the compositional division
+        sage: (GProd([D*HM(1,len(Lq),'one'),HM(len(Lq),1,Lq)], sum, [x])[0,0]+Rem).canonicalize_radical()
+        4*x^3 + 3*x^2 + 2*x + 1
 
 
     AUTHORS:
@@ -6091,6 +6190,11 @@ def GProd(Lh, Op, Lv):
         [-c0 + a00*x0*b00 + a01*x1*b01]
         [-c1 + a10*x0*b10 + a11*x1*b11]
         [-c2 + a20*x0*b20 + a21*x1*b21]
+        sage: P = 4*x^3 + 3*x^2 + 2*x + 1 # Initialization of the "dividend"
+        sage: D = 5*x^2 + 3*x + 7 # Initialization of the "divisor"
+        sage: [Lq, Rem] = CompositionalDivision(P, D, x) # Performing the compositional division
+        sage: (GProd([D*HM(1,len(Lq),'one'),HM(len(Lq),1,Lq)], sum, [x])[0,0]+Rem).canonicalize_radical()
+        4*x^3 + 3*x^2 + 2*x + 1
 
 
     AUTHORS:
@@ -8507,6 +8611,95 @@ def Tuple_to_AdjacencyII(T,sz):
         A[t]=Integer(1)
     return A
 
+def Tuple_to_Bipartite_Adjacency(T):
+    """
+    The method returns the adjacency matrix of directed bipartite
+    graph description of the input edge tuple description of the 
+    input directed graph. It therefore doubles the number of vertices
+    by assiuming that the codomain and domain have the same size.
+    This implementation can be seen as decoupling the domain and codoamin
+    of fuctional directed graphs. The length of the input list T determines
+    the co-domain and the domain.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Tuple_to_Bipartite_Adjacency([(0, 1), (1, 2), (2, 0), (3, 3)]).printHM()
+        [:, :]= 
+        [0 0 0 0 0 1 0 0]
+        [0 0 0 0 0 0 1 0]
+        [0 0 0 0 1 0 0 0]
+        [0 0 0 0 0 0 0 1]
+        [0 0 0 0 0 0 0 0]
+        [0 0 0 0 0 0 0 0]
+        [0 0 0 0 0 0 0 0]
+        [0 0 0 0 0 0 0 0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(T))
+    # Initialization of the identity matrix
+    Id=HM(Integer(2),sz,'kronecker')
+    A_T=(sum([Id.slice([t[0]],'col')*Id.slice([t[1]],'row') for t in T]))
+    # Performing the index rotation
+    return A_T.index_rotation(-pi/2).block_sum(HM(sz,sz,'zero')).index_rotation(pi/2)
+
+def Tuple_to_Symbolic_Adjacency(T,sz,A):
+    """
+    The method returns the symbolic adjacency matrix of input edge tuple
+    description of the input directed graph. This implementation
+    is not resitricted fuctional directed graphs. The length of the
+    input list T determines the co-domain and the domain.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(2); A=HM(sz,sz,'a'); Tuple_to_Symbolic_Adjacency([(0, 1), (1, 0)], 2, A).p()
+        [:, :]= 
+        [  0 a01]
+        [a10   0]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return A.elementwise_product(Tuple_to_AdjacencyII(T,sz))
+
+def Tuple_to_Tutte(T,sz,A):
+    """
+    The method returns the symbolic adjacency matrix of input edge tuple
+    description of the input directed graph. This implementation
+    is not resitricted fuctional directed graphs. The length of the
+    input list T determines the co-domain and the domain.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: od=Integer(2); sz=Integer(2); A=HM(od,sz,'a','skewsym'); Tuple_to_Tutte([(0, 1), (1, 0)], sz, A).p()
+        [:, :]= 
+        [   0 a01]
+        [-a10   0]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Obtaining the adjacency matrix
+    Adjm=Tuple_to_AdjacencyII(T,sz)
+    if Adjm.is_symmetric() and A == -A.t():
+        return A.elementwise_product(Tuple_to_AdjacencyII(T,sz))
+    else:
+        raise ValueError("Expected the matrix to be skew symmetric and the input tuple to be bi-directed")
+
 def Adjacency_to_Tuple(A):
     """
     The method returns the adjacency matrix of input edge tuple
@@ -10046,6 +10239,26 @@ def GeneralHypermatrixPseudoKroneckerSum(A,B):
         return Ht 
     else:
         raise ValueError("The order of the input hypermatrices must match.")
+
+def GeneralHypermatrixKroneckerSumList(L):
+    """
+    Computes the Kronecker sum for a list of arbitrary order hypermatrices.
+
+    EXAMPLES:
+
+    ::
+
+        sage: GeneralHypermatrixKroneckerSumList([HM(2,2,'a'), HM(2,2,'b')])
+        [[a00, a01, 0, 0], [a10, a11, 0, 0], [0, 0, b00, b01], [0, 0, b10, b11]]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    A=L[0]
+    for i in rg(1,len(L)):
+        A=A.block_sum(L[i])
+    return A
+
 
 def GeneralHypermatrixKroneckerProduct(A,B):
     """
@@ -12154,6 +12367,25 @@ def EvalT(T):
     else:
         print('IMPROPER INPUT !!!')
 
+def EvalPolyT(P, X, Tg):
+    """
+    Outputs the evaluation of the polynomial at tuple description.
+    The first input is the polynomial. The second is the  list of variable.
+    The second input is the tuple description of the function.
+    The code does not check that T is a list of size len(X).
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(6); X=var_list('x',sz); P=sum(X); Tg=[(0,0)]+[(i,i-1) for i in rg(1,sz)]; EvalPolyT(P, X, Tg)
+        6
+
+    AUTHORS:
+    - Edinah K. Gnang and Kailee Lin
+    """
+    return P.subs([X[i]==Tg[i][1] for i in rg(len(X))])
+ 
 @cached_function
 def MonotoneFormula(n):
     """
@@ -13870,6 +14102,14 @@ def fast_reduceII(f, monom, subst, Dct):
         sage: M = fast_reduceII(prm,var_list('x',3),[U,V,W],{'U':Lm[0],'V':Lm[1],'W':Lm[2], 'a00':A[0,0], 'a10':A[1,0], 'a20':A[2,0], 'a01':A[0,1], 'a11':A[1,1], 'a21':A[2,1], 'a02':A[0,2], 'a12':A[1,2], 'a22':A[2,2]}) # Substitution
         sage: M[2^sz-1,0]
         a02*a11*a20 + a01*a12*a20 + a02*a10*a21 + a00*a12*a21 + a01*a10*a22 + a00*a11*a22
+        sage: sz=Integer(3); X=var_list('x',sz); Y=var_list('y',sz); Z=var_list('z',sz); Ha=HM(sz,sz,'a')
+        sage: p=prod((X[Integer(mod(i+0,sz))])^i for i in rg(sz))*prod((Y[Integer(mod(i+1,sz))])^i for i in rg(sz))*prod((Z[Integer(mod(i+2,sz))])^i for i in rg(sz))
+        sage: A,B,C=var('A,B,C') #Initialization of the substitution variables
+        sage: Hr=fast_reduceII(p, [x1*x2^2,y0^2*y2,z0*z1^2], [A,B,C],{'A':HM(2,2,[1,0,Ha[0,0]*Ha[1,1]*Ha[2,2],1]),'B':HM(2,2,[1,0,Ha[0,1]*Ha[1,2]*Ha[2,0],1]),'C':HM(2,2,[1,0,Ha[0,2]*Ha[1,0]*Ha[2,1],1])})
+        sage: Hr.p() # Orbital listing construction for the cyclic group
+        [:, :]=
+        [                                      1 a01*a12*a20 + a02*a10*a21 + a00*a11*a22]
+        [                                      0                                       1]
 
 
     AUTHORS:
@@ -13881,6 +14121,92 @@ def fast_reduceII(f, monom, subst, Dct):
         for i in range(len(monom)):
             s = s.replace(str(monom[i]), str(subst[i]))
         return sage_eval(s, locals=Dct)
+    else:
+        print('Error the monomial list and the substitution list must have the same length')
+
+def find_and_replace_into_poly(P, mnm, submnm):
+    """
+    computes the input polynomial P reduction modulo
+    a binomial relations. This implementation expects
+    input polynomial P not to be a monomial.
+ 
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: x1,x2,x3=var('x1, x2, x3'); find_and_replace_into_poly(x1^3+x2+x3^3,x3^3,1)
+        x1^3 + x2 + 1
+        sage: sz=Integer(3); A=HM(sz,sz,'a'); Z=HM(sz,sz,factorial(sz),'z'); Lm=var_list('M',factorial(sz)); Lr=var_list('U',factorial(sz))
+        sage: Sn=PermutationFunctionList(sz); An=[T for T in Sn if signf(T)>0]; Orb=HM(sz,sz,[prod(Z[i,T[j][1],Permutation_lex(T)] for T in An) for j in rg(sz) for i in rg(sz)])
+        sage: P=prod(Orb[i,i] for i in rg(sz))-Orb[0,1]*Orb[1,0]*prod(Orb[i,i] for i in rg(2,sz)); Pn=P # Initialization of the  polynomial
+        sage: for T in Sn:
+        ....:     for u in rg(factorial(sz)):
+        ....:         Pn=find_and_replace_into_poly(Pn, prod(Z[i,T[i][1],u] for i in rg(sz)), Lm[Permutation_lex(T)])
+        sage: Lsm=[HM(2, 2, [1, 0, prod(A[i,T[i][1]] for i in rg(sz)), 1]) for T in Sn] # Initialization of the matrix to be substituted
+        sage: F=fast_reduceII(Pn, Lm, Lr, {'U0':Lsm[0],'U1':Lsm[1],'U2':Lsm[2],'U3':Lsm[3],'U4':Lsm[4],'U5':Lsm[5],'a00':A[0,0], 'a10':A[1,0], 'a20':A[2,0], 'a01':A[0,1], 'a11':A[1,1], 'a21':A[2,1], 'a02':A[0,2], 'a12':A[1,2], 'a22':A[2,2]})[0,1]; F
+        -a02*a11*a20 + a01*a12*a20 + a02*a10*a21 - a00*a12*a21 - a01*a10*a22 + a00*a11*a22
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the operations
+    add = var('x0') + var('x1')
+    mul = var('x0') * var('x1')
+    xpo = var('x0') ^ var('x1')
+    if P.operator() == add.operator():
+        # Collecting the terms
+        L0=P.operands()
+        # Initialization of the new loop
+        L1=copy(L0)
+        for i in rg(len(L0)):
+            if ((L0[i]/mnm).denominator()-1).is_zero():
+                # Performing the search and replace
+                L1[i]=(L0[i]/mnm)*submnm
+        return sum(L1) 
+    elif P.operator() == mul.operator():
+        raise ValueError("Expected a polynomial seems to have receibed a monomial")
+    elif P.operator() == xpo.operator():
+        raise ValueError("Expected a polynomial seems to have receibed a monomial or worse")
+    else :
+        raise ValueError("Expected a polynomial")
+
+def reduce_modulo_binomial_ideal(P, monom, subst):
+    """
+    computes the canonical representative of the congruence
+    class. The implementation assumes that the relations
+    are ordered in decreasing degree order.
+ 
+    
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=3; A=HM(sz,sz,'a'); X=HM(sz,sz,'x'); Y=HM(sz,sz,'y') # Illustration of Rongyu's PDP-relaxation construction
+        sage: F=sum(prod(X.elementwise_product(Y)[i,t[i][1]] for i in rg(sz)) for t in TupleFunctionList(sz))
+        sage: monom=[X[i,j]*Y[j,k] for k in rg(sz) for j in rg(sz) for i in rg(sz)] # list of monomials to be replaced
+        sage: subst=[A[i,k]*Y[j,k] for k in rg(sz) for j in rg(sz) for i in rg(sz)] # list of replacement monomials
+        sage: G=reduce_modulo_binomial_ideal(F, monom, subst); G
+        a00*a10*a20*y00*y10*y20 + a00*a11*a21*y01*y10*y20 + a00*a12*a22*y02*y10*y20 + a00*a11*a20*y00*y11*y20 + a01*a11*a21*y01*y11*y20 + a00*a11*a22*y02*y11*y20 + a00*a10*a20*y00*y12*y20 + a02*a10*a21*y01*y12*y20 + a00*a10*a22*y02*y12*y20 + a00*a10*a20*y00*y10*y21 + a00*a11*a20*y01*y10*y21 + a01*a12*a20*y02*y10*y21 + a00*a11*a21*y00*y11*y21 + a01*a11*a21*y01*y11*y21 + a01*a11*a21*y02*y11*y21 + a00*a11*a22*y00*y12*y21 + a02*a11*a22*y01*y12*y21 + a01*a11*a22*y02*y12*y21 + a00*a10*a22*y00*y10*y22 + a00*a11*a22*y01*y10*y22 + a02*a12*a22*y02*y10*y22 + a00*a11*a22*y00*y11*y22 + a01*a11*a22*y01*y11*y22 + a02*a11*a22*y02*y11*y22 + a00*a12*a22*y00*y12*y22 + a02*a12*a22*y01*y12*y22 + a02*a12*a22*y02*y12*y22 
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Testing that the lists have the same length
+    if len(monom)==len(subst):
+        # Initialization of the polynomial
+        Po=P 
+        # Loop performing the reduction
+        for i in rg(len(monom)):
+            Pn=find_and_replace_into_poly(Po, monom[i], subst[i])
+            while not (Po-Pn).is_zero():
+                Po=Pn; Pn=find_and_replace_into_poly(Po, monom[i], subst[i])
+        return Pn
     else:
         print('Error the monomial list and the substitution list must have the same length')
 
@@ -16791,6 +17117,7 @@ def linear_solverHM(A,b,x,v):
     where A denotes the input matrix, b denotes the right-hand side vector, x denotes
     the variable vector coming from the original system of equations, and v denotes 
     the free variable vector.
+
 
     EXAMPLES:
  
@@ -23743,9 +24070,8 @@ def TupleFunctionListII(sz0, sz1):
 
     - Edinah K. Gnang
     """
-    A=HM(max(sz0,sz1),max(sz0,sz1),'a')
     if sz0 > 0 and sz1 > 0:
-        return [Monomial2Tuple(mnm,A.list(), max(sz0,sz1)) for mnm in expand(prod(sum(A[i,j] for j in rg(sz1)) for i in rg(sz0))).operands()]
+        return [[(i,l[i]) for i in rg(sz0)] for l in List_of_Integers([sz1 for i in rg(sz0)])]
     else:
         raise ValueError("Expected input sizes to be an integer >=1")
 
@@ -23791,11 +24117,11 @@ def TupleFunctionListIII(L0, L1):
 
     - Edinah K. Gnang
     """
-    A=HM(1+max(L0+L1), 1+max(L0+L1), 'a')
+    sz0=len(L0); sz1=len(L1)
     if len(L1) == 1:
         return [[(i,L1[0]) for i in L0]]
     elif max(L0+L1) > 0:
-        return [Monomial2Tuple(mnm,A.list(), 1+max(L0+L1)) for mnm in expand(prod(sum(A[i,j] for j in L1) for i in L0)).operands()]
+        return [[(L0[i],L1[l[i]]) for i in rg(sz0)] for l in List_of_Integers([sz1 for i in rg(sz0)])]
     else:
         raise ValueError("Expected input sizes to be an integer >=1")
 
@@ -24075,6 +24401,53 @@ def RootedTupleTreeFunctionList(sz):
             Lf.append([(i, f[i]) for i in range(sz)])
     return Lf
 
+def UniqueFixedPointTupleFunctionList(sz):
+    """
+    Returns tuple descriptions of functions having a unique fixed point
+    the implementation uses symbolic listings.
+
+    EXAMPLES:
+    ::
+        sage: sz=Integer(4); UniqueFixedPointTupleFunctionList(sz)
+        [[(0, 1), (1, 0), (2, 0), (3, 3)],
+         [(0, 2), (1, 0), (2, 0), (3, 3)],
+         [(0, 3), (1, 0), (2, 0), (3, 3)],
+         [(0, 1), (1, 2), (2, 0), (3, 3)],
+         [(0, 2), (1, 2), (2, 0), (3, 3)],
+         [(0, 3), (1, 2), (2, 0), (3, 3)],
+         [(0, 1), (1, 3), (2, 0), (3, 3)],
+         [(0, 2), (1, 3), (2, 0), (3, 3)],
+         [(0, 3), (1, 3), (2, 0), (3, 3)],
+         [(0, 1), (1, 0), (2, 1), (3, 3)],
+         [(0, 2), (1, 0), (2, 1), (3, 3)],
+         [(0, 3), (1, 0), (2, 1), (3, 3)],
+         [(0, 1), (1, 2), (2, 1), (3, 3)],
+         [(0, 2), (1, 2), (2, 1), (3, 3)],
+         [(0, 3), (1, 2), (2, 1), (3, 3)],
+         [(0, 1), (1, 3), (2, 1), (3, 3)],
+         [(0, 2), (1, 3), (2, 1), (3, 3)],
+         [(0, 3), (1, 3), (2, 1), (3, 3)],
+         [(0, 1), (1, 0), (2, 3), (3, 3)],
+         [(0, 2), (1, 0), (2, 3), (3, 3)],
+         [(0, 3), (1, 0), (2, 3), (3, 3)],
+         [(0, 1), (1, 2), (2, 3), (3, 3)],
+         [(0, 2), (1, 2), (2, 3), (3, 3)],
+         [(0, 3), (1, 2), (2, 3), (3, 3)],
+         [(0, 1), (1, 3), (2, 3), (3, 3)],
+         [(0, 2), (1, 3), (2, 3), (3, 3)],
+         [(0, 3), (1, 3), (2, 3), (3, 3)]]        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the symbolic matrices
+    A=HM(sz,sz,var_list('z',sz^2))
+    # Initializing the listing
+    F=expand(A[sz-1,sz-1]*prod(sum(A[i,j] for j in rg(sz) if j!=i) for i in rg(sz-1)))
+    # Converting monomials into tuples
+    return [Monomial2Tuple(mnm, A.list(), sz) for mnm in F.operands()]
+
 def RepresentativeRootedTupleTreeFunctionList(sz):
     """
     Goes through all the functions and determines which ones
@@ -24342,7 +24715,8 @@ def IncreasingFunctionList(sz):
     AUTHORS:
     - Edinah K. Gnang
     """
-    A=HM(sz,sz,'a')
+    #A=HM(sz,sz,'a')
+    A=HM(sz,sz,var_list('z',sz^2))
     if sz == 1:
         return [(0, 0)]
     elif sz == 2:
@@ -24479,7 +24853,8 @@ def RepresentativeTupleSpanningFunctionalTreeList(sz):
     - Edinah K. Gnang
     """
     # Initialization of the lists
-    A=HM(sz,sz,'a')
+    #A=HM(sz,sz,'a')
+    A=HM(sz,sz,var_list('x',sz^2))
     L=[Monomial2Tuple(mnm, A.list(), sz) for mnm in expand(A[0,0]*prod(sum(A[i,j] for j in rg(i+1)) for i in rg(1,sz))).operands()]
     # Initialization of the list storing the equivalence class of trees.
     cL=[ L[0] ]
@@ -24499,7 +24874,6 @@ def TupleSpanningFunctionalTreeList(sz):
     Returns a list of edge tuple desctiption for all 
     spanning unions of functional trees. There are
     (sz+1)^(sz-1) of them. 
-
 
 
     EXAMPLES:
@@ -24528,7 +24902,8 @@ def TupleSpanningFunctionalTreeList(sz):
     - Edinah K. Gnang
     """
     # Initialization of the lists
-    A=HM(sz, sz, 'a')
+    #A=HM(sz, sz, 'a')
+    A=HM(sz, sz, var_list('z',sz^2))
     L =TupleFunctionList(sz)
     # Initialization of the list storing the equivalence class of trees.
     cL=[ ]
@@ -24555,7 +24930,10 @@ def TupleSpanningFunctionalTreeListII(sz):
     of functional trees on sz vertices is obtained by
     contracting every subgraph described by the edge
     monomial A[i,sz]*A[sz,sz] into the self loop edge
-    A[i,i] where i is in rg(sz).
+    A[i,i] where i is in rg(sz). Works only for < 9
+    vertices because for instance of the ambiguity
+    inherent to a111 being confused as a_{1,11} or 
+    a_{11,1}
 
 
     EXAMPLES:
@@ -24804,6 +25182,78 @@ def Monomial2TupleII(mnm, VrbL):
     trm=mnm/(mnm.subs([v==1 for v in VrbL]))
     return [(i, trm.degree(VrbL[i])) for i in rg(len(VrbL))]
 
+def Monomial2Adjacency(mnm, VrbL, sz):
+    """
+    Outputs the adjacency matrix description of the input monomial mnm.
+    The variables are obtain by listing the entries of a hypermatrix.
+    This implementation handles directed graph case. The input needs
+    not be multilinear. The implementation does not check that the input
+    is a monomial
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=4; A=HM(sz,sz,'a'); AT=Monomial2Adjacency(prod(A[0,i] for i in rg(sz)), A.list(), sz)
+        sage: AT.p()
+        [1 1 1 1]
+        [0 0 0 0]
+        [0 0 0 0]
+        [0 0 0 0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the adjacency matrix
+    AdjMtr=HM(sz,sz,'zero') 
+    # Getting rid of the coefficient of the monomial
+    f=mnm/(mnm.subs([v==1 for v in VrbL]))
+    # Initialization of the dictionary
+    EdgeDct=dict([(VrbL[j*sz+i],(i,j)) for j in rg(sz) for i in rg(sz)])
+    # Cheking the support via differentiation
+    for i in rg(sz):
+        for j in rg(sz):
+            if not f.diff(VrbL[j*sz+i]).is_zero():
+                AdjMtr[i,j]=1
+    return AdjMtr
+
+def Monomial2AdjacencyII(mnm, VrbL, sz):
+    """
+    Outputs the symbolic adjacency matrix of the input monomial mnm.
+    The variables are obtain by listing the entries of a hypermatrix.
+    Handles directed graph case. The input monomial need not be multilinear
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=4; A=HM(sz,sz,'a'); AT=Monomial2AdjacencyII(prod(A[0,i] for i in rg(sz)), A.list(), sz)
+        sage: AT.p()
+        [a00 a01 a02 a03]
+        [  0   0   0   0]
+        [  0   0   0   0]
+        [  0   0   0   0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of the adjacency matrix
+    AdjMtr=HM(sz,sz,'zero') 
+    # Getting rid of the coefficient of the monomial
+    f=mnm/(mnm.subs([v==1 for v in VrbL]))
+    # Cheking the support via differentiation
+    for i in rg(sz):
+        for j in rg(sz):
+            if not f.diff(VrbL[j*sz+i]).is_zero():
+                AdjMtr[i,j]=VrbL[j*sz+i]
+    return AdjMtr
+
 def RootedTupleClassTreeFunctionList(tp):
     """
     Computes determines the set all functional
@@ -24870,11 +25320,11 @@ def BasicLagrangeInterpolation(L, x):
         f = f + L[idx][1]*fk
     return f
 
-def bli(L, x):
+def bli(L, v=x):
     """
     Implements the basic lagrange interpolation.
     The functions take as input a list of tuples
-    and outputs a polynomial in the variable x
+    and outputs a polynomial in the input variable v
 
 
     EXAMPLES:
@@ -24889,14 +25339,38 @@ def bli(L, x):
     - Edinah K. Gnang
     """
     # Initialization of the function
-    F = 0
+    F = SR(0)
     # Code for building the parts 
     for idx in rg(len(L)):
-        fk = 1
+        fk = SR(1)
         for j in [i for i in rg(len(L)) if i != idx]:
-            fk = fk*((x-L[j][0])/(L[idx][0]-L[j][0]))
+            fk = fk*((v-L[j][0])/(L[idx][0]-L[j][0]))
         F = F + L[idx][1]*fk
     return F
+
+def LagrangeBasis(T, X, sz1):
+    """
+    Returns the Lagrange basis element associated
+    with lagrange interpolation indexed by a function.
+    The input T is a tuple description of the function
+    associated with the basis element. The domain of the
+    function described by T is Z_sz0 and the codomain is
+    Z_sz1.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: sz0=Integer(2); sz1=Integer(3); X=var_list('x', sz0)
+        sage: T=[(i,0) for i in rg(sz0)]; Lt=LagrangeBasis(T, X, sz1); Lt
+        1/4*(x0 - 1)*(x0 - 2)*(x1 - 1)*(x1 - 2)
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return prod(prod((X[k]-jk)/(T[k][1]-jk) for jk in rg(sz1) if jk != T[k][1]) for k in rg(len(X)))
 
 def LagrangeInterpolationZn(F, X):
     """
@@ -24911,7 +25385,7 @@ def LagrangeInterpolationZn(F, X):
 
 
         sage: sz=Integer(2); X=var_list('x', sz); F=X[0]^5*X[1]^7 - 3*X[0]^2*X[1] + 7
-        sage: G=LagrangeInterpolationZn(F, X); G
+        sage: G=LagrangeInterpolationZn(F, X); expand(G)
         -2*x0*x1 + 7
 
 
@@ -24922,7 +25396,34 @@ def LagrangeInterpolationZn(F, X):
     sz=Integer(len(X))
     # Initialization of the list of Tuple
     Lt=TupleFunctionList(sz)
-    return sum(F.subs([X[i]==T[i][1] for i in rg(sz)])*prod(prod((X[k]-jk)/(T[k][1]-jk) for jk in rg(sz) if jk != T[k][1]) for k in rg(sz)) for T in Lt)
+    #return sum(F.subs([X[i]==T[i][1] for i in rg(sz)])*prod(prod((X[k]-jk)/(T[k][1]-jk) for jk in rg(sz) if jk != T[k][1]) for k in rg(sz)) for T in Lt)
+    return sum(F.subs([X[i]==T[i][1] for i in rg(sz)])*LagrangeBasis(T, X, sz) for T in Lt)
+
+def LagrangeInterpolationZd(F, X, d):
+    """
+    Implements the basic lagrange interpolation
+    over Zd where the input F is a multivariate
+    polynomial in the entries of the list of 
+    variable X.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: sz=Integer(2); X=var_list('x', sz); F=X[0]^5*X[1]^7 - 3*X[0]^2*X[1] + 7
+        sage: d=Integer(2); G=LagrangeInterpolationZd(F, X, d); expand(G)
+        -2*x0*x1 + 7
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=Integer(len(X))
+    # Initialization of the list of Tuple
+    Lt=TupleFunctionListII(len(X), d)
+    return sum(F.subs([X[i]==T[i][1] for i in rg(sz)])*LagrangeBasis(T, X, d) for T in Lt)
 
 def composition(f, x, k, sz):
     """
@@ -25382,7 +25883,6 @@ def pre_image_set(tp, L):
     """
     return Set([t[0] for t in tp if t[1] in L]).list()
 
-
 def tpl_pre_image_set(tp, i):
     """
     returns the list of vertex pre-images of the input vertex.
@@ -25486,6 +25986,104 @@ def tpl_leaf_set(tp):
     L0=Set([t[1] for t in tp]).list(); L0.sort()
     L1=[tp[i][0] for i in rg(len(tp)) if not tp[i][0] in L0]; L1.sort()
     return L1
+
+def generate_sorted_hist(Tf, X):
+    """
+    returns the list of monomoial describing the sorted histogram of proper colorings
+    for the input functional digraph having a unique fixed point. The code was written
+    in connection with Stanley's conjecture.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); Tf=[(0,0)]+[(i,i-1) for i in rg(1,sz)]; X=var_list('x',sz)
+        sage: generate_sorted_hist(Tf, X)
+        [x0^2*x1, x0*x1*x2]
+        sage: sz=5; Tf=[(0,0)]+[(i,i+1) for i in rg(1,sz-1)]+[(sz-1,1)]; X=var_list('x',sz)
+        sage: generate_sorted_hist(Tf, X)
+        [x0^3*x1^2, x0^2*x1^2*x2, x0^3*x1*x2, x0^2*x1*x2*x3, x0*x1*x2*x3*x4]
+
+
+    AUTHORS:
+    - Edinah K. Gnang; Kailee Lin
+    """
+    # Initializing the size parameter
+    sz=Integer(len(Tf))
+    # Testing that Tf has a unique fixed point
+    if len([(i,Tf[i][1]) for i in rg(sz) if i==Tf[i][1]])==1:
+        # Initialization of the fixed point
+        rt=[i for i in rg(sz) if i==Tf[i][1]][0]
+        # Initialize the list Z_n^Z_n
+        Lg=TupleFunctionList(sz)
+        # Initializing the histogram
+        Lhst=[]
+        # Main loop filling Lhst
+        for Tg in Lg:
+            if prod((compose_tuple(Tg,Tf)[i][1]-Tg[i][1]) for i in rg(sz) if i!=rt) !=0:
+                # Initializin the list of exponents and sorting it
+                tmpL=[len(pre_image_set(Tg,[i])) for i in rg(sz)]; tmpL.sort()
+                # Test to check that tmpL is new
+                if not prod(X[sz-1-i]^tmpL[i] for i in rg(sz)) in Lhst:
+                    # Update the list of histogram
+                    Lhst.append(prod(X[sz-1-i]^tmpL[i] for i in rg(sz)))
+        # returning the result
+        return Lhst
+    else: 
+        raise ValueError("Expected a functional digraph with a unique fixed point.")
+
+def generate_sorted_histII(Tf, X):
+    """
+    returns the list of monomoial describing the sorted histogram of proper colorings
+    for the input functional digraph having a unique fixed point. The code was written
+    in connection with Stanley's conjecture.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); Tf=[(0,0)]+[(i,i-1) for i in rg(1,sz)]; X=var_list('x', sz)
+        sage: generate_sorted_histII(Tf, X)
+        [x0*x1, x0^2]
+        sage: sz=Integer(5); Tf=[(0,0)]+[(i,i+1) for i in rg(1,sz-1)]+[(sz-1,1)]; X=var_list('x', sz)
+        sage: generate_sorted_histII(Tf, X)
+        [x0^2*x1*x2, x0^2*x1^2, x0*x1*x2*x3]
+
+
+    AUTHORS:
+    - Edinah K. Gnang; Kailee Lin
+    """
+    # Initializing the size parameter
+    sz=Integer(len(Tf))
+    # Initialization of Adjacency matrix
+    Af=Tuple_to_Adjacency(Tf); Aid=Tuple_to_Adjacency([(i,i) for i in rg(sz)])
+    # Initialization of the signed incidence matrices
+    A=(Af-Aid)
+    # Testing that Tf has a unique fixed point
+    if len([(i,Tf[i][1]) for i in rg(sz) if i==Tf[i][1]])==1:
+        # Initialization of the fixed point
+        rt=[i for i in rg(sz) if i==Tf[i][1]][0]
+        # Initilizing a list of variables for the histogram
+        X=var_list('x', sz)
+        # Initialize the list Z_n^Z_n
+        Lg=TupleFunctionList(sz)
+        # Initializing the histogram
+        Lhst=[]
+        # Main loop filling Lhst
+        for Tg in Lg:
+            if prod(A[i,Tg[i][1]] for i in rg(sz) if i!=rt)!=0:
+                # Initializing the list of exponents and sorting it
+                tmpL=[len([v for v in tpl_pre_image_set(Tg,u) if v!=rt]) for u in rg(sz)]; tmpL.sort()
+                # Test to check that tmpL is new
+                if not prod(X[sz-1-i]^tmpL[i] for i in rg(sz)) in Lhst:
+                    # Update the list of histogram
+                    Lhst.append(prod(X[sz-1-i]^tmpL[i] for i in rg(sz)))
+        # returning the result
+        return Lhst
+    else: 
+        raise ValueError("Expected a functional digraph with a unique fixed point.")
 
 def tuple_order(T):
     """
@@ -25642,6 +26240,67 @@ def EuclidsGCD(a, b):
     else:
         raise ValueError("Expected non zero integer inputs.")
 
+def IntegerBezout(a, b):
+    """
+
+    This function uses Euclid's GCD algorithm to devise the
+    Bezouts identity Z-linear combination which yields the GCD.
+    Cramers identity is also used here. The function checks
+    that the inputs are non-zero integers and returns as output
+    the matrix which describes all the iterations of the algorithm.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: a=189; b=55; [G, M, s, t]=IntegerBezout(a, b); G.p()
+        [:, :]=
+        [189  55   3  24]
+        [ 55  24   2   7]
+        [ 24   7   3   3]
+        [  7   3   2   1]
+        [  3   1   3   0]
+        sage: s*a+t*b
+        1
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if type(a)==type(Integer(1)) and type(b)==type(Integer(1)) and a*b !=0:
+        # Initialization of the matrix Data Structure.
+        G = HM(1, 4, 'zero')
+        # Initialization of the initial conditions
+        G[0, 0] = a; G[0, 1] = b
+        G[0, 3] = Integer(mod(G[0, 0], G[0, 1]))
+        G[0, 2] = (G[0, 0] - G[0, 3])/G[0, 1]
+        # Initialization of the index
+        indx = 0
+        while G[indx, 3] != 0:
+            # Updating the size of G
+            G=G.zero_pad([G.n(0)+1, G.n(1)])
+            # Incrementing the index
+            indx=indx+1
+            G[indx, 0] = G[indx-1, 1]; G[indx, 1] = G[indx-1, 3]
+            G[indx, 3] = Integer(mod(G[indx, 0], G[indx, 1]))
+            G[indx, 2] = (G[indx, 0] - G[indx, 3])/G[indx, 1]
+        # Filling up the matrix
+        M=HM(G.n(0)-1,G.n(0)-1,'zero')
+        # Initialization of the first two rows of the matrix
+        M[0,0]=1; M[1,0]=G[1,2]; M[1,1]=1
+        # Loop Filling up the rest of the matrix
+        for i in rg(2,G.n(0)-1):
+            # Filling up the i-th row
+            M[i,i-2]=Integer(1); M[i,i-1]=-G[i,2]; M[i,i]=-Integer(1)
+        # Computing Bezout's coefficients
+        s=M.slice(rg(1,G.n(0)-1),'row').slice(rg(G.n(0)-2),'col').det()
+        t=-G[0,2]*M.slice(rg(1,G.n(0)-1),'row').slice(rg(G.n(0)-2),'col').det()-\
+        M.slice([0]+rg(2,G.n(0)-1),'row').slice(rg(G.n(0)-2),'col').det()
+        return [G, M, -s, -t]
+    else:
+        raise ValueError("Expected non zero integer inputs.")
+
 def Modulo(f, VrbL, Rlts):
     """
     Outputs the quotient and the remainder of the simultaneous
@@ -25650,7 +26309,8 @@ def Modulo(f, VrbL, Rlts):
     input list VrbL and a list of monic univariate polynomial
     which correspond to the relations we are moding by.
     All polynomials must be inputed in expanded form otherwise
-    the output is incorrect
+    the output is incorrect. This implementation does not work
+    for the univariate case
 
 
     EXAMPLES:
@@ -25703,7 +26363,8 @@ def ModuloII(f, VrbL, Rlts):
     input list VrbL and a list of monic univariate polynomial
     which correspond to the relations we are moding by.
     The imput polynomials must be presented in expanded form
-    otherwise the output may be incorrect.
+    otherwise the output may be incorrect. This implementation
+    does not work for the univariate case.
 
 
     EXAMPLES:
@@ -25875,7 +26536,9 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
         sage: sz=3; X=var_list('x',sz); f=expand(var('x0')^2*var('x1')+var('x2')^4); Lr=rg(sz)
         sage: expand(remainder_via_lagrange_interpolation(f, Lr, X))
         x0^2*x1 + 7*x2^2 - 6*x2
-
+        sage: sz=Integer(3); w=exp(2*pi*sqrt(-1)/3); X=var_list('x',sz); f=expand(var('x0')^2*var('x1')+var('x2')^4); Lr=[w^k for k in rg(sz)]
+        sage: expand(remainder_via_lagrange_interpolation(f, Lr, X)).simplify_full()
+        x0^2*x1+x2
 
     AUTHORS:
 
@@ -26525,6 +27188,26 @@ def FindCycleTupleComponents(T):
             cL.append(tmp_cL)
     return cL
 
+def FindNumberCycleTupleComponents(T):
+    """
+    Returns the number of cycle decomposition of the input
+    permutation.
+
+
+    EXAMPLES:
+
+    ::
+
+
+        sage: FindNumberCycleTupleComponents([(0, 0), (1, 2), (2, 3), (3, 4), (4, 5), (5, 1), (6, 7), (7, 6)])
+        3
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return len(FindCycleTupleComponents(T))
+
 def signf(T):
     """
     Returns the sign of a permutation inputed as
@@ -26812,113 +27495,6 @@ def svd_symbolic2x2(A):
             Sln_z1=Sln_z1+[eq for eq in solve(L1[0].subs([y01==v01.rhs(), y00==v00.rhs()])==0, z) if eq.rhs()!=0]
     return [Sln_x00,Sln_x10,Sln_z0,Sln_y00,Sln_y01,Sln_z1]
 
-def EuclidsPolynomialGCD(a, b, v):
-    """
-
-    This function implements Euclid's GCD algorithm for
-    polynomials.
-    The function checks that the inputs are not degree 0
-    polynomials and returns as output the matrix which
-    describes all the iterations of the algorithm.
-
-
-    EXAMPLES:
-    ::
-
-
-        sage: p=x^5+1; d=x^2+1; G=EuclidsPolynomialGCD(p, d, x); G.printHM()
-        [:, :]=
-        [x^5 + 1 x^2 + 1 x^3 - x   x + 1]
-        [x^2 + 1   x + 1   x - 1       2]
-        sage: p=x^5-1; d=x^2-1; G=EuclidsPolynomialGCD(p, d, x); G.printHM()
-        [:, :]=
-        [x^5 - 1 x^2 - 1 x^3 + x   x - 1]
-        [x^2 - 1   x - 1   x + 1       0]
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    if a.degree(v)>0 and b.degree(v)>0:
-        # Initialization of the matrix Data Structure.
-        G = HM(1, 4, 'zero')
-        # Initialization of the initial conditions
-        G[0, 0] = a; G[0, 1] = b; [q, r] = Division(G[0, 0], G[0, 1], v)
-        G[0, 3] = r; G[0, 2] = q
-        # Initialization of the index
-        indx = 0
-        while G[indx, 3].degree(v) > 0:
-            # Updating the size of G
-            G=G.zero_pad([G.n(0)+1, G.n(1)])
-            # Incrementing the index
-            indx=indx+1
-            G[indx, 0] = G[indx-1, 1]; G[indx, 1] = G[indx-1, 3]; [q, r]=Division(G[indx, 0], G[indx, 1], v)
-            G[indx, 3] = r; G[indx, 2] = q
-        return G
-    else:
-        raise ValueError("Expected inputs of degree >= 1.")
-
-def CompositionalDivision(p, d,  v):
-    """
-    Outputs the quotient list and the remainder of the composition version
-    the Euclidean division. The algorithm takes as input
-    two univariate polynomials in the input variable v,  p and d respectively
-    associated with the dividend and the divisor. 
-
-
-    EXAMPLES:
-
-    ::
-        
-        sage: p = 4*x^3+3*x^2+2*x+1; d = 5*x^2+3*x+7; [Lq, r] = CompositionalDivision(p, d, x); [Lq, r] 
-        [[2*sqrt(1/5)*x^(3/2), sqrt(3/5)*x],
-         -1/5*(3*sqrt(5)*sqrt(3) - 10)*x - 6/5*sqrt(5)*x^(3/2) - 13]
-        sage: (sum(d.subs(x==q) for q in Lq)+r).canonicalize_radical() # Checking the computation
-        4*x^3 + 3*x^2 + 2*x + 1
-        sage: p=13*x^7; d=5*x^2+3*x+7; [Lq,r] = CompositionalDivision(p, d, x); [Lq, r]
-        [[sqrt(13/5)*x^(7/2), 1/5*sqrt(3)*sqrt(-sqrt(13)*sqrt(5))*x^(7/4)],
-         -3/5*5^(1/4)*sqrt(3)*x^(7/4)*sqrt(-sqrt(13)) - 14]
-        sage: (sum(d.subs(x==q) for q in Lq)+r).canonicalize_radical() # Checking the computation
-        13*x^7
-        sage: p=x^7; d=5*x^2+3*x+7; [Lq,r] = CompositionalDivision(p, d, x); [Lq,r]
-        [[sqrt(1/5)*x^(7/2), 1/5*sqrt(3)*x^(7/4)*sqrt(-sqrt(5))],
-         -3/5*sqrt(3)*x^(7/4)*sqrt(-sqrt(5)) - 14]
-        sage: (sum(d.subs(x==q) for q in Lq)+r).canonicalize_radical() # Checking the computation
-        x^7
-        sage: p=x^7; d=5*x^2; [Lq,r] = CompositionalDivision(p, d, x); [Lq,r]
-        [[sqrt(1/5)*x^(7/2)], 0]
-        sage: sum(d.subs(x==q) for q in Lq)+r # Checking the computation
-        x^7
-        sage: p=x*(var('t')+1)*(var('t')+2); d=x*(var('t')+1); [Lq,r] = CompositionalDivision(p, d, x); [Lq,r]
-        [[(t + 2)*x], 0]
-
-    AUTHORS:
-    - Edinah K. Gnang
-    """
-    # Initialization of remainder
-    r = p
-    # Initialization of the Quotient list
-    Lq = []
-    # Checking that neither p or d are monomials.
-    if p.degree(v)>=1 and d.degree(v)>=1:
-        # Obtaining the leading term of d
-        ltd = d.coefficients(v)[len(d.coefficients(v))-1][0]* v^d.coefficients(v)[len(d.coefficients(v))-1][1]
-        # Main loop
-        while r.degree(v) >= d.degree(v):
-            # Obtaining the leading term of r
-            ltr = r.coefficients(v)[len(r.coefficients(v))-1][0]* v^r.coefficients(v)[len(r.coefficients(v))-1][1]
-            # Updating the quotient list
-            Lq.append((ltr.subs(v==1)/ltd.subs(v==1))^(1/ltd.degree(v))*v^(ltr.degree(v)/ltd.degree(v)))
-            #print 'Lq = ',Lq
-            # Updating the remainder
-            #r = r-d.subs(v==Lq[len(Lq)-1])
-            #r = (r-d.subs(v==Lq[len(Lq)-1])).canonicalize_radical()
-            r = sum( l[0]*v^l[1] for l in (r-d.subs(v==Lq[len(Lq)-1])).canonicalize_radical().coefficients() )
-            #print 'r = ',r
-        return [Lq, r]
-    else:
-        raise ValueError("Expected inputs of degree >= 1 in the input variable.")
-
 def Division(p, d,  v):
     """
     Outputs the quotient and the remainder of the Euclidean division.
@@ -26975,6 +27551,282 @@ def Division(p, d,  v):
         return [sum(Lq), r]
     else:
         raise ValueError("Expected inputs of degree >= 1 in the input variable.")
+
+def EuclidsPolynomialGCD(a, b, v):
+    """
+
+    This function implements Euclid's GCD algorithm for
+    polynomials.
+    The function checks that the inputs are not degree 0
+    polynomials and returns as output the matrix which
+    describes all the iterations of the algorithm.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: p=x^5+1; d=x^2+1; G=EuclidsPolynomialGCD(p, d, x); G.printHM()
+        [:, :]=
+        [x^5 + 1 x^2 + 1 x^3 - x   x + 1]
+        [x^2 + 1   x + 1   x - 1       2]
+        sage: p=x^5-1; d=x^2-1; G=EuclidsPolynomialGCD(p, d, x); G.printHM()
+        [:, :]=
+        [x^5 - 1 x^2 - 1 x^3 + x   x - 1]
+        [x^2 - 1   x - 1   x + 1       0]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if a.degree(v)>0 and b.degree(v)>0:
+        # Initialization of the matrix Data Structure.
+        G = HM(1, 4, 'zero')
+        # Initialization of the initial conditions
+        G[0, 0] = a; G[0, 1] = b; [q, r] = Division(G[0, 0], G[0, 1], v)
+        G[0, 3] = r; G[0, 2] = q
+        # Initialization of the index
+        indx = 0
+        while G[indx, 3].degree(v) > 0:
+            # Updating the size of G
+            G=G.zero_pad([G.n(0)+1, G.n(1)])
+            # Incrementing the index
+            indx=indx+1
+            G[indx, 0] = G[indx-1, 1]; G[indx, 1] = G[indx-1, 3]; [q, r]=Division(G[indx, 0], G[indx, 1], v)
+            G[indx, 3] = r; G[indx, 2] = q
+        return G
+    else:
+        raise ValueError("Expected inputs of degree >= 1.")
+
+def PolynomialBezout(a, b, v):
+    """
+
+    This function uses Euclid's GCD algorithm for
+    polynomials to devise Bezouts identity for polynomials.
+    Cramers identity is also used here. The implementation
+    is very similar to the previous IntegerBezout function.
+    The function checks that the inputs are not degree 0
+    polynomials and returns as output the matrix which
+    describes all the iterations of the algorithm.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: p=expand(sum(i*x^i for i in rg(6))*(x^3+x+2)); d=expand((x^2-4)*(x^3+x+2)); [G, M, s, t]=PolynomialBezout(p, d, x); G.printHM()
+        [:, :]=
+        [5*x^8 + 4*x^7 + 8*x^6 + 16*x^5 + 12*x^4 + 8*x^3 + 5*x^2 + 2*x                                 x^5 - 3*x^3 + 2*x^2 - 4*x - 8                                     5*x^3 + 4*x^2 + 23*x + 18                        93*x^4 + 72*x^3 + 93*x^2 + 258*x + 144]
+        [                                x^5 - 3*x^3 + 2*x^2 - 4*x - 8                        93*x^4 + 72*x^3 + 93*x^2 + 258*x + 144                                                1/93*x - 8/961                         -3268/961*x^3 - 3268/961*x - 6536/961]
+        [                       93*x^4 + 72*x^3 + 93*x^2 + 258*x + 144                         -3268/961*x^3 - 3268/961*x - 6536/961                                     -89373/3268*x - 17298/817                                                             0]
+        sage: expand(s*p+t*d)
+        -3268/961*x^3 - 3268/961*x - 6536/961
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if a.degree(v)>0 and b.degree(v)>0:
+        # Initialization of the matrix Data Structure.
+        G = HM(1, 4, 'zero')
+        # Initialization of the initial conditions
+        G[0, 0] = a; G[0, 1] = b; [q, r] = Division(G[0, 0], G[0, 1], v)
+        G[0, 3] = r; G[0, 2] = q
+        # Initialization of the index
+        indx = 0
+        while G[indx, 3].degree(v) > 0:
+            # Updating the size of G
+            G=G.zero_pad([G.n(0)+1, G.n(1)])
+            # Incrementing the index
+            indx=indx+1
+            G[indx, 0] = G[indx-1, 1]; G[indx, 1] = G[indx-1, 3]; [q, r]=Division(G[indx, 0], G[indx, 1], v)
+            G[indx, 3] = SR(r); G[indx, 2] = SR(q)
+        if G[G.n(0)-1,G.n(1)-1].is_zero():
+            # Filling up the matrix
+            M=HM(G.n(0)-1, G.n(0)-1, 'zero')
+            # Initialization of the first two rows of the matrix
+            M[0,0]=1; M[1,0]=G[1,2]; M[1,1]=1
+            # Loop Filling up the rest of the matrix
+            for i in rg(2,G.n(0)-1):
+                # Filling up the i-th row
+                M[i,i-2]=Integer(1); M[i,i-1]=-G[i,2]; M[i,i]=-Integer(1)
+            # Computing Bezout's coefficients
+            s=M.slice(rg(1,G.n(0)-1),'row').slice(rg(G.n(0)-2),'col').det()
+            t=-G[0,2]*M.slice(rg(1,G.n(0)-1),'row').slice(rg(G.n(0)-2),'col').det()-\
+            M.slice([0]+rg(2,G.n(0)-1),'row').slice(rg(G.n(0)-2),'col').det()
+            return [G, M, -s, -t]
+        else:
+            # Filling up the matrix
+            M=HM(G.n(0), G.n(0), 'zero')
+            # Initialization of the first two rows of the matrix
+            M[0,0]=1; M[1,0]=G[1,2]; M[1,1]=1
+            # Loop Filling up the rest of the matrix
+            for i in rg(2,G.n(0)):
+                # Filling up the i-th row
+                M[i,i-2]=Integer(1); M[i,i-1]=-G[i,2]; M[i,i]=-Integer(1)
+            # Computing Bezout's coefficients
+            s=M.slice(rg(1,G.n(0)),'row').slice(rg(G.n(0)-1),'col').det()
+            t=-G[0,2]*M.slice(rg(1,G.n(0)),'row').slice(rg(G.n(0)-1),'col').det()-\
+            M.slice([0]+rg(2,G.n(0)),'row').slice(rg(G.n(0)-1),'col').det()
+            return [G, M, -s, -t]
+    else:
+        raise ValueError("Expected inputs of degree >= 1.")
+
+def CompositionalDivision(p, d,  v):
+    """
+    Outputs the quotient list and the remainder of the composition version
+    the Euclidean division. The algorithm takes as input
+    two univariate polynomials in the input variable v,  p and d respectively
+    associated with the dividend and the divisor. 
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: p = 4*x^3+3*x^2+2*x+1; d = 5*x^2+3*x+7; [Lq, r] = CompositionalDivision(p, d, x); [Lq, r] 
+        [[2*sqrt(1/5)*x^(3/2), sqrt(3/5)*x],
+         -1/5*(3*sqrt(5)*sqrt(3) - 10)*x - 6/5*sqrt(5)*x^(3/2) - 13]
+        sage: (sum(d.subs(x==q) for q in Lq)+r).canonicalize_radical() # Checking the computation
+        4*x^3 + 3*x^2 + 2*x + 1
+        sage: p=13*x^7; d=5*x^2+3*x+7; [Lq,r] = CompositionalDivision(p, d, x); [Lq, r]
+        [[sqrt(13/5)*x^(7/2), 1/5*sqrt(3)*sqrt(-sqrt(13)*sqrt(5))*x^(7/4)],
+         -3/5*5^(1/4)*sqrt(3)*x^(7/4)*sqrt(-sqrt(13)) - 14]
+        sage: (sum(d.subs(x==q) for q in Lq)+r).canonicalize_radical() # Checking the computation
+        13*x^7
+        sage: p=x^7; d=5*x^2+3*x+7; [Lq,r] = CompositionalDivision(p, d, x); [Lq,r]
+        [[sqrt(1/5)*x^(7/2), 1/5*sqrt(3)*x^(7/4)*sqrt(-sqrt(5))],
+         -3/5*sqrt(3)*x^(7/4)*sqrt(-sqrt(5)) - 14]
+        sage: (sum(d.subs(x==q) for q in Lq)+r).canonicalize_radical() # Checking the computation
+        x^7
+        sage: p=x^7; d=5*x^2; [Lq,r] = CompositionalDivision(p, d, x); [Lq,r]
+        [[sqrt(1/5)*x^(7/2)], 0]
+        sage: sum(d.subs(x==q) for q in Lq)+r # Checking the computation
+        x^7
+        sage: p=x*(var('t')+1)*(var('t')+2); d=x*(var('t')+1); [Lq,r] = CompositionalDivision(p, d, x); [Lq,r]
+        [[(t + 2)*x], 0]
+        sage: P = 4*x^3 + 3*x^2 + 2*x + 1 # Initialization of the "dividend"
+        sage: D = 5*x^2 + 3*x + 7 # Initialization of the "divisor"
+        sage: [Lq, Rem] = CompositionalDivision(P, D, x) # Performing the compositional division
+        sage: (GProd([D*HM(1,len(Lq),'one'),HM(len(Lq),1,Lq)], sum, [x])[0,0]+Rem).canonicalize_radical()
+        4*x^3 + 3*x^2 + 2*x + 1
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of remainder
+    r = p
+    # Initialization of the Quotient list
+    Lq = []
+    # Checking that neither p or d are monomials.
+    if p.degree(v)>=1 and d.degree(v)>=1:
+        # Obtaining the leading term of d
+        ltd = d.coefficients(v)[len(d.coefficients(v))-1][0]* v^d.coefficients(v)[len(d.coefficients(v))-1][1]
+        # Main loop
+        while r.degree(v) >= d.degree(v):
+            # Obtaining the leading term of r
+            ltr = r.coefficients(v)[len(r.coefficients(v))-1][0]* v^r.coefficients(v)[len(r.coefficients(v))-1][1]
+            # Updating the quotient list
+            Lq.append((ltr.subs(v==1)/ltd.subs(v==1))^(1/ltd.degree(v))*v^(ltr.degree(v)/ltd.degree(v)))
+            #print 'Lq = ',Lq
+            # Updating the remainder
+            #r = r-d.subs(v==Lq[len(Lq)-1])
+            #r = (r-d.subs(v==Lq[len(Lq)-1])).canonicalize_radical()
+            r = sum( l[0]*v^l[1] for l in (r-d.subs(v==Lq[len(Lq)-1])).canonicalize_radical().coefficients() )
+            #print 'r = ',r
+        return [Lq, r]
+    else:
+        raise ValueError("Expected inputs of degree >= 1 in the input variable.")
+
+def CompositionalDivisionII(p, d, v, Rlt):
+    """
+    Outputs the quotient list and the remainder of the composition version
+    the Euclidean division. By working modulo relations of the form v^n-1 
+    where n is prime. The algorithm takes as input two univariate polynomials
+    in the input variable v, p and d respectively associated with the dividend
+    and the divisor. The last input is the relation we do not check in the current
+    implementation that Rlt is a polynomial of the form x^n-1 where n is prime. 
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: p = 4*x^7*x^2+2*x+1; d = 5*x^2+3*x+7; Rlt=x^3-1; [L, Rm] = CompositionalDivisionII(p, d, x, Rlt) 
+        sage: F0 = ModuloII(p, [x], [Rlt])
+        sage: F1 = ModuloII((GProd([d*HM(1,len(L),'one'),HM(len(L),1,L)], sum, [x])[0,0]+Rm).canonicalize_radical(), [x], [Rlt])
+        sage: F0 == F1
+        True
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of remainder
+    Rem = p
+    # Initialization of the Quotient list
+    Lq = []
+    # Checking that neither p or d are monomials.
+    if p.degree(v)>=1 and d.degree(v)>=1:
+        # Obtaining the leading term of d
+        ltd = d.coefficients(v)[len(d.coefficients(v))-1][0]* v^d.coefficients(v)[len(d.coefficients(v))-1][1]
+        # Main loop
+        while Rem.degree(v) >= d.degree(v):
+            # Obtaining the leading term of Rem
+            ltr = Rem.coefficients(v)[len(Rem.coefficients(v))-1][0]* v^Rem.coefficients(v)[len(Rem.coefficients(v))-1][1]
+            # Updating the quotient list
+            Lq.append((ltr.subs(v==1)/ltd.subs(v==1))^(1/ltd.degree(v))*v^(ltr.degree(v)/ltd.degree(v)))
+            Rem = sum( l[0]*v^l[1] for l in (Rem-d.subs(v==Lq[len(Lq)-1])).canonicalize_radical().coefficients() )
+        # Loop turning exponents into integers using the relation
+        L=[]
+        for trm in Lq:
+            cf=trm.subs(v==1); ep=log(trm/trm.subs(v==1),v).canonicalize_radical()
+            if ep in ZZ:
+                L.append(cf*v^Integer(mod(ep,Rlt.degree(v))))
+            else:
+                Num=ep.numerator(); Den=ep.denominator()
+                [G, M, s, t]=IntegerBezout(Integer(Den),Integer(Rlt.degree(v)))
+                L.append(cf*v^Integer(mod(Num*s,Rlt.degree(v))))
+        # Expression used for specifying the type of the operation.
+        add = var('x0') + var('x1'); mul = var('x0') * var('x1'); xpo = var('x0') ^ var('x1')
+        # Checking if the remainder is identically constant
+        if Rem.subs(v==0)==Rem:
+            Rm=Rem
+        # Otherwise checking that it is a sum
+        elif Rem.operator() == add.operator():
+            Rm=SR(0)
+            for trm in Rem.operands():
+                cf=trm.subs(v==1); ep=log(trm/trm.subs(v==1),v).canonicalize_radical()
+                if ep in ZZ:
+                    Rm=Rm+(cf*v^Integer(mod(ep,Rlt.degree(v))))
+                else:
+                    Num=ep.numerator(); Den=ep.denominator()
+                    [G, M, s, t]=IntegerBezout(Integer(Den),Integer(Rlt.degree(v)))
+                    Rm=Rm+(cf*v^Integer(mod(Num*s,Rlt.degree(v))))
+        # Otherwise checking that it is a monomial
+        elif Rem.operator() == mul.operator():
+            cf=trm.subs(v==1); ep=log(trm/trm.subs(v==1),v).canonicalize_radical()
+            if ep in ZZ:
+                Rm=(cf*v^Integer(mod(ep,Rlt.degree(v))))
+            else:
+                Num=ep.numerator(); Den=ep.denominator()
+                [G, M, s, t]=IntegerBezout(Integer(Den),Integer(Rlt.degree(v)))
+                Rm=(cf*v^Integer(mod(Num*s,Rlt.degree(v))))
+        # Otherwise checking that the remainder is of the form v^ep
+        elif Rem.operator() == xpo.operator():
+            ep=log(trm/trm.subs(v==1),v).canonicalize_radical()
+            if ep in ZZ:
+                Rm=v^Integer(mod(ep,Rlt.degree(v)))
+            else:
+                Num=ep.numerator(); Den=ep.denominator()
+                [G, M, s, t]=IntegerBezout(Integer(Den),Integer(Rlt.degree(v)))
+                Rm=v^Integer(mod(Num*s,Rlt.degree(v)))
+        return [L, Rm]
+    else:
+        raise ValueError("Expected inputs of degree >= 1 in the input variable.")
+
+
 
 def EuclidsCompositionalGCD(a, b, v):
     """
@@ -27173,6 +28025,51 @@ def Graph_lex(A):
     """
     sz=min(A.nrows(),A.ncols())
     return sum(A[i,j]*2^(A.nrows()*i+j) for j in rg(sz) for i in rg(sz))
+
+def Triangular_lex(i,j):
+    """
+    Outputs the lexicographic ordering of the input pair 0=< i < j < sz.
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: Triangular_lex(1,2)
+        2
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if 0 <= i and i < j:
+        return j*(j-1)/2+i
+    else:
+        raise ValueError("Expected 0 <= i and i < j")
+
+def Triangular_lex_inv(i,sz):
+    """
+    Outputs the pre-image of the lexicographic ordering of the input pair 0=< i < j < sz.
+
+
+    EXAMPLES:
+
+    ::
+        
+        sage: Triangular_lex_inv(3,4)
+        [1, 2]
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the counter
+    cnt=0
+    for v in rg(sz):
+        for u in rg(sz):
+            if u<v:
+                if cnt==i:
+                    return [u,v]
+                else:
+                    cnt=cnt+1
 
 def SupFunctionalDigraphList(T, sz):
     """
@@ -28976,10 +29873,37 @@ def generate_unlabeled_tree_graceful_preimage_listing_script(sz):
     # Closing the file
     f.close()
 
-def generate_unlabeled_permutation_listing_script(sz, c):
+def generate_unlabeled_permutation_listing(sz,A):
+    """
+    The function lists representative of the conjugacy class of spanning union of 
+    directed cycles. The implementation thus describes unlabeled spanning union of
+    directed cycles on sz vertices.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); L=generate_unlabeled_permutation_listing(sz,HM(sz,sz,'a')); L
+        [a01*a12*a20, a01*a10*a22, a00*a11*a22]
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the the list which store the computation
+    Lm=[]; VrbL=[]
+    # Loop running through the partitions
+    for P in Partitions(sz):
+        Lm.append(1)
+        for indx in rg(len(P)):
+            Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,sum(P[:indx])+Integer(mod(u+1,P[indx]))] for u in rg(P[indx]))
+    return Lm
+
+def generate_unlabeled_spanning_union_of_stars_listing(sz,A):
     """
     Creates a sage file which corresponds to a script
-    which list unlabeled spanning union of directes cycles
+    which list unlabeled spanning union of stars
     on sz vertices having no loop edges this implementation
     is very slow. The input character c is the pre-index
     character.
@@ -28989,22 +29913,22 @@ def generate_unlabeled_permutation_listing_script(sz, c):
 
     ::
 
-        sage: sz=Integer(3); L=generate_unlabeled_permutation_listing_script(3, 'a'); L
-        [a01*a12*a20, a01*a10*a22, a00*a11*a22]
- 
+        sage: sz=Integer(3); L=generate_unlabeled_spanning_union_of_stars_listing(sz, HM(sz,sz,'a')); L
+        [a00*a11*a22, a00*a11*a20, a00*a10*a20]
+        sage: od=Integer(2);sz=Integer(3); X=var_list('x',sz); L=generate_unlabeled_spanning_union_of_stars_listing(sz,HM(sz,sz,'a')*HM(od,X,'diag')); L
+        [a00*a11*a22*x0*x1*x2, a00*a11*a20*x0^2*x1, a00*a10*a20*x0^3] 
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    # Initialization of the symbolic matrix
-    A=HM(sz,sz,'a')
     # Initialization of the the list which store the computation
     Lm=[]; VrbL=[]
     # Loop running through the partitions
     for P in Partitions(sz):
         Lm.append(1)
         for indx in rg(len(P)):
-            Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,sum(P[:indx])+Integer(mod(u+1,P[indx]))] for u in rg(P[indx]))
+            #Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,sum(P[:indx])+Integer(mod(u+1,P[indx]))] for u in rg(P[indx]))
+            Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,u] for u in rg(P[indx]))
     return Lm
 
 def generate_unlabeled_curtailement_functional_listing_script(Tp):
@@ -29714,8 +30638,10 @@ def generate_undirected_supgraph_unlabeled_listing_script(sz,T):
 def generate_tensorial_functional_listing_script(sz):
     """
     Creates a sage file which corresponds to a script
-    which list tensorial functional directed graph on sz vertices
-    having no loop edges this implementation is very slow.
+    which list tensorial functional directed graph on sz vertices.
+    In other words the code describes the orbit induced by the left-right
+    action of S_sz x S_sz on the functional directed graphs this implementation
+    is very slow.
 
 
     EXAMPLES:
@@ -30949,7 +31875,7 @@ def generate_GL_Fp_script(p, sz):
     Creates a sage file which corresponds to a script
     which computes the members of the general linear
     group over the field of prime order p. It is not
-    checked that p in prime. Also sz must be > 2 
+    checked that p is prime. Also sz must be > 2 
 
 
     EXAMPLES:
@@ -31092,6 +32018,87 @@ def generate_GL_F2_cycle_index_script(sz):
     f.write(spc_indt+'        cnt=cnt+1\n') 
     # Closing the file
     f.close()
+
+def generate_GL_F2_charpoly_index_script(sz):
+    """
+    Creates a sage file which corresponds to a script
+    which computes the cycle index of characteristic general linear
+    group as a subgroup of the permutation group over
+    2^sz elements.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: generate_GL_F2_charpoly_index_script(3)
+        sage: load('Charpoly_Index_GL_F2_3.sage')
+        At iteration 1 F =  2*y^((x - 1)^3)
+        At iteration 2 F =  3*y^((x - 1)^3)
+        At iteration 4 F =  5*y^((x - 1)^3)
+        At iteration 8 F =  8*y^((x - 1)^3) + y^((x - 1)*x^2 - x + 1)
+        At iteration 16 F =  8*y^((x - 1)^3) + 5*y^((x - 1)^2*x - x + 1) + 4*y^((x - 1)*x^2 - x + 1)
+        At iteration 32 F =  12*y^((x - 1)^3) + 12*y^((x - 1)^2*x - x + 1) + 8*y^((x - 1)*x^2 - x + 1) + y^(x^3 - 1)
+        At iteration 64 F =  16*y^((x - 1)^3) + 19*y^((x - 1)^2*x - x + 1) + y^((x - 1)^2*x - x - 1) + 2*y^((x - 1)^2*x - 2*x + 1) + 3*y^((x - 1)^2*x - 1) + 10*y^((x - 1)*x^2 - x + 1) + 4*y^((x - 1)*x^2 - x - 1) + 2*y^((x - 1)*x^2 - 2*x + 1) + y^((x - 1)*x^2 - 2*x - 1) + 3*y^((x - 1)*x^2 - 1) + 2*y^(x^3 - x - 1) + y^(x^3 - 2*x - 1) + y^(x^3 - 1)
+        sage: F
+        6*y^((x - 1)^3 - x) + 3*y^((x - 1)^3 - 2*x + 2) + 25*y^((x - 1)^3) + 42*y^((x - 1)^2*x - x + 1) + 6*y^((x - 1)^2*x - x - 1) + 12*y^((x - 1)^2*x - 2*x + 1) + 6*y^((x - 1)^2*x - 1) + 21*y^((x - 1)*x^2 - x + 1) + 12*y^((x - 1)*x^2 - x - 1) + 6*y^((x - 1)*x^2 - 2*x + 1) + 6*y^((x - 1)*x^2 - 2*x - 1) + 3*y^((x - 1)*x^2 - 3*x - 1) + 6*y^((x - 1)*x^2 - 1) + 6*y^(x^3 - x - 1) + 6*y^(x^3 - 2*x - 1) + 2*y^(x^3 - 1)
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Creating the string storing the file name
+    filename = 'Charpoly_Index_GL_F2_'+str(sz)+'.sage'
+    # Opening the file
+    f = open(filename,'w')
+    # Writting the size and order parameters
+    f.write('# Initializing the size\n')
+    f.write('sz='+str(sz)+'\n')
+    # Writing the variables
+    f.write('\n# Initialization of the vertex variables\n')
+    f.write("X=var_list('x', 2^sz)\n")
+    f.write("x,y=var('x,y')\n")
+    f.write('\n# Initialization of the list of binary lists\n')
+    f.write("Li=List_of_Integers([2 for i in rg(sz)])\n")
+    f.write('\n# Initialization of the counter for displaying purposes\n')
+    f.write("Lcnt=[2^k for k in rg(floor(log(prod(2^sz-2^k for k in rg(sz)),2)))]\n")
+    f.write('\n# Looping through the binary vector\n')
+    f.write("cnt=0; F=0; L0=List_of_Integers([2 for i in rg(sz)])[1:]\n")
+    f.write('for l0 in L0:\n')
+    f.write('    L1=copy(L0); L1.remove(l0)\n')
+    # Begining of the loop
+    # Initialization of the indentation space
+    spc_indt=''
+    for i in rg(1,sz-1):
+        # Updateing the space indentation
+        spc_indt=spc_indt+'    '
+        f.write(spc_indt+'for l'+str(i)+' in L'+str(i)+':\n')
+        f.write(spc_indt+'    L'+str(i+1)+'=copy(L'+str(i)+')\n')
+        f.write(spc_indt+'    for lc'+str(i+1)+' in List_of_Integers([2 for i in rg('+str(i+1)+')])[1:]:\n')
+        # Writing the if condition
+        f.write(spc_indt+'        if (')
+        for j in rg(i):
+            f.write('lc'+str(i+1)+'['+str(j)+']*HM(sz,1,l'+str(j)+')+')
+        f.write('lc'+str(i+1)+'['+str(i)+']*HM(sz,1,l'+str(i)+')).mod(2).list() in L2:\n')
+        f.write(spc_indt+'            L'+str(i+1)+'.remove((')
+        for j in rg(i):
+            f.write('lc'+str(i+1)+'['+str(j)+']*HM(sz,1,l'+str(j)+')+')
+        f.write('lc'+str(i+1)+'['+str(i)+']*HM(sz,1,l'+str(i)+')).mod(2).list())\n')
+    # End the loop
+    f.write(spc_indt+'    for l'+str(i+1)+' in L'+str(i+1)+':\n')
+    f.write(spc_indt+'        # Initializing the matrix representation of the Grassmanian variables\n')
+    f.write(spc_indt+'        M=HM(sz,sz,')
+    for j in rg(i+1):
+        f.write('l'+str(j)+'+')
+    f.write('l'+str(i+1)+')\n')
+    f.write(spc_indt+'        F=F+y^expand(Deter(x*HM(2,sz,"kronecker")-M))\n') 
+    f.write(spc_indt+'        if cnt in Lcnt:\n') 
+    f.write(spc_indt+"            print('At iteration '+str(cnt)+' F = ',F)\n") 
+    f.write(spc_indt+'        # Incrementing the counter\n') 
+    f.write(spc_indt+'        cnt=cnt+1\n') 
+    # Closing the file
+    f.close()
+
 
 def GrL(T):
     """
@@ -31435,13 +32442,13 @@ def SymPoly_lead_term_eliminate(mf, Xv, Lm, Pv, Sv):
     CnstrLst=[Fn.coefficient(mnm) for mnm in Lm]+[Fn.coefficient(mf)-1]
     #print('CnstrLst=',CnstrLst)
     # Initialization of the total degree
-    [A,b]=ConstraintFormatorIVHM(CnstrLst, Y)
+    [A,b]=ConstraintFormatorIVHM(CnstrLst,Y)
     #A.printHM()
     Sln=linear_solverHM(A, b, HM(A.n(1),1,Y), HM(A.n(1),1,Y))
     # Performing the reduction in degrees
     for d in rg(td):
         if (td-d)>sz:
-            G=fast_reduce_no_expand(G, [Pv[td-d]],[-sum((-1)^k*Sv[k]*Pv[(td-d)-k] for k in rg(1,sz+1))])
+            G=fast_reduce_no_expand(G,[Pv[td-d]],[-sum((-1)^k*Sv[k]*Pv[(td-d)-k] for k in rg(1,sz+1))])
     # Initialization of the list derived from Girard's identities
     GiL=[Pv[1]==Sv[1]]
     for bnd in rg(2,sz+1):
@@ -32227,11 +33234,11 @@ def hypermatrix_action_over_F2(sz, od):
 
     ::
 
-        sage: sz=2; od=2; [cL, Lt]=hypermatrix_action_over_F2(sz, od); cL
-        [[(0, 0), (1, 0), (2, 0), (3, 0)],
-         [(0, 0), (1, 1), (2, 0), (3, 1)],
-         [(0, 0), (1, 2), (2, 1), (3, 3)]] 
-        sage: A=HM(Integer(2)^sz, Integer(2)^sz, 'a'); F=sum(prod(A[i,T[i][1]] for i in rg(2^sz)) for T in Lt); F
+        sage: sz=Integer(2); od=Integer(2); [cL, Lt]=hypermatrix_action_over_F2(sz, od); cL
+        [[[(0, 0), (1, 0), (2, 0), (3, 0)], [0, 0, 0, 4]],
+         [[(0, 0), (1, 1), (2, 0), (3, 1)], [0, 0, 2, 2]],
+         [[(0, 0), (1, 2), (2, 1), (3, 3)], [1, 1, 1, 1]]]
+        sage: Lt=[Lt[i][0] for i in rg(len(Lt))]; A=HM(Integer(2)^sz, Integer(2)^sz, 'a'); F=sum(prod(A[i,T[i][1]] for i in rg(2^sz)) for T in Lt); F
         a00*a10*a20*a30 + a00*a11*a21*a30 + a00*a12*a22*a30 + a00*a13*a23*a30 + a00*a11*a20*a31 + a00*a10*a21*a31 + a00*a13*a22*a31 + a00*a12*a23*a31 + a00*a12*a20*a32 + a00*a13*a21*a32 + a00*a10*a22*a32 + a00*a11*a23*a32 + a00*a13*a20*a33 + a00*a12*a21*a33 + a00*a11*a22*a33 + a00*a10*a23*a33
 
 
@@ -32255,24 +33262,97 @@ def hypermatrix_action_over_F2(sz, od):
     # Initialization of the list of integer lists associated with evaluation points
     Lev=List_of_Integers([2 for i in rg(sz)])
     # Tuple list description of the elements of the transformation monoid
-    Lt=[]
+    Lt=[]; LtII=[]
     # Looping over the hypermatrix choices
     for al in Li:
-        Lt.append([(sum(l[k]*2^k for k in rg(sz)), sum(2^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(2).list()[k] for k in rg(sz))) for l in Lev])
+        # Setup for initialization the HM constructor for the purposes of obtaining the indegree sequence
+        Lt.append([[(sum(l[k]*2^k for k in rg(sz)), sum(2^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(2).list()[k] for k in rg(sz))) for l in Lev], al, (HM(1,len(Lev),'one')*Tuple_to_Adjacency([(sum(l[k]*2^k for k in rg(sz)), sum(2^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(2).list()[k] for k in rg(sz))) for l in Lev])).list()])
     # Initialization of the list storing the rpresentatives of conjugacy classes of functional digraphs.
     cL=[]
     # Loop perfomring the binning by conjugacy classes.
-    for T in Lt:
+    for u in rg(len(Lt)):
+        # Setting the test Boolean variable for a new class
         nwT=True
-        for i in range(len(cL)):
-            # Initialization of the bipartite adjacency matrices
-            Aadj=(Tuple_to_Adjacency(T).index_rotation(-pi/2).block_sum(HM(2^sz,2^sz,'zero')).index_rotation(pi/2)).matrix()
-            Badj=(Tuple_to_Adjacency(cL[i]).index_rotation(-pi/2).block_sum(HM(2^sz,2^sz,'zero')).index_rotation(pi/2)).matrix()
-            if DiGraph(Aadj).is_isomorphic(DiGraph(Badj)):
+        for v in rg(len(cL)):
+            # Checking the in-degree sequences
+            indSeqL0=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(Lt[u][0])).list(); indSeqL0.sort()
+            indSeqL1=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(cL[v][0])).list(); indSeqL1.sort()
+            if indSeqL0 == indSeqL1:
                 nwT=False
                 break
         if nwT==True:
-            cL.append(T)
+            # Initialization of the degree sequence
+            indSeqL0=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(Lt[u][0])).list(); indSeqL0.sort()
+            cL.append([Lt[u][0], indSeqL0])
+    return [cL, Lt]
+
+def hypermatrix_action_over_Fp(p, sz, od):
+    """
+    Implements the hypermatrix action on vector spaces
+    over the field with p elements where p is prime. 
+    The inputs to the function are the size and order
+    parameters.  The function outputs the list of representative
+    of the left-right action classes of functional directed
+    graphs as well as the list of all functional directed
+    graphs associated with hypermatrix transforms.
+    vertex labels arise from the canonical lexicographic
+    map on binary vectors in Fp^sz.
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(2); od=Integer(2); [cL, Lt]=hypermatrix_action_over_Fp(2, sz, od); cL
+        [[[(0, 0), (1, 0), (2, 0), (3, 0)], [0, 0, 0, 4]],
+         [[(0, 0), (1, 1), (2, 0), (3, 1)], [0, 0, 2, 2]],
+         [[(0, 0), (1, 2), (2, 1), (3, 3)], [1, 1, 1, 1]]]
+        sage: Lt=[Lt[i][0] for i in rg(len(Lt))]; A=HM(Integer(2)^sz, Integer(2)^sz, 'a'); F=sum(prod(A[i,T[i][1]] for i in rg(2^sz)) for T in Lt); F
+        a00*a10*a20*a30 + a00*a11*a21*a30 + a00*a12*a22*a30 + a00*a13*a23*a30 + a00*a11*a20*a31 + a00*a10*a21*a31 + a00*a13*a22*a31 + a00*a12*a23*a31 + a00*a12*a20*a32 + a00*a13*a21*a32 + a00*a10*a22*a32 + a00*a11*a23*a32 + a00*a13*a20*a33 + a00*a12*a21*a33 + a00*a11*a22*a33 + a00*a10*a23*a33
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of variables
+    X=var_list('x',sz)
+    # Initialization of Background hypermatrix
+    iL=[sz for i in rg(od)]+['a']; A=HM(*iL)
+    # Initialization of the list of projectors
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    # Performing the projectors
+    Lh=[ProdB(*([A.transpose(j) for j in rg(od)]+[DltL[i]])) for i in rg(sz)]
+    # Initialization of the list of transpose of the vectors
+    Lv=[HM(*([sz]+[1 for i in rg(od-1)]+[var_list('x',sz)])) for j in rg(od)]
+    # Initialization of the vector
+    Y=HM(*([sz]+[1 for i in rg(od-1)]+[[ProdB(*([Lv[i].transpose(i) for i in rg(od-1,-1,-1)]+[Lh[j]])).list()[0] for j in rg(sz)]])).factor()
+    # Initializing the list of integer lists associated with the hypermatrix choices
+    Li=List_of_Integers([p for i in rg(sz^od)])
+    # Initialization of the list of integer lists associated with evaluation points
+    Lev=List_of_Integers([p for i in rg(sz)])
+    # Tuple list description of the elements of the transformation monoid
+    Lt=[]; LtII=[]
+    # Looping over the hypermatrix choices
+    for al in Li:
+        # Setup for initialization the HM constructor for the purposes of obtaining the indegree sequence
+        Lt.append([[(sum(l[k]*p^k for k in rg(sz)), sum(p^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(p).list()[k] for k in rg(sz))) for l in Lev], al, (HM(1,len(Lev),'one')*Tuple_to_Adjacency([(sum(l[k]*p^k for k in rg(sz)), sum(p^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(p).list()[k] for k in rg(sz))) for l in Lev])).list()])
+    # Initialization of the list storing the rpresentatives of conjugacy classes of functional digraphs.
+    cL=[]
+    # Loop perfomring the binning by conjugacy classes.
+    for u in rg(len(Lt)):
+        # Setting the test Boolean variable for a new class
+        nwT=True
+        for v in rg(len(cL)):
+            # Checking the in-degree sequences
+            indSeqL0=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(Lt[u][0])).list(); indSeqL0.sort()
+            indSeqL1=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(cL[v][0])).list(); indSeqL1.sort()
+            if indSeqL0 == indSeqL1:
+                nwT=False
+                break
+        if nwT==True:
+            # Initialization of the degree sequence
+            indSeqL0=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(Lt[u][0])).list(); indSeqL0.sort()
+            cL.append([Lt[u][0], indSeqL0])
     return [cL, Lt]
 
 def hypermatrix_shifted_action_over_F2(sz, od):

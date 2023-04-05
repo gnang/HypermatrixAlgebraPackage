@@ -15,7 +15,7 @@ algebra package, simply download the [hypermatrix algebra package sage file](htt
 sage: load('Hypermatrix_Algebra_Package_code.sage')
 ```
 
-The hypermatrix package passes all tests on SageMath version 9.7 To run the hypermatrix tests on your local sage, 
+The hypermatrix package passes all tests on SageMath version 9.8 To run the hypermatrix tests on your local sage, 
 use the following command in a [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) shell session
 
 ```bash
