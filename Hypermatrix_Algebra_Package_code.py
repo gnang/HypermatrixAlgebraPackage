@@ -1189,7 +1189,7 @@ class HM:
 
         ::
 
-            sage: sz=5; (HM(sz,sz,'a') - HM(sz,sz,'a').index_rotation(pi/2)).printHM()
+            sage: sz=Integer(5); (HM(sz,sz,'a') - HM(sz,sz,'a').index_rotation(pi/2)).printHM()
             [:, :]=
             [ a00 - a40  a01 - a30  a02 - a20  a03 - a10 -a00 + a04]
             [ a10 - a41  a11 - a31  a12 - a21 -a11 + a13 -a01 + a14]
@@ -3389,7 +3389,7 @@ def Vandermonde(l, shft=0):
     AUTHORS:
     - Edinah K. Gnang
     """
-    return HM(len(l),len(l),[l[j]^(i+shft) for j in range(len(l)) for i in range(len(l))])
+    return HM(len(l),len(l),[l[j]^(i+shft) for j in rg(len(l)) for i in rg(len(l))])
 
 def Circulant(l):
     """
@@ -12355,10 +12355,10 @@ def EvalT(T):
 
 def EvalPolyT(P, X, Tg):
     """
-    Outputs the evaluation of the polynomial at tuple description.
-    The first input is the polynomial. The second is the  list of variable.
-    The second input is the tuple description of the function.
-    The code does not check that T is a list of size len(X).
+    Outputs the evaluation or substitution of the polynomial at tuple 
+    description. The first input is the polynomial. The second is the
+    list of variable. The second input is the tuple description of the 
+    function. The code does not check that T is a list of size len(X).
 
     EXAMPLES:
 
@@ -14022,6 +14022,8 @@ def fast_reduce(f, monom, subst):
 
         sage: x1,x2,x3=var('x1, x2, x3'); fast_reduce(x1^3+x2+x3^3,[x3^3],[1])
         x1^3 + x2 + 1
+        sage: x1,x2,x3=var('x1, x2, x3'); y1,y2=var('y1, y2'); fast_reduce(x1^3*x2+x2*x3+x3^3+5,[x1^3*x2,x2*x3],[y1, y2])
+        x3^3 + y1 + y2 + 5
 
     AUTHORS:
     - Edinah K. Gnang
@@ -24014,6 +24016,66 @@ def TupleFunctionList(sz):
         Lf.append([(i,f[i]) for i in rg(sz)])
     return Lf
 
+def Zn2Zn(sz):
+    """
+    Returns a list of edge tuple desctiption for all 
+    functional directed graphs on sz vertices.
+    In other words the function lists members of (Z_sz)^Z_sz.
+    This implementation is identical to the function above it
+    is just has a shorter name
+
+
+    EXAMPLES:
+    ::
+        sage: Zn2Zn(3)
+        [[(0, 0), (1, 0), (2, 0)],
+         [(0, 1), (1, 0), (2, 0)],
+         [(0, 2), (1, 0), (2, 0)],
+         [(0, 0), (1, 1), (2, 0)],
+         [(0, 1), (1, 1), (2, 0)],
+         [(0, 2), (1, 1), (2, 0)],
+         [(0, 0), (1, 2), (2, 0)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 2), (1, 2), (2, 0)],
+         [(0, 0), (1, 0), (2, 1)],
+         [(0, 1), (1, 0), (2, 1)],
+         [(0, 2), (1, 0), (2, 1)],
+         [(0, 0), (1, 1), (2, 1)],
+         [(0, 1), (1, 1), (2, 1)],
+         [(0, 2), (1, 1), (2, 1)],
+         [(0, 0), (1, 2), (2, 1)],
+         [(0, 1), (1, 2), (2, 1)],
+         [(0, 2), (1, 2), (2, 1)],
+         [(0, 0), (1, 0), (2, 2)],
+         [(0, 1), (1, 0), (2, 2)],
+         [(0, 2), (1, 0), (2, 2)],
+         [(0, 0), (1, 1), (2, 2)],
+         [(0, 1), (1, 1), (2, 2)],
+         [(0, 2), (1, 1), (2, 2)],
+         [(0, 0), (1, 2), (2, 2)],
+         [(0, 1), (1, 2), (2, 2)],
+         [(0, 2), (1, 2), (2, 2)]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the lists
+    l=[sz for i in rg(sz)]; Lf=[]
+    # Main loop performing the collecting the functions.
+    for i in rg(prod(l)):
+        # Turning the index i into an hypermatrix array location using the decimal encoding trick
+        entry = [Integer(mod(i,l[0]))]
+        sm = Integer(mod(i,l[0]))
+        for k in rg(len(l)-1):
+            entry.append(Integer(mod(Integer((i-sm)/prod(l[0:k+1])),l[k+1])))
+            sm = sm+prod(l[0:k+1])*entry[len(entry)-1]
+        f=entry
+        # Appending the function to the list
+        Lf.append([(i,f[i]) for i in rg(sz)])
+    return Lf
+
 def TupleFunctionListII(sz0, sz1):
     """
     Returns a list of edge tuple desctiption for all 
@@ -24111,6 +24173,40 @@ def TupleFunctionListIII(L0, L1):
     else:
         raise ValueError("Expected input sizes to be an integer >=1")
 
+def injectiveTupleFunctionList(L0, L1):
+    """
+    Returns a list of edge tuple desctiption for all 
+    functional directed graphs on a domain list L0 and the
+    codomain list L1 of graphs which are injective.
+
+
+    EXAMPLES:
+    ::
+        sage: injectiveTupleFunctionList([0,1],[0,1])
+        [[(0, 0), (1, 1)],
+         [(0, 1), (1, 0)]]
+ 
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Checking whether or not injective fucntions are at all possible
+    if len(L0)>len(L1):
+        return []
+    else:
+        # Initialization sets
+        S1=Set(L1)
+        # Initialization of the list of permutations
+        SnL=PermutationFunctionList(len(L0))
+        # Initialization of the result
+        rsLt=[]
+        # Updating the list of functions
+        for st in S1.subsets(len(L0)):
+            l1=st.list()
+            rsLt=rsLt+[[(L0[i], l1[T[i][1]]) for i in rg(len(L0))] for T in SnL]
+        return rsLt
+
 def RepresentativeTupleFunctionList(sz):
     """
     Returns a list of edge tuple desctiption for all 
@@ -24173,6 +24269,25 @@ def PermutationFunctionList(sz):
     # Initialization of the list of permutations of elements from 1 to (n-1).
     P=Permutations(sz)
     return [[(i,Integer(p[i]-1)) for i in rg(sz)] for p in P]
+
+def AlternatingGroupFunctionList(sz):
+    """
+    Returns a list of edge tuple descriptions associated 
+    with permutations.
+
+
+    EXAMPLES:
+    ::
+        sage: AlternatingGroupFunctionList(3)
+        [[(0, 0), (1, 1), (2, 2)], [(0, 1), (1, 2), (2, 0)], [(0, 2), (1, 0), (2, 1)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of permutations of elements from 1 to (n-1).
+    P=Permutations(sz)
+    return [[(i,Integer(p[i]-Integer(1))) for i in rg(sz)] for p in P if signf([(i,Integer(p[i]-1)) for i in rg(sz)])>Integer(0)]
 
 def RepresentativePermutationFunctionList(sz):
     """
@@ -25411,6 +25526,32 @@ def LagrangeInterpolationZd(F, X, d):
     Lt=TupleFunctionListII(len(X), d)
     return sum(F.subs([X[i]==T[i][1] for i in rg(sz)])*LagrangeBasis(T, X, d) for T in Lt)
 
+def Strip_Coefficients(F, v):
+    """
+    Extracts the list of coefficients of the
+    input polynomial F in the variable v
+    the implementation assumes that the input polynomial
+    F is presented in it's expanded form.
+
+
+    EXAMPLES:
+    ::
+
+
+        sage: x=var('x'); F=BasicLagrangeInterpolation([(0,0), (1,1), (2,2), (3,3)], x); F
+        1/2*(x - 1)*(x - 2)*x - (x - 1)*(x - 3)*x + 1/2*(x - 2)*(x - 3)*x
+        sage: Strip_Coefficients(expand(F), x)
+        [0, 1]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializtion of the degree in the input variable this is the only part which
+    # requires an expanded form.
+    dg=Integer(F.degree(v))
+    return [diff(F,v,i).subs(v==0)/factorial(i) for i in rg(dg+1)]
+
 def composition(f, x, k, sz):
     """
     This function performs the composition of the function f in the 
@@ -25689,6 +25830,34 @@ def compose_tuple_pow(T, k):
             g=TmpF
         return [(i, g.subs(x==i)) for i in rg(len(T))]
 
+def local_iterate_tuple(T, Lv):
+    """
+    This function iterates the input function described by a tuple list 
+    locally on the subset of the domain Lv specified as a list. This
+    implementation is motivated by the generalization of the composition
+    lemma. This implementation assume that the input list of tuples describes 
+    is valid and the input list Lv is also valid.
+
+    EXAMPLES:
+    ::
+
+
+        sage: T=[(0,1), (1,2), (2,2)]; Lv=rg(2)
+        sage: local_iterate_tuple(T,Lv)
+        [(0, 2), (1, 2), (2, 2)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    rT=[]
+    for i in rg(len(T)):
+        if T[i][0] in Lv:
+            rT.append((T[i][0],T[T[i][1]][1]))
+        else:
+            rT.append(T[i])
+    return rT
+
 def composition_inverse(f, sz, vrbl):
     """
     This function computes the composition inverse of f.
@@ -25909,6 +26078,30 @@ def tpl_image_set(tp):
     L=Set([t[1] for t in tp]).list(); L.sort()
     return L
 
+def tpl_image_setII(tp,Ld):
+    """
+    returns the list of vertex image of the subset of the domain described by the 
+    list Ld of the input function associated with the list of tuples.
+    The input graphs is assumes to have no isolated vertices.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: tpl_image_setII([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)], rg(4))
+        [0, 2, 4]
+        sage: tpl_image_setII([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)], rg(1,3))
+        [2, 4]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initializing and sorting the list
+    L=Set([tp[i][1] for i in Ld]).list(); L.sort()
+    return L
+
 def tpl_pre_image_set_function(tp):
     """
     returns the list of vertex pre-images of every vertex
@@ -26070,6 +26263,27 @@ def generate_sorted_histII(Tf, X):
         return Lhst
     else: 
         raise ValueError("Expected a functional digraph with a unique fixed point.")
+
+def tpl_pre_image_cardinality_map(T, Codomain):
+    """
+    returns the tuple list description of the induced map whose
+    domain is the Codomain specified as a list of integers the 
+    input tuple description of the input function.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: tpl_pre_image_cardinality_map([(0, 0), (1, 2), (2, 4), (3, 0), (4, 0)], rg(5))
+        [(0, 3), (1, 0), (2, 1), (3, 0), (4, 1)]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    Tp=[(Codomain[i], len(tpl_pre_image_set(T,Codomain[i]))) for i in rg(len(Codomain))]; Tp.sort()
+    return Tp
 
 def tuple_order(T):
     """
@@ -27663,7 +27877,9 @@ def CompositionalDivision(p, d,  v):
     Outputs the quotient list and the remainder of the composition version
     the Euclidean division. The algorithm takes as input
     two univariate polynomials in the input variable v,  p and d respectively
-    associated with the dividend and the divisor. 
+    associated with the dividend and the divisor. The stoping criteria is when the
+    remainder degree is less then the divisor degree which implies that all terms in
+    the quotient have exponent greater or equal to one. 
 
 
     EXAMPLES:
@@ -27696,6 +27912,8 @@ def CompositionalDivision(p, d,  v):
         sage: [Lq, Rem] = CompositionalDivision(P, D, x) # Performing the compositional division
         sage: (GProd([D*HM(1,len(Lq),'one'),HM(len(Lq),1,Lq)], sum, [x])[0,0]+Rem).canonicalize_radical()
         4*x^3 + 3*x^2 + 2*x + 1
+        sage: p = x^5; d = x^3+x^2; [Lq, r] = CompositionalDivision(p, d, x); [Lq, r]
+        [[x^(5/3), (-1)^(1/3)*x^(10/9)], -(-1)^(2/3)*x^(20/9)]
 
 
     AUTHORS:
@@ -27811,8 +28029,6 @@ def CompositionalDivisionII(p, d, v, Rlt):
         return [L, Rm]
     else:
         raise ValueError("Expected inputs of degree >= 1 in the input variable.")
-
-
 
 def EuclidsCompositionalGCD(a, b, v):
     """
@@ -27930,6 +28146,51 @@ def Permutation_Pair_lex(L):
     else:
         raise ValueError("Expected Tuples descriptions of permutations should be of the same size.")
 
+@cached_function
+def DictionaryAlternatingGroup(sz):
+    """
+    Returns a dictionary for indexing elements of the alternating
+    group. This implementation is based upon the permutation lexicographic
+    map function
+
+
+    EXAMPLES:
+    ::
+        sage: DictionaryAlternatingGroup(3)
+        {0: 0, 4: 1, 3: 2}
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the alternating group
+    L=AlternatingGroupFunctionList(sz)
+    # Returning the dictionary
+    return dict([(Permutation_lex(L[i]),i) for i in rg(len(L))])
+
+def Alt_Permutation_lex(T,Dct):
+    """
+    Outputs the lexicographic ordering of the permutaions.
+    The lexicographic ordering is based upon the invertion
+    count. The input T is a tuple description of a member of
+    the alternating group. The input Dct is dictionary
+    mapping the permutation_lex order to Z_(n!/2)
+
+
+    EXAMPLES:
+
+    ::
+       
+        sage: Dct=DictionaryAlternatingGroup(4) # Initialization of the dictionary 
+        sage: T=[(0, 1), (1, 2), (2, 0), (3, 3)]; Alt_Permutation_lex(T,Dct)
+        4
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return Dct[Permutation_lex(T)]
+
 def Function_lex(T):
     """
     Outputs the lexicographic ordering of the input function.
@@ -27983,6 +28244,53 @@ def Function_lexII(T, b):
     - Edinah K. Gnang
     """
     return sum(T[i][1]*b^i for i in rg(len(T)))
+
+def DictionaryZn_to_the_ZnSubset(L,sz):
+    """
+    Returns a dictionary for indexing elements of arbitrary subset of the
+    transformation monoid on sz elements. The subset is specified as a list
+    group. This implementation is based upon the functional lexicographic
+    map function
+
+
+    EXAMPLES:
+    ::
+        sage: sz=Integer(3); SnL=PermutationFunctionList(sz)
+        sage: DictionaryZn_to_the_ZnSubset(SnL,sz)
+        {21: 0, 15: 1, 19: 2, 7: 3, 11: 4, 5: 5}
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Returning the dictionary
+    return dict([(Function_lex(L[i]),i) for i in rg(len(L))])
+
+def Zn_to_the_ZnSubset_lex(T,Dct):
+    """
+    Outputs the lexicographic ordering defined for some
+    arbitray subset of the transformation monoid encapsulated
+    by the dictionay input Dct. The lexicographic ordering is 
+    based upon the functional lexicographic map. The input T is
+    a tuple description of a member of the alternating group. 
+
+
+    EXAMPLES:
+
+    ::
+       
+        sage: sz=Integer(4); AnL=AlternatingGroupFunctionList(sz); Dct=DictionaryZn_to_the_ZnSubset(AnL,sz)
+        sage: T=[(0, 1), (1, 2), (2, 0), (3, 3)]; Zn_to_the_ZnSubset_lex(T,Dct)
+        4
+        sage: sz=Integer(3); SnL=PermutationFunctionList(sz); Dct=DictionaryZn_to_the_ZnSubset(SnL,sz)
+        sage: T=[(0, 1), (1, 2), (2, 0)]; Zn_to_the_ZnSubset_lex(T,Dct)
+        3
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return Dct[Function_lex(T)]
 
 def Graph_lex(A):
     """
@@ -28920,7 +29228,7 @@ def generate_unlabeled_undirected_listing_script(sz):
     f.write('P=Permutations(sz)\n')
     # Writting the part which initializes the symbolic adjacency matrices
     f.write('\n# Initialization of the Adjacency matrix\n')
-    f.write('\nA=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    f.write('A=HM(sz,sz,[prod(TmpA[indx][P[indx][i]-1,P[indx][j]-1] for indx in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
     # Writting the critical piece of the code
     f.write('\n# Initialization of listing of directed graphs\n')
     f.write('F=expand(prod(1+A[i,j]*A[j,i] for j in rg(sz) for i in rg(sz) if i<j)-1)\n')
@@ -30648,14 +30956,14 @@ def generate_tensorial_functional_listing_script(sz):
     - Edinah K. Gnang
     """
     # Initialization of the order
-    #od = ceil(log(sz^sz, 26))
     od = ceil(log(factorial(sz)^2, 26))
     # Initialization of the alphabet of characters
     AlphaBl = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
     AlphaBc = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
     # Inflating the alphabet to the appropriate size
     Ll=AlphaBl.copy(); Lc=AlphaBc.copy()
-    for i in rg(od-1):
+    #for i in rg(od-1):
+    for i in rg(od):
         Ll=[a+'_'+b for a in Ll for b in AlphaBl]
         Lc=[A+'_'+B for A in Lc for B in AlphaBc]
     # Creating the string storing the file name
@@ -30664,7 +30972,7 @@ def generate_tensorial_functional_listing_script(sz):
     f = open(filename,'w')
     # Writting the size parameter
     f.write('# Initializing the size parameter\n')
-    f.write('sz='+str(sz)+'\n')
+    f.write('sz=Integer('+str(sz)+')\n')
     # Writing the symbols in capital letters
     f.write('\n# Initialization of the symbolic edge weights\nTmpA=[\\\n')
     cnt = 0
@@ -30701,7 +31009,7 @@ def generate_tensorial_functional_listing_script(sz):
     f.write('P=Permutations(sz)\n')
     # Writting the part which initializes the symbolic adjacency matrices
     f.write('\n# Initialization of the Adjacency matrix\n')
-    f.write('\nA=HM(sz,sz,[prod(TmpA[factorial(sz)*indx0+indx1][P[indx0][i]-1,P[indx1][j]-1] for indx0 in rg(factorial(sz)) for indx1 in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
+    f.write('A=HM(sz,sz,[prod(TmpA[factorial(sz)*indx0+indx1][P[indx0][i]-1,P[indx1][j]-1] for indx0 in rg(factorial(sz)) for indx1 in rg(factorial(sz))) for j in rg(sz) for i in rg(sz)])\n')
     # Writting the critical piece of the code
     f.write('\n# Initialization of listing of directed graphs\n')
     f.write('F=expand(prod(sum(A[i,j] for j in rg(sz)) for i in rg(sz)))\n')
@@ -33140,6 +33448,28 @@ def Girard_Identities(Xv, Pv, Sv):
         GiL.append( Pv[bnd]==bnd*(-1)^bnd*sum( ( factorial(sum(l)-1)/prod(factorial(l[j]) for j in rg(len(l)))) * prod( (-Sv[i])^l[i-1] for i in rg(1,bnd+1) ) for l in eL ) )
     return [GiL, [Pv[i]==sum(Xv[j]^i for j in rg(sz)) for i in rg(1,1+sz)], [Sv[i]==sum(prod(s) for s in Set(Xv).subsets(i)) for i in rg(1,sz+1)]]
 
+def Symmetrize(F, Xv, Lg):
+    """
+    Takes the input polynomial F sums over the permutations of the variables
+    in Xv by permutation described as tuple list and stored into the input list
+    listed in Lg. If Lg is the whole symmetric group then the method
+    output is a symmetric polynomial.
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); Xv=var_list('x',sz); Lg=AlternatingGroupFunctionList(3); F=Xv[0]^0*Xv[1]^1*Xv[2]^2-Xv[0]^0*Xv[2]^1*Xv[1]^2
+        sage: Symmetrize(F, Xv, Lg).factor()
+        -(x0 - x1)*(x0 - x2)*(x1 - x2)
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Fan Tian
+    """
+    return sum(F.subs([Xv[i]==Xv[T[i][1]] for i in rg(len(Xv))]) for T in Lg)
+
 def hypermatrix_action_over_F2_conj(sz, od):
     """
     Implements the hypermatrix action on vector spaces
@@ -33341,6 +33671,109 @@ def hypermatrix_action_over_Fp(p, sz, od):
             cL.append([Lt[u][0], indSeqL0])
     return [cL, Lt]
 
+def hypermatrix_action_over_FpII(p, sz, od):
+    """
+    Implements the hypermatrix action on vector spaces
+    over the field with p elements where p is prime. 
+    The inputs to the function are the size and order
+    parameters.  The function outputs the list of distinct
+    functional directed graphs as well as the list description 
+    hypermatrix transforms, followed by the sorted indegree
+    sequence. The vertex labels arise from the canonical
+    lexicographic map on binary vectors in Fp^sz.
+
+ 
+    EXAMPLES:
+
+    ::
+
+        sage: p=Integer(2); sz=Integer(2); od=Integer(3); cL=hypermatrix_action_over_FpII(p, sz, od); cL
+        [[[(0, 0), (1, 0), (2, 0), (3, 0)], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 4]],
+         [[(0, 0), (1, 1), (2, 0), (3, 1)], [1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 2, 2]],
+         [[(0, 0), (1, 1), (2, 0), (3, 0)], [1, 1, 1, 0, 0, 0, 0, 0], [0, 0, 1, 3]],
+         [[(0, 0), (1, 2), (2, 0), (3, 2)], [0, 1, 1, 0, 1, 0, 0, 0], [0, 0, 2, 2]],
+         [[(0, 0), (1, 3), (2, 0), (3, 2)], [1, 1, 1, 0, 1, 0, 0, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 0), (2, 0), (3, 3)], [0, 0, 0, 1, 1, 0, 0, 0], [0, 0, 1, 3]],
+         [[(0, 0), (1, 1), (2, 0), (3, 2)], [1, 0, 0, 1, 1, 0, 0, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 0), (3, 3)], [1, 1, 0, 1, 1, 0, 0, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 2), (2, 0), (3, 1)], [0, 1, 1, 1, 1, 0, 0, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 3), (2, 0), (3, 1)], [1, 1, 1, 1, 1, 0, 0, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 0), (2, 1), (3, 1)], [0, 0, 0, 1, 0, 1, 1, 0], [0, 0, 2, 2]],
+         [[(0, 0), (1, 1), (2, 1), (3, 0)], [1, 0, 0, 1, 0, 1, 1, 0], [0, 0, 2, 2]],
+         [[(0, 0), (1, 0), (2, 1), (3, 2)], [0, 1, 0, 1, 0, 1, 1, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 1), (3, 3)], [1, 1, 0, 1, 0, 1, 1, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 1), (3, 1)], [1, 1, 1, 1, 0, 1, 1, 0], [0, 0, 1, 3]],
+         [[(0, 0), (1, 2), (2, 1), (3, 0)], [0, 1, 1, 1, 1, 1, 1, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 3), (2, 1), (3, 0)], [1, 1, 1, 1, 1, 1, 1, 0], [0, 1, 1, 2]],
+         [[(0, 0), (1, 0), (2, 2), (3, 2)], [0, 0, 0, 0, 0, 0, 0, 1], [0, 0, 2, 2]],
+         [[(0, 0), (1, 1), (2, 2), (3, 3)], [1, 0, 0, 0, 0, 0, 0, 1], [1, 1, 1, 1]],
+         [[(0, 0), (1, 1), (2, 2), (3, 2)], [1, 1, 1, 0, 0, 0, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 2), (2, 2), (3, 0)], [0, 1, 1, 0, 1, 0, 0, 1], [0, 0, 2, 2]],
+         [[(0, 0), (1, 3), (2, 2), (3, 0)], [1, 1, 1, 0, 1, 0, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 0), (2, 2), (3, 1)], [0, 0, 0, 1, 1, 0, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 2), (3, 0)], [1, 0, 0, 1, 1, 0, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 2), (3, 1)], [1, 1, 0, 1, 1, 0, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 2), (2, 2), (3, 3)], [0, 1, 1, 1, 1, 0, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 3), (2, 2), (3, 3)], [1, 1, 1, 1, 1, 0, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 0), (2, 2), (3, 0)], [0, 0, 0, 1, 0, 1, 0, 1], [0, 0, 1, 3]],
+         [[(0, 0), (1, 0), (2, 2), (3, 3)], [0, 0, 1, 1, 0, 1, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 2), (2, 2), (3, 2)], [0, 1, 1, 1, 1, 1, 0, 1], [0, 0, 1, 3]],
+         [[(0, 0), (1, 3), (2, 2), (3, 2)], [1, 1, 1, 1, 1, 1, 0, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 0), (2, 3), (3, 1)], [0, 0, 0, 1, 0, 1, 1, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 3), (3, 0)], [1, 0, 0, 1, 0, 1, 1, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 0), (2, 3), (3, 2)], [0, 1, 0, 1, 0, 1, 1, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 3), (3, 3)], [1, 1, 0, 1, 0, 1, 1, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 1), (2, 3), (3, 1)], [1, 1, 1, 1, 0, 1, 1, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 2), (2, 3), (3, 0)], [0, 1, 1, 1, 1, 1, 1, 1], [0, 1, 1, 2]],
+         [[(0, 0), (1, 3), (2, 3), (3, 0)], [1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 2, 2]]]
+        sage: Lt=[cL[i][0] for i in rg(len(cL))]; A=HM(Integer(2)^sz, Integer(2)^sz, 'a'); F=sum(prod(A[i,T[i][1]] for i in rg(2^sz)) for T in Lt); F
+        a00*a10*a20*a30 + a00*a11*a20*a30 + a00*a11*a21*a30 + a00*a12*a21*a30 + a00*a13*a21*a30 + a00*a10*a22*a30 + a00*a11*a22*a30 + a00*a12*a22*a30 + a00*a13*a22*a30 + a00*a11*a23*a30 + a00*a12*a23*a30 + a00*a13*a23*a30 + a00*a11*a20*a31 + a00*a12*a20*a31 + a00*a13*a20*a31 + a00*a10*a21*a31 + a00*a11*a21*a31 + a00*a10*a22*a31 + a00*a11*a22*a31 + a00*a10*a23*a31 + a00*a11*a23*a31 + a00*a11*a20*a32 + a00*a12*a20*a32 + a00*a13*a20*a32 + a00*a10*a21*a32 + a00*a10*a22*a32 + a00*a11*a22*a32 + a00*a12*a22*a32 + a00*a13*a22*a32 + a00*a10*a23*a32 + a00*a10*a20*a33 + a00*a11*a20*a33 + a00*a11*a21*a33 + a00*a10*a22*a33 + a00*a11*a22*a33 + a00*a12*a22*a33 + a00*a13*a22*a33 + a00*a11*a23*a33
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of variables
+    X=var_list('x',sz)
+    # Initialization of Background hypermatrix
+    iL=[sz for i in rg(od)]+['a']; A=HM(*iL)
+    # Initialization of the list of projectors
+    DltL=GeneralHypermatrixKroneckerDeltaL(od,sz)
+    # Performing the projectors
+    Lh=[ProdB(*([A.transpose(j) for j in rg(od)]+[DltL[i]])) for i in rg(sz)]
+    # Initialization of the list of transpose of the vectors
+    Lv=[HM(*([sz]+[1 for i in rg(od-1)]+[var_list('x',sz)])) for j in rg(od)]
+    # Initialization of the vector
+    Y=HM(*([sz]+[1 for i in rg(od-1)]+[[ProdB(*([Lv[i].transpose(i) for i in rg(od-1,-1,-1)]+[Lh[j]])).list()[0] for j in rg(sz)]])).factor()
+    # Initializing the list of integer lists associated with the hypermatrix choices
+    Li=List_of_Integers([p for i in rg(sz^od)])
+    # Initialization of the list of integer lists associated with evaluation points
+    Lev=List_of_Integers([p for i in rg(sz)])
+    # Tuple list description of the elements of the transformation monoid
+    Lt=[]; LtII=[]
+    # Looping over the hypermatrix choices
+    for al in Li:
+        # Setup for initialization the HM constructor for the purposes of obtaining the indegree sequence
+        Lt.append([[(sum(l[k]*p^k for k in rg(sz)), sum(p^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(p).list()[k] for k in rg(sz))) for l in Lev], al, (HM(1,len(Lev),'one')*Tuple_to_Adjacency([(sum(l[k]*p^k for k in rg(sz)), sum(p^k*Y.subs([X[i]==l[i] for i in rg(sz)]).subs([A.list()[i]==al[i] for i in rg(sz^od)]).mod(p).list()[k] for k in rg(sz))) for l in Lev])).list()])
+    # Initialization of the list storing the rpresentatives of conjugacy classes of functional digraphs.
+    cL=[]
+    # Loop perfomring the binning by conjugacy classes.
+    for u in rg(len(Lt)):
+        # Setting the test Boolean variable for a new class
+        nwT=True
+        for v in rg(len(cL)):
+            # In-degree sequences
+            indSeqL0=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(Lt[u][0])).list(); indSeqL0.sort()
+            indSeqL1=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(cL[v][0])).list(); indSeqL1.sort()
+            if Lt[u][0] == cL[v][0]:
+                nwT=False
+                break
+        if nwT==True:
+            # Initialization of the degree sequence
+            indSeqL0=(HM(1,len(Lev),'one')*Tuple_to_Adjacency(Lt[u][0])).list(); indSeqL0.sort()
+            cL.append([Lt[u][0], Lt[u][1], indSeqL0])
+    return cL
+
 def hypermatrix_shifted_action_over_F2(sz, od):
     """
     Implements the hypermatrix shifted action on 
@@ -33420,7 +33853,7 @@ def CosetRepresentativeList(T):
 
     ::
 
-        sage: sz=3; T=[(i, i) for i in rg(sz)]; CosetRepresentativeList(T)
+        sage: sz=Integer(3); T=[(i, i) for i in rg(sz)]; CosetRepresentativeList(T)
         [[(0, 0), (1, 1), (2, 2)]]
         sage: sz=3; T=[(0,0)]+[(i, i-1) for i in rg(1,sz)]; CosetRepresentativeList(T)
         [[(0, 0), (1, 1), (2, 2)],
@@ -33455,6 +33888,31 @@ def CosetRepresentativeList(T):
             Sn_quot.append(Tq)
     return Sn_quot
 
+def tuple_automorphism_group(Tf):
+    """
+    The method returns a list of tuples which describe
+    automorphism group (under action by conjugation) of
+    the input tuple Tf
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(4); Tf=[(0,0)]+[(i,i-1) for i in rg(1,sz)]
+        sage: tuple_automorphism_group(Tf)
+        [[(0, 0), (1, 1), (2, 2), (3, 3)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    sz=Integer(len(Tf))
+    # Initialization of the list of permutations
+    SnL=PermutationFunctionList(sz)
+    # Computing the automorphism group
+    return [T for T  in SnL if Tf==compose_tuple_list([T,Tf,invert_tuple(T)])]
+
 def automorphism_group(F, X):
     """
     The method returns a list of tuples which describe
@@ -33469,6 +33927,14 @@ def automorphism_group(F, X):
         sage: sz=Integer(3); od=Integer(2); X=var_list('x', sz)
         sage: automorphism_group(prod(X[j]-X[i] for i in rg(sz) for j in rg(sz) if i<j), X)
         [[(0, 0), (1, 1), (2, 2)], [(0, 1), (1, 2), (2, 0)], [(0, 2), (1, 0), (2, 1)]]
+        sage: sz=Integer(3); od=Integer(2); X=var_list('x', sz)
+        sage: automorphism_group(prod(X[j]+X[i] for i in rg(sz) for j in rg(sz) if i<j), X)
+        [[(0, 0), (1, 1), (2, 2)],
+         [(0, 0), (1, 2), (2, 1)],
+         [(0, 1), (1, 0), (2, 2)],
+         [(0, 1), (1, 2), (2, 0)],
+         [(0, 2), (1, 0), (2, 1)],
+         [(0, 2), (1, 1), (2, 0)]]
 
 
     AUTHORS:
@@ -33477,9 +33943,9 @@ def automorphism_group(F, X):
     # Initialization of the size parameter
     sz=Integer(len(X))
     # Initialization of the list of permutations
-    SnL=PermutationFunctionList(sz)
+    P=Permutations(sz)
     # Computing the automorphism group
-    return [T for T  in SnL if (F-F.subs([X[i]==X[T[i][1]] for i in rg(sz)])).is_zero()]
+    return [[(i,Integer(p[i]-1)) for i in rg(sz)] for p  in P if (F-F.subs([X[i]==X[p[i]-1] for i in rg(sz)])).is_zero()]
 
 def CosetPolynomialRepresentativeList(F, X):
     """
@@ -33495,6 +33961,9 @@ def CosetPolynomialRepresentativeList(F, X):
         sage: sz=Integer(3); od=Integer(2); X=var_list('x', sz)
         sage: CosetPolynomialRepresentativeList(prod(X[j]-X[i] for i in rg(sz) for j in rg(sz) if i<j), X)
         [[(0, 0), (1, 1), (2, 2)], [(0, 0), (1, 2), (2, 1)]]
+        sage: sz=Integer(3); od=Integer(2); X=var_list('x', sz)
+        sage: CosetPolynomialRepresentativeList(prod(X[j]+X[i] for i in rg(sz) for j in rg(sz) if i<j), X)
+        [[(0, 0), (1, 1), (2, 2)]]
 
 
     AUTHORS:
