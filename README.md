@@ -15,13 +15,6 @@ algebra package, simply download the [hypermatrix algebra package sage file](htt
 sage: load('Hypermatrix_Algebra_Package_code.sage')
 ```
 
-The hypermatrix package passes all tests on SageMath version 9.8 To run the hypermatrix tests on your local sage, 
-use the following command in a [bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell)) shell session
-
-```bash
-n: g$ sage -t Hypermatrix_Algebra_Package_code.sage
-```
-
 To get started with SageMath, the authors of the hypermatrix package highly recommend reading 
 [Mathematical Computation with SageMath] (http://sagebook.gforge.inria.fr/)
 
@@ -44,7 +37,7 @@ To create a symbolic hypermatrix of size say 2 by 3 by 4, use
 
 ```python
 sage: Ha=HM(2,3,4,'a')
-sage: Ha.printHM()
+sage: Ha.p()
 [:, :, 0]=
 [a000 a010 a020]
 [a100 a110 a120]
@@ -67,7 +60,7 @@ Alternatively, hypermatrices can be initialized from an arbitrary Python list as
 ```python
 sage: rng=range(1,3); Lst=[var('x{0}{1}{2}'.format(i,j,k)) for k in rng for j in rng for i in rng]
 sage: Hx=HM(2,2,2,Lst)
-sage: Hx.printHM()
+sage: Hx.p()
 [:, :, 0]=
 [x111 x121]
 [x211 x221]
@@ -102,14 +95,14 @@ The [BM product](http://arxiv.org/abs/1411.6270) is implemented for conformable 
 of all orders. The BM product is computed as follows
 
 ```python
-sage: H1=Prod(HM(3,2,'a'), HM(2,2,'c')) # Matrix product
+sage: H1=BMP(HM(3,2,'a'), HM(2,2,'c')) # Matrix product
 sage: H1.printHM()
 [:, :]=
 [a00*c00 + a01*c10 a00*c01 + a01*c11]
 [a10*c00 + a11*c10 a10*c01 + a11*c11]
 [a20*c00 + a21*c10 a20*c01 + a21*c11]
 
-sage: H2=Prod(HM(2,3,4,'a'), HM(2,2,3,'b'), HM(3,2,4,'c')) # Third order product 
+sage: H2=BMP(HM(2,3,4,'a'), HM(2,2,3,'b'), HM(3,2,4,'c')) # Third order product 
 sage: H2.printHM()
 [:, :, 0]=
 [a000*b000*c000 + a010*b001*c100 + a020*b002*c200 a000*b010*c010 + a010*b011*c110 + a020*b012*c210]
@@ -245,9 +238,9 @@ is obtained as follows
 
 ```python
 sage: sz=3; X=HM(sz, 1, HM(sz,'x').list()); Y=HM(sz, 1, HM(sz,'y').list()); L=[X, Y]
-sage: Prod(X.transpose(),Y)[0,0]
+sage: BMP(X.transpose(),Y)[0,0]
 x0*y0 + x1*y1 + x2*y2
-sage: Prod(*[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0]
+sage: BMP(*[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0]
 x0*y0 + x1*y1 + x2*y2
 ```
 
@@ -256,9 +249,9 @@ each of size 3 by 1 by 1
 
 ```python
 sage: sz=3; X=HM(sz,1,1,HM(sz,'x').list()); Y=HM(sz,1,1,HM(sz,'y').list()); Z=HM(sz,1,1,HM(sz,'z').list()); L=[X, Y, Z]
-sage: Prod(X.transpose(2), Y.transpose(), Z)[0,0,0]
+sage: BMP(X.transpose(2), Y.transpose(), Z)[0,0,0]
 x0*y0*z0 + x1*y1*z1 + x2*y2*z2
-sage: Prod(*[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0,0]
+sage: BMP(*[L[i].transpose(i) for i in range(X.order()-1,-1,-1)])[0,0,0]
 x0*y0*z0 + x1*y1*z1 + x2*y2*z2
 ```
 
@@ -268,7 +261,7 @@ Here is a similar command in a more general set up
 sage: AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
 sage: od=4; sz=3 # Initialization of the order and size paramaters
 sage: L=[HM(*([sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()])) for j in range(od)]
-sage: Prod(*[L[i].transpose(i) for i in range(od-1,-1,-1)])
+sage: BMP(*[L[i].transpose(i) for i in range(od-1,-1,-1)])
 [[[[w0*x0*y0*z0 + w1*x1*y1*z1 + w2*x2*y2*z2]]]]
 ```
 
@@ -278,7 +271,7 @@ using the general BM product as follows
 
 ```python
 sage: X=HM(2,1,HM(2,'x').list()); Y=HM(2,1,HM(2,'y').list()); A=HM(2,2,'a')
-sage: ProdB(X.transpose(), Y, A)[0,0]
+sage: BMPb(X.transpose(), Y, A)[0,0]
 a00*x0*y0 + a10*x1*y0 + a01*x0*y1 + a11*x1*y1
 ```
 
@@ -287,7 +280,7 @@ The corresponding commands for third order hypermatrices is
 ```python
 sage: X=HM(2,1,1,HM(2,'x').list()); Y=HM(2,1,1,HM(2,'y').list()); Z=HM(2,1,1,HM(2,'z').list())
 sage: A=HM(2,2,2,'a')
-sage: ProdB(X.transpose(2), Y.transpose(), Z, A)[0,0,0]
+sage: BMPb(X.transpose(2), Y.transpose(), Z, A)[0,0,0]
 a000*x0*y0*z0 + a100*x1*y0*z0 + a010*x0*y1*z0 + a110*x1*y1*z0 + a001*x0*y0*z1 + a101*x1*y0*z1 + a011*x0*y1*z1 + a111*x1*y1*z1
 ```
 
@@ -298,7 +291,7 @@ sage: AlphaB=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q
 sage: od=3; sz=2 # Initialization of the order and size paramaters
 sage: L=[HM(*([sz]+[1 for i in range(od-1)]+[HM(sz,AlphaB[j-od]).list()])) for j in range(od)]
 sage: A=HM(2,2,2,'a') # Initialization of the background hypermatrix
-sage: ProdB(*([L[i].transpose(i) for i in range(od-1,-1,-1)]+[A]))[0,0,0]
+sage: BMPb(*([L[i].transpose(i) for i in range(od-1,-1,-1)]+[A]))[0,0,0]
 a000*x0*y0*z0 + a100*x1*y0*z0 + a010*x0*y1*z0 + a110*x1*y1*z0 + a001*x0*y0*z1 + a101*x1*y0*z1 + a011*x0*y1*z1 + a111*x1*y1*z1
 ```
 
@@ -346,7 +339,7 @@ obtained as follows
 
 ```python
 sage: Q=GeneralOrthogonalHypermatrix(3)
-sage: (Prod(*[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
+sage: (BMP(*[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
 True
 ```
 
@@ -355,7 +348,7 @@ as follows
 
 ```python
 sage: Q=GeneralOrthogonalHypermatrix(4)
-sage: (Prod(*[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
+sage: (BMP(*[Q.transpose(i) for i in range(Q.order(),0,-1)]).simplify()-HM(Q.order(),2,'kronecker')).is_zero()
 True
 ```
 
@@ -364,7 +357,7 @@ package also provides constructions of third order hypermatrix analog of Hadamar
 ```python
 sage: H=ThirdOrderHadamardBlockU(4); H
 [[[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]], [[-1, 1, -1, 1], [1, 1, 1, 1], [-1, 1, -1, 1], [1, 1, 1, 1]], [[-1, -1, 1, 1], [-1, -1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]], [[1, -1, -1, 1], [-1, -1, 1, 1], [-1, 1, -1, 1], [1, 1, 1, 1]]]
-sage: (Prod(*[H.transpose(i) for i in range(H.order(),0,-1)])-4*HM(H.order(),4,'kronecker')).is_zero()
+sage: (BMP(*[H.transpose(i) for i in range(H.order(),0,-1)])-4*HM(H.order(),4,'kronecker')).is_zero()
 True
 ```
 
@@ -382,7 +375,7 @@ sage: U
 [[e^(-I*pi-I*r1+I*r2+I*r3-r4+r5+r6)/sqrt(e^(-2*r4+2*r5+2*r6)+e^(2*r6)), e^(I*r2+r6)/sqrt(e^(-2*r4+2*r5+2*r6)+e^(2*r6))], [e^(I*r3+r4)/sqrt(e^(2*r4)+e^(2*r5)), e^(I*r1+r5)/sqrt(e^(2*r4)+e^(2*r5))]]
 sage: Uc # Symbolic complex conjugate of U
 [[e^(I*pi + I*r1 - I*r2 - I*r3 - r4 + r5 + r6)/sqrt(e^(-2*r4 + 2*r5 + 2*r6) + e^(2*r6)), e^(-I*r2 + r6)/sqrt(e^(-2*r4 + 2*r5 + 2*r6) + e^(2*r6))], [e^(-I*r3 + r4)/sqrt(e^(2*r4) + e^(2*r5)), e^(-I*r1 + r5)/sqrt(e^(2*r4) + e^(2*r5))]]
-sage: Prod(U,Uc.transpose()).simplify()
+sage: BMP(U,Uc.transpose()).simplify()
 [[1, 0], [0, 1]]
 ```
 
@@ -390,7 +383,7 @@ Similarly a symbolic paramterization of a fourth order unitary hypermatrix of si
 
 ```python
 sage: [U,Uc]=GeneralUnitaryHypermatrix(4) 
-sage: Prod(U, Uc.transpose(3), U.transpose(2), Uc.transpose()).simplify()
+sage: BMP(U, Uc.transpose(3), U.transpose(2), Uc.transpose()).simplify()
 [[[[1, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[0, 0], [0, 1]]]]
 ```
 
@@ -407,11 +400,11 @@ yield the Kronecker delta of the same order and size. The hypermatrix package im
 uncorrelated tuples of arbitrary order but having side length equal to 2 obtained as follows
 
 ```python
-sage: [Ha,Hb]=GeneralUncorrelatedHypermatrixTuple(2); Prod(Ha,Hb).simplify() 
+sage: [Ha,Hb]=GeneralUncorrelatedHypermatrixTuple(2); BMP(Ha,Hb).simplify() 
 [[1, 0], [0, 1]]
-sage: [Ha,Hb,Hc]=GeneralUncorrelatedHypermatrixTuple(3); Prod(Ha,Hb,Hc).simplify()
+sage: [Ha,Hb,Hc]=GeneralUncorrelatedHypermatrixTuple(3); BMP(Ha,Hb,Hc).simplify()
 [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
-sage: [Ha,Hb,Hc,Hd]=GeneralUncorrelatedHypermatrixTuple(4); Prod(Ha,Hb,Hc,Hd).simplify()
+sage: [Ha,Hb,Hc,Hd]=GeneralUncorrelatedHypermatrixTuple(4); BMP(Ha,Hb,Hc,Hd).simplify()
 [[[[1, 0], [0, 0]], [[0, 0], [0, 0]]], [[[0, 0], [0, 0]], [[0, 0], [0, 1]]]]
 ```
 
@@ -475,7 +468,7 @@ sage: Dg=HM(Mtr); Dg.printHM()
 The defining property of diagonal third order hypermatrices is the identity
 
 ```python
-sage: (Prod(Dg.transpose(),Dg.transpose(2),Dg)-Dg.elementwise_product(Dg).elementwise_product(Dg)).is_zero()
+sage: (BMP(Dg.transpose(),Dg.transpose(2),Dg)-Dg.elementwise_product(Dg).elementwise_product(Dg)).is_zero()
 True
 ```
 
@@ -485,7 +478,7 @@ True
 Recall from the algebra of matrices that rank one matrices of size 2 by 3 are obtained as follows
 
 ```python
-sage: Prod(HM(2,1,'a'),HM(1,3,'b')).printHM()
+sage: BMP(HM(2,1,'a'),HM(1,3,'b')).printHM()
 [:, :]=
 [a00*b00 a00*b01 a00*b02]
 [a10*b00 a10*b01 a10*b02]
@@ -494,7 +487,7 @@ sage: Prod(HM(2,1,'a'),HM(1,3,'b')).printHM()
 Quite similarly a general rank one third order hypermatrix of size 2 by 3 by 4 is obtained as follows
 
 ```python
-sage: Prod(HM(2,1,4,'a'),HM(2,3,1,'b'),HM(1,3,4,'c')).printHM()
+sage: BMP(HM(2,1,4,'a'),HM(2,3,1,'b'),HM(1,3,4,'c')).printHM()
 [:, :, 0]=
 [a000*b000*c000 a000*b010*c010 a000*b020*c020]
 [a100*b100*c000 a100*b110*c010 a100*b120*c020]
@@ -517,7 +510,7 @@ It is possible to extract outer product summands from the any BM product by usin
 ```python
 sage: sz=3;A=HM(sz,sz,'a'); B=HM(sz,sz,'b')
 sage: od=2; Dlt0=HM(od,[1,0,0],'diag')
-sage: ProdB(A,B,Dlt0).printHM()
+sage: BMPb(A,B,Dlt0).printHM()
 [:, :]=
 [a00*b00 a00*b01 a00*b02]
 [a10*b00 a10*b01 a10*b02]
@@ -529,7 +522,7 @@ For third order hypermatrices we proceed as follows
 ```python
 sage: sz=2;A=HM(sz,sz,sz,'a'); B=HM(sz,sz,sz,'b'); C=HM(sz,sz,sz,'c')
 sage: od=3; Dlt0=HM(od,[1,0],'diag')
-sage: ProdB(A,B,C,Dlt0).printHM()
+sage: BMPb(A,B,C,Dlt0).printHM()
 [:, :, 0]=
 [a000*b000*c000 a000*b010*c010]
 [a100*b100*c000 a100*b110*c010]
@@ -565,7 +558,7 @@ sage: A=HM(3,3,3,'a'); A.list()
 [a000,a100,a200,a010,a110,a210,a020,a120,a220,a001,a101,a201,a011,a111,a211,a021,a121,a221,a002,a102,a202,a012,a112,a212,a022,a122,a222]
 sage: P=HM(3,[1,0,2],'perm'); P
 [[[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]]]
-sage: Prod(P.transpose(),P.transpose(2),A).list()
+sage: BMP(P.transpose(),P.transpose(2),A).list()
 [a100,a000,a200,a110,a010,a210,a120,a020,a220,a101,a001,a201,a111,a011,a211,a121,a021,a221,a102,a002,a202,a112,a012,a212,a122,a022,a222]
 ```
 
@@ -574,7 +567,7 @@ For transposing the first two column slices we use the following instructions
 ```python
 sage: A=HM(3,3,3,'a'); A
 sage: P=HM(3,[1,0,2],'perm'); P
-sage: Prod(A,P,P.transpose())
+sage: BMP(A,P,P.transpose())
 ```
 
 For transposing the first two depth slices we use the following instructions
@@ -582,7 +575,7 @@ For transposing the first two depth slices we use the following instructions
 ```python
 sage: A=HM(3,3,3,'a'); A
 sage: P=HM(3,[1,0,2],'perm'); P
-sage: Prod(P,A,P.transpose(2))
+sage: BMP(P,A,P.transpose(2))
 ```
 
 Transposition can composed to perform an arbitrary permutation as illustrated below
@@ -591,7 +584,7 @@ Transposition can composed to perform an arbitrary permutation as illustrated be
 sage: A=HM(3,3,3,'a'); A
 sage: P=HM(3,[1,0,2],'perm'); P
 sage: Q=HM(3,[2,1,0],'perm'); Q
-sage: Prod(Q, Prod(P,A,P.transpose(2)), Q.transpose(2))
+sage: BMP(Q, BMP(P,A,P.transpose(2)), Q.transpose(2))
 ```
 
 # Slice linear combination
@@ -608,7 +601,7 @@ The basic slice operation is the transposition of the two slices via transpositi
 hypermatrices.
 
 ```python
-sage: Prod(HM(3,[1,0],'perm'),A,HM(3,[1,0],'perm').transpose(2))
+sage: BMP(HM(3,[1,0],'perm'),A,HM(3,[1,0],'perm').transpose(2))
 [[[a001, a000], [a011, a010]], [[a101, a100], [a111, a110]]]
 ```
 
@@ -617,7 +610,7 @@ The first step amount to slice selection and scaling.
 
 ```python
 sage: Idj=HM(3,range(2),'perm'); Idj[0,0,0]=0; Idj[1,0,0]=0 
-sage: A+var('c')*Prod(HM([1,0],'perm'), Prod(Idj,A,Idj.transpose(2)), HM([1,0],'perm').transpose(2))
+sage: A+var('c')*BMP(HM([1,0],'perm'), BMP(Idj,A,Idj.transpose(2)), HM([1,0],'perm').transpose(2))
 [[[a001*c + a000, a001], [a011*c + a010, a011]], [[a101*c + a100, a101], [a111*c + a110, a111]]]
 ```
 
@@ -626,7 +619,7 @@ Recall from linear algebra that the action of 2 by 3 matrix on a row vector of s
 1 by 2 is defined by the following product
 
 ```python
-sage: Prod(HM(1,2,'x'),HM(2,3,'a')).printHM()
+sage: BMP(HM(1,2,'x'),HM(2,3,'a')).printHM()
 [:,:]=
 [a00*x00 + a10*x01 a01*x00 + a11*x01 a02*x00 + a12*x01]
 ```
@@ -635,7 +628,7 @@ Also recall that the action of a 2 by 3 matrix on a column vector of size 3 by 1
 is prescribed by the product
 
 ```python
-sage: Prod(HM(2,3,'a'),HM(3,1,'x')).printHM()
+sage: BMP(HM(2,3,'a'),HM(3,1,'x')).printHM()
 [a00*x00 + a01*x10 + a02*x20]
 [a10*x00 + a11*x10 + a12*x20]
 ```
@@ -645,9 +638,9 @@ depth slice matrices of respective sizes 2 by 4 and 4 by 3 is prescribed
 by the product resulting in a matrix slice of size 2 by 3
 
 ```python
-sage: Prod(HM(2,4,1,'x'),HM(2,3,4,'a'),HM(4,3,1,'y'))[0,0,0]
+sage: BMP(HM(2,4,1,'x'),HM(2,3,4,'a'),HM(4,3,1,'y'))[0,0,0]
 a000*x000*y000 + a001*x010*y100 + a002*x020*y200 + a003*x030*y300
-sage: Prod(HM(2,4,1,'x'),HM(2,3,4,'a'),HM(4,3,1,'y'))[1,0,0]
+sage: BMP(HM(2,4,1,'x'),HM(2,3,4,'a'),HM(4,3,1,'y'))[1,0,0]
 a100*x100*y000 + a101*x110*y100 + a102*x120*y200 + a103*x130*y300
 ```
 By transposing the result we the product we obtain derivation of the action of a third order hypermatrix on other
@@ -724,7 +717,7 @@ sage: H=Form2TotallySymmetricHypermatrix(f, 2, X.list()); H.printHM()
 [ 1/2    0    0    0]
 sage: sz=2; od=2; A=HM(sz,sz,'a'); X=HM(od,'x').list()
 sage: Hv0=HM(sz,1,[1,X[0]]); Hv1=HM(sz,1,[1,X[1]])
-sage: f=ProdB(Hv0.transpose(),Hv1,A)[0,0]; f
+sage: f=BMP(Hv0.transpose(),Hv1,A)[0,0]; f
 a11*x0*x1 + a10*x0 + a01*x1 + a00
 sage: Form2Hypermatrix(f, X).printHM()
 [:, :]=
@@ -732,7 +725,7 @@ sage: Form2Hypermatrix(f, X).printHM()
 [a10 a11]
 sage: sz=2; od=3; A=HM(sz, sz, sz,'a'); X=HM(od, 'x').list()
 sage: Hv0=HM(sz, 1, 1, [1,X[0]]); Hv1=HM(sz, 1, 1, [1,X[1]]); Hv2=HM(sz, 1, 1, [1,X[2]])
-sage: f=ProdB(Hv0.transpose(2), Hv1.transpose(), Hv2, A)[0,0,0]; f
+sage: f=BMPb(Hv0.transpose(2), Hv1.transpose(), Hv2, A)[0,0,0]; f
 a111*x0*x1*x2 + a110*x0*x1 + a101*x0*x2 + a011*x1*x2 + a100*x0 + a010*x1 + a001*x2 + a000
 sage: Form2Hypermatrix(f, X).printHM()
 [:, :, 0]=
@@ -744,7 +737,7 @@ sage: Form2Hypermatrix(f, X).printHM()
 [a101 a111]
 sage: sz=3; A=HM(sz,sz,'a'); X=var_list('x',2)
 sage: Hv0=HM(sz,1,[X[0]^i for i in range(sz)]); Hv1=HM(sz,1,[X[1]^j for j in range(sz)])
-sage: f=ProdB(Hv0.transpose(),Hv1,A)[0,0]; f
+sage: f=BMPb(Hv0.transpose(),Hv1,A)[0,0]; f
 a22*x0^2*x1^2 + a21*x0^2*x1 + a12*x0*x1^2 + a20*x0^2 + a11*x0*x1 + a02*x1^2 + a10*x0 + a01*x1 + a00
 sage: Form2Hypermatrix(f, X).printHM()
 [:, :]=
@@ -787,12 +780,6 @@ sage: p=x^2+2*x*y+1
 sage: substitute_matrix(p,x,Matrix(SR,HM(2,2,'a').listHM()))
 [a00^2 + a01*a10 + 2*a00*y + 1   a00*a01 + a01*a11 + 2*a01*y]
 [  a00*a10 + a10*a11 + 2*a10*y a01*a10 + a11^2 + 2*a11*y + 1]
-```
-
-To loading a PNG image into a hypermatrix ( warning: very slow !)
-
-```python
-sage: A=HM("pic.png")
 ```
 
 The slicer is given by 
@@ -841,7 +828,7 @@ sage: Ha
 [[1, 1], [1, -1]]
 sage: Hb
 [[1, 1], [1, -1]]
-sage: Prod(Ha,Hb).simplify()
+sage: BMP(Ha,Hb).simplify()
 [[2, 0], [0, 2]]
 sage: [Ha, Hb, Hc]=ThirdOrderDFT(3,2)
 sage: Ha
@@ -850,10 +837,10 @@ sage: Hb
 [[[1, 1, 1], [1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2]], [[1, 1/2*I*sqrt(3) - 1/2, -1/2*I*sqrt(3) - 1/2], [1, 1, 1]]]
 sage: Hc
 [[[1, 1], [1, 1]], [[1, 1/2*I*sqrt(3) - 1/2], [1/2*I*sqrt(3) - 1/2, 1]], [[1, -1/2*I*sqrt(3) - 1/2], [-1/2*I*sqrt(3) - 1/2, 1]]]
-sage: Prod(Ha,Hb,Hc).simplify_full()
+sage: BMP(Ha,Hb,Hc).simplify_full()
 [[[3, 0], [0, 0]], [[0, 0], [0, 3]]]
 sage: [Ha, Hb, Hc]=ThirdOrderDFT(5,5)
-sage: Prod(Ha,Hb,Hc).simplify_full()
+sage: BMP(Ha,Hb,Hc).simplify_full()
 [[[5, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 5, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 5, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 5, 0], [0, 0, 0, 0, 0]], [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 5]]]
 ```
 

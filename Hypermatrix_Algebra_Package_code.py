@@ -9,7 +9,6 @@ _sage_const_8 = Integer(8)
 # Imports
 import itertools
 
-
 # Definition of the hypermatrix class HM.
 class HM:
     """
@@ -34,7 +33,7 @@ class HM:
         [[[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]], [[0, 1, 0], [1, 0, 0], [0, 0, 1]]]
         sage: od=2; sz=2; HM(od,sz,'a','sym') # Creating a symmetric matrix
         [[a00, a10], [a10, a11]]
-        sage: od=2; sz=2; HM(od,sz,'a','skewsym') # Creating a symmetric matrix
+        sage: od=2; sz=2; HM(od,sz,'a','skewsym') # Creating a skewsymmetric matrix
         [[0, a01], [-a01, 0]]
         sage: sz=2; HM(sz,sz,sz,'a','shift') # Creating a hypermatrix where the index are shifted by one
         [[[a111, a112], [a121, a122]], [[a211, a212], [a221, a222]]]
@@ -206,6 +205,9 @@ class HM:
             else:
                 raise ValueError("not supported for order %d hypermatrices" % dims[0])
         elif s == 'kronecker':
+            AtmpL=args[:-1]
+            self.hm=GeneralHypermatrixKroneckerDelta(*AtmpL).listHM()
+        elif s == 'kron':
             AtmpL=args[:-1]
             self.hm=GeneralHypermatrixKroneckerDelta(*AtmpL).listHM()
         elif s == 'diag':
@@ -719,6 +721,28 @@ class HM:
         """
         return GeneralHypermatrixKroneckerSum(self, V)
 
+    def direct_sum(self, V):
+        """
+        Returns the block sum of two hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised. Same as the previous 
+        implementation
+
+        EXAMPLES:
+
+        ::
+
+            sage: HM(2,2,'a').direct_sum(HM(2,2,'b'))
+            [[a00, a01, 0, 0], [a10, a11, 0, 0], [0, 0, b00, b01], [0, 0, b10, b11]]
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixKroneckerSum(self, V)
+
     def block_sum_list(self, L):
         """
         Returns the block sum of a list of hypermatrices.
@@ -733,6 +757,27 @@ class HM:
         ::
 
             sage: HM(2,2,'a').block_sum_list([HM(2,2,'b'), HM(2,2,'c')])
+            [[a00, a01, 0, 0, 0, 0], [a10, a11, 0, 0, 0, 0], [0, 0, b00, b01, 0, 0], [0, 0, b10, b11, 0, 0], [0, 0, 0, 0, c00, c01], [0, 0, 0, 0, c10, c11]]
+
+        AUTHORS:
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixKroneckerSumList([self]+L)
+
+    def direct_sum_list(self, L):
+        """
+        Returns the block sum of a list of hypermatrices.
+        This routine assumes that ``self`` and ``B``
+        are both hypermatrices, with identical
+        sizes. It is "unsafe" in the sense that these
+        conditions are not checked and no sensible 
+        errors are raised.
+
+        EXAMPLES:
+
+        ::
+
+            sage: HM(2,2,'a').direct_sum_list([HM(2,2,'b'), HM(2,2,'c')])
             [[a00, a01, 0, 0, 0, 0], [a10, a11, 0, 0, 0, 0], [0, 0, b00, b01, 0, 0], [0, 0, b10, b11, 0, 0], [0, 0, 0, 0, c00, c01], [0, 0, 0, 0, c10, c11]]
 
         AUTHORS:
@@ -896,8 +941,8 @@ class HM:
 
     def numerical(self, dgts=15):
         """
-        Performs the symbolic simplification of the expressions
-        associated with the hypermatrix entries. 
+        Returns numerical value associated with the expressions
+        in the hypermatrix entries. 
 
         EXAMPLES:
 
@@ -913,6 +958,28 @@ class HM:
         - Edinah K. Gnang
         """
         return GeneralHypermatrixNumerical(self, dgts)
+
+    def N(self, dgts=15):
+        """
+        Returns numerical value associated with the expressions
+        in the hypermatrix entries. 
+
+        EXAMPLES:
+
+        ::
+
+            sage: Ha=HM(3,3,[exp(I*2*pi*u*v/3) for v in range(3) for u in range(3)]) 
+            sage: Ha.numerical()
+            [[1.00000000000000, 1.00000000000000, 1.00000000000000], [1.00000000000000, -0.500000000000000 + 0.866025403784439*I, -0.500000000000000 - 0.866025403784439*I], [1.00000000000000, -0.500000000000000 - 0.866025403784439*I, -0.500000000000000 + 0.866025403784439*I]] 
+         
+
+        AUTHORS:
+
+        - Edinah K. Gnang
+        """
+        return GeneralHypermatrixNumerical(self, dgts)
+
+
 
     def real(self):
         """
@@ -3402,8 +3469,10 @@ def Circulant(l):
 
     ::
 
-        sage: Circulant(var_list('x',2))
-        
+        sage: Circulant(var_list('x',2)).p()
+        [:, :]=
+        [x0 x1]
+        [x1 x0]
 
 
     AUTHORS:
@@ -3601,6 +3670,32 @@ def DiagonalHypermatrix(Mtrx):
                     D[i][j][k] = Mtrx[i,k]
     return D
 
+def Orthogonal2x2Matrix(t):
+    """
+    Outputs a symbolic parametrization of third order orthogonal matrix
+    of size 2x2. Yields a matrix representation of the field of complex
+    numbers.
+
+     EXAMPLES:
+
+    ::
+
+        sage: t=var('t'); Q=Orthogonal2x2x2Matrix(t); Q.p()
+        [:, :]=
+        [ cos(t) -sin(t)]
+        [ sin(t)  cos(t)]
+
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the trigonometric
+    c=cos(t); s=sin(t)
+    # Initialization of the 2x2x2 hypermatrix
+    Q=HM(2, 2,'zero')
+    Q[0,0]=c; Q[0,1]=-s; Q[1,0]=s; Q[1,1]=c
+    return Q
+
 def Orthogonal2x2x2Hypermatrix(t,x,y):
     """
     Outputs a symbolic parametrization of third order orthogonal hypermatrix
@@ -3625,7 +3720,10 @@ def Orthogonal2x2x2Hypermatrix(t,x,y):
 def Orthogonal2x2x2HypermatrixII(t,x,y):
     """
     Outputs a symbolic parametrization of third order orthogonal hypermatrix
-    of size 2x2x2.
+    of size 2x2x2. The difference with the first implementation above is a
+    permutation of the entries in the second row of the first slice and in the
+    the first row of the second slice
+
 
      EXAMPLES:
 
@@ -3648,7 +3746,8 @@ def Orthogonal2x2x2HypermatrixII(t,x,y):
 def Orthogonal2x2x2HypermatrixIII(t,x,y):
     """
     Outputs a symbolic parametrization of third order orthogonal hypermatrix
-    of size 2x2x2.
+    of size 2x2x2. The difference in the very first implementation is the sign
+    change in the first row of the secodn slice.
 
      EXAMPLES:
 
@@ -3665,6 +3764,37 @@ def Orthogonal2x2x2HypermatrixIII(t,x,y):
     """
     return HM([[[sin(t)^(2/3), x*cos(t)^(2/3)], [cos(t)^(2/3), -y*sin(t)^(2/3)]], [[1/x, sin(t)^(2/3)], [1/y, cos(t)^(2/3)]]])
 
+def Orthogonal2x2x2HypermatrixIV(t):
+    """
+    Outputs a symbolic parametrization of third order orthogonal hypermatrix
+    of size 2x2x2. This implementation is a good candidate for the 3rd analog
+    of the matrix representation of complex numbers.
+
+     EXAMPLES:
+
+    ::
+
+        sage: t=var('t'); Q=Orthogonal2x2x2HypermatrixIV(t); Q.p()
+        [:, :, 0]=
+        [ cos(t)^(2/3) -sin(t)^(2/3)]
+        [ sin(t)^(2/3)  cos(t)^(2/3)]
+        
+        [:, :, 1]=
+        [ sin(t)^(2/3)  sin(t)^(2/3)]
+        [ cos(t)^(2/3)  sin(t)^(2/3)]
+        sage: Prod(Q.transpose(), Q, Q.transpose(2))
+        [[[cos(t)^2 + sin(t)^2, 0], [0, 0]], [[0, 0], [0, cos(t)^2 + sin(t)^2]]]
+
+    AUTHORS:
+    - Edinah K. Gnang and Ori Parzanchevski
+    """
+    # Initialization of the trigonometric
+    c=(cos(t))^(2/3); s=(sin(t))^(2/3)
+    # Initialization of the 2x2x2 hypermatrix
+    Q=HM(2, 2, 2, 'zero')
+    Q[0,0,0]=c; Q[1,0,0]=s; Q[0,1,0]=-s; Q[1,1,0]=c
+    Q[0,0,1]=s; Q[1,0,1]=c; Q[0,1,1]= s; Q[1,1,1]=s
+    return Q
 
 def Orthogonal3x3x3Hypermatrix(t1,t2):
     """
@@ -4312,11 +4442,11 @@ def multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst):
         sage: CnstrLst = [x^A[0,0]*y^A[0,1]==7, x^A[1,0]*y^A[1,1]==2]
         sage: VrbLst = [x, y]
         sage: [Ha,hb] = multiplicativeConstraintFormatorIIIHM(CnstrLst, VrbLst)
-        sage: Ha.printHM()
+        sage: Ha.p()
         [:, :]=
         [a00 a01]
         [a10 a11]
-        sage: hb.printHM()
+        sage: hb.p()
         [:, :]=
         [7]
         [2]
@@ -5123,6 +5253,80 @@ def GmatrixHM(p,q,vrbl):
     else:
         raise ValueError("Both inputs must be polynomials in the input variable.")
 
+def Convolution(Hp,Hq):
+    """
+    Takes as input two vectors stored as column vecots of type hypermatrices and computes
+    their convolution via polynomial product in the variable x
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); Lp=var_list('a',sz); Lq=var_list('b',sz)
+        sage: Convolution(HM(sz,1,Lp), HM(sz,1,Lq)).p()
+        [:, :]=
+        [                a0*b0]
+        [        a1*b0 + a0*b1]
+        [a2*b0 + a1*b1 + a0*b2]
+        [        a2*b1 + a1*b2]
+        [                a2*b2]
+        sage: sz0=Integer(4); sz1=Integer(2); Lp=var_list('a',sz0); Lq=var_list('b',sz1) 
+        sage: Convolution(HM(sz0,1,Lp), HM(sz1,1,Lq)).p()
+        [:, :]=
+        [        a0*b0]
+        [a1*b0 + a0*b1]
+        [a2*b0 + a1*b1]
+        [a3*b0 + a2*b1]
+        [        a3*b1]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the list
+    Lp=Hp.list(); Lq=Hq.list()
+    # Initializing the sizes
+    sz0=len(Lp); sz1=len(Lq)
+    # Initialization of the polynomials
+    P=sum(Lp[i]*x^i for i in rg(sz0)); Q=sum(Lq[i]*x^i for i in rg(sz1))
+    # Initialization of the product of the two polynomials
+    H=expand(P*Q)
+    return HM(len(Lq)+len(Lp)-1,1,[diff(H,x,k).subs(x=0)/factorial(k) for k in rg(len(Lq)+len(Lp)-1)])
+
+def ConvolutionL(L):
+    """
+    Takes as input a list of two vectors stored as column vecots of type hypermatrices and computes
+    their convolution via polynomial product in the variable x
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); Lp=var_list('a',sz); Lq=var_list('b',sz)
+        sage: ConvolutionL([HM(sz,1,Lp),HM(sz,1,Lq)]).p()
+        [:, :]=
+        [                a0*b0]
+        [        a1*b0 + a0*b1]
+        [a2*b0 + a1*b1 + a0*b2]
+        [        a2*b1 + a1*b2]
+        [                a2*b2]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Obtaining the hypermatrices
+    Hp=L[0]; Hq=L[1]
+    # Initializing the sizes
+    sz0=Hp.n(0); sz1=Hq.n(0)
+    # Initialization of the list
+    Lp=Hp.list(); Lq=Hq.list()
+    # Initialization of the polynomials
+    P=sum(Lp[i]*x^i for i in rg(sz0)); Q=sum(Lq[i]*x^i for i in rg(sz1))
+    # Initialization of the product of the two polynomials
+    H=expand(P*Q)
+    return HM(len(Lq)+len(Lp)-1,1,[diff(H,x,k).subs(x=0)/factorial(k) for k in rg(len(Lq)+len(Lp)-1)])
+
 def substitute_matrix(p, vrbl, A):
     """
     The functions takes as input a polynomial p,
@@ -5600,6 +5804,29 @@ def Prod(*args):
     """
     return GeneralHypermatrixProduct(*args)
 
+# Defining a shorter function call for the hypermatrix product implemented above.
+def BMP(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner product of the input hypermatrices.
+    The code only handles the Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c')
+        sage: Rslt=BMP(Ha, Hb, Hc); Rslt
+        [[[a000*b000*c000 + a010*b001*c100, a001*b000*c001 + a011*b001*c101], [a000*b010*c010 + a010*b011*c110, a001*b010*c011 + a011*b011*c111]], [[a100*b100*c000 + a110*b101*c100, a101*b100*c001 + a111*b101*c101], [a100*b110*c010 + a110*b111*c110, a101*b110*c011 + a111*b111*c111]]]
+        sage: BMP(HM(2,2,'a'),HM(2,2,'b'))
+        [[a00*b00 + a01*b10, a00*b01 + a01*b11], [a10*b00 + a11*b10, a10*b01 + a11*b11]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProduct(*args)
+
 def GeneralHypermatrixProductB(*args):
     """
     Outputs a list of lists associated with the general
@@ -5664,6 +5891,27 @@ def ProdB(*args):
 
         sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c'); Hd = HM(2,2,2,'d')
         sage: Rslt=ProdB(Ha, Hb, Hc, Hd); Rslt
+        [[[a000*b000*c000*d000 + a000*b000*c100*d001 + a000*b001*c000*d010 + a000*b001*c100*d011 + a010*b000*c000*d100 + a010*b000*c100*d101 + a010*b001*c000*d110 + a010*b001*c100*d111, a001*b000*c001*d000 + a001*b000*c101*d001 + a001*b001*c001*d010 + a001*b001*c101*d011 + a011*b000*c001*d100 + a011*b000*c101*d101 + a011*b001*c001*d110 + a011*b001*c101*d111], [a000*b010*c010*d000 + a000*b010*c110*d001 + a000*b011*c010*d010 + a000*b011*c110*d011 + a010*b010*c010*d100 + a010*b010*c110*d101 + a010*b011*c010*d110 + a010*b011*c110*d111, a001*b010*c011*d000 + a001*b010*c111*d001 + a001*b011*c011*d010 + a001*b011*c111*d011 + a011*b010*c011*d100 + a011*b010*c111*d101 + a011*b011*c011*d110 + a011*b011*c111*d111]], [[a100*b100*c000*d000 + a100*b100*c100*d001 + a100*b101*c000*d010 + a100*b101*c100*d011 + a110*b100*c000*d100 + a110*b100*c100*d101 + a110*b101*c000*d110 + a110*b101*c100*d111, a101*b100*c001*d000 + a101*b100*c101*d001 + a101*b101*c001*d010 + a101*b101*c101*d011 + a111*b100*c001*d100 + a111*b100*c101*d101 + a111*b101*c001*d110 + a111*b101*c101*d111], [a100*b110*c010*d000 + a100*b110*c110*d001 + a100*b111*c010*d010 + a100*b111*c110*d011 + a110*b110*c010*d100 + a110*b110*c110*d101 + a110*b111*c010*d110 + a110*b111*c110*d111, a101*b110*c011*d000 + a101*b110*c111*d001 + a101*b111*c011*d010 + a101*b111*c111*d011 + a111*b110*c011*d100 + a111*b110*c111*d101 + a111*b111*c011*d110 + a111*b111*c111*d111]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return GeneralHypermatrixProductB(*args) 
+
+def BMPb(*args):
+    """
+    Outputs a list of lists associated with the general
+    Bhattacharya-Mesner product of the input hypermatrices
+    with non-trivial background. The code only handles the 
+    Hypermatrix HM class objects.
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c'); Hd = HM(2,2,2,'d')
+        sage: Rslt=BMPb(Ha, Hb, Hc, Hd); Rslt
         [[[a000*b000*c000*d000 + a000*b000*c100*d001 + a000*b001*c000*d010 + a000*b001*c100*d011 + a010*b000*c000*d100 + a010*b000*c100*d101 + a010*b001*c000*d110 + a010*b001*c100*d111, a001*b000*c001*d000 + a001*b000*c101*d001 + a001*b001*c001*d010 + a001*b001*c101*d011 + a011*b000*c001*d100 + a011*b000*c101*d101 + a011*b001*c001*d110 + a011*b001*c101*d111], [a000*b010*c010*d000 + a000*b010*c110*d001 + a000*b011*c010*d010 + a000*b011*c110*d011 + a010*b010*c010*d100 + a010*b010*c110*d101 + a010*b011*c010*d110 + a010*b011*c110*d111, a001*b010*c011*d000 + a001*b010*c111*d001 + a001*b011*c011*d010 + a001*b011*c111*d011 + a011*b010*c011*d100 + a011*b010*c111*d101 + a011*b011*c011*d110 + a011*b011*c111*d111]], [[a100*b100*c000*d000 + a100*b100*c100*d001 + a100*b101*c000*d010 + a100*b101*c100*d011 + a110*b100*c000*d100 + a110*b100*c100*d101 + a110*b101*c000*d110 + a110*b101*c100*d111, a101*b100*c001*d000 + a101*b100*c101*d001 + a101*b101*c001*d010 + a101*b101*c101*d011 + a111*b100*c001*d100 + a111*b100*c101*d101 + a111*b101*c001*d110 + a111*b101*c101*d111], [a100*b110*c010*d000 + a100*b110*c110*d001 + a100*b111*c010*d010 + a100*b111*c110*d011 + a110*b110*c010*d100 + a110*b110*c110*d101 + a110*b111*c010*d110 + a110*b111*c110*d111, a101*b110*c011*d000 + a101*b110*c111*d001 + a101*b111*c011*d010 + a101*b111*c111*d011 + a111*b110*c011*d100 + a111*b110*c111*d101 + a111*b111*c011*d110 + a111*b111*c111*d111]]]
 
 
@@ -23416,7 +23664,11 @@ def SelectSecondOrderIndexRotation(Ha, T, EntryList):
 def SecondOrderIndexMap(A):
     """
     The function perform a very special index map to the the the indices.
-    Ha is input second order hypermatrices and is assumed to be ?-diagonal
+    A is input second order hypermatrix. The product of the sum across
+    non-zero entries of yields a listing of all possible orrientations
+    of gracefully labeled graphs. If B is the output for A=HM(sz,sz,'a')
+    then prod(sum(B[i,j] for j in rg(sz) if j>=i) for i in rg(sz)) lists
+    all 2^(sz-1)*factorial(sz) orrientations of grapcefully labeled graphs 
 
 
     EXAMPLES:
@@ -23424,13 +23676,19 @@ def SecondOrderIndexMap(A):
     ::
 
         sage: sz=5; Ha=HM(sz, sz, 'a') # Initialization of the input Hypermatrix
-        sage: SecondOrderIndexMap(Ha).printHM()
+        sage: SecondOrderIndexMap(Ha).p()
         [:, :]=
         [      a00       a11       a22       a33       a44]
         [        0 a01 + a10 a12 + a21 a23 + a32 a34 + a43]
         [        0         0 a02 + a20 a13 + a31 a24 + a42]
         [        0         0         0 a03 + a30 a14 + a41]
         [        0         0         0         0 a04 + a40]
+        sage: sz=Integer(4); A=HM(sz,sz,'a'); B=SecondOrderIndexMap(A)
+        sage: F=prod(sum(B[i,j] for j in rg(sz) if j>=i) for i in rg(sz)); F # list of orrientations of graceful graphs 
+        (a00 + a11 + a22 + a33)*(a01 + a10 + a12 + a21 + a23 + a32)*(a02 + a13 + a20 + a31)*(a03 + a30)
+        sage: sz=Integer(4); od=Integer(2); X=var_list('x',sz); A=HM(sz,sz,'a'); Dx=HM(od, X,'diag'); B=SecondOrderIndexMap(Dx*A)
+        sage: F=diff(prod(sum(B[i,j] for j in rg(sz) if j>=i) for i in rg(sz)),X); expand(F) # list of graceful functional digraphs 
+        a00*a10*a20*a30 + a01*a11*a20*a30 + a00*a12*a20*a30 + a02*a11*a21*a30 + a00*a13*a21*a30 + a02*a10*a22*a30 + a02*a12*a22*a30 + a01*a13*a22*a30 + a02*a11*a23*a30 + a00*a13*a23*a30 + a03*a11*a21*a31 + a03*a10*a22*a31 + a03*a12*a22*a31 + a03*a11*a23*a31 + a03*a11*a20*a32 + a03*a13*a22*a32 + a03*a10*a20*a33 + a03*a12*a20*a33 + a03*a13*a21*a33 + a03*a13*a23*a33
 
 
     AUTHORS:
@@ -23448,6 +23706,421 @@ def SecondOrderIndexMap(A):
         return B.index_rotation(2*(2*pi/4))
     else:
         raise ValueError("The input matrices must be square.")
+
+def SecondOrderIndexMapII(A):
+    """
+    The function perform a very special index map to the the the indices.
+    Ha is input second order hypermatrices and is assumed to be ?-diagonal
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(4); Ha=HM(sz, sz, 'a') # Initialization of the input Hypermatrix
+        sage: SecondOrderIndexMapII(Ha).printHM()
+        [:, :]=
+        [    a00     a11     a22     a33]
+        [      0 a01*a10 a12*a21 a23*a32]
+        [      0       0 a02*a20 a13*a31]
+        [      0       0       0 a03*a30]
+        sage: sz=Integer(4); A=HM(sz,sz,'a'); B=SecondOrderIndexMapII(A); B.p()
+        sage: F=prod(sum(B[i,j] for j in rg(sz) if j>=i) for i in rg(sz)); F
+        (a01*a10 + a12*a21 + a23*a32)*(a02*a20 + a13*a31)*(a00 + a11 + a22 + a33)*a03*a30
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.is_cubical():
+        # Initialization of the matrix
+        sz=A.n(0); B=HM(sz,sz,'zero')
+        for i in rg(sz):
+            for j in rg(i+1):
+                if i == A.n(0)-1: 
+                    B[i,j]=A[i-j,A.n(1)-1-j]
+                else:
+                    B[i,j]=A[i-j,A.n(1)-1-j]*A[A.n(1)-1-j,i-j]
+        return B.index_rotation(2*(2*pi/4))
+    else:
+        raise ValueError("The input matrices must be square.")
+
+def SecondOrderIndexInvolution(A):
+    """
+    The function perform a very special index involution to the the the indices.
+    Ha is input second order hypermatrices and must be a square matrix
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(5); A=HM(sz, sz, 'a') # Initialization of the input Hypermatrix
+        sage: SecondOrderIndexInvolution(A).p()
+        [:, :]=
+        [a44 a43 a42 a41 a40]
+        [a34 a33 a32 a31 a30]
+        [a24 a23 a22 a21 a20]
+        [a14 a13 a12 a11 a10]
+        [a04 a03 a02 a01 a00]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    if A.is_cubical():
+        # Initialization of the matrix
+        sz=A.n(0); B=HM(sz,sz,'zero')
+        for i in rg(sz):
+            for j in rg(sz):
+                B[i,j]=A[sz-1-i,sz-1-j]
+        return B
+    else:
+        raise ValueError("The input matrices must be square.")
+
+def SecondOrderBetaSlicing(A,T):
+    """
+    The function takes as in put a matrix A as well as a tuple description
+    of an undirected loop beta-labeled graph and outputs a square matrix of the same size
+    as A whose columns are the Beta slices of A. The function checks that the second input
+    is beta labeled.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(4); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)] # Initialization of the tuples
+        sage: SecondOrderBetaSlicing(A,T).p()
+        [:, :]=
+        [a00 a11 a22 a33 a44 a55 a66]
+        [a10 a21 a32 a43 a54 a65 a06]
+        [a20 a31 a42 a53 a64 a05 a16]
+        [a30 a41 a52 a63 a04 a15 a26]
+        [a01 a12 a23 a34 a45 a56 a60]
+        [a02 a13 a24 a35 a46 a50 a61]
+        [a03 a14 a25 a36 a40 a51 a62]
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]
+        sage: SecondOrderBetaSlicing(A,T).p()
+        [:, :]=
+        [a04 a15 a26 a30 a41 a52 a63]
+        [a13 a24 a35 a46 a50 a61 a02]
+        [a22 a33 a44 a55 a66 a00 a11]
+        [a32 a43 a54 a65 a06 a10 a21]
+        [a41 a52 a63 a04 a15 a26 a30]
+        [a40 a51 a62 a03 a14 a25 a36]
+        [a31 a42 a53 a64 a05 a16 a20]
+        [a23 a34 a45 a56 a60 a01 a12]
+        [a14 a25 a36 a40 a51 a62 a03]
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]
+        sage: SecondOrderBetaSlicing(A,T).p()
+        [:, :]=
+        [a03 a14 a25 a36 a40 a51 a62]
+        [a13 a24 a35 a46 a50 a61 a02]
+        [a23 a34 a45 a56 a60 a01 a12]
+        [a33 a44 a55 a66 a00 a11 a22]
+        [a40 a51 a62 a03 a14 a25 a36]
+        [a30 a41 a52 a63 a04 a15 a26]
+        [a31 a42 a53 a64 a05 a16 a20]
+        [a32 a43 a54 a65 a06 a10 a21]
+        [a04 a15 a26 a30 a41 a52 a63]
+        sage: sz=Integer(5); od=Integer(2); A=HM(sz, sz, 'a'); X=var_list('x', sz); Ha=HM(sz,sz,'zero') # Setup for obtaining beta-labled functional digraphs
+        sage: for u in rg(sz):
+        ....:     for v in rg(sz):
+        ....:         Ha[u,v]=A[u,v]*X[abs(v-u)] # Filling up the matrix
+        ....:
+        sage: F=expand(diff(prod(sum(Ha[i, j] for j in rg(sz)) for i in rg(sz)),X)) # Initialization of the listing
+        sage: Lt=[]
+        sage: for mnm in F.operands():
+        ....:     Lt.append(Monomial2Tuple(mnm, A.list(), sz)+[(t[1], t[0]) for t in Monomial2Tuple(mnm, A.list(), sz) if t[0]!=t[1]])
+        ....:
+        sage: Lt[:5]
+        [[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (0, 1), (0, 2), (0, 3), (0, 4)],
+         [(0, 1), (1, 1), (2, 0), (3, 0), (4, 0), (1, 0), (0, 2), (0, 3), (0, 4)],
+         [(0, 0), (1, 2), (2, 0), (3, 0), (4, 0), (2, 1), (0, 2), (0, 3), (0, 4)],
+         [(0, 2), (1, 1), (2, 1), (3, 0), (4, 0), (2, 0), (1, 2), (0, 3), (0, 4)],
+         [(0, 0), (1, 3), (2, 1), (3, 0), (4, 0), (3, 1), (1, 2), (0, 3), (0, 4)]]
+        sage: V=Vandermonde(var_list('x',2*sz-1))
+        sage: for T in Lt[:2]:
+        ....:     SecondOrderBetaSlicing(V,T).p(); print('\n')
+        ....:
+        [:, :]=
+        [   1   x1 x2^2 x3^3 x4^4 x5^5 x6^6 x7^7 x8^8]
+        [  x0 x1^2 x2^3 x3^4 x4^5 x5^6 x6^7 x7^8    1]
+        [x0^2 x1^3 x2^4 x3^5 x4^6 x5^7 x6^8    1   x8]
+        [x0^3 x1^4 x2^5 x3^6 x4^7 x5^8    1   x7 x8^2]
+        [x0^4 x1^5 x2^6 x3^7 x4^8    1   x6 x7^2 x8^3]
+        [   1   x2 x3^2 x4^3 x5^4 x6^5 x7^6 x8^7 x0^8]
+        [   1   x3 x4^2 x5^3 x6^4 x7^5 x8^6 x0^7 x1^8]
+        [   1   x4 x5^2 x6^3 x7^4 x8^5 x0^6 x1^7 x2^8]
+        [   1   x5 x6^2 x7^3 x8^4 x0^5 x1^6 x2^7 x3^8]
+
+        [:, :]=
+        [   1   x2 x3^2 x4^3 x5^4 x6^5 x7^6 x8^7 x0^8]
+        [  x1 x2^2 x3^3 x4^4 x5^5 x6^6 x7^7 x8^8    1]
+        [x0^2 x1^3 x2^4 x3^5 x4^6 x5^7 x6^8    1   x8]
+        [x0^3 x1^4 x2^5 x3^6 x4^7 x5^8    1   x7 x8^2]
+        [x0^4 x1^5 x2^6 x3^7 x4^8    1   x6 x7^2 x8^3]
+        [  x0 x1^2 x2^3 x3^4 x4^5 x5^6 x6^7 x7^8    1]
+        [   1   x3 x4^2 x5^3 x6^4 x7^5 x8^6 x0^7 x1^8]
+        [   1   x4 x5^2 x6^3 x7^4 x8^5 x0^6 x1^7 x2^8]
+        [   1   x5 x6^2 x7^3 x8^4 x0^5 x1^6 x2^7 x3^8]        
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the number of vertices in the template graph
+    sz=Integer((A.n(0)+1)/2)
+    if A.is_cubical() and Set(rg(sz))==Set([abs(t[1]-t[0]) for t in T]) and Tuple_to_AdjacencyII(T,2*sz-1).is_symmetric():
+        return HM([[A[Integer(mod(t[0]+k,2*sz-1)),Integer(mod(t[1]+k,2*sz-1))] for t in T] for k in rg(2*sz-1)]).t()
+    else:
+        raise ValueError("The input matrices must be square and the second input beta labeled")
+
+def SecondOrderRhoSlicing(A,T):
+    """
+    The function takes as in put a matrix A as well as a tuple description
+    of an undirected loop rho-labeled graph and outputs a square matrix of the same size
+    as A whose columns are the rho slices of A. The function checks that the second input
+    is beta labeled.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,5),(1,1),(2,1),(3,0),(5,3),(5,0),(1,2),(0,3),(3,5)] # Initialization of the tuples associated with a rho-labeling
+        sage: SecondOrderRhoSlicing(A,T).p()
+        [:, :]=
+        [a05 a16 a27 a38 a40 a51 a62 a73 a84]
+        [a11 a22 a33 a44 a55 a66 a77 a88 a00]
+        [a21 a32 a43 a54 a65 a76 a87 a08 a10]
+        [a30 a41 a52 a63 a74 a85 a06 a17 a28]
+        [a53 a64 a75 a86 a07 a18 a20 a31 a42]
+        [a50 a61 a72 a83 a04 a15 a26 a37 a48]
+        [a12 a23 a34 a45 a56 a67 a78 a80 a01]
+        [a03 a14 a25 a36 a47 a58 a60 a71 a82]
+        [a35 a46 a57 a68 a70 a81 a02 a13 a24]
+        sage: sz=Integer(4); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)] # Initialization of the tuples
+        sage: SecondOrderRhoSlicing(A,T).p()
+        [:, :]=
+        [a00 a11 a22 a33 a44 a55 a66]
+        [a10 a21 a32 a43 a54 a65 a06]
+        [a20 a31 a42 a53 a64 a05 a16]
+        [a30 a41 a52 a63 a04 a15 a26]
+        [a01 a12 a23 a34 a45 a56 a60]
+        [a02 a13 a24 a35 a46 a50 a61]
+        [a03 a14 a25 a36 a40 a51 a62]
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]
+        sage: SecondOrderRhoSlicing(A,T).p()
+        [:, :]=
+        [a04 a15 a26 a30 a41 a52 a63]
+        [a13 a24 a35 a46 a50 a61 a02]
+        [a22 a33 a44 a55 a66 a00 a11]
+        [a32 a43 a54 a65 a06 a10 a21]
+        [a41 a52 a63 a04 a15 a26 a30]
+        [a40 a51 a62 a03 a14 a25 a36]
+        [a31 a42 a53 a64 a05 a16 a20]
+        [a23 a34 a45 a56 a60 a01 a12]
+        [a14 a25 a36 a40 a51 a62 a03]
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]
+        sage: SecondOrderRhoSlicing(A,T).p()
+        [:, :]=
+        [a03 a14 a25 a36 a40 a51 a62]
+        [a13 a24 a35 a46 a50 a61 a02]
+        [a23 a34 a45 a56 a60 a01 a12]
+        [a33 a44 a55 a66 a00 a11 a22]
+        [a40 a51 a62 a03 a14 a25 a36]
+        [a30 a41 a52 a63 a04 a15 a26]
+        [a31 a42 a53 a64 a05 a16 a20]
+        [a32 a43 a54 a65 a06 a10 a21]
+        [a04 a15 a26 a30 a41 a52 a63]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the number of vertices in the template graph
+    sz=Integer((A.n(0)+1)/2)
+    if A.is_cubical() and Set(rg(sz))==Set([min(abs(t[1]-t[0]),2*sz-1-abs(t[1]-t[0])) for t in T]) and Tuple_to_AdjacencyII(T,2*sz-1).is_symmetric():
+        return HM([[A[Integer(mod(t[0]+k,2*sz-1)),Integer(mod(t[1]+k,2*sz-1))] for t in T] for k in rg(2*sz-1)]).t()
+    else:
+        raise ValueError("The input matrices must be square and the second input beta labeled")
+
+def SecondOrderRhoSlicingII(A,T):
+    """
+    The function takes as in put a matrix A as well as a tuple description
+    of an undirected loop rho-labeled graph and outputs a square matrix of the same size
+    as A whose columns are the rho slices of A associated with a bipartite decomposition.
+    The function checks that the second input is beta labeled.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,5),(1,1),(2,1),(3,0),(5,3),(5,0),(1,2),(0,3),(3,5)] # Initialization of the tuples associated with a rho-labeling
+        sage: SecondOrderRhoSlicingII(A,T).p()
+        [:, :]=
+        [b014 b115 b216 b317  b49 b510 b611 b712 b813]
+        [b110 b211 b312 b413 b514 b615 b716 b817  b09]
+        [b210 b311 b412 b513 b614 b715 b816 b017  b19]
+        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
+        [b512 b613 b714 b815 b016 b117  b29 b310 b411]
+        [ b59 b610 b711 b812 b013 b114 b215 b316 b417]
+        [b111 b212 b313 b414 b515 b616 b717  b89 b010]
+        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
+        [b314 b415 b516 b617  b79 b810 b011 b112 b213]
+        sage: sz=Integer(4); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)] # Initialization of the tuples
+        sage: SecondOrderRhoSlicingII(A,T).p()
+        [:, :]=
+        [ b07  b18  b29 b310 b411 b512 b613]
+        [ b17  b28  b39 b410 b511 b612 b013]
+        [ b27  b38  b49 b510 b611 b012 b113]
+        [ b37  b48  b59 b610 b011 b112 b213]
+        [ b08  b19 b210 b311 b412 b513  b67]
+        [ b09 b110 b211 b312 b413  b57  b68]
+        [b010 b111 b212 b313  b47  b58  b69]
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]
+        sage: SecondOrderRhoSlicingII(A,T).p()
+        [:, :]=
+        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
+        [b112 b213 b314 b415 b516 b617  b79 b810 b011]
+        [b211 b312 b413 b514 b615 b716 b817  b09 b110]
+        [b311 b412 b513 b614 b715 b816 b017  b19 b210]
+        [b410 b511 b612 b713 b814 b015 b116 b217  b39]
+        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
+        [b310 b411 b512 b613 b714 b815 b016 b117  b29]
+        [b212 b313 b414 b515 b616 b717  b89 b010 b111]
+        [b113 b214 b315 b416 b517  b69 b710 b811 b012]
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]
+        sage: SecondOrderRhoSlicingII(A,T).p()
+        [:, :]=
+        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
+        [b112 b213 b314 b415 b516 b617  b79 b810 b011]
+        [b212 b313 b414 b515 b616 b717  b89 b010 b111]
+        [b312 b413 b514 b615 b716 b817  b09 b110 b211]
+        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
+        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
+        [b310 b411 b512 b613 b714 b815 b016 b117  b29]
+        [b311 b412 b513 b614 b715 b816 b017  b19 b210]
+        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
+        sage: sz=Integer(5); od=Integer(2); A=HM(sz, sz, 'a'); X=var_list('x', sz); Ha=HM(sz,sz,'zero') # Setup for obtaining beta-labled functional digraphs
+        sage: for u in rg(sz):
+        ....:     for v in rg(sz):
+        ....:         Ha[u,v]=A[u,v]*X[abs(v-u)] # Filling up the matrix
+        ....:
+        sage: F=expand(diff(prod(sum(Ha[i, j] for j in rg(sz)) for i in rg(sz)),X)) # Initialization of the listing
+        sage: Lt=[]
+        sage: for mnm in F.operands():
+        ....:     Lt.append(Monomial2Tuple(mnm, A.list(), sz)+[(t[1], t[0]) for t in Monomial2Tuple(mnm, A.list(), sz) if t[0]!=t[1]])
+        ....:
+        sage: Lt[:5]
+        [[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (0, 1), (0, 2), (0, 3), (0, 4)],
+         [(0, 1), (1, 1), (2, 0), (3, 0), (4, 0), (1, 0), (0, 2), (0, 3), (0, 4)],
+         [(0, 0), (1, 2), (2, 0), (3, 0), (4, 0), (2, 1), (0, 2), (0, 3), (0, 4)],
+         [(0, 2), (1, 1), (2, 1), (3, 0), (4, 0), (2, 0), (1, 2), (0, 3), (0, 4)],
+         [(0, 0), (1, 3), (2, 1), (3, 0), (4, 0), (3, 1), (1, 2), (0, 3), (0, 4)]]
+        sage: Ma=HM(2*sz-1, 2*sz-1, 'a')
+        sage: for T in Lt[:2]:
+        ....:     SecondOrderRhoSlicingII(Ma,T).p(); print('\n')
+        ....:
+        [:, :]=
+        [ b09 b110 b211 b312 b413 b514 b615 b716 b817]
+        [ b19 b210 b311 b412 b513 b614 b715 b816 b017]
+        [ b29 b310 b411 b512 b613 b714 b815 b016 b117]
+        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
+        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
+        [b010 b111 b212 b313 b414 b515 b616 b717  b89]
+        [b011 b112 b213 b314 b415 b516 b617  b79 b810]
+        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
+        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
+
+
+        [:, :]=
+        [b010 b111 b212 b313 b414 b515 b616 b717  b89]
+        [b110 b211 b312 b413 b514 b615 b716 b817  b09]
+        [ b29 b310 b411 b512 b613 b714 b815 b016 b117]
+        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
+        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
+        [ b19 b210 b311 b412 b513 b614 b715 b816 b017]
+        [b011 b112 b213 b314 b415 b516 b617  b79 b810]
+        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
+        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the number of vertices in the template graph
+    sz=Integer((A.n(0)+1)/2)
+    # Initialization of the symbolic matrix
+    Hb=HM(2*(2*sz-1), 2*(2*sz-1),'b')
+    if A.is_cubical() and Set(rg(sz))==Set([min(abs(t[1]-t[0]),2*sz-1-abs(t[1]-t[0])) for t in T]) and Tuple_to_AdjacencyII(T,2*sz-1).is_symmetric():
+        return HM([[Hb[Integer(mod(t[0]+k,2*sz-1)),(2*sz-1)+Integer(mod(t[1]+k,2*sz-1))] for t in T] for k in rg(2*sz-1)]).t()
+    else:
+        raise ValueError("The input matrices must be square and the second input beta labeled")
+
+def SecondOrderBetaInterlacers(A,T):
+    """
+    The function takes as in put a matrix A as well as a tuple description
+    of an undirected loop beta-labeled graph and outputs a square matrix of the same size
+    as A whose columns are the Beta slices of A. The function checks that the second input
+    is beta labeled.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(4); A=HM(sz, sz, 'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)] # Initialization of the tuples
+        sage: SecondOrderBetaInterlacers(A,T)
+        [[[-a00, 0, 0, 0], [0, a11, a12, a13], [0, a21, a22, a23], [0, a31, a32, a33]],
+         [[a00, 0, a02, a03], [0, -a11, 0, 0], [a20, 0, a22, a23], [a30, 0, a32, a33]],
+         [[a00, a01, 0, a03], [a10, a11, 0, a13], [0, 0, -a22, 0], [a30, a31, 0, a33]],
+         [[a00, a01, a02, 0], [a10, a11, a12, 0], [a20, a21, a22, 0], [0, 0, 0, -a33]]]
+        sage: sz=Integer(5); A=HM(sz, sz, 'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]; SecondOrderBetaInterlacers(A,T)
+        [[[a00, a01, a02, a03, 0], [a10, a11, a12, 0, 0], [a20, a21, -a22, 0, a24], [a30, 0, 0, a33, a34], [0, 0, a42, a43, a44]],
+         [[a00, 0, 0, a03, a04], [0, a11, a12, a13, a14], [0, a21, a22, a23, 0], [a30, a31, a32, -a33, 0], [a40, a41, 0, 0, a44]],
+         [[a00, a01, a02, 0, 0], [a10, a11, 0, 0, a14], [a20, 0, a22, a23, a24], [0, 0, a32, a33, a34], [0, a41, a42, a43, -a44]],
+         [[-a00, 0, a02, a03, a04], [0, a11, a12, a13, 0], [a20, a21, a22, 0, 0], [a30, a31, 0, a33, a34], [a40, 0, 0, a43, a44]],
+         [[a00, a01, 0, 0, a04], [a10, -a11, 0, a13, a14], [0, 0, a22, a23, a24], [0, a31, a32, a33, 0], [a40, a41, a42, 0, a44]]]
+        sage: sz=Integer(5); A=HM(sz, sz, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]; SecondOrderBetaInterlacers(A,T)
+        [[[a00, a01, a02, 0, 0], [a10, a11, a12, 0, a14], [a20, a21, a22, 0, a24], [0, 0, 0, -a33, a34], [0, a41, a42, a43, a44]],
+         [[a00, 0, a02, a03, a04], [0, a11, a12, a13, 0], [a20, a21, a22, a23, 0], [a30, a31, a32, a33, 0], [a40, 0, 0, 0, -a44]],
+         [[-a00, a01, 0, 0, 0], [a10, a11, 0, a13, a14], [0, 0, a22, a23, a24], [0, a31, a32, a33, a34], [0, a41, a42, a43, a44]],
+         [[a00, 0, a02, a03, a04], [0, -a11, a12, 0, 0], [a20, a21, a22, 0, a24], [a30, 0, 0, a33, a34], [a40, 0, a42, a43, a44]],
+         [[a00, a01, 0, a03, a04], [a10, a11, 0, a13, a14], [0, 0, -a22, a23, 0], [a30, a31, a32, a33, 0], [a40, a41, 0, 0, a44]]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Checking that the Tuple describes a gracefully labeled graph
+    if Set(rg(sz)) == Set([abs(t[1]-t[0]) for t in T]) and Tuple_to_AdjacencyII(T,sz).is_symmetric():
+        # Initialization of the list which stores the output
+        La=[]
+        for i in rg(sz):
+            # Initialization of a copy of the input hypermatrix
+            Ha=A.copy()
+            # Looping through the entries specified by the tuple list
+            for t in T:
+                # Nagating the the loop edge entry
+                if t[0]==t[1]:
+                    Ha[Integer(mod(t[0]+i,sz)),Integer(mod(t[1]+i,sz))]=-Ha[Integer(mod(t[0]+i,sz)),Integer(mod(t[1]+i,sz))]
+                else:
+                    # Zeroing out the non noop edges
+                    Ha[Integer(mod(t[0]+i,sz)),Integer(mod(t[1]+i,sz))]=0
+            La.append(Ha)
+        return La
+    else:
+        raise ValueError("The input tuple the second input beta labeled")
 
 def geometric_mean(L):
     """
@@ -26726,7 +27399,7 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
     f modulo Ld. The input f is an arbitrary multivariate polynomial
     in the variables stored in the list input X. Lr is is the list of distinct
     roots of the monic univariate polynomial associated with each variable.
-    This implementation does not require the input polunomial to be in 
+    This implementation does not require the input polynomial to be in 
     factored form
 
 
@@ -26736,6 +27409,8 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
         sage: sz=3; X=var_list('x',sz); f=expand(var('x0')^2*var('x1')+var('x2')^4); Lr=rg(sz)
         sage: expand(remainder_via_lagrange_interpolation(f, Lr, X))
         x0^2*x1 + 7*x2^2 - 6*x2
+        sage: expand(remainder_via_lagrange_interpolation(f, rg(5), X))
+        x2^4+x0^2*x1
         sage: sz=Integer(3); w=exp(2*pi*sqrt(-1)/3); X=var_list('x',sz); f=expand(var('x0')^2*var('x1')+var('x2')^4); Lr=[w^k for k in rg(sz)]
         sage: expand(remainder_via_lagrange_interpolation(f, Lr, X)).simplify_full()
         x0^2*x1+x2
@@ -26745,8 +27420,8 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
     - Edinah K. Gnang
     """
     # Initialization the number of variables
-    sz=len(X)
-    return sum(f.subs([X[i] == Lr[t[i][1]] for i in rg(sz)])*prod(prod((X[k]-jk)/(Lr[t[k][1]]-jk) for jk in Lr if jk !=Lr[t[k][1]]) for k in rg(sz) ) for t in TupleFunctionList(sz))
+    sz0=Integer(len(X)); sz1=Integer(len(Lr))
+    return sum(f.subs([X[i] == Lr[t[i][1]] for i in rg(sz0)])*prod(prod((X[k]-jk)/(Lr[t[k][1]]-jk) for jk in Lr if jk !=Lr[t[k][1]]) for k in rg(sz0) ) for t in TupleFunctionListII(sz0, sz1))
 
 def canonical_representative(f, Lr, X):
     """
@@ -27104,6 +27779,160 @@ def GeneralHypermatrixSupport(A):
             Rh[tuple(entry)]=Integer(1)
     return Rh
 
+def EliminationHM(Ha):
+    """
+    Performs row operations to zero out entries bellow the first pivot
+    row operation involve roots of unity whose primitive member is of
+    the number of non-zero entries in the first column i.e. row operations
+    are root of unity weighted linear combination of a maximal number of
+    of rows.
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=Integer(2); Ha=HM(sz,sz,'a') # Initialization of a symbolic 3x3 matrix
+        sage: Hb=EliminationHM(Ha); Hb.p() # Performing the elimination
+        [:, :]=
+        [              a00               a01]
+        [                0 a01*a10 - a00*a11]
+
+
+        sage: sz=Integer(3); Ha=HM(sz,sz,'a') # Initialization of a symbolic 3x3 matrix
+        sage: Hb=EliminationHM(Ha); Hb.p() # Performing the elimination
+        [:, :]=
+        [                                                                                                    a00                                                                                                     a01                                                                                                     a02]
+        [                                                                                                      0                                                                                       a01*a20 - a00*a21                                                                                       a02*a20 - a00*a22]
+        [                                                                                                      0 1/2*I*sqrt(3)*a00*a11*a20 - 1/2*I*sqrt(3)*a00*a10*a21 + a01*a10*a20 - 1/2*a00*a11*a20 - 1/2*a00*a10*a21 1/2*I*sqrt(3)*a00*a12*a20 - 1/2*I*sqrt(3)*a00*a10*a22 + a02*a10*a20 - 1/2*a00*a12*a20 - 1/2*a00*a10*a22]
+
+
+        sage: sz=Integer(3); Ha=HM(sz,sz,'a'); Ha[1,0]=SR(0) # Initialization of a symbolic 3x3 matrix
+        sage: Hb=EliminationHM(Ha); Hb.p() # Performing the elimination
+        [:, :]=
+        [              a00               a01               a02]
+        [                0 a01*a20 - a00*a21 a02*a20 - a00*a22]
+        [                0               a11               a12]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of a copy of the input matrix
+    A=Ha.copy()
+    # Initialization of the list of indices of zero entries in the first column
+    ZrIndxL=[i for i in rg(A.n(0)) if A[i,0].is_zero()]
+    # Initialization of the list of indices of non-zero entries in the first column
+    nZrIndxL=[i for i in rg(A.n(0)) if not i in ZrIndxL]
+    # Checking that if there are only zero entries bellow the pivot in the first column
+    if len(ZrIndxL)>=A.n(0)-1:
+        # Reodering the rows to ensure that rows whose first entry is equal to 0 appear at the bottom of the matrix
+        A=HM([A.slice([i],0).list() for i in nZrIndxL]+[A.slice([j],0).list() for j in ZrIndxL])
+        return A
+    else:
+        # While there are are non-zero entries bellow the pivot in the first column we run this loop
+        while len([i for i in rg(A.n(0)) if A[i,0].is_zero()])<A.n(0)-1:
+            # Initialization of the matrix
+            A=HM([A.slice([i],0).list() for i in nZrIndxL]+[A.slice([j],0).list() for j in ZrIndxL])
+            # Update the list of indices of zero entries on the first column
+            ZrIndxL=[i for i in rg(A.n(0)) if A[i,0].is_zero()]
+            # Update the list of indices of the nonzero entries on the first column
+            nZrIndxL=[i for i in rg(A.n(0)) if not i in ZrIndxL]
+            # Initialization of the root of unity
+            od=len(nZrIndxL); w=exp(I*2*pi/od)
+            #print('od = ',od)
+            # Initialization of a dictionary
+            Dct=dict([(i,nZrIndxL[i]) for i in rg(len(nZrIndxL))])
+            #print('Dct = ',Dct)
+            # Performing the row operation
+            Sm=sum([w^k*prod(A[Dct[i],0] for i in rg(len(nZrIndxL)) if i != Dct[k])*A.slice([Dct[k]],0) for k in rg(len(nZrIndxL))])
+            #print('Sm = ',Sm)
+            # Updating the matrix row
+            for j in rg(A.n(1)):
+                A[1,j]=Sm[0,j]
+            # Update the list of indices of zero entries on the first column
+            ZrIndxL=[i for i in rg(A.n(0)) if A[i,0].is_zero()]
+            # Update the list of indices of the nonzero entries on the first column
+            nZrIndxL=[i for i in rg(A.n(0)) if not i in ZrIndxL]
+    #return A
+    return A.expand()
+
+def GaussianEliminationHM(Ha):
+    """
+    This method repeatedly call the EliminationHM by
+    root of unity weighted linear combination
+    method to put the input matrix in Row Echelon Form
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=Integer(3); Ha=HM(sz,sz,'a') # Initialization of a symbolic 3x3 matrix
+        sage: Hb=GaussianEliminationHM(Ha); Hb.p()
+        [:, :]=
+        [                                                                                                                                                                                                                                                                                                                                                              a00                                                                                                                                                                                                                                                                                                                                                               a01                                                                                                                                                                                                                                                                                                                                                               a02]
+        [                                                                                                                                                                                                                                                                                                                                                                0                                                                                                                                                                                                                                                                                                                                                 a01*a20 - a00*a21                                                                                                                                                                                                                                                                                                                                                 a02*a20 - a00*a22]
+        [                                                                                                                                                                                                                                                                                                                                                                0                                                                                                                                                                                                                                                                                                                                                                 0 1/2*I*sqrt(3)*a00*a02*a11*a20^2 - 1/2*I*sqrt(3)*a00*a01*a12*a20^2 - 1/2*I*sqrt(3)*a00*a02*a10*a20*a21 + 1/2*I*sqrt(3)*a00^2*a12*a20*a21 + 1/2*I*sqrt(3)*a00*a01*a10*a20*a22 - 1/2*I*sqrt(3)*a00^2*a11*a20*a22 - 1/2*a00*a02*a11*a20^2 + 1/2*a00*a01*a12*a20^2 + 1/2*a00*a02*a10*a20*a21 - 1/2*a00^2*a12*a20*a21 - 1/2*a00*a01*a10*a20*a22 + 1/2*a00^2*a11*a20*a22]
+        sage: factor(Hb[2,2])
+        1/2*(a02*a11*a20 - a01*a12*a20 - a02*a10*a21 + a00*a12*a21 + a01*a10*a22 - a00*a11*a22)*a00*a20*(I*sqrt(3) - 1)
+        sage: sz=Integer(2); Ha=HM(sz,sz,'a') # Initialization of a symbolic 3x3 matrix
+        sage: Hb=GaussianEliminationHM(Ha); Hb.p()
+        [:, :]=
+        [              a00               a01]
+        [                0 a01*a10 - a00*a11]
+        sage: sz=Integer(3); Lx=var_list('x',sz); Vx=Vandermonde(Lx)
+        sage: Hb=GaussianEliminationHM(Vx); Hb.p()
+        [:, :]=
+        [                                                                                                                                                                                                                                                            1                                                                                                                                                                                                                                                             1                                                                                                                                                                                                                                                             1]
+        [                                                                                                                                                                                                                                                            0                                                                                                                                                                                                                                                   x0^2 - x1^2                                                                                                                                                                                                                                                   x0^2 - x2^2]
+        [                                                                                                                                                                                                                                                            0                                                                                                                                                                                                                                                             0 1/2*I*sqrt(3)*x0^4*x1 - 1/2*I*sqrt(3)*x0^3*x1^2 - 1/2*I*sqrt(3)*x0^4*x2 + 1/2*I*sqrt(3)*x0^2*x1^2*x2 + 1/2*I*sqrt(3)*x0^3*x2^2 - 1/2*I*sqrt(3)*x0^2*x1*x2^2 - 1/2*x0^4*x1 + 1/2*x0^3*x1^2 + 1/2*x0^4*x2 - 1/2*x0^2*x1^2*x2 - 1/2*x0^3*x2^2 + 1/2*x0^2*x1*x2^2]
+        sage: factor(Hb[2,2])
+        1/2*(x0 - x1)*(x0 - x2)*x0^2*(x1 - x2)*(I*sqrt(3) - 1)
+
+
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of a copy of the input matrix
+    A=Ha.copy()
+    for i in rg(A.n(0)-1):
+        A=A.fill_with(EliminationHM(A.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),[i,i])
+    return A
+
+def GaussJordanEliminationHM(Ha):
+    """
+    This method repeatedly call the EliminationHM by root of unity weighted linear combination
+    method to put the input matrix in Reduced Row Echelon Form. This implementation makes use
+    matrix index rotation operations. 
+
+
+    EXAMPLES:
+ 
+    ::
+
+        sage: sz=Integer(2); Ha=HM(sz,sz,'a') # Initialization of a symbolic 3x3 matrix
+        sage: Hb=GaussJordanEliminationHM(Ha); Hb.p()
+        [:, :]=
+        [-a00*a01*a10 + a00^2*a11                        0]
+        [                       0        a01*a10 - a00*a11]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    - To Do: 
+    """
+    # Initialization of a copy of the input matrix
+    A=Ha.copy()
+    B=GaussianEliminationHM(A).index_rotation(2*2*pi/4)
+    for i in rg(B.n(0)-1):
+        B = B.fill_with(GaussianEliminationHM(B.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),[i,i])
+    return B.index_rotation(2*2*pi/4)
+
 def EliminationHMI(Ha,i):
     """
     Procedure for performing a row linear combination which cancels the first entry
@@ -27199,7 +28028,7 @@ def EliminationHMII(Ha):
             B[i,jndx]=Tmp[i,jndx]
     return B
 
-def GaussEliminationHM(Ha):
+def GaussEliminationHMI(Ha):
     """
     Procedure for obtaining the Row Echelon Form (REF)
 
@@ -27208,14 +28037,14 @@ def GaussEliminationHM(Ha):
 
     ::
 
-        sage: sz=3; Ha=HM(sz,sz,'a'); Hc=GaussEliminationHM(Ha).canonicalize_radical()
+        sage: sz=3; Ha=HM(sz,sz,'a'); Hc=GaussEliminationHMI(Ha).canonicalize_radical()
         sage: Hc.printHM()
         [:, :]=
         [                                                                                                                                                                                        a00                                                                                                                                                                                         a01                                                                                                                                                                                         a02]
         [                                                                                                                                                                                          0                                                                                                           -1/2*a00*a10*a21*(I*sqrt(3) + 1) - 1/2*(a00*a11*(-I*sqrt(3) + 1) - 2*a01*a10)*a20                                                                                                           -1/2*a00*a10*a22*(I*sqrt(3) + 1) - 1/2*(a00*a12*(-I*sqrt(3) + 1) - 2*a02*a10)*a20]
         [                                                                                                                                                                                          0                                                                                                                                                                                           0 (-I*sqrt(3)*a00*a02*a10*a11 + I*sqrt(3)*a00*a01*a10*a12)*a20^2 + (I*sqrt(3)*a00*a02*a10^2 - I*sqrt(3)*a00^2*a10*a12)*a20*a21 + (-I*sqrt(3)*a00*a01*a10^2 + I*sqrt(3)*a00^2*a10*a11)*a20*a22]
         sage: Ha = HM([[HM(2,2,'a'),HM(2,2,'b'),HM(2,2,'c')],[HM(2,2,'d'),HM(2,2,'e'),HM(2,2,'f')],[HM(2,2,'g'),HM(2,2,'h'),HM(2,2,'i')]])
-        sage: Hb=GaussEliminationHM(Ha); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
+        sage: Hb=GaussEliminationHMI(Ha); HM(sz,sz,[Hb[i,j].is_zero() for j in rg(sz) for i in rg(sz)]).printHM()
         [:, :]=
         [0 0 0]
         [1 0 0]
@@ -27230,7 +28059,7 @@ def GaussEliminationHM(Ha):
         A = A.fill_with(EliminationHMII(A.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),[i,i])
     return A
 
-def GaussJordanEliminationHM(Ha):
+def GaussJordanEliminationHMI(Ha):
     """
     Procedure for obtaining the Reduced Row Echelon Form (RREF)
 
@@ -27244,7 +28073,7 @@ def GaussJordanEliminationHM(Ha):
         [:, :]=
         [-a00*a01*a10 + a00^2*a11                        0]
         [                       0        a01*a10 - a00*a11]
-        sage: Hb=GaussJordanEliminationHM(Ha); Hb[0,1].is_zero()
+        sage: Hb=GaussJordanEliminationHMI(Ha); Hb[0,1].is_zero()
         True
 
 
@@ -27252,9 +28081,9 @@ def GaussJordanEliminationHM(Ha):
     - Edinah K. Gnang
     """
     A=Ha.copy()
-    B=GaussEliminationHM(A).index_rotation(2*2*pi/4)
+    B=GaussEliminationHMI(A).index_rotation(2*2*pi/4)
     for i in rg(B.n(0)-1):
-        B=B.fill_with(GaussEliminationHM(B.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),[i,i])
+        B=B.fill_with(GaussEliminationHMI(B.slice(rg(i,A.n(0)),'row').slice(rg(i,A.n(1)),'col')),[i,i])
     return B.index_rotation(2*2*pi/4)
 
 def general_derivative(f, v, od):
@@ -28232,11 +29061,11 @@ def Function_lexII(T, b):
 
     ::
         
-        sage: T=[(0, 0), (1, 2), (2, 3), (3, 0)]; b=Integer(3); Function_lexII(T, b)
+        sage: T=[(0, 0), (1, 2), (2, 3), (3, 0)]; b=Integer(4); Function_lexII(T, b)
         56
-        sage: T=[(0, 0), (1, 0), (2, 0), (3, 0)]; b=Integer(3); Function_lexII(T, b)
+        sage: T=[(0, 0), (1, 0), (2, 0), (3, 0)]; b=Integer(4); Function_lexII(T, b)
         0
-        sage: T=[(0, 3), (1, 3), (2, 3), (3, 3)]; b=Integer(3); Function_lexII(T, b)
+        sage: T=[(0, 3), (1, 3), (2, 3), (3, 3)]; b=Integer(4); Function_lexII(T, b)
         255
 
 
@@ -30192,6 +31021,33 @@ def generate_unlabeled_permutation_listing(sz,A):
         Lm.append(1)
         for indx in rg(len(P)):
             Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,sum(P[:indx])+Integer(mod(u+1,P[indx]))] for u in rg(P[indx]))
+    return Lm
+
+def generate_representative_functions_listing(sz,A):
+    """
+    The function lists representative functions of the orbit under the Sn x Sn action each function is described
+    by a bipartite graph on 2*sz vertices as a result in the symbolic input matrix A must be of size 2*sz x 2*sz
+    the implementation leans rather heavily on the partition function
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); L=generate_representative_functions_listing(sz,HM(2*sz,2*sz,'a')); L
+        [a04*a15*a23, a04*a13*a25, a03*a14*a25]
+ 
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the the list which store the computation
+    Lm=[]; VrbL=[]
+    # Loop running through the partitions
+    for P in Partitions(sz):
+        Lm.append(1)
+        for indx in rg(len(P)):
+            Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,sz+sum(P[:indx])+Integer(mod(u+1,P[indx]))] for u in rg(P[indx]))
     return Lm
 
 def generate_unlabeled_spanning_union_of_stars_listing(sz,A):
