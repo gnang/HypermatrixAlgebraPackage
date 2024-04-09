@@ -1278,7 +1278,7 @@ class HM:
             [ a30 - a43  a31 - a33 -a23 + a32 -a13 + a33 -a03 + a34]
             [ a40 - a44 -a34 + a41 -a24 + a42 -a14 + a43 -a04 + a44]
             sage: sz=2; A=HM(sz, sz, sz, 'a')
-            sage: A.index_rotation([2*pi/4, 0, 0]).printHM()
+            sage: A.index_rotation([2*pi/4, 0, 0]).p()
             [:, :, 0]=
             [a100 a110]
             [a101 a111]
@@ -3694,7 +3694,7 @@ def Orthogonal2x2Matrix(t):
 
     ::
 
-        sage: t=var('t'); Q=Orthogonal2x2x2Matrix(t); Q.p()
+        sage: t=var('t'); Q=Orthogonal2x2Matrix(t); Q.p()
         [:, :]=
         [ cos(t) -sin(t)]
         [ sin(t)  cos(t)]
@@ -8697,6 +8697,87 @@ def PerII(A):
     for part in P:
         Pml.append((-1)^(max(part))*factorial(max(part))*((Partition2HM(part)).elementwise_product(A)).det())
     return expand(sum(Pml))*(-1)^A.nrows()
+
+def ChowDecompPerHM(sz):
+    """
+    This function returns the Hypermatrix which
+    underlies Ryser s and Glynn s Chow decomposition
+    of the permanent polynomial.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(2); A=HM(sz,sz,'a','shift'); [Hr, Hg]=ChowDecompPerHM(sz)
+        sage: Hr.p()
+        [:, :, 0]=
+        [0 0]
+        [I I]
+        [0 0]
+        [1 1]
+
+        [:, :, 1]=
+        [0 0]
+        [0 0]
+        [I I]
+        [1 1]
+
+        sage: Hg.p()
+        [:, :, 0]=
+        [ 1  1]
+        [-I -I]
+        [ I  I]
+        [-1 -1]
+
+        [:, :, 1]=
+        [ 1  1]
+        [ I  I]
+        [-I -I]
+        [-1 -1]
+
+        sage: sum(prod(sum(Hr[u,i,j]*A[i,j] for j in rg(sz)) for i in rg(sz)) for u in rg(2^sz)) # Ryser's Hypermatrix
+        (a11 + a12)*(a21 + a22) - a11*a21 - a12*a22
+        sage: (-1)^sz*sum(prod(sum(Hg[u,i,j]*A[i,j] for j in rg(sz)) for i in rg(sz)) for u in rg(2^sz))/(2^sz) # Glynn's Hypermatrix
+        1/2*(a11 + a12)*(a21 + a22) + 1/4*(I*a11 - I*a12)*(I*a21 - I*a22) + 1/4*(-I*a11 + I*a12)*(-I*a21 + I*a22)
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of shift parameter
+    shft=Integer(1)
+    # Initialization of the list of vertex variables with index shifted by 1
+    X=var_list('x',sz,shft)
+    # Initialization of the symbolic adjacency matrix for the completed complete graph
+    A=HM(sz,sz,'a','shift')
+    # Initialization of the symbolic listing of functional directed graphs with in-degree recordings
+    Pf=prod(sum(A[i,j]*X[j] for j in rg(sz)) for i in rg(sz))
+    # Initialization of the tensor power DFT matrix associated with the finite difference scheme
+    M=HM([[Integer(1),Integer(1)],[Integer(1),Integer(-1)]]).tensor_power(sz)
+    # Initialization of the list of all length sz binary strings
+    Li=List_of_Integers([2 for i in rg(sz)])
+    # Initialization of the evaluation (2^sz) x 1 vector of evaluation of Pf
+    Hv0=HM(2^sz,1,[Pf.subs([X[i]==l[i] for i in rg(len(l))]) for l in Li])
+    Hv1=HM(2^sz,1,[Pf.subs([X[i]==(-1)^l[i] for i in rg(len(l))]) for l in Li])
+    # Expressing Ryser's and Glynn's Chow-decomposition of the permanent
+    Pm0=(M*Hv0)[2^sz-1,0]; Pm1=(M*Hv1)[2^sz-1,0]/(2^sz)
+    # Initialization of the hypermatrix which underlies Ryser's and Glynn's Chow-decomposition of the permanent
+    H=HM(2^sz,sz,sz,'zero')
+    for l in Li:
+        for i in rg(sz):
+            for j in rg(sz):
+                if l[j]==Integer(1):
+                    H[sum(l[u]*(2^u)for u in rg(sz)),i,j]=((-1)^(sz-sum(l)))^(1/sz)
+    Hp=HM(2^sz,sz,sz,'one')
+    for l in Li:
+        for i in rg(sz):
+            for j in rg(sz):
+                if l[j]==Integer(1):
+                    Hp[sum(l[u]*(2^u) for u in rg(sz)),i,j]=(-1)*((-1)^(sz-sum(l)))^(1/sz)
+                else:
+                    Hp[sum(l[u]*(2^u) for u in rg(sz)),i,j]=((-1)^(sz-sum(l)))^(1/sz)
+    return [H, Hp]
  
 def MeanApproximation(T):
     """
@@ -8768,7 +8849,7 @@ def Permutation_to_PseudoTuple(M):
     """
     Returns list of edge tuple desctiption associated with the 
     input permutation. The encoding is based on the diagonals.
-    The row of the input nxn matrix M determines where the loop
+    The first row of the input nxn matrix M determines where the loop
     edge is placed. The second row of the input matrix M determines
     where the edge whose edge weight equals one. This continues
     up utill we reach the edge of weight (n-1) for there is only
@@ -9142,7 +9223,7 @@ def GenerateUnitLpNormVectorII(sz,p=2,indx=0):
     else :
         X = []
         X.append( Cos(var('t'+str(indx)))^(2/p) )
-        for i in range(1,sz-1):
+        for i in rg(1,sz-1):
             X.append( prod(Sin( var('t'+str(j+indx)) ) for j in range(i))*Cos(var('t'+str(i+indx)))^(2/p) )
         X.append( prod(Sin(var('t'+str(j+indx)))^(2/p) for j in range(sz-1)) )
         return X
@@ -9160,7 +9241,8 @@ def GenerateUnitLpNormVectorIII(sz, p, indx, T):
     is devised from T by using the correspondence between 
     permutations and gracefully labeled undirected graph having
     a loop edge.
-    Crucially T must a permutation of sz-1 elements.
+    Crucially T must a tuple description of a permutation of 
+    sz-1 elements.
 
 
     EXAMPLES:
@@ -23894,10 +23976,10 @@ def SecondOrderBetaSlicing(A,T):
 
 def SecondOrderRhoSlicing(A,T):
     """
-    The function takes as in put a matrix A as well as a tuple description
-    of an undirected loop rho-labeled graph and outputs a square matrix of the same size
-    as A whose columns are the rho slices of A. The function checks that the second input
-    is beta labeled.
+    The function takes as input a square matrix A with an odd number of rows  as well as
+    a tuple description of an undirected loop rho-labeled graph and outputs a square matrix
+    of the same size as A whose columns are the rho slices of A. The function checks that 
+    the second input is beta labeled.
 
 
     EXAMPLES:
@@ -23905,7 +23987,7 @@ def SecondOrderRhoSlicing(A,T):
     ::
 
         sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
-        sage: T=[(0,5),(1,1),(2,1),(3,0),(5,3),(5,0),(1,2),(0,3),(3,5)] # Initialization of the tuples associated with a rho-labeling
+        sage: T=[(0,0)]+[(i,i-1) for i in rg(1,sz)]+[(i-1,i) for i in rg(1,sz)] # Initialization of the tuples associated with a rho-labeling
         sage: SecondOrderRhoSlicing(A,T).p()
         [:, :]=
         [a05 a16 a27 a38 a40 a51 a62 a73 a84]
@@ -23921,37 +24003,39 @@ def SecondOrderRhoSlicing(A,T):
         sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)] # Initialization of the tuples
         sage: SecondOrderRhoSlicing(A,T).p()
         [:, :]=
-        [a00 a11 a22 a33 a44 a55 a66]
-        [a10 a21 a32 a43 a54 a65 a06]
-        [a20 a31 a42 a53 a64 a05 a16]
-        [a30 a41 a52 a63 a04 a15 a26]
-        [a01 a12 a23 a34 a45 a56 a60]
-        [a02 a13 a24 a35 a46 a50 a61]
-        [a03 a14 a25 a36 a40 a51 a62]
+        [a00 a15 a25 a35 a45 a05 a06 a07 a08]
+        [a10 a11 a26 a36 a46 a56 a16 a17 a18]
+        [a20 a21 a22 a37 a47 a57 a67 a27 a28]
+        [a30 a31 a32 a33 a48 a58 a68 a78 a38]
+        [a40 a41 a42 a43 a44 a50 a60 a70 a80]
+        [a01 a51 a52 a53 a54 a55 a61 a71 a81]
+        [a02 a12 a62 a63 a64 a65 a66 a72 a82]
+        [a03 a13 a23 a73 a74 a75 a76 a77 a83]
+        [a04 a14 a24 a34 a84 a85 a86 a87 a88]
         sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]
         sage: SecondOrderRhoSlicing(A,T).p()
         [:, :]=
-        [a04 a15 a26 a30 a41 a52 a63]
-        [a13 a24 a35 a46 a50 a61 a02]
-        [a22 a33 a44 a55 a66 a00 a11]
-        [a32 a43 a54 a65 a06 a10 a21]
-        [a41 a52 a63 a04 a15 a26 a30]
-        [a40 a51 a62 a03 a14 a25 a36]
-        [a31 a42 a53 a64 a05 a16 a20]
-        [a23 a34 a45 a56 a60 a01 a12]
-        [a14 a25 a36 a40 a51 a62 a03]
+        [a00 a02 a04 a25 a45 a64 a84 a06 a08]
+        [a10 a11 a13 a15 a36 a56 a75 a05 a17]
+        [a28 a21 a22 a24 a26 a47 a67 a86 a16]
+        [a27 a30 a32 a33 a35 a37 a58 a78 a07]
+        [a18 a38 a41 a43 a44 a46 a48 a60 a80]
+        [a01 a20 a40 a52 a54 a55 a57 a50 a71]
+        [a82 a12 a31 a51 a63 a65 a66 a68 a61]
+        [a72 a03 a23 a42 a62 a74 a76 a77 a70]
+        [a81 a83 a14 a34 a53 a73 a85 a87 a88]
         sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]
         sage: SecondOrderRhoSlicing(A,T).p()
         [:, :]=
-        [a03 a14 a25 a36 a40 a51 a62]
-        [a13 a24 a35 a46 a50 a61 a02]
-        [a23 a34 a45 a56 a60 a01 a12]
-        [a33 a44 a55 a66 a00 a11 a22]
-        [a40 a51 a62 a03 a14 a25 a36]
-        [a30 a41 a52 a63 a04 a15 a26]
-        [a31 a42 a53 a64 a05 a16 a20]
-        [a32 a43 a54 a65 a06 a10 a21]
-        [a04 a15 a26 a30 a41 a52 a63]
+        [a00 a01 a02 a03 a15 a54 a64 a74 a05]
+        [a16 a11 a12 a13 a14 a26 a65 a75 a85]
+        [a06 a27 a22 a23 a24 a25 a37 a76 a86]
+        [a07 a17 a38 a33 a34 a35 a36 a48 a87]
+        [a08 a18 a28 a40 a44 a45 a46 a47 a50]
+        [a61 a10 a20 a30 a51 a55 a56 a57 a58]
+        [a60 a72 a21 a31 a41 a62 a66 a67 a68]
+        [a70 a71 a83 a32 a42 a52 a73 a77 a78]
+        [a80 a81 a82 a04 a43 a53 a63 a84 a88]
 
 
     AUTHORS:
@@ -23960,13 +24044,33 @@ def SecondOrderRhoSlicing(A,T):
     # Initialization of the number of vertices in the template graph
     sz=Integer((A.n(0)+1)/2)
     if A.is_cubical() and Set(rg(sz))==Set([min(abs(t[1]-t[0]),2*sz-1-abs(t[1]-t[0])) for t in T]) and Tuple_to_AdjacencyII(T,2*sz-1).is_symmetric():
-        return HM([[A[Integer(mod(t[0]+k,2*sz-1)),Integer(mod(t[1]+k,2*sz-1))] for t in T] for k in rg(2*sz-1)]).t()
+        # Initialization of the matrix
+        Ha=HM(2*sz-1, 2*sz-1, 'zero')
+        # Identifying the column index
+        for i in rg(len(T)):
+            if T[i][0] == T[i][1]:
+                # Assigning the index
+                indx=T[i][0]
+        # Initialization of the list of free indices
+        fL0=rg(2*sz-1); fL1=rg(2*sz-1)
+        for i in rg(len(T)):
+            if T[i][1] == indx:
+                for k in rg(2*sz-1):
+                    Ha[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]=A[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]
+                fL0.remove(i); fL1.remove(T[i][0])
+        # Initialization of the dictionary
+        DctIndx=dict([(fL0[i],fL1[i]) for i in rg(len(fL0))])
+        for k in rg(2*sz-1):
+            for i in rg(len(T)):
+                if i in fL0:
+                    Ha[Integer(mod(DctIndx[i]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]=A[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(T[i][1]+k,2*sz-1))]
+        return Ha 
     else:
         raise ValueError("The input matrices must be square and the second input beta labeled")
 
 def SecondOrderRhoSlicingII(A,T):
     """
-    The function takes as in put a matrix A as well as a tuple description
+    The function takes as input a matrix A as well as a tuple description
     of an undirected loop rho-labeled graph and outputs a square matrix of the same size
     as A whose columns are the rho slices of A associated with a bipartite decomposition.
     The function checks that the second input is beta labeled.
@@ -23980,50 +24084,50 @@ def SecondOrderRhoSlicingII(A,T):
         sage: T=[(0,5),(1,1),(2,1),(3,0),(5,3),(5,0),(1,2),(0,3),(3,5)] # Initialization of the tuples associated with a rho-labeling
         sage: SecondOrderRhoSlicingII(A,T).p()
         [:, :]=
-        [b014 b115 b216 b317  b49 b510 b611 b712 b813]
-        [b110 b211 b312 b413 b514 b615 b716 b817  b09]
-        [b210 b311 b412 b513 b614 b715 b816 b017  b19]
-        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
-        [b512 b613 b714 b815 b016 b117  b29 b310 b411]
-        [ b59 b610 b711 b812 b013 b114 b215 b316 b417]
-        [b111 b212 b313 b414 b515 b616 b717  b89 b010]
-        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
-        [b314 b415 b516 b617  b79 b810 b011 b112 b213]
+        [ b09 b014 b415 b214 b414 b013 b117 b015 b017]
+        [ b19 b110 b115 b516 b315 b515 b114  b29 b116]
+        [b217 b210 b211 b216 b617 b416 b616 b215 b310]
+        [b411  b39 b311 b312 b317  b79 b517 b717 b316]
+        [b417 b512 b410 b412 b413  b49 b810  b69  b89]
+        [b010  b59 b613 b511 b513 b514 b510 b011 b710]
+        [b811 b111 b610 b714 b612 b614 b615 b611 b112]
+        [b213 b012 b212 b711 b815 b713 b715 b716 b712]
+        [b813 b314 b113 b313 b812 b016 b814 b816 b817]
         sage: sz=Integer(4); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
         sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)] # Initialization of the tuples
         sage: SecondOrderRhoSlicingII(A,T).p()
         [:, :]=
-        [ b07  b18  b29 b310 b411 b512 b613]
-        [ b17  b28  b39 b410 b511 b612 b013]
-        [ b27  b38  b49 b510 b611 b012 b113]
-        [ b37  b48  b59 b610 b011 b112 b213]
-        [ b08  b19 b210 b311 b412 b513  b67]
-        [ b09 b110 b211 b312 b413  b57  b68]
-        [b010 b111 b212 b313  b47  b58  b69]
+        [ b07 b111 b211 b311 b011 b012 b013]
+        [ b17  b18 b212 b312 b412 b112 b113]
+        [ b27  b28  b29 b313 b413 b513 b213]
+        [ b37  b38  b39 b310  b47  b57  b67]
+        [ b08  b48  b49 b410 b411  b58  b68]
+        [ b09  b19  b59 b510 b511 b512  b69]
+        [b010 b110 b210 b610 b611 b612 b613]
         sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]
         sage: SecondOrderRhoSlicingII(A,T).p()
         [:, :]=
-        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
-        [b112 b213 b314 b415 b516 b617  b79 b810 b011]
-        [b211 b312 b413 b514 b615 b716 b817  b09 b110]
-        [b311 b412 b513 b614 b715 b816 b017  b19 b210]
-        [b410 b511 b612 b713 b814 b015 b116 b217  b39]
-        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
-        [b310 b411 b512 b613 b714 b815 b016 b117  b29]
-        [b212 b313 b414 b515 b616 b717  b89 b010 b111]
-        [b113 b214 b315 b416 b517  b69 b710 b811 b012]
+        [ b09 b011 b013 b214 b414 b613 b813 b015 b017]
+        [ b19 b110 b112 b114 b315 b515 b714 b014 b116]
+        [b217 b210 b211 b213 b215 b416 b616 b815 b115]
+        [b216  b39 b311 b312 b314 b316 b517 b717 b016]
+        [b117 b317 b410 b412 b413 b415 b417  b69  b89]
+        [b010  b29  b49 b511 b513 b514 b516  b59 b710]
+        [b811 b111 b310 b510 b612 b614 b615 b617 b610]
+        [b711 b012 b212 b411 b611 b713 b715 b716  b79]
+        [b810 b812 b113 b313 b512 b712 b814 b816 b817]
         sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]
         sage: SecondOrderRhoSlicingII(A,T).p()
         [:, :]=
-        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
-        [b112 b213 b314 b415 b516 b617  b79 b810 b011]
-        [b212 b313 b414 b515 b616 b717  b89 b010 b111]
-        [b312 b413 b514 b615 b716 b817  b09 b110 b211]
-        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
-        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
-        [b310 b411 b512 b613 b714 b815 b016 b117  b29]
-        [b311 b412 b513 b614 b715 b816 b017  b19 b210]
-        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
+        [ b09 b010 b011 b012 b114 b513 b613 b713 b014]
+        [b115 b110 b111 b112 b113 b215 b614 b714 b814]
+        [b015 b216 b211 b212 b213 b214 b316 b715 b815]
+        [b016 b116 b317 b312 b313 b314 b315 b417 b816]
+        [b017 b117 b217  b49 b413 b414 b415 b416  b59]
+        [b610  b19  b29  b39 b510 b514 b515 b516 b517]
+        [ b69 b711 b210 b310 b410 b611 b615 b616 b617]
+        [ b79 b710 b812 b311 b411 b511 b712 b716 b717]
+        [ b89 b810 b811 b013 b412 b512 b612 b813 b817]
         sage: sz=Integer(5); od=Integer(2); A=HM(sz, sz, 'a'); X=var_list('x', sz); Ha=HM(sz,sz,'zero') # Setup for obtaining beta-labled functional digraphs
         sage: for u in rg(sz):
         ....:     for v in rg(sz):
@@ -24045,27 +24149,26 @@ def SecondOrderRhoSlicingII(A,T):
         ....:     SecondOrderRhoSlicingII(Ma,T).p(); print('\n')
         ....:
         [:, :]=
-        [ b09 b110 b211 b312 b413 b514 b615 b716 b817]
-        [ b19 b210 b311 b412 b513 b614 b715 b816 b017]
-        [ b29 b310 b411 b512 b613 b714 b815 b016 b117]
-        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
-        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
-        [b010 b111 b212 b313 b414 b515 b616 b717  b89]
-        [b011 b112 b213 b314 b415 b516 b617  b79 b810]
-        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
-        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
-
+        [ b09 b114 b214 b314 b414 b014 b015 b016 b017]
+        [ b19 b110 b215 b315 b415 b515 b115 b116 b117]
+        [ b29 b210 b211 b316 b416 b516 b616 b216 b217]
+        [ b39 b310 b311 b312 b417 b517 b617 b717 b317]
+        [ b49 b410 b411 b412 b413  b59  b69  b79  b89]
+        [b010 b510 b511 b512 b513 b514 b610 b710 b810]
+        [b011 b111 b611 b612 b613 b614 b615 b711 b811]
+        [b012 b112 b212 b712 b713 b714 b715 b716 b812]
+        [b013 b113 b213 b313 b813 b814 b815 b816 b817]
 
         [:, :]=
-        [b010 b111 b212 b313 b414 b515 b616 b717  b89]
-        [b110 b211 b312 b413 b514 b615 b716 b817  b09]
-        [ b29 b310 b411 b512 b613 b714 b815 b016 b117]
-        [ b39 b410 b511 b612 b713 b814 b015 b116 b217]
-        [ b49 b510 b611 b712 b813 b014 b115 b216 b317]
-        [ b19 b210 b311 b412 b513 b614 b715 b816 b017]
-        [b011 b112 b213 b314 b415 b516 b617  b79 b810]
-        [b012 b113 b214 b315 b416 b517  b69 b710 b811]
-        [b013 b114 b215 b316 b417  b59 b610 b711 b812]
+        [ b09 b010 b114 b214 b314 b513 b014 b015 b016]
+        [b117 b110 b111 b215 b315 b415 b614 b115 b116]
+        [b217  b29 b211 b212 b316 b416 b516 b715 b216]
+        [b317  b39 b310 b312 b313 b417 b517 b617 b816]
+        [b017  b49 b410 b411 b413 b414  b59  b69  b79]
+        [b810  b19 b510 b511 b512 b514 b515 b610 b710]
+        [b811 b011 b210 b611 b612 b613 b615 b616 b711]
+        [b812 b012 b112 b311 b712 b713 b714 b716 b717]
+        [ b89 b013 b113 b213 b412 b813 b814 b815 b817]
 
 
     AUTHORS:
@@ -24074,11 +24177,179 @@ def SecondOrderRhoSlicingII(A,T):
     # Initialization of the number of vertices in the template graph
     sz=Integer((A.n(0)+1)/2)
     # Initialization of the symbolic matrix
-    Hb=HM(2*(2*sz-1), 2*(2*sz-1),'b')
     if A.is_cubical() and Set(rg(sz))==Set([min(abs(t[1]-t[0]),2*sz-1-abs(t[1]-t[0])) for t in T]) and Tuple_to_AdjacencyII(T,2*sz-1).is_symmetric():
-        return HM([[Hb[Integer(mod(t[0]+k,2*sz-1)),(2*sz-1)+Integer(mod(t[1]+k,2*sz-1))] for t in T] for k in rg(2*sz-1)]).t()
+        #return HM([[Hb[Integer(mod(t[0]+k,2*sz-1)),(2*sz-1)+Integer(mod(t[1]+k,2*sz-1))] for t in T] for k in rg(2*sz-1)]).t()
+        # Initialization of the matrix
+        Hb=HM((2*sz-1), (2*sz-1),'b'); B=HM(2*(2*sz-1), 2*(2*sz-1),'b')
+        # Identifying the column index
+        for i in rg(len(T)):
+            if T[i][0] == T[i][1]:
+                # Assigning the index
+                indx=T[i][0]
+        # Initialization of the list of free indices
+        fL0=rg(2*sz-1); fL1=rg(2*sz-1)
+        for i in rg(len(T)):
+            if T[i][1] == indx:
+                for k in rg(2*sz-1):
+                    Hb[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]=B[Integer(mod(T[i][0]+k,2*sz-1)),(2*sz-1)+Integer(mod(indx+k,2*sz-1))]
+                fL0.remove(i); fL1.remove(T[i][0])
+        # Initialization of the dictionary
+        DctIndx=dict([(fL0[i],fL1[i]) for i in rg(len(fL0))])
+        for k in rg(2*sz-1):
+            for i in rg(len(T)):
+                if i in fL0:
+                    Hb[Integer(mod(DctIndx[i]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]=B[Integer(mod(T[i][0]+k,2*sz-1)),(2*sz-1)+Integer(mod(T[i][1]+k,2*sz-1))]
+        return Hb
     else:
         raise ValueError("The input matrices must be square and the second input beta labeled")
+
+def SecondOrderPseudoRhoSlicing(A,Tp):
+    """
+    The function takes as in put a square matrix A with an even number of vertices as well as
+    a tuple description of an undirected loop pseudo rho-labeled graph and outputs a square 
+    matrix of the same size as A whose columns are the rho slices of A. The function checks 
+    that the second input is beta labeled. The extra two directed edges which make up the
+    additional undirected edges should be appended at the end of the tuple
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(5); A=HM(2*sz,2*sz,'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)]+[(2*sz-1,1), (1,2*sz-1)] # Initialization of the tuples associated with a rho-labeling
+        sage: SecondOrderPseudoRhoSlicing(A,T).p()
+        [:, :]=
+        [a00 a15 a25 a35 a45 a05 a06 a07 a08 a19]
+        [a10 a11 a26 a36 a46 a56 a16 a17 a18 a29]
+        [a20 a21 a22 a37 a47 a57 a67 a27 a28 a39]
+        [a30 a31 a32 a33 a48 a58 a68 a78 a38 a49]
+        [a40 a41 a42 a43 a44 a50 a60 a70 a80 a59]
+        [a01 a51 a52 a53 a54 a55 a61 a71 a81 a69]
+        [a02 a12 a62 a63 a64 a65 a66 a72 a82 a79]
+        [a03 a13 a23 a73 a74 a75 a76 a77 a83 a89]
+        [a04 a14 a24 a34 a84 a85 a86 a87 a88 a09]
+        [a91 a92 a93 a94 a95 a96 a97 a98 a90 a99]
+        sage: sz=Integer(5); A=HM(2*sz,2*sz,'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]+[(2*sz-1,0),(0,2*sz-1)]
+        sage: SecondOrderPseudoRhoSlicing(A,T).p()
+        [:, :]=
+        [a00 a02 a04 a25 a45 a64 a84 a06 a08 a79]
+        [a10 a11 a13 a15 a36 a56 a75 a05 a17 a89]
+        [a28 a21 a22 a24 a26 a47 a67 a86 a16 a09]
+        [a27 a30 a32 a33 a35 a37 a58 a78 a07 a19]
+        [a18 a38 a41 a43 a44 a46 a48 a60 a80 a29]
+        [a01 a20 a40 a52 a54 a55 a57 a50 a71 a39]
+        [a82 a12 a31 a51 a63 a65 a66 a68 a61 a49]
+        [a72 a03 a23 a42 a62 a74 a76 a77 a70 a59]
+        [a81 a83 a14 a34 a53 a73 a85 a87 a88 a69]
+        [a97 a98 a90 a91 a92 a93 a94 a95 a96 a99]
+        sage: sz=Integer(5); A=HM(2*sz, 2*sz, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]+[(2*sz-1,0),(0,2*sz-1)]
+        sage: SecondOrderPseudoRhoSlicing(A,T).p()
+        [:, :]=
+        [a00 a01 a02 a03 a15 a54 a64 a74 a05 a69]
+        [a16 a11 a12 a13 a14 a26 a65 a75 a85 a79]
+        [a06 a27 a22 a23 a24 a25 a37 a76 a86 a89]
+        [a07 a17 a38 a33 a34 a35 a36 a48 a87 a09]
+        [a08 a18 a28 a40 a44 a45 a46 a47 a50 a19]
+        [a61 a10 a20 a30 a51 a55 a56 a57 a58 a29]
+        [a60 a72 a21 a31 a41 a62 a66 a67 a68 a39]
+        [a70 a71 a83 a32 a42 a52 a73 a77 a78 a49]
+        [a80 a81 a82 a04 a43 a53 a63 a84 a88 a59]
+        [a96 a97 a98 a90 a91 a92 a93 a94 a95 a99]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    T=Tp[:Integer(len(Tp)-2)]
+    # Initialization of the number of vertices in the template graph
+    sz=Integer((len(T)+1)/2)
+    # Initialization 
+    if A.is_cubical() and Set(rg(sz))==Set([min(abs(t[1]-t[0]),2*sz-1-abs(t[1]-t[0])) for t in T]) and Tuple_to_AdjacencyII(T,2*sz-1).is_symmetric():
+        # Initialization of the matrix
+        Ha=HM(2*sz-1, 2*sz-1, 'zero')
+        # Identifying the column index
+        for i in rg(len(T)):
+            if T[i][0] == T[i][1]:
+                # Assigning the index
+                indx=T[i][0]
+        # Initialization of the list of free indices
+        fL0=rg(2*sz-1); fL1=rg(2*sz-1)
+        for i in rg(len(T)):
+            if T[i][1] == indx:
+                for k in rg(2*sz-1):
+                    Ha[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]=A[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]
+                fL0.remove(i); fL1.remove(T[i][0])
+        # Initialization of the dictionary
+        DctIndx=dict([(fL0[i],fL1[i]) for i in rg(len(fL0))])
+        for k in rg(2*sz-1):
+            for i in rg(len(T)):
+                if i in fL0:
+                    Ha[Integer(mod(DctIndx[i]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]=A[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(T[i][1]+k,2*sz-1))]
+        Ah=HM(2*sz, 2*sz, 'zero'); Ah=Ah.fill_with(Ha,[0,0]); Ah[2*sz-1,2*sz-1]=A[2*sz-1,2*sz-1]
+        for i in rg(2*sz-1):
+            Ah[Integer(mod(indx+i,2*sz-1)),2*sz-1]=A[Integer(mod(Tp[len(Tp)-2][1]+i,2*sz-1)),Tp[len(Tp)-2][0]]
+            Ah[2*sz-1,Integer(mod(indx+i,2*sz-1))]=A[Tp[len(Tp)-2][0],Integer(mod(Tp[len(Tp)-2][1]+i,2*sz-1))]
+        return Ah 
+    else:
+        raise ValueError("The input matrices must be square and the second input beta labeled")
+
+def BetaLabelCaterpillarTuple(T):
+    """
+    Outputs the graceful labeling of the input Caterpillar tree T.
+    The implementation assumes that the input caterpillar tree arise
+    in the format that Random Caterpillar function output in the sense
+    the maximum in pre-image is where the next star in the caterpillar
+    is attached to. This is simplifying assumption for the inplementation
+    of the spring bloom algorithm. 
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(15); T=[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 6), (8, 7), (9, 7), (10, 7), (11, 7), (12, 7), (13, 7), (14, 7)]
+        sage: BetaLabelCaterpillarTuple(T)
+        [(0, 14), (1, 14), (2, 14), (3, 14), (4, 14), (5, 14), (6, 14), (7, 13), (8, 13), (9, 13), (10, 13), (11, 13), (12, 13), (13, 13), (14, 7)]
+       
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    sz=Integer(len(T))
+    # Changing the list of tuples into a list of list for mutability
+    Tp=[[T[i][0],T[i][1]] for i in rg(sz)]
+    # Identifying non zero vertices which will be labeled
+    # zero throughout the run of the spring bloom procedure.
+    # This implementation makes use of the special structure
+    # of the caterpillar trees generated by the RandomCaterpillarTuple
+    Lv=[0]; u=Integer(0)
+    while u < sz-1:
+        # Appending the next vertex to the list
+        Lv.append(max(tpl_pre_image_set(T,u)))
+        # Updating the vertex to the next one
+        u=max(tpl_pre_image_set(T,u))
+    #print('Lv = ', Lv)
+    # The main part of the Spring Bloom procedure.
+    for i in rg(len(Lv)):
+        # Specifying what to do at the very first center
+        if i==Integer(0):
+            indx=Lv[i+1]+Integer(1)
+            Tp=TupleComplementaryLabelII(Tp[:indx])+Tp[indx:]
+            for j in rg(indx,len(Tp)):
+                # Accounting for the label change for the next center in the rest of the caterpillar
+                if Tp[j][1]==Lv[i+1]:
+                    Tp[j][1]=Integer(0)
+        elif (i>0 and Lv[i]<Integer(sz-1)):
+            indx=Lv[i+1]+Integer(1)
+            Tp=TupleComplementaryLabelII(Tp[:indx])+Tp[indx:]
+            for j in rg(indx,len(Tp)):
+                # Accounting for the label change for the next center in the rest of the caterpillar
+                if Tp[j][1]==Lv[i+1]:
+                    Tp[j][1]=Integer(0) 
+        elif (i>0 and Lv[i]==Integer(sz-1)):
+            Tp=TupleComplementaryLabelII(Tp)
+    return [(Tp[i][0], Tp[i][1]) for i in rg(len(Tp))]
 
 def SecondOrderBetaInterlacers(A,T):
     """
@@ -25006,6 +25277,129 @@ def RepresentativePermutationFunctionList(sz):
             cL.append(tp)
     return cL
 
+def GracefulFunctionList(sz):
+    """
+    Returns a list of edge tuple descriptions associated 
+    with functions which admit a graceful labeling.
+    This implementation works while the number of vertices
+    is less then 11 because of the indexing symbolic issue.
+
+
+    EXAMPLES:
+    ::
+        sage: sz=Integer(2); GracefulFunctionList(sz)
+        [[(0, 0), (1, 0)], [(0, 1), (1,1)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the symbolic matrix
+    A=HM(sz,sz,'a')
+    # Initialization of the label variables
+    X=var_list('x',sz)
+    # Initialization of the list of permutations
+    SnL=PermutationFunctionList(sz)
+    # Initialization of the listing polynomial
+    F0=expand(diff(sum(prod(sum(A[i,j]*X[abs(T[j][1]-T[i][1])] for j in rg(sz)) for i in rg(sz)) for T in SnL),X))
+    # Initialization of the list of terms
+    Ltrm0=[trm/trm.subs([v==1 for v in A.list()]) for trm in F0.operands()]
+    return [Monomial2Tuple(mnm/mnm.subs([v==1 for v in A.list()]), A.list(),sz) for mnm in Ltrm0]
+
+def RhoLabelableNonGracefulFunctionList(sz):
+    """
+    Returns a list of edge tuple descriptions associated 
+    with functions which admit a rho labeling but no graceful labeling.
+    This implementation works while the number of vertices
+    is less then 11 because of the indexing symbolic issue.
+    This implementation is very slow
+
+
+    EXAMPLES:
+    ::
+        sage: sz=Integer(5); Lrho=RhoLabelableNonGracefulFunctionList(sz); Lrho
+        [[(0, 2), (1, 0), (2, 1), (3, 4), (4, 4)],
+         [(0, 4), (1, 1), (2, 1), (3, 0), (4, 3)],
+         [(0, 2), (1, 4), (2, 3), (3, 0), (4, 4)],
+         [(0, 3), (1, 0), (2, 4), (3, 1), (4, 4)],
+         [(0, 1), (1, 1), (2, 4), (3, 2), (4, 3)],
+         [(0, 3), (1, 2), (2, 2), (3, 4), (4, 0)],
+         [(0, 2), (1, 1), (2, 4), (3, 1), (4, 0)],
+         [(0, 0), (1, 0), (2, 3), (3, 4), (4, 2)],
+         [(0, 1), (1, 3), (2, 2), (3, 0), (4, 2)],
+         [(0, 3), (1, 1), (2, 0), (3, 2), (4, 1)],
+         [(0, 4), (1, 2), (2, 3), (3, 1), (4, 4)],
+         [(0, 2), (1, 1), (2, 3), (3, 0), (4, 1)],
+         [(0, 0), (1, 4), (2, 1), (3, 0), (4, 2)],
+         [(0, 0), (1, 0), (2, 4), (3, 2), (4, 3)],
+         [(0, 4), (1, 0), (2, 2), (3, 2), (4, 1)],
+         [(0, 1), (1, 2), (2, 0), (3, 4), (4, 4)],
+         [(0, 1), (1, 4), (2, 3), (3, 3), (4, 0)],
+         [(0, 4), (1, 0), (2, 3), (3, 3), (4, 1)],
+         [(0, 4), (1, 2), (2, 2), (3, 0), (4, 3)],
+         [(0, 0), (1, 3), (2, 0), (3, 4), (4, 1)],
+         [(0, 0), (1, 4), (2, 0), (3, 1), (4, 3)],
+         [(0, 3), (1, 4), (2, 0), (3, 2), (4, 4)],
+         [(0, 3), (1, 0), (2, 2), (3, 1), (4, 2)],
+         [(0, 1), (1, 3), (2, 4), (3, 0), (4, 4)],
+         [(0, 2), (1, 3), (2, 4), (3, 3), (4, 0)],
+         [(0, 0), (1, 2), (2, 4), (3, 0), (4, 1)],
+         [(0, 2), (1, 4), (2, 2), (3, 1), (4, 3)],
+         [(0, 2), (1, 3), (2, 2), (3, 4), (4, 1)],
+         [(0, 3), (1, 1), (2, 1), (3, 4), (4, 0)],
+         [(0, 0), (1, 2), (2, 3), (3, 1), (4, 0)],
+         [(0, 1), (1, 4), (2, 2), (3, 2), (4, 0)],
+         [(0, 4), (1, 3), (2, 1), (3, 2), (4, 4)],
+         [(0, 1), (1, 1), (2, 3), (3, 4), (4, 2)],
+         [(0, 3), (1, 4), (2, 1), (3, 3), (4, 2)],
+         [(0, 1), (1, 2), (2, 0), (3, 3), (4, 3)],
+         [(0, 3), (1, 2), (2, 4), (3, 3), (4, 1)],
+         [(0, 4), (1, 1), (2, 0), (3, 1), (4, 2)],
+         [(0, 0), (1, 3), (2, 1), (3, 2), (4, 0)],
+         [(0, 2), (1, 0), (2, 1), (3, 3), (4, 3)],
+         [(0, 4), (1, 3), (2, 0), (3, 3), (4, 2)]]
+        sage: Tg=Lrho[0]; print("Induced edge labels: ",Set([min(abs(t[1]-t[0]),2*sz-1-abs(t[1]-t[0])) for t in Tg])) # Rho Labelings
+        Induced edge labels:  {0, 1, 2}
+        sage: A=HM(2*sz-1,2*sz-1,'a'); X=var_list('x',sz); Lf=injectiveTupleFunctionList(rg(sz), rg(2*sz-1))
+        sage: F=sum(prod(A[T[i][1],T[Tg[i][1]][1]]*X[min(abs(T[Tg[i][1]][1]-T[i][1]),2*sz-1-abs(T[Tg[i][1]][1]-T[i][1]))] for i in rg(sz)) for T in Lf); Fl=diff(F,X)
+        sage: rL=[Monomial2Tuple(mnm/mnm.subs([v==1 for v in A.list()]), A.list(),2*sz-1) for mnm in Fl.operands()]; rL[:5]
+        [[(0, 3), (1, 1), (2, 1), (3, 5), (5, 0)],
+         [(0, 3), (1, 2), (2, 2), (3, 5), (5, 0)],
+         [(0, 0), (1, 2), (2, 4), (4, 1), (5, 0)],
+         [(0, 0), (1, 3), (3, 4), (4, 1), (5, 0)],
+         [(0, 0), (1, 4), (2, 1), (4, 2), (5, 0)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size parameter
+    sz=Integer(5)
+    # Initialization of the symbolic matrix
+    A=HM(2*sz-1,2*sz-1,'a')
+    # Initialization of the label variables
+    X=var_list('x',sz)
+    # Initialization of the list of permutations
+    SnL=PermutationFunctionList(sz)
+    # Initialization of the listing polynomial
+    F0=expand(diff(sum(prod(sum(A[i,j]*X[abs(T[j][1]-T[i][1])] for j in rg(sz)) for i in rg(sz)) for T in SnL),X))
+    # Initialization of the list of terms
+    Ltrm0=[trm/trm.subs([v==1 for v in A.list()]) for trm in F0.operands()]
+    # Initialization of the corresponding set of terms
+    St0=Set(Ltrm0)
+    # Initialization of the list of functions
+    Lf=injectiveTupleFunctionList(rg(sz), rg(2*sz-1))
+    # Initialization of the listing polynomial
+    F1=expand(diff(sum(prod(sum(A[i,j]*X[min(abs(T[j][1]-T[i][1]),2*sz-1-abs(T[j][1]-T[i][1]))] for j in rg(sz)) for i in rg(sz)) for T in Lf),X))
+    # Initialization of the list of terms
+    Ltrm1=[trm/trm.subs([v==1 for v in A.list()]) for trm in F1.operands()]
+    # Initialization of the corresponding set of terms
+    St1=Set(Ltrm1)
+    # Computing the set difference
+    dSt=St1.difference(St0)
+    # Initialization of list of tuple descriptions
+    return [Monomial2Tuple(trm, A.list(), 2*sz-1) for trm in dSt]
+
 def TranspositionPermutation(pl, sz):
     """
     Returns a tuple list description of the transposition
@@ -25057,7 +25451,8 @@ def is_permutation(T):
 
 def RandomPermutationTuple(sz):
     """
-    Outputs a permutation described in tuple notation
+    Outputs a random permutation i.e. a spanning union of
+    disjoint directed cycles described in tuple notation
     chosen uniformly at random
 
 
@@ -25486,6 +25881,32 @@ def TupleComplementaryLabel(T):
     """
     sz=len(T)
     tp=[(sz-1-t[0], sz-1-t[1]) for t in T]
+    tp.sort()
+    return tp
+
+def TupleComplementaryLabelII(T):
+    """
+    Returns the tuple encoding of the involuted labeling
+    This implementation does not assume that the tuple is   
+    rooted at 0. Differs from the implementation above in
+    the fact that T is a list of list for mutability purposes.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: T=[[0, 0], [1, 2], [2, 4], [3, 0], [4, 0]]
+        sage: TupleComplementaryLabelII(T)
+        [[0, 4], [1, 4], [2, 0], [3, 2], [4, 4]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the size
+    sz=Integer(len(T))
+    tp=[[sz-1-t[0], sz-1-t[1]] for t in T]
     tp.sort()
     return tp
 
@@ -27428,6 +27849,11 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
         sage: sz=Integer(3); w=exp(2*pi*sqrt(-1)/3); X=var_list('x',sz); f=expand(var('x0')^2*var('x1')+var('x2')^4); Lr=[w^k for k in rg(sz)]
         sage: expand(remainder_via_lagrange_interpolation(f, Lr, X)).simplify_full()
         x0^2*x1+x2
+        sage: sz=Integer(3); Xv=var_list('x',sz); T=[(0,0)]+[(i,i-1) for i in rg(1,sz)]; T # Initialization
+        [(0, 0), (1, 0), (2, 1)]
+        sage: vV=prod(Xv[j]-Xv[i] for i in rg(sz) for j in rg(sz) if i<j)
+        sage: eV=prod((Xv[T[j][1]]-Xv[j])*(Xv[T[j][1]]^(2*sz-2)-Xv[j]^(2*sz-2))-(Xv[T[i][1]]-Xv[i])*(Xv[T[i][1]]^(2*sz-2)-Xv[i]^(2*sz-2)) for i in rg(sz) for j in rg(sz) if i<j)
+        sage: F=vV*eV; w=exp(2*pi*I/(2*sz-1)); Lrh=[w^i for i in rg(2*sz-1)]; cF=remainder_via_lagrange_interpolation(f, Lr, X)
 
     AUTHORS:
 
@@ -31095,6 +31521,49 @@ def generate_unlabeled_spanning_union_of_stars_listing(sz,A):
             Lm[len(Lm)-1]=Lm[len(Lm)-1]*prod(A[sum(P[:indx])+u,u] for u in rg(P[indx]))
     return Lm
 
+def RandomCaterpillarTuple(sz):
+    """
+    Outputs a random functional caterpillar tree
+    described in tuple notation chosen uniformly at random
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(5); len(RandomCaterpillarTuple(sz))
+        5
+       
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the empty partition list
+    pL=[] 
+    # Initialization of the Tuple and the list which
+    # will store values that were already used
+    Tp=[]
+    # Initialization of the residue value
+    rsdv=sz
+    while rsdv > Integer(0):
+        # Random choice of the number vertices in the current star
+        strsz=randint(Integer(1), rsdv)
+        pL.append(strsz);  rsdv=rsdv-strsz
+    # Displaying on screen for debugging purposes
+    #print('pL =',pL)
+    for indx in rg(len(pL)):
+        Tp=Tp+[[sum(pL[:indx])+u,sum(pL[:indx])] for u in rg(pL[indx])] 
+    # Fixing the spanning union of stars into a caterpillar
+    T=[(Tp[0][0], Tp[0][1])]
+    for i in rg(1,sz):
+        if Tp[i][0] == Tp[i][1]:
+            T.append((Tp[i][0], Tp[i][1]-Integer(1)))
+        else:
+            T.append((Tp[i][0], Tp[i][1]))
+    # Displaying on screen for debugging purposes
+    #print('Tp =',Tp)
+    return T
+
 def generate_unlabeled_curtailement_functional_listing_script(Tp):
     """
     Creates a sage file which corresponds to a script
@@ -33981,7 +34450,7 @@ def SymPoly_ExpansionII(F, Xv, Pv, Sv):
 
     ::
 
-        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
+        sage: sz=Integer(3); Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)] 
         sage: f=Xv[1]*Xv[2]^2 - Xv[1]^2 + Xv[1]*Xv[2] # Initial non-symmetric polynomial 
         sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
         sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
