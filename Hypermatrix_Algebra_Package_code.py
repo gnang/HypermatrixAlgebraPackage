@@ -3304,6 +3304,44 @@ def HypermatrixProductB(A, B, C, D):
     else :
         raise ValueError("Hypermatrix dimension mismatch.")
 
+def HypermatrixDualProduct(A, B, C):
+    """
+    Outputs a list of lists associated with the ternary
+    dual product the third order input hypermatrices A, B
+    and C. Corresponds to the product introduced by Richard
+    Kerner.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Ha=HM(2, 2, 2,'a'); Hb=HM(2, 2, 2,'b'); Hc=HM(2, 2, 2,'c')
+        sage: Hr=HypermatrixDualProduct(Ha, Hb, Hc); Hr.p()
+        [:, :, 0]=
+        [a000*b000*c000 + a001*b001*c000 + a010*b000*c010 + a011*b001*c010 + a000*b100*c100 + a001*b101*c100 + a010*b100*c110 + a011*b101*c110 a000*b010*c000 + a001*b011*c000 + a010*b010*c010 + a011*b011*c010 + a000*b110*c100 + a001*b111*c100 + a010*b110*c110 + a011*b111*c110]
+        [a100*b000*c000 + a101*b001*c000 + a110*b000*c010 + a111*b001*c010 + a100*b100*c100 + a101*b101*c100 + a110*b100*c110 + a111*b101*c110 a100*b010*c000 + a101*b011*c000 + a110*b010*c010 + a111*b011*c010 + a100*b110*c100 + a101*b111*c100 + a110*b110*c110 + a111*b111*c110]
+
+        [:, :, 1]=
+        [a000*b000*c001 + a001*b001*c001 + a010*b000*c011 + a011*b001*c011 + a000*b100*c101 + a001*b101*c101 + a010*b100*c111 + a011*b101*c111 a000*b010*c001 + a001*b011*c001 + a010*b010*c011 + a011*b011*c011 + a000*b110*c101 + a001*b111*c101 + a010*b110*c111 + a011*b111*c111]
+        [a100*b000*c001 + a101*b001*c001 + a110*b000*c011 + a111*b001*c011 + a100*b100*c101 + a101*b101*c101 + a110*b100*c111 + a111*b101*c111 a100*b010*c001 + a101*b011*c001 + a110*b010*c011 + a111*b011*c011 + a100*b110*c101 + a101*b111*c101 + a110*b110*c111 + a111*b111*c111]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Test for dimension match
+    if A.n(1)==C.n(1) and B.n(0)==C.n(0) and A.n(2)==B.n(2):
+        # Initialization of the output
+        Hr=HM(A.n(0), B.n(1), C.n(2),'zero')
+        for i in rg(A.n(0)):
+            for j in rg(B.n(1)):
+                for k in rg(C.n(2)):
+                    Hr[i,j,k]=sum([A[i,l1,l2]*B[l0,j,l2]*C[l0,l1,k] for l0 in rg(B.n(0)) for l1 in rg(C.n(1)) for l2 in rg(A.n(2))])
+        return Hr
+    else :
+        raise ValueError("Hypermatrix dimension mismatch.")
+
 def HypermatrixDualProductB(A, B, C, D):
     """
     Outputs a list of lists associated with the ternary
@@ -3315,51 +3353,29 @@ def HypermatrixDualProductB(A, B, C, D):
 
     ::
 
-        sage: Ha=HypermatrixGenerate(2,2,2,'a')
-        sage: Hb=HypermatrixGenerate(2,2,2,'b')
-        sage: Hc=HypermatrixGenerate(2,2,2,'c')
-        sage: Hd=HypermatrixGenerate(2,2,2,'d')
-        sage: Rslt = HypermatrixDualProductB(Ha, Hb, Hc, Hd); Rslt
-        [[[a000*b000*c000*d000 + a100*b100*c000*d000 + a001*b000*c001*d000 + a101*b100*c001*d000 + a000*b010*c010*d000 + a100*b110*c010*d000 + a001*b010*c011*d000 + a101*b110*c011*d000, a000*b000*c100*d001 + a100*b100*c100*d001 + a001*b000*c101*d001 + a101*b100*c101*d001 + a000*b010*c110*d001 + a100*b110*c110*d001 + a001*b010*c111*d001 + a101*b110*c111*d001], [a000*b001*c000*d010 + a100*b101*c000*d010 + a001*b001*c001*d010 + a101*b101*c001*d010 + a000*b011*c010*d010 + a100*b111*c010*d010 + a001*b011*c011*d010 + a101*b111*c011*d010, a000*b001*c100*d011 + a100*b101*c100*d011 + a001*b001*c101*d011 + a101*b101*c101*d011 + a000*b011*c110*d011 + a100*b111*c110*d011 + a001*b011*c111*d011 + a101*b111*c111*d011]], [[a010*b000*c000*d100 + a110*b100*c000*d100 + a011*b000*c001*d100 + a111*b100*c001*d100 + a010*b010*c010*d100 + a110*b110*c010*d100 + a011*b010*c011*d100 + a111*b110*c011*d100, a010*b000*c100*d101 + a110*b100*c100*d101 + a011*b000*c101*d101 + a111*b100*c101*d101 + a010*b010*c110*d101 + a110*b110*c110*d101 + a011*b010*c111*d101 + a111*b110*c111*d101], [a010*b001*c000*d110 + a110*b101*c000*d110 + a011*b001*c001*d110 + a111*b101*c001*d110 + a010*b011*c010*d110 + a110*b111*c010*d110 + a011*b011*c011*d110 + a111*b111*c011*d110, a010*b001*c100*d111 + a110*b101*c100*d111 + a011*b001*c101*d111 + a111*b101*c101*d111 + a010*b011*c110*d111 + a110*b111*c110*d111 + a011*b011*c111*d111 + a111*b111*c111*d111]]]
+        sage: Ha=HM(2,2,2,'a'); Hb=HM(2,2,2,'b'); Hc=HM(2,2,2,'c'); Hd=HM(2,2,2,'d')
+        sage: Hr=HypermatrixDualProductB(Ha, Hb, Hc, Hd); Hr.p()
+        [:, :, 0]=
+        [a000*b000*c000*d000 + a001*b001*c000*d001 + a010*b000*c010*d010 + a011*b001*c010*d011 + a000*b100*c100*d100 + a001*b101*c100*d101 + a010*b100*c110*d110 + a011*b101*c110*d111 a000*b010*c000*d000 + a001*b011*c000*d001 + a010*b010*c010*d010 + a011*b011*c010*d011 + a000*b110*c100*d100 + a001*b111*c100*d101 + a010*b110*c110*d110 + a011*b111*c110*d111]
+        [a100*b000*c000*d000 + a101*b001*c000*d001 + a110*b000*c010*d010 + a111*b001*c010*d011 + a100*b100*c100*d100 + a101*b101*c100*d101 + a110*b100*c110*d110 + a111*b101*c110*d111 a100*b010*c000*d000 + a101*b011*c000*d001 + a110*b010*c010*d010 + a111*b011*c010*d011 + a100*b110*c100*d100 + a101*b111*c100*d101 + a110*b110*c110*d110 + a111*b111*c110*d111]
+
+        [:, :, 1]=
+        [a000*b000*c001*d000 + a001*b001*c001*d001 + a010*b000*c011*d010 + a011*b001*c011*d011 + a000*b100*c101*d100 + a001*b101*c101*d101 + a010*b100*c111*d110 + a011*b101*c111*d111 a000*b010*c001*d000 + a001*b011*c001*d001 + a010*b010*c011*d010 + a011*b011*c011*d011 + a000*b110*c101*d100 + a001*b111*c101*d101 + a010*b110*c111*d110 + a011*b111*c111*d111]
+        [a100*b000*c001*d000 + a101*b001*c001*d001 + a110*b000*c011*d010 + a111*b001*c011*d011 + a100*b100*c101*d100 + a101*b101*c101*d101 + a110*b100*c111*d110 + a111*b101*c111*d111 a100*b010*c001*d000 + a101*b011*c001*d001 + a110*b010*c011*d010 + a111*b011*c011*d011 + a100*b110*c101*d100 + a101*b111*c101*d101 + a110*b110*c111*d110 + a111*b111*c111*d111]
 
 
     AUTHORS:
     - Edinah K. Gnang
     """
-    typ = 'list'
-    if type(A)==type(HM(1,1,1,'one')) and type(B)==type(HM(1,1,1,'one')) and type(C)==type(HM(1,1,1,'one')) and type(D)==type(HM(1,1,1,'one')):
-        A = A.listHM(); B = B.listHM(); C = C.listHM(); D = D.listHM()
-        typ = 'HM'
-    # Setting the dimensions parameters.
-    n_a_rows = len(A)
-    n_a_cols = len(A[0])
-    n_a_dpts = len(A[0][0])
-    n_b_rows = len(B)
-    n_b_cols = len(B[0])
-    n_b_dpts = len(B[0][0])
-    n_c_rows = len(C)
-    n_c_cols = len(C[0])
-    n_c_dpts = len(C[0][0])
-    n_d_rows = len(D)
-    n_d_cols = len(D[0])
-    n_d_dpts = len(D[0][0])
     # Test for dimension match
-    if n_a_rows==n_b_rows and n_b_cols==n_c_cols and n_c_dpts==n_a_dpts and n_a_cols==n_b_dpts and n_b_dpts==n_c_rows and n_a_cols==n_d_rows and n_a_cols==n_d_cols and n_a_cols==n_d_dpts:
-        # Initialization of the hypermatrix
-        q = []
-        for i in range(n_a_rows):
-            q.append([])
-        for i in range(len(q)):
-            for j in range(n_b_cols):
-                (q[i]).append([])
-        for l0 in range(len(q)):
-            for l1 in range(len(q[i])):
-                for l2 in range(n_c_dpts):
-                    (q[l0][l1]).append( sum([A[i][l0][k]*B[i][j][l1]*C[l2][j][k]*D[l0][l1][l2] for i in range(n_a_rows) for j in range(n_b_cols) for k in range(n_c_dpts)]))
-        if typ=='list':
-            return q
-        else:
-            return HM(q)
+    if A.n(1)==C.n(1) and B.n(0)==C.n(0) and A.n(2)==B.n(2) and D.n(0)==C.n(0) and D.n(1)==A.n(1) and D.n(2)==A.n(2):
+        # Initialization of the output
+        Hr=HM(A.n(0), B.n(1), C.n(2),'zero')
+        for i in rg(A.n(0)):
+            for j in rg(B.n(1)):
+                for k in rg(C.n(2)):
+                    Hr[i,j,k]=sum([A[i,l1,l2]*B[l0,j,l2]*C[l0,l1,k]*D[l0,l1,l2] for l0 in rg(B.n(0)) for l1 in rg(C.n(1)) for l2 in rg(A.n(2))])
+        return Hr
     else :
         raise ValueError("Hypermatrix dimension mismatch.")
 
@@ -34605,7 +34621,7 @@ def SymPoly_ExpansionII(F, Xv, Pv, Sv):
          [p1 == x0 + x1 + x2, p2 == x0^2 + x1^2 + x2^2, p3 == x0^3 + x1^3 + x2^3]]
         sage: F-expand((1/6*p1^6 - 3/2*p1^4*p2 + 7/2*p1^2*p2^2 + 4/3*p1^3*p3 - 1/2*p2^3 - 6*p1*p2*p3 + 3*p3^2).subs(p1==x0+x1+x2, p2==x0^2+x1^2+x2^2, p3==x0^3+x1^3+x2^3, p4==x0^4+x1^4+x2^4))
         0
-        sage: sz=3; Xv=var_list('x',sz); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
+        sage: sz=3; Xv=var_list('x',sz,1); P=Primes(); Pp=[P.unrank(i) for i in rg(sz)]
         sage: f=prod(Xv[i]^(i+1) for i in rg(sz))
         sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in TupleFunctionList(sz)) # Symmetrized polynomial
         sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
