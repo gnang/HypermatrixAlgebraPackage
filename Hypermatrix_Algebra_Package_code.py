@@ -8942,6 +8942,39 @@ def Tuple_to_AdjacencyII(T,sz):
         A[t]=Integer(1)
     return A
 
+def Tuple_to_AdjacencyIII(T,sz):
+    """
+    The method returns the adjacency matrix of input edge tuple
+    description of the input directed weighted graph. Each tuple is
+    a list of triple such that the first two integers describe the
+    vertices spanning the directed edge and the last element of the
+    triple is a dictionary with a single item called weight.
+    Start by creating a sz x sz matrix and fills it up. This 
+    implementation is not limited to functional directed graphs.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: Tuple_to_AdjacencyIII([(0, 1, {'weight':0.5}), (1, 2, {'weight':0.6}), (2, 0, {'weight':0.7}), (3, 3, {'weight':0.8})], Integer(4)).p()
+        [:, :]= 
+        [                0 0.500000000000000                 0                 0]
+        [                0                 0 0.600000000000000                 0]
+        [0.700000000000000                 0                 0                 0]
+        [                0                 0                 0 0.800000000000000]
+        
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initialization of the zero matrix
+    A=HM(sz, sz, 'zero')
+    # Filling up the matrix
+    for t in T:
+        A[t[:2]]=t[2]['weight']
+    return A
+
 def Tuple_to_Bipartite_Adjacency(T):
     """
     The method returns the adjacency matrix of directed bipartite
@@ -25373,7 +25406,7 @@ def PermutationFunctionList(sz):
 def AlternatingGroupFunctionList(sz):
     """
     Returns a list of edge tuple descriptions associated 
-    with permutations.
+    with permutations in the alternating group.
 
 
     EXAMPLES:
@@ -25388,6 +25421,23 @@ def AlternatingGroupFunctionList(sz):
     # Initialization of the list of permutations of elements from 1 to (n-1).
     P=Permutations(sz)
     return [[(i,Integer(p[i]-Integer(1))) for i in rg(sz)] for p in P if signf([(i,Integer(p[i]-1)) for i in rg(sz)])>Integer(0)]
+
+def CyclicGroupFunctionList(sz):
+    """
+    Returns a list of edge tuple descriptions associated 
+    with permutations in the cyclic group.
+
+
+    EXAMPLES:
+    ::
+        sage: CyclicGroupFunctionList(3)
+        [[(0, 0), (1, 1), (2, 2)], [(0, 1), (1, 2), (2, 0)], [(0, 2), (1, 0), (2, 1)]]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    return [[(i,Integer(mod(i+j,sz))) for i in rg(sz)] for j in rg(sz)]
 
 def RepresentativePermutationFunctionList(sz):
     """
@@ -27995,7 +28045,7 @@ def remainder_via_lagrange_interpolation(f, Lr, X):
         [(0, 0), (1, 0), (2, 1)]
         sage: vV=prod(Xv[j]-Xv[i] for i in rg(sz) for j in rg(sz) if i<j)
         sage: eV=prod((Xv[T[j][1]]-Xv[j])*(Xv[T[j][1]]^(2*sz-2)-Xv[j]^(2*sz-2))-(Xv[T[i][1]]-Xv[i])*(Xv[T[i][1]]^(2*sz-2)-Xv[i]^(2*sz-2)) for i in rg(sz) for j in rg(sz) if i<j)
-        sage: F=vV*eV; w=exp(2*pi*I/(2*sz-1)); Lrh=[w^i for i in rg(2*sz-1)]; cF=remainder_via_lagrange_interpolation(f, Lr, X)
+        sage: F=vV*eV; w=exp(2*pi*I/(2*sz-1)); Lr=[w^i for i in rg(2*sz-1)]; cF=remainder_via_lagrange_interpolation(f, Lr, X)
 
     AUTHORS:
 
