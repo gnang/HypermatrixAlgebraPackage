@@ -1,24 +1,24 @@
-#*************************************************************************n
-# Copyright (C) 2018, 19, 20, 21, 22, 23 Edinah K. Gnang kgnang@gmail.com #
-#                          Ori Parzanchevski,                             #
-#                          Yuval Filmus,                                  #
-#                          Doron Zeilberger,                              #
-#                          Fan Tian,                                      #
-#                          Ricky Cheng,                                   #
-#                          Jonathan Earl,                                 #
-#                          Harry Crane,                                   #
-#                                                                         #
-#  Distributed under the terms of the GNU General Public License (GPL)    #
-#                                                                         #
-#    This code is distributed in the hope that it will be useful,         #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of       #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU     #
-#    General Public License for more details.                             #
-#                                                                         #
-#  The full text of the GPL is available at:                              #
-#                                                                         #
-#                  http://www.gnu.org/licenses/                           #
-#*************************************************************************#
+#******************************************************************************
+# Copyright (C) 2018, 19, 20, 21, 22, 23, 24 Edinah K. Gnang kgnang@gmail.com #
+#                          Ori Parzanchevski,                                 #
+#                          Yuval Filmus,                                      #
+#                          Doron Zeilberger,                                  #
+#                          Fan Tian,                                          #
+#                          Ricky Cheng,                                       #
+#                          Jonathan Earl,                                     #
+#                          Harry Crane,                                       #
+#                                                                             #
+#  Distributed under the terms of the GNU General Public License (GPL)        #
+#                                                                             #
+#    This code is distributed in the hope that it will be useful,             #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of           #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU         #
+#    General Public License for more details.                                 #
+#                                                                             #
+#  The full text of the GPL is available at:                                  #
+#                                                                             #
+#                  http://www.gnu.org/licenses/                               #
+#*****************************************************************************#
 
 # Imports
 import itertools
@@ -8794,6 +8794,61 @@ def ChowDecompPerHM(sz):
                 else:
                     Hp[sum(l[u]*(2^u) for u in rg(sz)),i,j]=((-1)^(sz-sum(l)))^(1/sz)
     return [H, Hp]
+
+def ftspDetExpansion(A):
+    """
+    This function returns the expression associated with
+    the Fundamental Theorem of Symmetric Polynomial 
+    expansion of the determinant. Other words
+    the output is congruent to the determinant of A modulo
+    algebraic relations {A[i,k]*A[j,k]-A[u,k]^v such that u+v=i+j}. 
+    Consequently if the input matrix is the Vandermonde matrix
+    then the output of the function is indeed the determinant of
+    the Vandermonde matrix as illustrated in the examples.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(3); od=Integer(2); Xv=var_list('x', sz, Integer(1)); A=Vandermonde(Xv)*HM(od, Xv, 'diag')
+        sage: ftspDetExpansion(A)[0]
+        -(x1 - x2)*(x1 - x3)*x1*(x2 - x3)*x2*x3
+        sage: sz=Integer(4); od=Integer(2); Xv=var_list('x', sz, Integer(1)); A=Vandermonde(Xv)*HM(od, Xv, 'diag')
+        sage: factor(ftspDetExpansion(A))[0]
+        (x1 - x2)*(x1 - x3)*(x1 - x4)*x1*(x2 - x3)*(x2 - x4)*x2*(x3 - x4)*x3*x4
+        sage: sz=Integer(3); od=Integer(2); Xv=var_list('x', sz, Integer(1)); A=HM(sz,sz,'a','shift')
+        sage: ftspDetExpansion(A)[0]
+        -1/2*(a11*a12 - a22)*(((a11 + a12)^2 - a21 - a22)*a13 - 2*(a11 + a12)*a23 + 2*a33)*a11
+        sage: expand(Deter(A.slice(rg(2),0).slice(rg(2),1))*ftspDetExpansion(A)[1][2])
+        -1/2*a11^2*a12*a13*a21 - a11*a12^2*a13*a21 - 1/2*a12^3*a13*a21 + 1/2*a11^3*a13*a22 + a11^2*a12*a13*a22 + 1/2*a11*a12^2*a13*a22 + 1/2*a12*a13*a21^2 - 1/2*a11*a13*a21*a22 + 1/2*a12*a13*a21*a22 - 1/2*a11*a13*a22^2 + a11*a12*a21*a23 + a12^2*a21*a23 - a11^2*a22*a23 - a11*a12*a22*a23 - a12*a21*a33 + a11*a22*a33
+        sage: sz=Integer(3); od=Integer(2); Xv=var_list('x', sz, Integer(1)); A=HM(sz,sz,'a','shift').elementwise_product(Vandermonde(Xv)*HM(od, Xv, 'diag'))
+        sage: expand(ftspDetExpansion(A)[0])
+        -1/2*a11^4*a12*a13*x1^4*x2*x3 - a11^3*a12^2*a13*x1^3*x2^2*x3 - 1/2*a11^2*a12^3*a13*x1^2*x2^3*x3 + 1/2*a11^2*a12*a13*a21*x1^4*x2*x3 + 1/2*a11^3*a13*a22*x1^3*x2^2*x3 + 3/2*a11^2*a12*a13*a22*x1^2*x2^3*x3 + 1/2*a11*a12^2*a13*a22*x1*x2^4*x3 + a11^3*a12*a23*x1^3*x2*x3^2 + a11^2*a12^2*a23*x1^2*x2^2*x3^2 - 1/2*a11*a13*a21*a22*x1^3*x2^2*x3 - 1/2*a11*a13*a22^2*x1*x2^4*x3 - a11^2*a22*a23*x1^2*x2^2*x3^2 - a11*a12*a22*a23*x1*x2^3*x3^2 - a11^2*a12*a33*x1^2*x2*x3^3 + a11*a22*a33*x1*x2^2*x3^3
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Initial conditions for the recurrence
+    D=A[0,0]; Dl=[A[0,0]]
+    # Computing the recurrence
+    for sz0 in rg(2,sz+1):
+        # Initialization of the list of variables
+        Pv=[1]+var_list('p', sz0-1, 1); Sv=[1]+var_list('s', sz0-1, 1)
+        # Initialization of the list derived from Newton's identities
+        NwL0=[Sv[1]==Pv[1]]
+        for bnd in rg(2,sz0):
+            eL=[l for l in List_of_Integers([1+floor(bnd/i) for i in rg(1,bnd+1)]) if bnd==sum(l[i]*(i+1) for i in rg(bnd))]
+            NwL0.append(Sv[bnd]==(-1)^bnd*sum(prod((-Pv[i])^l[i-1]/(factorial(l[i-1])*i^l[i-1]) for i in rg(1,bnd+1)) for l in eL))
+        # Initialization of the matrix row assignement
+        sbA=A.slice(rg(sz0-1),0).slice(rg(sz0-1),1)
+        La=sbA.listHM(); NwL1=[Pv[i+1]==sum(La[i]) for i in rg(sbA.n(0))]
+        # Initialization of the polynomial
+        Ply=sum(A[sz0-k-1,sz0-1]*Sv[k]*(-1)^k for k in rg(sz0))
+        F=Ply.subs(NwL0); Ff=F.subs(NwL1)
+        D=D*Ff; Dl.append(Ff)
+    return [D, Dl]
  
 def MeanApproximation(T):
     """
@@ -16221,25 +16276,45 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
     does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
     The algorithm perform the reduction assuming that the the leading term in each relations
     is a monic powers in a distinct variable as illustrated in the example bellow.
+    The linear combination operations are performed in such a way as to not change the absolute
+    value of the determinant.  This implementation is skew fields or division ring friendly by
+    inputing hypermatrices whose entries are themselve hypermatrices of the approprioate size.
+    This implementation is very slow since expanding polynomials is very expensive.
+
 
     EXAMPLES:
  
     ::
 
-        sage: x1, x2=var('x1, x2')
-        sage: Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]])
-        sage: rs=HM(2,1,'zero')
-        sage: VrbL=[x1, x2]
-        sage: Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
-        sage: [A,b]=gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts)
+        sage: x1, x2=var('x1, x2'); Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]]); VrbL=[x1, x2]; Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
+        sage: [A,b]=gaussian_elimination_ReductionHM(Cf, HM(Cf.n(0),1,'zero'), VrbL, Rlts)
         sage: A.printHM()
         [:, :]=
-        [        -2  -2*x1 + 3]
-        [         0 12*x1 - 12]
-        sage: b.printHM()
+        [       -2 -2*x1 + 3]
+        [        0  6*x1 - 6]
+        sage: od=2; sz=3 # Initialization of the order and size parameter
+        sage: A=HM(od,sz,'a','sym'); X=HM(sz,sz,[x^(sz^abs(j-i)) for j in rg(sz) for i in rg(sz)])
+        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
+        sage: for i in rg(sz):
+        ....:     for j in rg(sz):
+        ....:         if i < j:
+        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
+        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
+        ....:             clidx=clidx+1
+        ....:
+        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
+        sage: M=(HM(od,[x*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
+        sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
+        sage: [Rh,b]=gaussian_elimination_ReductionHM(M,HM(M.n(0),1,'zero'),[x],[x^(1+d)])
+        sage: (Rh[0,0]*Rh[1,1]).canonicalize_radical()
+        (a00*a10*a20 + a00*a20*a21)*x^13 + a00*a10*a21*x^7
+        sage: sz=Integer(2); X=var_list('x',sz); w=exp(2*pi*I/sz) # Initialization of the primitive roots and the variables
+        sage: A=HM(sz,sz,'a'); Ha=HM(sz,sz,[expand(A[i,j]*prod(X[i]*X[j]^(sz-1)-w^k for k in rg(sz) if k!=1)) for j in rg(sz) for i in rg(sz)])
+        sage: [Rh,b]=gaussian_elimination_ReductionHM(Ha,HM(Ha.n(0),1,'zero'),X,[v^sz-1 for v in X])
+        sage: Rh.p()
         [:, :]=
-        [0]
-        [0]
+        [a10*x0*x1 - a10               0]
+        [              0 a01*x0*x1 - a01]
 
 
     AUTHORS:
@@ -16248,279 +16323,78 @@ def gaussian_elimination_ReductionHM(Cf, rs, VrbL, Rlts):
     """
     # Initializing a copy of the input second order hypermatrices.
     A=Cf.copy(); b=rs.copy()
+    # Performing the first round of reductions
+    for i in rg(A.n(0)):
+        for j in rg(A.n(1)):
+            # Initialization of the polynomial to be reduced
+            f=SR(expand(A[i,j]))
+            # Performing the reduction modulo algebraic relations
+            for v in rg(len(VrbL)):
+                for d in rg(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                    f=SR(expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])))
+            A[i,j]=f
     # Initialization of the row and column index
     i=0; j=0
     while i < A.n(0) and j < A.n(1):
-        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
+        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in rg(i,A.n(0))]).is_zero() and j < A.ncols()-1:
             # Incrementing the column index
             j=j+1
-        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
+        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in rg(A.n(1)) for i0 in rg(i,A.n(0))]).is_zero()==False:
             while A[i,j].is_zero(): 
-                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
-                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in range(b.n(1)) for i0 in range(i,b.n(0))])
+                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in rg(A.n(1)) for i0 in rg(i,A.n(0))])
+                Tb=HM(b.n(0)-i, b.n(1), [b[i0,j0] for j0 in rg(b.n(1)) for i0 in rg(i,b.n(0))])
                 # Initializing the cyclic shift permutation matrix
-                #Id=HM(2, Ta.n(0), 'kronecker')
-                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
                 P=HM(2, rg(1,Ta.n(0))+[0],'perm')
                 Ta=P*Ta; Tb=P*Tb
-                for i0 in range(Ta.n(0)):
-                    for j0 in range(Ta.n(1)):
+                for i0 in rg(Ta.n(0)):
+                    for j0 in rg(Ta.n(1)):
                         A[i+i0,j0]=Ta[i0,j0]
-                for i0 in range(Tb.n(0)):
-                    for j0 in range(Tb.n(1)):
+                for i0 in rg(Tb.n(0)):
+                    for j0 in rg(Tb.n(1)):
                         b[i+i0,j0]=Tb[i0,j0]
-            # Performing the row operations.
-            cf1=A[i,j]
-            for r in range(i+1,A.nrows()):
-                # Taking care of the zero row
-                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
-                    r=r+1
-                else:
-                    # Initialization of the coefficient
-                    cf2=A[r,j]
-                    for j0 in range(b.n(1)):
-                        # Performing the reduction
-                        #b[r,j0]=cf2*b[i,j0]-cf1*b[r,j0]
-                        f=expand(cf2*b[i,j0]-cf1*b[r,j0])
-                        for v in range(len(VrbL)):
-                            for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
-                                f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
-                        b[r,j0]=f
-                    for j0 in range(A.n(1)):
-                        # Performing the reduction
-                        #A[r,j0]=cf2*A[i,j0]-cf1*A[r,j0]
-                        g=expand(cf2*A[i,j0]-cf1*A[r,j0])
-                        for v in range(len(VrbL)):
-                            for d in range(g.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
-                                g=expand(fast_reduce(g,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)]))
-                        A[r,j0]=g
+            if A.n(0)-i-1 > 0 and not (HM(A.n(0)-i-1, 1, [A[i0,j] for i0 in rg(i+1,A.n(0))]).is_zero() and j <= A.ncols()-1):
+                # Performing the row operations.
+                #cf1=A[i,j]
+                tcf1=SR(A[i,j])
+                # Performing the reduction modulo algebraic relations
+                for v in rg(len(VrbL)):
+                    for d in rg(tcf1.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                        tcf1=SR(expand(fast_reduce(tcf1,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])))
+                cf1=tcf1
+                for r in rg(i+1,A.nrows()):
+                    # Taking care of the zero row
+                    if HM(1,A.n(1),[A[r,j0] for j0 in rg(A.n(1))]).is_zero():
+                        r=r+1
+                    else:
+                        # Initialization of the coefficient
+                        #cf2=A[r,j]
+                        tcf2=SR(A[r,j])
+                        # Performing the reduction modulo algebraic relations
+                        for v in rg(len(VrbL)):
+                            for d in rg(tcf2.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                tcf2=SR(expand(fast_reduce(tcf2,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])))
+                        cf2=tcf2
+                        for j0 in rg(b.n(1)):
+                            #b[r,j0]=-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]
+                            brj0=SR(expand(-(cf2*cf1^(-1))*b[i,j0]+b[r,j0]))
+                            # Performing the reduction modulo algebraic relations
+                            for v in rg(len(VrbL)):
+                                for d in rg(brj0.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                    brj0=SR(expand(fast_reduce(brj0,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])))
+                            b[r,j0]=brj0
+                        for j0 in rg(A.n(1)):
+                            #A[r,j0]=-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]
+                            Arj0=SR(expand(-(cf2*cf1^(-1))*A[i,j0]+A[r,j0]))
+                            # Performing the reduction modulo algebraic relations
+                            for v in rg(len(VrbL)):
+                                for d in rg(Arj0.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
+                                    #print('\nThe variable is ',VrbL[v]); print('\nBefore Arj0=',Arj0)
+                                    Arj0=SR(expand(fast_reduce(Arj0,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])))
+                                    #print('after Arj0=',Arj0)
+                            A[r,j0]=Arj0
         # Incrementing the row and column index.
         i=i+1; j=j+1
     return [A,b]
-
-def gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts):
-    """
-    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
-    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
-    The algorithm perform the reduction assuming that the the leading term in each relations
-    is a monic powers in a distinct variable as illustrated in the example bellow.
-    The computation is perform in such a way that the last diagonal entry holds the determinant
-    of the whole matrix it is also true that each diagonal entry corresponds to the determinant
-    of the corresponding top diagonal block of the matrix. Note that the relation in Rlts are
-    assumed to be univariate leading term. This implementaion also gets the sign right for the
-    determinant. This implementation is considerably more efficient then the previous one above
-    because the extra multiplicative factor is kept minimal.
-
-
-    EXAMPLES:
- 
-    ::
-
-        sage: x1, x2=var('x1, x2')
-        sage: Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]])
-        sage: VrbL=[x1, x2]
-        sage: Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
-        sage: A=gaussian_elimination_ReductionHMII(Cf, VrbL, Rlts)
-        sage: A.printHM()
-        [:, :]=
-        [         -2   -2*x1 + 3]
-        [          0 -12*x1 + 12]
-        sage: od=2; sz=3 # Initialization of the order and size parameter
-        sage: A=HM(od,sz,'a','sym'); X=HM(sz,sz,[x^(sz^abs(j-i)) for j in rg(sz) for i in rg(sz)])
-        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
-        sage: for i in rg(sz):
-        ....:     for j in rg(sz):
-        ....:         if i < j:
-        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
-        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
-        ....:             clidx=clidx+1
-        ....:
-        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
-        sage: M=(HM(od,[x*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
-        sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
-        sage: Rh=gaussian_elimination_ReductionHMII(M,[x],[x^(1+d)])
-        sage: Rh[1,1]
-        a00*a10*a20*x^13 + a00*a20*a21*x^13 + a00*a10*a21*x^7
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Initializing a copy of the input second order hypermatrices.
-    A=Cf.copy()
-    # Initialization of the row and column index
-    i=0; j=0
-    while i < A.n(0) and j < A.n(1):
-        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
-            # Incrementing the column index
-            j=j+1
-        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
-            while A[i,j].is_zero(): 
-                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
-                # Initializing the cyclic shift permutation matrix
-                #Id=HM(2, Ta.n(0), 'kronecker')
-                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
-                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
-                Ta=P*Ta
-                for i0 in range(Ta.n(0)):
-                    for j0 in range(Ta.n(1)):
-                        A[i+i0,j0]=Ta[i0,j0]
-            # Performing the row operations.
-            cf1=A[i,j]
-            for r in range(i+1,A.nrows()):
-                # Taking care of the zero row
-                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
-                    r=r+1
-                else:
-                    # Initialization of the coefficient
-                    cf2=A[r,j]
-                    if r==j+1:
-                        for j0 in range(j,A.n(1)):
-                            # Performing the reduction
-                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
-                            for v in range(len(VrbL)):
-                                #f=f.maxima_methods().divide(Rlts[v])[1]
-                                for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
-                                    f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
-                            A[r,j0]=f
-                    else:
-                        for j0 in range(j,A.n(1)):
-                            # Performing the reduction
-                            g=expand((-cf2*A[i,j0]+cf1*A[r,j0])/cf1)
-                            A[r,j0]=g
-        # Incrementing the row and column index.
-        i=i+1; j=j+1
-    return A
-
-def gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, RltsII):
-    """
-    Outputs the row echelon form of the input second order hypermatrix and the right hand side.
-    does not normalize the rows to ensure that the first non zero entry of non zero rows = 1
-    The algorithm perform the reduction assuming that the the leading term in each relations
-    is a monic powers in a distinct variable as illustrated in the example bellow.
-    The computation is perform in such a way that the last diagonal entry holds the determinant
-    of the whole matrix it is also true that each diagonal entry corresponds to the determinant
-    of the corresponding top diagonal block of the matrix. Note that the relation in Rlts are
-    assumed to be univariate leading term. This implementaion also gets the sign right for the
-    determinant. This implementation is considerably more efficient then the previous one above
-    because the extra multiplicative factor is kept minimal.
-
-
-    EXAMPLES:
- 
-    ::
-
-        sage: x1, x2=var('x1, x2')
-        sage: Cf=HM([[-2, -2*x1 + 3], [-12*x1 + 10, -2*x1 + 3]])
-        sage: VrbL=[x1, x2]
-        sage: Rlts=[x1^2 - 3*x1 + 2, x2^2 - 3*x2 + 2]
-        sage: A=gaussian_elimination_ReductionHMIII(Cf, VrbL, Rlts, Rlts)
-        sage: A.printHM()
-        [:, :]=
-        [         -2   -2*x1 + 3]
-        [          0 -12*x1 + 12]
-        sage: od=2; sz=3 # Initialization of the order and size parameter
-        sage: A=HM(od,sz,'a','sym'); X=HM(sz,sz,[x^(sz^abs(j-i)) for j in rg(sz) for i in rg(sz)])
-        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
-        sage: for i in rg(sz):
-        ....:     for j in rg(sz):
-        ....:         if i < j:
-        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
-        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
-        ....:             clidx=clidx+1
-        ....:
-        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
-        sage: M=(HM(od,[x*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
-        sage: d=1+sum(sz^k for k in rg(1+floor((sz-1)/2),sz))+sum(sz^(sz-1-k) for k in rg(1,1+floor((sz-1)/2))) # Initializing the max degree
-        sage: Rh=gaussian_elimination_ReductionHMIII(M,[x],[x^(1+d)],[x^(1+d)])
-        sage: Rh[1,1]
-        a00*a10*a20*x^13 + a00*a20*a21*x^13 + a00*a10*a21*x^7
-        sage: od=2; sz=4 # Initialization of the order and size parameter
-        sage: Lx=var_list('x',sz) # Initialization of the list of vraiables
-        sage: A=HM(od,sz,'a','sym') # Initialization of the adjacency matrix
-        sage: X=HM(sz,sz,[Lx[abs(i-j)] for j in rg(sz) for i in rg(sz)]) # initialization of the edge weight matrix
-        sage: Hb=HM(sz,binomial(sz,2),'zero'); clidx=0 # Initialization of the incidence matrix
-        sage: for i in rg(sz):
-        ....:     for j in rg(sz):
-        ....:         if i < j:
-        ....:             Hb[i,clidx]=-sqrt(A[i,j]*X[i,j])
-        ....:             Hb[j,clidx]=+sqrt(A[i,j]*X[i,j])
-        ....:             clidx=clidx+1
-        ....:
-        sage: t=0; B=HM(sz-1,Hb.n(1),[Hb[i,j] for j in rg(Hb.n(1)) for i in rg(Hb.n(0)) if i!=t]) # Grounding at the vertex t
-        sage: M=(HM(od,[Lx[0]*A[t,t]]+[1 for i in rg(sz-2)],'diag')*(B*B.transpose())).expand() # Initialization of the fundamental matrix
-        sage: d0=3; d1=2; Rh=gaussian_elimination_ReductionHMIII(M,Lx,[v^d0 for v in Lx],[v^d1 for v in Lx])
-        sage: Rh[sz-2,sz-2]
-        a00*a10*a20*a30*x0*x1*x2*x3 + a00*a20*a21*a30*x0*x1*x2*x3 + a00*a21*a30*a31*x0*x1*x2*x3 + a00*a30*a31*a32*x0*x1*x2*x3
-        sage: od=2; sz=4 # Initialization of the order and size parameter
-        sage: Lx=var_list('x',sz) # Initialization of the list of variables
-        sage: A=HM(sz,sz,'a') # Initialization of part of the adjacency matrix
-        sage: X=HM(sz,sz,[Lx[abs(j-i)] for j in rg(sz) for i in rg(sz)]) # Initialization of the symbolic edge weights
-        sage: Hb=Matrix2HM((HM(od,(A.elementwise_product(X)*HM(sz,1,'one')).list(),'diag')-A.elementwise_product(X)).matrix()[1:,1:]) # Directed Laplacian
-        sage: d0=3; d1=2; Rh2=A[0,0]*Lx[0]*gaussian_elimination_ReductionHMIII(Hb,Lx,[v^3 for v in Lx],[v^2 for v in Lx])
-        sage: Rh2[sz-2,sz-2]
-        (a10*a20*a30*x1*x2*x3 + a12*a20*a30*x1*x2*x3 + a13*a21*a30*x1*x2*x3 + a13*a23*a30*x1*x2*x3)*a00*x0
-
-
-    AUTHORS:
-    - Edinah K. Gnang
-    - To Do: 
-    """
-    # Initializing a copy of the input second order hypermatrices.
-    A=Cf.copy()
-    # Initialization of the row and column index
-    i=0; j=0
-    while i < A.n(0) and j < A.n(1):
-        while HM(A.n(0)-i, 1, [A[i0,j] for i0 in range(i,A.n(0))]).is_zero() and j < A.ncols()-1:
-            # Incrementing the column index
-            j=j+1
-        if HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))]).is_zero()==False:
-            while A[i,j].is_zero(): 
-                Ta=HM(A.n(0)-i, A.n(1), [A[i0,j0] for j0 in range(A.n(1)) for i0 in range(i,A.n(0))])
-                # Initializing the cyclic shift permutation matrix
-                #Id=HM(2, Ta.n(0), 'kronecker')
-                #P=sum([HM(Ta.n(0),1,[Id[i0,k] for i0 in range(Ta.n(0))])*HM(1,Ta.n(0),[Id[Integer(mod(k+1,Ta.n(0))),j0] for j0 in range(Ta.n(0))]) for k in range(Ta.n(0))])
-                P=HM(2, rg(1,Ta.n(0))+[0],'perm')
-                Ta=P*Ta
-                for i0 in range(Ta.n(0)):
-                    for j0 in range(Ta.n(1)):
-                        A[i+i0,j0]=Ta[i0,j0]
-            # Performing the row operations.
-            cf1=A[i,j]
-            for r in range(i+1,A.nrows()):
-                # Taking care of the zero row
-                if HM(1,A.n(1),[A[r,j0] for j0 in range(A.n(1))]).is_zero():
-                    r=r+1
-                else:
-                    # Initialization of the coefficient
-                    cf2=A[r,j]
-                    if r==j+1 and r!=A.n(0)-1:
-                        for j0 in range(j,A.n(1)):
-                            # Performing the reduction
-                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
-                            for v in range(len(VrbL)):
-                                #f=f.maxima_methods().divide(Rlts[v])[1]
-                                for d in range(f.degree(VrbL[v])-Rlts[v].degree(VrbL[v]),-1,-1):
-                                    f=expand(fast_reduce(f,[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))],[VrbL[v]^(d+Rlts[v].degree(VrbL[v]))-expand(Rlts[v]*VrbL[v]^d)])) 
-                            A[r,j0]=f
-                    elif r==j+1 and r==A.n(0)-1:
-                        for j0 in range(j,A.n(1)):
-                            # Performing the reduction
-                            f=(-cf2*A[i,j0]+cf1*A[r,j0]).numerator()
-                            for v in range(len(VrbL)):
-                                #f=f.maxima_methods().divide(Rlts[v])[1]
-                                for d in range(f.degree(VrbL[v])-RltsII[v].degree(VrbL[v]),-1,-1):
-                                    f=expand(fast_reduce(f,[VrbL[v]^(d+RltsII[v].degree(VrbL[v]))],[VrbL[v]^(d+RltsII[v].degree(VrbL[v]))-expand(RltsII[v]*VrbL[v]^d)])) 
-                            A[r,j0]=f
-                    else:
-                        for j0 in range(j,A.n(1)):
-                            # Performing the reduction
-                            g=expand((-cf2*A[i,j0]+cf1*A[r,j0])/cf1)
-                            A[r,j0]=g
-        # Incrementing the row and column index.
-        i=i+1; j=j+1
-    return A
 
 def gauss_jordan_elimination(Cf,rs):
     """
@@ -24048,7 +23922,7 @@ def SecondOrderRhoSlicing(A,T):
         [a60 a61 a21 a31 a41 a51 a66 a67 a68]
         [a70 a71 a72 a32 a42 a52 a62 a77 a78]
         [a80 a81 a82 a83 a43 a53 a63 a73 a88]
-        sage: sz=Integer(4); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
         sage: T=[(0,0)]+[(i,0) for i in rg(1,sz)]+[(0,i) for i in rg(1,sz)] # Initialization of the tuples
         sage: SecondOrderRhoSlicing(A,T).p()
         [:, :]=
@@ -24061,6 +23935,19 @@ def SecondOrderRhoSlicing(A,T):
         [a02 a12 a62 a63 a64 a65 a66 a72 a82]
         [a03 a13 a23 a73 a74 a75 a76 a77 a83]
         [a04 a14 a24 a34 a84 a85 a86 a87 a88]
+        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a') # Initialization of the input Hypermatrix
+        sage: T=[(0,5),(1,1),(2,1),(3,0),(5,3),(5,0),(1,2),(0,3),(3,5)] # Initialization of the tuples
+        sage: SecondOrderRhoSlicing(A,T).p()
+        [:, :]=
+        [a00 a05 a46 a25 a45 a04 a18 a06 a08]
+        [a10 a11 a16 a57 a36 a56 a15 a20 a17]
+        [a28 a21 a22 a27 a68 a47 a67 a26 a31]
+        [a42 a30 a32 a33 a38 a70 a58 a78 a37]
+        [a48 a53 a41 a43 a44 a40 a81 a60 a80]
+        [a01 a50 a64 a52 a54 a55 a51 a02 a71]
+        [a82 a12 a61 a75 a63 a65 a66 a62 a13]
+        [a24 a03 a23 a72 a86 a74 a76 a77 a73]
+        [a84 a35 a14 a34 a83 a07 a85 a87 a88]
         sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,4),(1,3),(2,2),(3,2),(4,1),(4,0),(3,1),(2,3),(1,4)]
         sage: SecondOrderRhoSlicing(A,T).p()
         [:, :]=
@@ -24073,7 +23960,7 @@ def SecondOrderRhoSlicing(A,T):
         [a82 a12 a31 a51 a63 a65 a66 a68 a61]
         [a72 a03 a23 a42 a62 a74 a76 a77 a70]
         [a81 a83 a14 a34 a53 a73 a85 a87 a88]
-        sage: sz=Integer(5); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]
+        sage: sz=Integer(5); od=Integer(2); A=HM(2*sz-1, 2*sz-1, 'a'); T=[(0,3),(1,3),(2,3),(3,3),(4,0),(3,0),(3,1),(3,2),(0,4)]
         sage: SecondOrderRhoSlicing(A,T).p()
         [:, :]=
         [a00 a01 a02 a03 a15 a54 a64 a74 a05]
@@ -24085,6 +23972,31 @@ def SecondOrderRhoSlicing(A,T):
         [a60 a72 a21 a31 a41 a62 a66 a67 a68]
         [a70 a71 a83 a32 a42 a52 a73 a77 a78]
         [a80 a81 a82 a04 a43 a53 a63 a84 a88]
+        sage: At=Tuple_to_Adjacency(T); Ac=Tuple_to_Adjacency([(i,Integer(mod(i+1,2*sz-1))) for i in rg(2*sz-1)]); Aci=Tuple_to_Adjacency([(i,Integer(mod(i-1,2*sz-1))) for i in rg(2*sz-1)])
+        sage: sum((Ac^j)*At*(Aci^j) for j in rg(2*sz-1)).p()
+        [:, :]=
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1 1 1]
+        sage: w=exp(2*pi*sqrt(-1)/(2*sz-1)); Id=HM(od,2*sz-1,'kronecker') # Apportionement setup
+        sage: U=HM(2*sz-1,2*sz-1,[(1/sqrt(2*sz-1))*Ac^j*HM(od,[w^k for k in rg(2*sz-1)],'diag')^i for j in rg(2*sz-1) for i in rg(2*sz-1)]) 
+        sage: Ui=HM(2*sz-1,2*sz-1,[(1/sqrt(2*sz-1))*HM(od,[w^(-k) for k in rg(2*sz-1)],'diag')^i*Aci^j for i in rg(2*sz-1) for j in rg(2*sz-1)]) 
+        sage: Aa=HM(2*sz-1, 2*sz-1, [HM(2*sz-1,2*sz-1,'zero') for j in rg(2*sz-1) for i in rg(2*sz-1)])
+        sage: for i in rg(2*sz-1):
+        ....:     Aa[i,i]=At
+        sage: Mtr = U*Aa*Ui
+        sage: St=Set([N(1/(2*sz-1),5)])
+        sage: for i in rg(2*sz-1):
+        ....:     for j in rg(2*sz-1):
+        ....:         St=St.union(Set([N(abs(v),5) for v in Mtr[i,j].list()]))
+        sage: St
+        {0.11}
 
 
     AUTHORS:
@@ -24115,7 +24027,7 @@ def SecondOrderRhoSlicing(A,T):
                     Ha[Integer(mod(DctIndx[i]+k,2*sz-1)),Integer(mod(indx+k,2*sz-1))]=A[Integer(mod(T[i][0]+k,2*sz-1)),Integer(mod(T[i][1]+k,2*sz-1))]
         return Ha 
     else:
-        raise ValueError("The input matrices must be square and the second input beta labeled")
+        raise ValueError("The input matrices must be square and the second input rho-labeled")
 
 def SecondOrderRhoSlicingII(A,T):
     """
@@ -24459,6 +24371,101 @@ def BetaLabelCaterpillarTupleII(T):
             Tp=TupleComplementaryLabelII(Tp)
     Tt=[(Tp[i][0], Tp[i][1]) for i in rg(len(Tp))]
     return Tt+[(Tt[i][1], Tt[i][0]) for i in rg(len(Tt)) if Tt[i][1]!=Tt[i][0]]
+
+def SecondOrderBiRhoSlicing(A,rT):
+    """
+    The function takes as input a square matrix A with an odd number of rows  as well as
+    a tuple description of an directed loop birho-labeled graph also called bigraceful and
+    outputs a square matrix of the same size as A whose columns are the rho slices of A.
+    The function checks that the second input is bigracefully labeled.
+
+
+    EXAMPLES:
+
+    ::
+
+        sage: sz=Integer(7); od=Integer(2); A=HM(sz, sz, 'a') #Initialization 
+        sage: T=[(0, 0), (1, 0), (2, 1), (3, 2), (4, 2), (5, 4), (6, 5)]
+        sage: rT=BetaLabelCaterpillarTuple(T); M=SecondOrderBiRhoSlicing(A,rT); M.p()
+        [:, :]=
+        [a00 a65 a15 a25 a45 a46 a42]
+        [a53 a11 a06 a26 a36 a56 a50]
+        [a61 a64 a22 a10 a30 a40 a60]
+        [a01 a02 a05 a33 a21 a41 a51]
+        [a62 a12 a13 a16 a44 a32 a52]
+        [a63 a03 a23 a24 a20 a55 a43]
+        [a54 a04 a14 a34 a35 a31 a66]
+        sage: At=Tuple_to_Adjacency(rT); Ac=Tuple_to_Adjacency([(i,Integer(mod(i+1,sz))) for i in rg(sz)]); Aci=Tuple_to_Adjacency([(i,Integer(mod(i-1,sz))) for i in rg(sz)])
+        sage: sum((Ac^j)*At*(Aci^j) for j in rg(sz)).p()
+        [:,:]=
+        [1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1]
+        [1 1 1 1 1 1 1]
+        sage: w=exp(2*pi*sqrt(-1)/sz); Id=HM(od,sz,'kronecker') # Apportionement setup
+        sage: U=HM(sz,sz,[(1/sqrt(sz))*Ac^j*HM(od,[w^k for k in rg(sz)],'diag')^i for j in rg(sz) for i in rg(sz)]) 
+        sage: Ui=HM(sz,sz,[(1/sqrt(sz))*HM(od,[w^(-k) for k in rg(sz)],'diag')^i*Aci^j for i in rg(sz) for j in rg(sz)]) 
+        sage: Aa=HM(sz, sz, [HM(sz,sz,'zero') for j in rg(sz) for i in rg(sz)])
+        sage: for i in rg(sz):
+        ....:     Aa[i,i]=At
+        sage: Mtr = U*Aa*Ui
+        sage: St=Set([N(1/sz,5)])
+        sage: for i in rg(sz):
+        ....:     for j in rg(sz):
+        ....:         St=St.union(Set([N(abs(v),5) for v in Mtr[i,j].list()]))
+        sage: St
+        {0.11}
+        sage: sz=Integer(11); A=HM(sz, sz, 'a'); T=[(0,0),(1,10),(2,7),(3,7),(4,7),(5,4),(6,4),(7,1),(8,1),(9,1),(10,0)]; M=SecondOrderBiRhoSlicing(A,T); M.p()
+        [:, :]=
+        [  a00   a10   a30   a40   a50   a90  a100   a03   a04   a05   a09]
+        [ a110   a11   a21   a41   a51   a61  a101   a01   a14   a15   a16]
+        [  a27   a20   a22   a32   a52   a62   a72   a02   a12   a25   a26]
+        [  a37   a38   a31   a33   a43   a63   a73   a83   a13   a23   a36]
+        [  a47   a48   a49   a42   a44   a54   a74   a84   a94   a24   a34]
+        [  a45   a58   a59  a510   a53   a55   a65   a85   a95  a105   a35]
+        [  a46   a56   a69  a610   a60   a64   a66   a76   a96  a106   a06]
+        [  a17   a57   a67  a710   a70   a71   a75   a77   a87  a107   a07]
+        [  a18   a28   a68   a78   a80   a81   a82   a86   a88   a98   a08]
+        [  a19   a29   a39   a79   a89   a91   a92   a93   a97   a99  a109]
+        [ a010  a210  a310  a410  a810  a910  a102  a103  a104  a108 a1010]
+
+
+    AUTHORS:
+    - Edinah K. Gnang
+    """
+    # Identifying the fixed point
+    r=compose_tuple_power(rT, sz-1)[sz-1][1]
+    # Initialization of vertices in the pre-imgage
+    Sv0=Set([r]); Sv1=Set(pre_image_set(rT, Sv0.list())).difference(Set([r]))
+    # Computing the vertex partition associated with the bigraceful permutation
+    while Sv0.union(Sv1).cardinality()<sz:
+        Sv0=Sv0.union(Set(pre_image_set(rT, Sv1.list())).difference(Set([r])))
+        Sv1=Sv1.union(Set(pre_image_set(rT, Sv0.list())).difference(Set([r])))
+    # Initialization of the list of directed edges
+    eL=[(r, r)]
+    # Changing the orrientation of some of the edges
+    for e in rT:
+        if e != (r, r):
+            if e[0] in Sv0:
+                eL.append((e[0], e[1]))
+            else:
+                eL.append((e[1], e[0]))
+    # Initialization of the symbolic matrix
+    B=HM(sz,sz,'zero')
+    # Filling up the matrix
+    if A.is_cubical() and (Set(rg(sz))==Set([t[1]-t[0] for t in eL]) or Set(rg(0,-sz,-1))==Set([t[1]-t[0] for t in eL])):
+        # Initialization of column 0
+        Lt=[(Integer(mod(t[0]-r, sz)), Integer(mod(t[1]-r, sz))) for t in eL]
+        # Filling up the matrix B
+        for k in rg(sz):
+            for i in rg(sz):
+                B[Integer(mod(i+k,sz)),k]=A[Integer(mod(Lt[i][0]+k,sz)),Integer(mod(Lt[i][1]+k,sz))]
+        return B
+    else:
+        raise ValueError("The input matrices must be square and the second input beta labeled")
 
 def CaterpillarLabelHistogram(T):
     """
@@ -25353,6 +25360,41 @@ def injectiveTupleFunctionList(L0, L1):
             l1=st.list()
             rsLt=rsLt+[[(L0[i], l1[T[i][1]]) for i in rg(len(L0))] for T in SnL]
         return rsLt
+
+def injectiveTupleFunctionListII(L0, L1):
+    """
+    Returns a list of edge tuple desctiption for all 
+    functional directed graphs on a domain list L0 and the
+    codomain list L1 of graphs which are injective.
+
+
+    EXAMPLES:
+    ::
+        sage: injectiveTupleFunctionListII([0,1],[0,1])
+        [[(0, 0), (1, 1)],
+         [(0, 1), (1, 0)]]
+ 
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Checking whether or not injective fucntions are at all possible
+    if len(L0)>len(L1):
+        return []
+    else:
+        # Initialization of the symbolic matrix
+        A=HM(1+max(L1+L0),1+max(L1+L0),'a'); X=var_list('x',len(L0))
+        # Initialization of the sets
+        S0=Set(L0); S1=Set(L1)
+        # Initialization of the polynomial
+        Pr=SR(0)
+        for st in S1.subsets(len(L0)):
+            Lst1=st.list()
+            # Initializing a dictionary
+            Dct=dict([(Lst1[i],i) for i in rg(len(Lst1))])
+            Pr=Pr+prod(sum(A[i,j]*X[Dct[j]] for j in st) for i in L0)
+        return [Monomial2Tuple(trm,A.list(),1+max(L1+L0)) for trm in expand(diff(Pr,X)).operands()]
 
 def RepresentativeTupleFunctionList(sz):
     """
@@ -26288,7 +26330,15 @@ def TupleSpanningFunctionalTreeList(sz):
     """
     Returns a list of edge tuple desctiption for all 
     spanning unions of functional trees. There are
-    (sz+1)^(sz-1) of them. 
+    (sz+1)^(sz-1) of them. This implementation is based
+    on the matrix tree theorem proof argument using
+    functional trees on sz+1 vertices rooted at the
+    vertex labeled sz. The listing of spanning unions
+    of functional trees on sz vertices is obtained by
+    contracting every subgraph described by the edge
+    monomial A[i,sz]*A[sz,sz] into the self loop edge
+    A[i,i] where i is in rg(sz).
+
 
 
     EXAMPLES:
@@ -26317,73 +26367,69 @@ def TupleSpanningFunctionalTreeList(sz):
     - Edinah K. Gnang
     """
     # Initialization of the lists
-    #A=HM(sz, sz, 'a')
-    A=HM(sz, sz, var_list('z',sz^2))
-    L =TupleFunctionList(sz)
-    # Initialization of the list storing the equivalence class of trees.
-    cL=[ ]
-    cL0=RepresentativeTupleSpanningFunctionalTreeList(sz)
-    # Loop perfomring the isomorphism binning.
-    for tp in L:
-        nwT=False
-        for tq in cL0:
-            if Tuple2DiGraph(tp,sz).is_isomorphic(Tuple2DiGraph(tq,sz)):
-                nwT=True
-                break
-        if nwT==True:
-            cL.append(tp)
-    return cL
-
-def TupleSpanningFunctionalTreeListII(sz):
-    """
-    Returns a list of edge tuple desctiption for all 
-    spanning unions of functional trees. There are
-    (sz+1)^(sz-1) of them. This implementation is based
-    on the matrix tree theorem proof argument using
-    functional trees on sz+1 vertices rooted at the
-    vertex labeled sz. The listing of spanning unions
-    of functional trees on sz vertices is obtained by
-    contracting every subgraph described by the edge
-    monomial A[i,sz]*A[sz,sz] into the self loop edge
-    A[i,i] where i is in rg(sz). Works only for < 9
-    vertices because for instance of the ambiguity
-    inherent to a111 being confused as a_{1,11} or 
-    a_{11,1}
-
-
-    EXAMPLES:
-    ::
-        sage: TupleSpanningFunctionalTreeListII(3)
-        [[(0, 0), (1, 0), (2, 0)],
-         [(0, 0), (1, 1), (2, 0)],
-         [(0, 1), (1, 1), (2, 0)],
-         [(0, 0), (1, 2), (2, 0)],
-         [(0, 0), (1, 0), (2, 1)],
-         [(0, 0), (1, 1), (2, 1)],
-         [(0, 1), (1, 1), (2, 1)],
-         [(0, 2), (1, 1), (2, 1)],
-         [(0, 0), (1, 0), (2, 2)],
-         [(0, 2), (1, 0), (2, 2)],
-         [(0, 0), (1, 1), (2, 2)],
-         [(0, 1), (1, 1), (2, 2)],
-         [(0, 2), (1, 1), (2, 2)],
-         [(0, 0), (1, 2), (2, 2)],
-         [(0, 1), (1, 2), (2, 2)],
-         [(0, 2), (1, 2), (2, 2)]] 
-
-
-    AUTHORS:
-
-    - Edinah K. Gnang
-    """
-    # Initialization of the lists
-    A=HM(sz+1, sz+1, 'a'); As=HM(sz, sz, 'a')
+    A=HM(sz+1,sz+1,var_list('z',(sz+1)^2)); As=HM(sz,sz,[A[i,j] for j in rg(sz) for i in rg(sz)])
     # Initialization of the directed Laplacian
     LpmA=HM(2,(A*HM(sz+1,1,'one')).list(),'diag')-A
     # Initialization of the symbolic listing
     tmpF=expand(Deter(LpmA.slice(rg(sz),'row').slice(rg(sz),'col')))
     F=fast_reduce(tmpF, [A[i,sz] for i in rg(sz)], [A[i,i] for i in rg(sz)])
     return [Monomial2Tuple(mnm, As.list(), sz) for mnm in F.operands()]
+
+def TupleSpanningFunctionalCycleList(sz):
+    """
+    Returns a list of edge tuple desctiption for all 
+    spanning directed cycles i.e. directed Hamiltonian
+    cycle functional digraphs. 
+
+
+    EXAMPLES:
+    ::
+        sage: TupleSpanningFunctionalCycleList(4)
+        [[(0, 1), (1, 2), (2, 3), (3, 0)],
+         [(0, 1), (1, 3), (2, 0), (3, 2)],
+         [(0, 2), (1, 3), (2, 1), (3, 0)],
+         [(0, 2), (1, 0), (2, 3), (3, 1)],
+         [(0, 3), (1, 2), (2, 0), (3, 1)],
+         [(0, 3), (1, 0), (2, 1), (3, 2)]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of permutations
+    SnL=[[(0,0)]+[(1+i,1+t[i][1]) for i in rg(sz-1)] for t in PermutationFunctionList(sz-1)]
+    return [[(i,Sg[Integer(mod(1+invert_tuple(Sg)[i][1],sz))][1]) for i in rg(sz)] for Sg in SnL]
+
+def TupleSpanningFunctionalPathList(sz):
+    """
+    Returns a list of edge tuple desctiption for all 
+    spanning functional paths i.e. functional Hamiltonian
+    paths functional digraphs. 
+
+
+    EXAMPLES:
+    ::
+        sage: TupleSpanningFunctionalPathList(3)
+        [[(0, 0), (1, 0), (2, 1)],
+         [(0, 0), (1, 2), (2, 0)],
+         [(0, 2), (1, 1), (2, 1)],
+         [(0, 1), (1, 1), (2, 0)],
+         [(0, 2), (1, 0), (2, 2)],
+         [(0, 1), (1, 2), (2, 2)]]
+
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization of the list of permutations
+    SnL=[[(0,0)]+[(1+i,1+t[i][1]) for i in rg(sz-1)] for t in PermutationFunctionList(sz-1)]
+    TmpL=[[(0,0)]+[(i,Sg[Integer(invert_tuple(Sg)[i][1]-1)][1]) for i in rg(1,sz)] for Sg in SnL]
+    L=copy(TmpL)
+    for P in CyclicGroupFunctionList(sz)[1:]:
+        L=L+[ConjugateTuple(T,P) for T in TmpL] 
+    return L
 
 def List_of_Integers(l):
     """
@@ -27539,10 +27585,10 @@ def generate_sorted_histII(Tf, X):
 
         sage: sz=Integer(3); Tf=[(0,0)]+[(i,i-1) for i in rg(1,sz)]; X=var_list('x', sz)
         sage: generate_sorted_histII(Tf, X)
-        [x0*x1, x0^2]
+        [x0^2*x1, x0*x1*x2]
         sage: sz=Integer(5); Tf=[(0,0)]+[(i,i+1) for i in rg(1,sz-1)]+[(sz-1,1)]; X=var_list('x', sz)
         sage: generate_sorted_histII(Tf, X)
-        [x0^2*x1*x2, x0^2*x1^2, x0*x1*x2*x3]
+        [x0^3*x1^2, x0^2*x1^2*x2, x0^3*x1*x2, x0^2*x1*x2*x3, x0*x1*x2*x3*x4]
 
 
     AUTHORS:
@@ -27566,9 +27612,10 @@ def generate_sorted_histII(Tf, X):
         Lhst=[]
         # Main loop filling Lhst
         for Tg in Lg:
-            if prod(A[i,Tg[i][1]] for i in rg(sz) if i!=rt)!=0:
+            if prod((compose_tuple(Tg,Tf)[i][1]-Tg[i][1]) for i in rg(sz) if i!=rt)!=0:
+            #if prod(A[i,Tg[i][1]] for i in rg(sz) if i!=rt)!=0:
                 # Initializing the list of exponents and sorting it
-                tmpL=[len([v for v in tpl_pre_image_set(Tg,u) if v!=rt]) for u in rg(sz)]; tmpL.sort()
+                tmpL=[len([v for v in tpl_pre_image_set(Tg,u)]) for u in rg(sz)]; tmpL.sort()
                 # Test to check that tmpL is new
                 if not prod(X[sz-1-i]^tmpL[i] for i in rg(sz)) in Lhst:
                     # Update the list of histogram
@@ -28093,6 +28140,40 @@ def canonical_representative(f, Lr, X):
     """
     return remainder_via_lagrange_interpolation(f, Lr, X)
 
+def remainder_via_lagrange_interpolationHM(Hf, Lr, X):
+    """
+    Returns the matrix canonical representative of the residue class
+    f modulo Ld. The input f is an arbitrary multivariate polynomial
+    in the variables stored in the list input X. Lr is is the list of distinct
+    roots of the monic univariate polynomial associated with each variable.
+    This implementation does not require the input polynomial to be in 
+    factored form
+
+
+    EXAMPLES:
+    ::
+
+        sage: sz=3; X=var_list('x',sz); Hf=expand(var('x0')^2*var('x1')+var('x2')^4)*HM(sz,sz,'one'); Lr=rg(sz)
+        sage: remainder_via_lagrange_interpolationHM(Hf, Lr, X).expand().p()
+        [:, :]=
+        [x0^2*x1 + 7*x2^2 - 6*x2 x0^2*x1 + 7*x2^2 - 6*x2 x0^2*x1 + 7*x2^2 - 6*x2]
+        [x0^2*x1 + 7*x2^2 - 6*x2 x0^2*x1 + 7*x2^2 - 6*x2 x0^2*x1 + 7*x2^2 - 6*x2]
+        [x0^2*x1 + 7*x2^2 - 6*x2 x0^2*x1 + 7*x2^2 - 6*x2 x0^2*x1 + 7*x2^2 - 6*x2]        
+        sage: remainder_via_lagrange_interpolationHM(Hf, rg(5), X).expand().p()
+        [:, :]=
+        [x2^4 + x0^2*x1 x2^4 + x0^2*x1 x2^4 + x0^2*x1]
+        [x2^4 + x0^2*x1 x2^4 + x0^2*x1 x2^4 + x0^2*x1]
+        [x2^4 + x0^2*x1 x2^4 + x0^2*x1 x2^4 + x0^2*x1]    
+ 
+
+    AUTHORS:
+
+    - Edinah K. Gnang
+    """
+    # Initialization the number of variables
+    sz0=Integer(len(X)); sz1=Integer(len(Lr))
+    return sum(Hf.subs([X[i]==Lr[t[i][1]] for i in rg(sz0)])*prod( prod((X[k]-jk)/(Lr[t[k][1]]-jk) for jk in Lr if jk !=Lr[t[k][1]]) for k in rg(sz0) ) for t in TupleFunctionListII(sz0, sz1))
+
 def GeneralHypermatrixFlatten(A, dms, indx):
     """
     Outputs a lower order flattened hypermatrix computed from the higher order 
@@ -28593,7 +28674,7 @@ def EliminationHMI(Ha,i):
 
     ::
 
-        sage: sz=3; Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,1).canonicalize_radical(); Hb.p()
+        sage: sz=Integer(3); Ha=HM(sz,sz,'a'); Hb=EliminationHMI(Ha,1).canonicalize_radical(); Hb.p()
         [:, :]=
         [                                                                              a00                                                                               a01                                                                               a02]
         [                                                                                0 -1/2*a00*a10*a21*(I*sqrt(3) + 1) - 1/2*(a00*a11*(-I*sqrt(3) + 1) - 2*a01*a10)*a20 -1/2*a00*a10*a22*(I*sqrt(3) + 1) - 1/2*(a00*a12*(-I*sqrt(3) + 1) - 2*a02*a10)*a20]
@@ -28619,7 +28700,7 @@ def EliminationHMI(Ha,i):
     AUTHORS:
     - Edinah K. Gnang
     """
-    # Testing that the first entry is not already zero
+    # Testing that the first entry is not already zero.
     if Ha[i,0].is_zero():
         return Ha
     else:
@@ -28647,7 +28728,7 @@ def EliminationHMII(Ha):
 
     ::
 
-        sage: sz=3; Ha=HM(sz,sz,'a'); Hc=EliminationHMII(Ha).canonicalize_radical()
+        sage: sz=Integer(3); Ha=HM(sz,sz,'a'); Hc=EliminationHMII(Ha).canonicalize_radical()
         sage: Hc.printHM()
         [:, :]=
         [                                                                              a00                                                                               a01                                                                               a02]
@@ -28668,7 +28749,8 @@ def EliminationHMII(Ha):
     """
     A=Ha.copy(); B=Ha.copy()
     for i in rg(1,A.n(0)):
-        # Zeroing out the first entry of row i
+        # Zeroing out the first entry of row i. This step can done in parallel for each row independently.
+        #Tmp=EliminationHMI(A,i,i)
         Tmp=EliminationHMI(A,i)
         for jndx in rg(A.n(1)):
             B[i,jndx]=Tmp[i,jndx]
@@ -34788,7 +34870,7 @@ def SymPoly_ExpansionIIG(F, Xv, Pv, Sv, RtL):
         sage: f=Xv[1]*Xv[2]^2 - Xv[1]^2 + Xv[1]*Xv[2] # Initial non-symmetric polynomial 
         sage: F=sum(f.subs([Xv[i]==Xv[T[i][1]] for i in rg(sz)]) for T in PermutationFunctionList(sz)) # Symmetrized polynomial
         sage: mf=multivariate_leading_term(F, Xv, Pp); mf=mf/mf.subs([Xv[i]==1 for i in rg(sz)])
-        sage: rsLt=SymPoly_ExpansionIIG(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1), rg(sz))); rsLt
+        sage: rsLt=SymPoly_ExpansionIIG(F, Xv, [1]+var_list('p', max(sum(mf.degree(v) for v in Xv),sz),1), [1]+var_list('s', len(Xv),1), rg(sz)); rsLt
         [p1^2 + p1*p2 + 11*p1 - p3,
          [p1 == x0 + x1 + x2 - 3,
           p2 == x0^2 + x1^2 + x2^2 - 5,
