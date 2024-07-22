@@ -16,7 +16,7 @@ sage: load('Hypermatrix_Algebra_Package_code.sage')
 ```
 
 To get started with SageMath, the authors of the hypermatrix package highly recommend reading 
-[Mathematical Computation with SageMath] (http://sagebook.gforge.inria.fr/)
+[Mathematical Computation with SageMath] (https://www.sagemath.org/sagebook/english.html)
 
 The python file can be created from the sage file in the bash terminal as follows
 
